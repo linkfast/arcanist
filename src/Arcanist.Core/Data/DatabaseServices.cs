@@ -45,21 +45,25 @@ internal sealed class ArcanistDbContextFactory(
 
     public ArcanistDbContext CreateDbContext() => Create(options.CurrentValue, paths, loggerFactory);
 
-    public static ArcanistDbContext Create(DatabaseOptions options, ArcanistPaths paths, ILoggerFactory? loggerFactory = null) =>
-        options.Provider switch
+    public static ArcanistDbContext Create(DatabaseOptions options, ArcanistPaths paths, ILoggerFactory? loggerFactory = null)
+    {
+        var connectionString = string.IsNullOrWhiteSpace(options.ConnectionString) ? null : options.ConnectionString;
+
+        return options.Provider switch
         {
             DatabaseProvider.Sqlite => new SqliteArcanistDbContext(
                 Configure(new DbContextOptionsBuilder<SqliteArcanistDbContext>(), loggerFactory)
-                    .UseSqlite(options.ConnectionString ?? DefaultSqliteConnectionString(paths))
+                    .UseSqlite(connectionString ?? DefaultSqliteConnectionString(paths))
                     .Options),
             DatabaseProvider.Postgres => new PostgresArcanistDbContext(
                 Configure(new DbContextOptionsBuilder<PostgresArcanistDbContext>(), loggerFactory)
-                    .UseNpgsql(options.ConnectionString
+                    .UseNpgsql(connectionString
                                ?? throw new InvalidOperationException("PostgreSQL requires a connection string."))
                     .Options),
             null => throw new DatabaseNotConfiguredException(),
             _ => throw new ArgumentOutOfRangeException(nameof(options), options.Provider, null),
         };
+    }
 
     public static string DefaultSqliteConnectionString(ArcanistPaths paths) =>
         $"Data Source={Path.Combine(paths.Root, "arcanist.db")}";
@@ -81,6 +85,8 @@ public static class DatabaseServiceCollectionExtensions
         services.Configure<DatabaseOptions>(configuration.GetSection(DatabaseOptions.Section));
         services.AddSingleton<IArcanistDbContextFactory, ArcanistDbContextFactory>();
         services.AddScoped<ArcanistDbContext>(sp => sp.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext());
+        services.AddSingleton<DatabaseInitializer>();
+        services.AddHostedService<DatabaseMigrationService>();
         return services;
     }
 }

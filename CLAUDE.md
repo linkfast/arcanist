@@ -133,6 +133,12 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **Almacenamiento:** `Library` → varias `LibrarySource`, siempre leídas a través de `ILibraryStorage`. Nunca usar `System.IO` directamente fuera de `LocalStorage`.
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
+- **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.
+  - Mientras `Arcanist:Setup:Completed` no sea `true`, `SetupGateMiddleware` redirige `/` a `/admin/setup` y responde 503 `setup_required` a todo lo que no sea el asistente, `/admin`, `/health` o la documentación.
+  - El asistente envía todo de una vez a `POST /rest/v1/setup/complete`, que valida, guarda la BD en `arcanist.json` (salvo que venga fijada por el entorno), migra, crea el admin, las bibliotecas y los ajustes, y marca el setup como completado.
+  - Desde fuera de loopback (o a través de un proxy) se exige la cabecera `X-Setup-Code`.
+  - `ISettingsFileWriter` escribe `arcanist.json` y recarga la configuración en el acto.
+- **Errores de API como códigos:** `Api/Problems.cs`. REST devuelve problem details con `code`, y los errores de validación son `{ campo: [código] }`. La UI traduce los códigos; no mostrar textos del servidor.
 - **Seguridad:**
   - Se asume que el puerto puede estar abierto a internet: rate limiting en auth y setup, y `ForwardedHeaders` para proxies inversos.
   - El código de setup se exige fuera de loopback.

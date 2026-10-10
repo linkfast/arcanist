@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- Metadatos comunes a todos los proyectos .NET de Arcanist. -->
+  <PropertyGroup>
+    <Product>Arcanist</Product>
+    <Authors>LinkFast and Arcanist contributors</Authors>
+    <Copyright>Copyright (C) 2026 LinkFast and Arcanist contributors</Copyright>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+  </PropertyGroup>
+
+</Project>

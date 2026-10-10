@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Arcanist data directory used in Development (see DataDirectory.cs)
+.data/

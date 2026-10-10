@@ -28,9 +28,24 @@ src/Arcanist.Web/             panel de administración: Angular 22 + Tailwind v4
 ```bash
 dotnet build Arcanist.slnx
 dotnet run --project src/Arcanist.Core          # http://localhost:5263 / https://localhost:7137
+dotnet test                                      # todos los tests
+dotnet test --project tests/Arcanist.Core.Tests -- --filter-method "*Nombre_del_test"   # un test
+dotnet test --project tests/Arcanist.Core.Tests -- --filter-class "*DataDirectoryTests" # una clase
 ```
 
-Aún no hay proyecto de tests .NET (llega en el paso 1 de la Fase 1, en `tests/Arcanist.Core.Tests`); al crearlo, documentar aquí cómo ejecutar un test individual.
+- Los tests usan **xUnit v3 sobre Microsoft Testing Platform**, activado en `global.json` (`"test": { "runner": "Microsoft.Testing.Platform" }`). Por eso no hay `Microsoft.NET.Test.Sdk` ni `xunit.runner.visualstudio`, y los filtros van después de `--` con la sintaxis de MTP, no con `--filter` de VSTest.
+- Los tests de integración usan `ArcanistFactory` (`WebApplicationFactory<Program>`), que arranca el servidor con un directorio de datos temporal y el entorno `Testing`.
+
+**Directorio de datos** (`Hosting/DataDirectory.cs`, `Hosting/ArcanistPaths.cs`):
+- Se elige, por orden, con `--data-dir`, `Arcanist__DataDir` o `ARCANIST_DATA_DIR`.
+- Por defecto:
+  - Development: `src/Arcanist.Core/.data/` (ignorado por git).
+  - Contenedor: `/data`.
+  - systemd: `$STATE_DIRECTORY`.
+  - Windows: `%ProgramData%\Arcanist`.
+  - Linux como root: `/var/lib/arcanist`; si no, `$XDG_DATA_HOME/arcanist`.
+- Su `arcanist.json` se carga con más prioridad que `appsettings*.json` y menos que las variables de entorno y la línea de comandos.
+- Los logs (Serilog) van a la consola y a `<datos>/logs/`.
 
 **Web (Angular)**, desde `src/Arcanist.Web`:
 

@@ -1,4 +1,5 @@
 using Arcanist.Core.Capabilities;
+using Arcanist.Core.Data;
 using Arcanist.Core.Hosting;
 using Serilog;
 
@@ -29,6 +30,7 @@ builder.Services.AddSerilog((_, logger) => logger
 
 builder.Services.AddHealthChecks();
 builder.Services.AddCapabilities();
+builder.Services.AddArcanistDatabase(builder.Configuration);
 
 var app = builder.Build();
 

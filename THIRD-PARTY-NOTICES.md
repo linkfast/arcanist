@@ -8,6 +8,10 @@ Arcanist includes or depends on the following third-party components. Each is us
 |---|---|
 | .NET / ASP.NET Core (including `Microsoft.Extensions.Hosting.WindowsServices` and `.Systemd`) | MIT |
 | Serilog (`Serilog.AspNetCore` and its sinks) | Apache-2.0 |
+| Entity Framework Core, Microsoft.Data.Sqlite | MIT |
+| SQLitePCLRaw | Apache-2.0 |
+| SQLite | Public domain |
+| Npgsql, Npgsql.EntityFrameworkCore.PostgreSQL | PostgreSQL License |
 
 ## Admin panel (`src/Arcanist.Web`, production dependencies)
 

@@ -1,0 +1,84 @@
+namespace Arcanist.Core.Data.Entities;
+
+public enum UserRole
+{
+    User,
+
+    /// <summary>Implies every permission and access to every library.</summary>
+    Admin,
+}
+
+[Flags]
+public enum Permissions : long
+{
+    None = 0,
+    ManageLibraries = 1 << 0,
+    ManageUsers = 1 << 1,
+    ManageSettings = 1 << 2,
+    RunScans = 1 << 3,
+    Download = 1 << 4,
+    ViewAllStats = 1 << 5,
+}
+
+public sealed class User : Entity
+{
+    public required string UserName { get; set; }
+
+    /// <summary>Lookup key for <see cref="UserName"/>; see <c>TextNormalizer</c>.</summary>
+    public required string NormalizedUserName { get; set; }
+
+    public string? DisplayName { get; set; }
+
+    public required string PasswordHash { get; set; }
+
+    public UserRole Role { get; set; }
+
+    public Permissions Permissions { get; set; }
+
+    /// <summary>Changes whenever credentials or permissions change, invalidating issued tokens.</summary>
+    public string SecurityStamp { get; set; } = Guid.NewGuid().ToString("N");
+
+    public bool IsDisabled { get; set; }
+
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+
+    public DateTime? LastLoginAt { get; set; }
+
+    public List<UserSession> Sessions { get; } = [];
+
+    public List<LibraryAccess> LibraryAccess { get; } = [];
+}
+
+/// <summary>A signed-in device. Holds the hash of its current refresh token so it can be rotated and revoked.</summary>
+public sealed class UserSession : Entity
+{
+    public Guid UserId { get; init; }
+
+    public User User { get; init; } = null!;
+
+    public required string RefreshTokenHash { get; set; }
+
+    public string? DeviceName { get; set; }
+
+    public string? UserAgent { get; set; }
+
+    public string? IpAddress { get; set; }
+
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+
+    public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
+
+    public DateTime ExpiresAt { get; set; }
+
+    public DateTime? RevokedAt { get; set; }
+}
+
+/// <summary>Server-wide setting stored as JSON, for values edited from the admin panel at runtime.</summary>
+public sealed class Setting
+{
+    public required string Key { get; init; }
+
+    public required string Value { get; set; }
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

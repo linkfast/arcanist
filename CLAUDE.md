@@ -35,6 +35,16 @@ dotnet test --project tests/Arcanist.Core.Tests -- --filter-class "*DataDirector
 
 - Los tests usan **xUnit v3 sobre Microsoft Testing Platform**, activado en `global.json` (`"test": { "runner": "Microsoft.Testing.Platform" }`). Por eso no hay `Microsoft.NET.Test.Sdk` ni `xunit.runner.visualstudio`, y los filtros van después de `--` con la sintaxis de MTP, no con `--filter` de VSTest.
 - Los tests de integración usan `ArcanistFactory` (`WebApplicationFactory<Program>`), que arranca el servidor con un directorio de datos temporal y el entorno `Testing`.
+- `DatabaseProviderTests` ejecuta las mismas aserciones contra SQLite en memoria y contra PostgreSQL 17 en un contenedor de Testcontainers. Si Docker no está disponible, los de PostgreSQL aparecen como **skipped**, no como verdes. Incluye un test que falla si el modelo cambió sin migración para alguno de los dos proveedores.
+
+**Migraciones EF Core** (herramienta local `dotnet-ef` en `dotnet-tools.json`; ejecutar `dotnet tool restore` una vez). Cada cambio de modelo necesita **las dos**:
+
+```bash
+dotnet ef migrations add <Nombre> --project src/Arcanist.Core --context SqliteArcanistDbContext --output-dir Data/Migrations/Sqlite
+dotnet ef migrations add <Nombre> --project src/Arcanist.Core --context PostgresArcanistDbContext --output-dir Data/Migrations/Postgres
+```
+
+El proveedor se configura en `Arcanist:Database` (`Provider`: `Sqlite`/`Postgres`, `ConnectionString`). Nada se resuelve contra la BD hasta que esa sección existe. Los servicios obtienen el contexto por DI (`ArcanistDbContext`, scoped) o con `IArcanistDbContextFactory`, que es lo que usan los trabajos en segundo plano.
 
 **Directorio de datos** (`Hosting/DataDirectory.cs`, `Hosting/ArcanistPaths.cs`):
 - Se elige, por orden, con `--data-dir`, `Arcanist__DataDir` o `ARCANIST_DATA_DIR`.

@@ -322,7 +322,8 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ErrorMessage")
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Errors")
@@ -366,6 +367,8 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("LibraryId", "RequestedAt");
 

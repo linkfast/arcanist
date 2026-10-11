@@ -2,6 +2,7 @@ using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Libraries;
+using Arcanist.Core.Scanning;
 using Microsoft.EntityFrameworkCore;
 using LibraryEntity = Arcanist.Core.Data.Entities.Library;
 using LibrarySourceEntity = Arcanist.Core.Data.Entities.LibrarySource;
@@ -19,6 +20,7 @@ public sealed class LibraryService(
     LibraryRules rules,
     DirectoryBrowser directories,
     UserAccessCache accessCache,
+    ScanCoordinator scans,
     TimeProvider time)
 {
     public async Task<IReadOnlyList<Library>> ListAsync(CancellationToken cancellationToken)
@@ -79,6 +81,7 @@ public sealed class LibraryService(
         db.Libraries.Add(library);
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateAll();
+        await scans.EnqueueAsync(library.Id, ScanKind.Full, actor.UserId, cancellationToken);
 
         return library.ToModel(includeSources: true);
     }
@@ -113,6 +116,7 @@ public sealed class LibraryService(
         guard.RecentAuthentication();
         var library = await FindManageableAsync(actor, id, cancellationToken);
 
+        await scans.CancelLibraryAsync(library.Id, cancellationToken);
         db.Libraries.Remove(library);
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateAll();
@@ -130,6 +134,7 @@ public sealed class LibraryService(
 
         db.LibrarySources.Add(new LibrarySourceEntity { LibraryId = library.Id, Kind = LibrarySourceKind.Local, Location = locations[0]! });
         await db.SaveChangesAsync(cancellationToken);
+        await scans.EnqueueAsync(library.Id, ScanKind.Incremental, actor.UserId, cancellationToken);
 
         return await GetManagedAsync(library.Id, cancellationToken);
     }
@@ -144,6 +149,9 @@ public sealed class LibraryService(
 
         db.LibrarySources.Remove(source);
         await db.SaveChangesAsync(cancellationToken);
+
+        // The scan removes tracks left without files.
+        await scans.EnqueueAsync(source.LibraryId, ScanKind.Incremental, actor.UserId, cancellationToken);
 
         return await GetManagedAsync(source.LibraryId, cancellationToken);
     }

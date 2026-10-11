@@ -327,8 +327,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<int>("Errors")
                         .HasColumnType("integer");
@@ -371,6 +372,8 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasColumnType("character varying(32)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("LibraryId", "RequestedAt");
 

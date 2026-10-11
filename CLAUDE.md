@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas y las dos APIs (GraphQL y REST). Faltan escáner, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas, escáner y las dos APIs (GraphQL y REST). Faltan consultas del catálogo, progreso en vivo y escaneo programado, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -155,6 +155,23 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - Un gestor que no es admin solo gestiona las bibliotecas que ve, y recibe acceso automático a las que crea.
   - Borrar una biblioteca exige step-up y **nunca toca los archivos**.
   - `serverDirectories` es solo para admins.
+- **Escáner (implementado):** `Scanning/` y `Application/Scanning/`.
+  - `ScanCoordinator` encola trabajos (`ScanJob` en BD) y `ScanWorker` (BackgroundService) los ejecuta **de uno en uno**. Una biblioteca nunca tiene dos trabajos activos. Al arrancar se recuperan los encolados y los interrumpidos.
+  - Se escanea automáticamente al completar el setup, al crear una biblioteca y al añadir o quitar fuentes.
+  - `LibraryScanner` procesa cada fuente así:
+    1. Lista los archivos a través de `ILibraryStorage`.
+    2. Salta los que no cambiaron en tamaño ni mtime (±2 s); los escaneos `Full` releen todo.
+    3. Lee en paralelo (`Arcanist:Scanner:Parallelism`) con ATL (`TagReader`), calcula el `ContentHash` (`ContentHasher`, solo del audio) y guarda las carátulas (`ArtworkStore`, deduplicadas por SHA-256 en `<datos>/cache/artwork/`).
+    4. Escribe por lotes con un único `CatalogWriter`.
+  - **Salvaguarda:** si una fuente no responde, o aparece vacía cuando el catálogo tenía archivos de ella (un montaje caído), se omite con `source_unavailable` y **no se marca nada como desaparecido**.
+  - Los archivos desaparecidos reciben `MissingSince` y se purgan tras `MissingFileRetentionDays` (7 por defecto). Después, `CatalogCleaner` borra lo que quede huérfano: pistas, álbumes, grabaciones, artistas, géneros y carátulas (también del disco).
+  - **Reglas de `CatalogWriter`:**
+    - Un archivo se une a una pista existente de su álbum si coincide el MBID de grabación o, si no, disco + número + título normalizado.
+    - Un archivo re-etiquetado que es el único de su pista **conserva la pista**, para que los datos de usuario no se pierdan.
+    - El álbum se agrupa por MBID de release o por artista del álbum + título normalizado. Sin etiqueta de álbum, se usa el nombre de la carpeta.
+    - Los múltiples valores se separan por `;`, nunca por `/` (AC/DC); "feat." genera artistas `Featured`.
+  - **Limitación conocida:** un álbum sin etiqueta AlbumArtist ni marca de recopilatorio, con artistas distintos por pista, se parte en varios álbumes. Se mejorará en la F3.
+  - Tests: `AudioFixtures` genera WAV etiquetados al vuelo, sin binarios en el repo. `ScannerTests` espera a los trabajos sondeando `GET /rest/v1/scans/{id}`.
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.

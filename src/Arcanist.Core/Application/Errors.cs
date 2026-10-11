@@ -29,6 +29,10 @@ public static class ErrorCodes
     public const string LastAdministrator = "last_administrator";
     public const string CannotModifySelf = "cannot_modify_self";
     public const string Overlapping = "overlapping";
+    public const string ScanFailed = "scan_failed";
+    public const string SourceUnavailable = "source_unavailable";
+    public const string Interrupted = "interrupted";
+    public const string ScanFinished = "scan_finished";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

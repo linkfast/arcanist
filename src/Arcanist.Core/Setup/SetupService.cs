@@ -6,6 +6,7 @@ using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
+using Arcanist.Core.Scanning;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -60,6 +61,7 @@ public sealed class SetupService(
     SetupCode setupCode,
     IPasswordHasher<User> passwordHasher,
     LibraryRules libraryRules,
+    ScanCoordinator scans,
     ILogger<SetupService> logger)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -145,6 +147,7 @@ public sealed class SetupService(
 
             await initializer.MigrateAsync(database, cancellationToken);
 
+            IReadOnlyList<Guid> libraryIds;
             await using (var db = ArcanistDbContextFactory.Create(database, paths))
             {
                 if (await db.Users.AnyAsync(cancellationToken))
@@ -154,12 +157,16 @@ public sealed class SetupService(
                     return new SetupResult.Invalid(errors);
                 }
 
-                Seed(db, request, libraries, folders);
+                libraryIds = Seed(db, request, libraries, folders);
                 await db.SaveChangesAsync(cancellationToken);
             }
 
             await settingsWriter.SetAsync(new Dictionary<string, object?> { [SetupOptions.CompletedKey] = true }, cancellationToken);
             setupCode.Discard();
+
+            // The wizard's last step shows this first scan in progress.
+            foreach (var libraryId in libraryIds)
+                await scans.EnqueueAsync(libraryId, ScanKind.Full, requestedBy: null, cancellationToken);
 
             logger.LogInformation("Setup completed: {Provider} database, administrator {UserName}, {LibraryCount} library(ies)",
                 database.Provider, request.Admin!.UserName, libraries.Count);
@@ -172,7 +179,7 @@ public sealed class SetupService(
         }
     }
 
-    private void Seed(ArcanistDbContext db, SetupRequest request, IReadOnlyList<SetupLibrary> libraries, IReadOnlyList<IReadOnlyList<string?>> folders)
+    private IReadOnlyList<Guid> Seed(ArcanistDbContext db, SetupRequest request, IReadOnlyList<SetupLibrary> libraries, IReadOnlyList<IReadOnlyList<string?>> folders)
     {
         var admin = new User
         {
@@ -185,6 +192,7 @@ public sealed class SetupService(
         admin.PasswordHash = passwordHasher.HashPassword(admin, request.Admin.Password!);
         db.Users.Add(admin);
 
+        var libraryIds = new List<Guid>();
         for (var i = 0; i < libraries.Count; i++)
         {
             var library = new Library { Name = libraries[i].Name!.Trim(), VisibleToAll = libraries[i].VisibleToAll };
@@ -199,6 +207,7 @@ public sealed class SetupService(
             }
 
             db.Libraries.Add(library);
+            libraryIds.Add(library.Id);
         }
 
         db.Settings.Add(new Setting
@@ -209,6 +218,8 @@ public sealed class SetupService(
 
         if (!string.IsNullOrWhiteSpace(request.Language))
             db.Settings.Add(new Setting { Key = SettingKeys.DefaultLanguage, Value = JsonSerializer.Serialize(request.Language.Trim()) });
+
+        return libraryIds;
     }
 
     private static DatabaseOptions? ValidateDatabase(SetupDatabase request, string prefix, ValidationErrors errors)

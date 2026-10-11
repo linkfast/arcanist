@@ -325,6 +325,54 @@
         }
       }
     },
+    "/rest/v1/libraries/{libraryId}/scans": {
+      "post": {
+        "tags": [
+          "Scans"
+        ],
+        "summary": "Queues a scan, or returns the one already queued or running for the library. A full scan re-reads every file. Requires RUN_SCANS.",
+        "operationId": "StartScan",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StartScanInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/me": {
       "get": {
         "tags": [
@@ -833,6 +881,109 @@
           }
         }
       }
+    },
+    "/rest/v1/scans": {
+      "get": {
+        "tags": [
+          "Scans"
+        ],
+        "summary": "Most recent scans first, of one library or of all libraries the user can see. Requires RUN_SCANS or MANAGE_LIBRARIES.",
+        "operationId": "ScanJobs",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScanJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/scans/{id}": {
+      "get": {
+        "tags": [
+          "Scans"
+        ],
+        "summary": "A scan by id, including live progress while it runs. Poll it to follow a scan. Requires RUN_SCANS or MANAGE_LIBRARIES.",
+        "operationId": "ScanJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/scans/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Scans"
+        ],
+        "summary": "Requires RUN_SCANS.",
+        "operationId": "CancelScan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1140,6 +1291,175 @@
             "type": "string"
           }
         }
+      },
+      "ScanJob": {
+        "required": [
+          "id",
+          "libraryId",
+          "kind",
+          "status",
+          "requestedAt",
+          "startedAt",
+          "finishedAt",
+          "filesSeen",
+          "filesAdded",
+          "filesUpdated",
+          "filesMissing",
+          "errors",
+          "errorCode",
+          "progress"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ScanKind"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ScanStatus"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "filesSeen": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesAdded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesUpdated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesMissing": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errors": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "progress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ScanProgress"
+              }
+            ]
+          }
+        }
+      },
+      "ScanKind": {
+        "enum": [
+          "INCREMENTAL",
+          "FULL"
+        ]
+      },
+      "ScanPhase": {
+        "enum": [
+          "DISCOVERING",
+          "READING",
+          "CLEANING_UP"
+        ]
+      },
+      "ScanProgress": {
+        "required": [
+          "phase",
+          "filesFound",
+          "filesToRead",
+          "filesRead"
+        ],
+        "type": "object",
+        "properties": {
+          "phase": {
+            "$ref": "#/components/schemas/ScanPhase"
+          },
+          "filesFound": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesToRead": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesRead": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ScanStatus": {
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "COMPLETED",
+          "CANCELLED",
+          "FAILED"
+        ]
       },
       "ServerDirectory": {
         "required": [
@@ -1488,6 +1808,15 @@
           }
         }
       },
+      "StartScanInput": {
+        "type": "object",
+        "properties": {
+          "full": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "TokenResponse": {
         "required": [
           "accessToken",
@@ -1668,6 +1997,9 @@
     },
     {
       "name": "Libraries"
+    },
+    {
+      "name": "Scans"
     },
     {
       "name": "Me"

@@ -1,0 +1,476 @@
+using Arcanist.Core.Data;
+using Arcanist.Core.Data.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace Arcanist.Core.Scanning;
+
+/// <summary>A file read by the scanner, ready to be written to the catalog.</summary>
+/// <param name="ExistingFileId">The catalog row of this path when the file was already known.</param>
+public sealed record ScannedFile(
+    Guid SourceId,
+    Guid? ExistingFileId,
+    string RelativePath,
+    long Size,
+    DateTime ModifiedAt,
+    string ContentHash,
+    AudioMetadata Metadata,
+    StoredArtwork? Artwork);
+
+public sealed record BatchResult(int Added, int Updated);
+
+/// <summary>
+/// Turns scanned files into catalog rows. The only writer during a scan: files arrive in batches, each applied in
+/// one transaction. Lookups of artists, albums, recordings, genres and artwork are cached for the whole scan.
+/// <para>
+/// Duplicates collapse instead of multiplying: a file joins an existing track of its album when the MusicBrainz
+/// recording matches, or else disc, number and title match (so a FLAC and an MP3 of the same song, or copies in two
+/// libraries, are one track with two files). A re-tagged file keeps its track when it is the track's only file, so
+/// user data attached to the track follows it.
+/// </para>
+/// </summary>
+internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
+{
+    public const string UnknownArtist = "Unknown Artist";
+    public const string VariousArtists = "Various Artists";
+    public const string UnknownAlbum = "Unknown Album";
+
+    private readonly Dictionary<Guid, Guid> _artistByMbid = [];
+    private readonly Dictionary<string, Guid> _artistByName = new(StringComparer.Ordinal);
+    private readonly HashSet<Guid> _artistsWithoutMbid = [];
+    private readonly Dictionary<Guid, AlbumState> _albumByRelease = [];
+    private readonly Dictionary<(Guid ArtistId, string Title), AlbumState> _albumByKey = [];
+    private readonly Dictionary<Guid, Guid> _recordingByMbid = [];
+    private readonly Dictionary<Guid, Guid> _mbidByRecording = [];
+    private readonly Dictionary<string, Guid> _genreByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Guid> _artworkByHash = new(StringComparer.Ordinal);
+
+    // Changes to rows created in earlier batches, applied with set-based updates.
+    private readonly Dictionary<Guid, Guid> _pendingArtistMbids = [];
+    private readonly HashSet<AlbumState> _dirtyAlbums = [];
+
+    public async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        var artists = await db.Artists.AsNoTracking().Select(a => new { a.Id, a.NormalizedName, a.MusicBrainzId }).ToListAsync(cancellationToken);
+        foreach (var artist in artists)
+        {
+            _artistByName.TryAdd(artist.NormalizedName, artist.Id);
+            if (artist.MusicBrainzId is { } mbid)
+                _artistByMbid.TryAdd(mbid, artist.Id);
+            else
+                _artistsWithoutMbid.Add(artist.Id);
+        }
+
+        var albums = await db.Albums.AsNoTracking()
+            .Select(a => new { a.Id, a.AlbumArtistId, a.NormalizedTitle, a.MusicBrainzReleaseId, a.ArtworkId, a.Year })
+            .ToListAsync(cancellationToken);
+        foreach (var album in albums)
+        {
+            var state = new AlbumState(album.Id, null) { ArtworkId = album.ArtworkId, Year = album.Year, ReleaseMbid = album.MusicBrainzReleaseId };
+            _albumByKey.TryAdd((album.AlbumArtistId, album.NormalizedTitle), state);
+            if (album.MusicBrainzReleaseId is { } release)
+                _albumByRelease.TryAdd(release, state);
+        }
+
+        foreach (var recording in await db.Recordings.AsNoTracking().Where(r => r.MusicBrainzId != null)
+                     .Select(r => new { r.Id, r.MusicBrainzId }).ToListAsync(cancellationToken))
+        {
+            _recordingByMbid.TryAdd(recording.MusicBrainzId!.Value, recording.Id);
+            _mbidByRecording[recording.Id] = recording.MusicBrainzId.Value;
+        }
+
+        foreach (var genre in await db.Genres.AsNoTracking().Select(g => new { g.Id, g.NormalizedName }).ToListAsync(cancellationToken))
+            _genreByName.TryAdd(genre.NormalizedName, genre.Id);
+
+        foreach (var artwork in await db.Artworks.AsNoTracking().Select(a => new { a.Id, a.Hash }).ToListAsync(cancellationToken))
+            _artworkByHash.TryAdd(artwork.Hash, artwork.Id);
+    }
+
+    public async Task<BatchResult> ApplyAsync(IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        int added = 0, updated = 0;
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var existingIds = files.Where(f => f.ExistingFileId is not null).Select(f => f.ExistingFileId!.Value).ToList();
+        var existingFiles = await db.MediaFiles.Where(f => existingIds.Contains(f.Id)).ToDictionaryAsync(f => f.Id, cancellationToken);
+
+        // Albums first, so the tracks they may share are loaded in one query.
+        var resolved = files.Select(f => (File: f, Album: ResolveAlbum(f))).ToList();
+        var albumIds = resolved.Select(r => r.Album.Id).Distinct().ToList();
+        var currentTrackIds = existingFiles.Values.Select(f => f.TrackId).Distinct().ToList();
+
+        var tracks = await db.Tracks.Where(t => albumIds.Contains(t.AlbumId) || currentTrackIds.Contains(t.Id)).ToListAsync(cancellationToken);
+        var tracksById = tracks.ToDictionary(t => t.Id);
+        var tracksByAlbum = tracks.GroupBy(t => t.AlbumId).ToDictionary(g => g.Key, g => g.ToList());
+        var trackIds = tracks.Select(t => t.Id).ToList();
+        var fileCounts = await db.MediaFiles.Where(f => trackIds.Contains(f.TrackId))
+            .GroupBy(f => f.TrackId)
+            .Select(g => new { TrackId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.TrackId, x => x.Count, cancellationToken);
+
+        var existingTracksToRelink = new HashSet<Guid>();
+        var links = new Dictionary<Guid, (List<TrackArtist> Artists, List<TrackGenre> Genres)>();
+
+        foreach (var (file, album) in resolved)
+        {
+            var meta = file.Metadata;
+            var title = meta.Title ?? Path.GetFileNameWithoutExtension(file.RelativePath);
+            var normalizedTitle = TextNormalizer.Normalize(title);
+            MediaFile? mediaFile = file.ExistingFileId is { } fileId ? existingFiles.GetValueOrDefault(fileId) : null;
+
+            if (!tracksByAlbum.TryGetValue(album.Id, out var albumTracks))
+                tracksByAlbum[album.Id] = albumTracks = [];
+
+            var track = Match(albumTracks, meta, normalizedTitle);
+
+            // Re-tagged file that is alone on its track: keep the track, so what users attached to it follows.
+            if (track is null && mediaFile is not null && tracksById.TryGetValue(mediaFile.TrackId, out var current)
+                && fileCounts.GetValueOrDefault(current.Id) <= 1)
+            {
+                track = current;
+            }
+
+            if (track is null)
+            {
+                track = new Track
+                {
+                    Title = title,
+                    NormalizedTitle = normalizedTitle,
+                    AlbumId = album.Id,
+                    RecordingId = ResolveRecording(meta.RecordingMbid),
+                    AddedAt = now,
+                };
+                db.Tracks.Add(track);
+                tracksById[track.Id] = track;
+                fileCounts[track.Id] = 0;
+            }
+            else if (db.Entry(track).State != EntityState.Added)
+            {
+                existingTracksToRelink.Add(track.Id);
+            }
+
+            if (track.AlbumId != album.Id)
+            {
+                tracksByAlbum.GetValueOrDefault(track.AlbumId)?.Remove(track);
+                track.AlbumId = album.Id;
+            }
+
+            if (!albumTracks.Contains(track))
+                albumTracks.Add(track);
+
+            track.Title = title;
+            track.NormalizedTitle = normalizedTitle;
+            track.DiscNumber = meta.DiscNumber;
+            track.TrackNumber = meta.TrackNumber;
+            track.DurationMs = meta.DurationMs;
+            track.UpdatedAt = now;
+            if (meta.RecordingMbid is { } recordingMbid && _mbidByRecording.GetValueOrDefault(track.RecordingId) != recordingMbid)
+                track.RecordingId = ResolveRecording(recordingMbid);
+
+            links[track.Id] = (BuildArtists(track.Id, meta), BuildGenres(track.Id, meta));
+
+            if (mediaFile is null)
+            {
+                mediaFile = new MediaFile
+                {
+                    TrackId = track.Id,
+                    LibrarySourceId = file.SourceId,
+                    RelativePath = file.RelativePath,
+                    ContentHash = file.ContentHash,
+                    AddedAt = now,
+                };
+                db.MediaFiles.Add(mediaFile);
+                fileCounts[track.Id] = fileCounts.GetValueOrDefault(track.Id) + 1;
+                added++;
+            }
+            else
+            {
+                if (mediaFile.TrackId != track.Id)
+                {
+                    fileCounts[mediaFile.TrackId] = fileCounts.GetValueOrDefault(mediaFile.TrackId) - 1;
+                    fileCounts[track.Id] = fileCounts.GetValueOrDefault(track.Id) + 1;
+                    mediaFile.TrackId = track.Id;
+                }
+
+                updated++;
+            }
+
+            mediaFile.Size = file.Size;
+            mediaFile.ModifiedAt = file.ModifiedAt;
+            mediaFile.ContentHash = file.ContentHash;
+            mediaFile.Format = meta.Format;
+            mediaFile.BitRate = meta.BitRate;
+            mediaFile.SampleRate = meta.SampleRate;
+            mediaFile.BitDepth = meta.BitDepth;
+            mediaFile.Channels = meta.Channels;
+            mediaFile.DurationMs = meta.DurationMs;
+            mediaFile.ReplayGainTrackGain = meta.ReplayGainTrackGain;
+            mediaFile.ReplayGainTrackPeak = meta.ReplayGainTrackPeak;
+            mediaFile.ReplayGainAlbumGain = meta.ReplayGainAlbumGain;
+            mediaFile.ReplayGainAlbumPeak = meta.ReplayGainAlbumPeak;
+            mediaFile.ScannedAt = now;
+            mediaFile.MissingSince = null;
+
+            if (file.Artwork is { } artwork && album.ArtworkId is null)
+                SetAlbum(album, a => a.ArtworkId = ResolveArtwork(artwork));
+            if (meta.Year is { } year && album.Year is null)
+                SetAlbum(album, a => a.Year = year);
+        }
+
+        if (existingTracksToRelink.Count > 0)
+        {
+            var ids = existingTracksToRelink.ToList();
+            await db.TrackArtists.Where(x => ids.Contains(x.TrackId)).ExecuteDeleteAsync(cancellationToken);
+            await db.TrackGenres.Where(x => ids.Contains(x.TrackId)).ExecuteDeleteAsync(cancellationToken);
+        }
+
+        foreach (var (artists, genres) in links.Values)
+        {
+            db.TrackArtists.AddRange(artists);
+            db.TrackGenres.AddRange(genres);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await FlushPendingUpdatesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        db.ChangeTracker.Clear();
+
+        return new BatchResult(added, updated);
+    }
+
+    private Track? Match(List<Track> albumTracks, AudioMetadata meta, string normalizedTitle)
+    {
+        if (meta.RecordingMbid is { } mbid
+            && albumTracks.FirstOrDefault(t => _mbidByRecording.TryGetValue(t.RecordingId, out var m) && m == mbid) is { } byRecording)
+        {
+            return byRecording;
+        }
+
+        return albumTracks.FirstOrDefault(t =>
+            (t.DiscNumber ?? 1) == (meta.DiscNumber ?? 1)
+            && t.TrackNumber == meta.TrackNumber
+            && t.NormalizedTitle == normalizedTitle);
+    }
+
+    private AlbumState ResolveAlbum(ScannedFile file)
+    {
+        var meta = file.Metadata;
+        var title = meta.Album ?? FolderName(file.RelativePath) ?? UnknownAlbum;
+
+        var (artistName, artistMbid) = meta.AlbumArtist is not null
+            ? (meta.AlbumArtist, meta.AlbumArtistMbid)
+            : meta.IsCompilation
+                ? (VariousArtists, (Guid?)null)
+                : (meta.Artists.FirstOrDefault() ?? UnknownArtist, meta.ArtistMbid);
+        var artistId = ResolveArtist(artistName, artistMbid, meta.SortAlbumArtist);
+
+        if (meta.ReleaseMbid is { } release && _albumByRelease.TryGetValue(release, out var byRelease))
+            return byRelease;
+
+        var key = (artistId, TextNormalizer.Normalize(title));
+        if (_albumByKey.TryGetValue(key, out var state))
+        {
+            if (meta.ReleaseMbid is { } adopted && state.ReleaseMbid is null)
+            {
+                SetAlbum(state, a => a.MusicBrainzReleaseId = adopted);
+                _albumByRelease.TryAdd(adopted, state);
+            }
+
+            return state;
+        }
+
+        var album = new Album
+        {
+            Title = title,
+            NormalizedTitle = key.Item2,
+            AlbumArtistId = artistId,
+            Year = meta.Year,
+            IsCompilation = meta.IsCompilation || artistName == VariousArtists,
+            MusicBrainzReleaseId = meta.ReleaseMbid,
+        };
+        db.Albums.Add(album);
+
+        state = new AlbumState(album.Id, album) { Year = album.Year, ReleaseMbid = album.MusicBrainzReleaseId };
+        _albumByKey[key] = state;
+        if (meta.ReleaseMbid is { } newRelease)
+            _albumByRelease.TryAdd(newRelease, state);
+
+        return state;
+    }
+
+    private Guid ResolveArtist(string name, Guid? mbid, string? sortName)
+    {
+        var normalized = TextNormalizer.Normalize(name);
+
+        if (mbid is { } id)
+        {
+            if (_artistByMbid.TryGetValue(id, out var byMbid))
+                return byMbid;
+
+            // Same name without an ID yet: adopt the ID rather than creating a twin.
+            if (_artistByName.TryGetValue(normalized, out var byName) && _artistsWithoutMbid.Remove(byName))
+            {
+                _artistByMbid[id] = byName;
+                _pendingArtistMbids[byName] = id;
+                return byName;
+            }
+        }
+        else if (_artistByName.TryGetValue(normalized, out var byName))
+        {
+            return byName;
+        }
+
+        var artist = new Artist { Name = name, NormalizedName = normalized, SortName = sortName, MusicBrainzId = mbid };
+        db.Artists.Add(artist);
+        _artistByName.TryAdd(normalized, artist.Id);
+        if (mbid is { } newId)
+            _artistByMbid[newId] = artist.Id;
+        else
+            _artistsWithoutMbid.Add(artist.Id);
+
+        return artist.Id;
+    }
+
+    private Guid ResolveRecording(Guid? mbid)
+    {
+        if (mbid is { } id && _recordingByMbid.TryGetValue(id, out var existing))
+            return existing;
+
+        var recording = new Recording { MusicBrainzId = mbid };
+        db.Recordings.Add(recording);
+        if (mbid is { } newId)
+        {
+            _recordingByMbid[newId] = recording.Id;
+            _mbidByRecording[recording.Id] = newId;
+        }
+
+        return recording.Id;
+    }
+
+    private Guid ResolveArtwork(StoredArtwork stored)
+    {
+        if (_artworkByHash.TryGetValue(stored.Hash, out var id))
+            return id;
+
+        var artwork = new Artwork
+        {
+            Hash = stored.Hash,
+            MimeType = stored.MimeType,
+            Width = stored.Width,
+            Height = stored.Height,
+            Source = ArtworkSource.Embedded,
+        };
+        db.Artworks.Add(artwork);
+        _artworkByHash[stored.Hash] = artwork.Id;
+        return artwork.Id;
+    }
+
+    private Guid ResolveGenre(string name)
+    {
+        var normalized = TextNormalizer.Normalize(name);
+        if (_genreByName.TryGetValue(normalized, out var id))
+            return id;
+
+        var genre = new Genre { Name = name, NormalizedName = normalized };
+        db.Genres.Add(genre);
+        _genreByName[normalized] = genre.Id;
+        return genre.Id;
+    }
+
+    private List<TrackArtist> BuildArtists(Guid trackId, AudioMetadata meta)
+    {
+        var credits = new List<(string Name, Guid? Mbid, ArtistRole Role)>();
+        var primary = meta.Artists.Count > 0 ? meta.Artists : [meta.AlbumArtist ?? UnknownArtist];
+        credits.AddRange(primary.Select((name, i) => (name, i == 0 ? meta.ArtistMbid : null, ArtistRole.Primary)));
+        credits.AddRange(meta.FeaturedArtists.Select(name => (name, (Guid?)null, ArtistRole.Featured)));
+        credits.AddRange(meta.Composers.Select(name => (name, (Guid?)null, ArtistRole.Composer)));
+        credits.AddRange(meta.Lyricists.Select(name => (name, (Guid?)null, ArtistRole.Lyricist)));
+        if (meta.Conductor is not null)
+            credits.Add((meta.Conductor, null, ArtistRole.Conductor));
+
+        var result = new List<TrackArtist>();
+        foreach (var (name, mbid, role) in credits)
+        {
+            var artistId = ResolveArtist(name, mbid, role == ArtistRole.Primary && result.Count == 0 ? meta.SortArtist : null);
+            if (result.All(r => r.ArtistId != artistId || r.Role != role))
+                result.Add(new TrackArtist { TrackId = trackId, ArtistId = artistId, Role = role, Position = result.Count });
+        }
+
+        return result;
+    }
+
+    private List<TrackGenre> BuildGenres(Guid trackId, AudioMetadata meta) =>
+        meta.Genres.Select(ResolveGenre).Distinct().Select(genreId => new TrackGenre { TrackId = trackId, GenreId = genreId }).ToList();
+
+    private void SetAlbum(AlbumState state, Action<Album> change)
+    {
+        if (state.Entity is not null)
+        {
+            change(state.Entity);
+            state.Sync(state.Entity);
+            return;
+        }
+
+        var snapshot = new Album
+        {
+            Title = "",
+            NormalizedTitle = "",
+            ArtworkId = state.ArtworkId,
+            Year = state.Year,
+            MusicBrainzReleaseId = state.ReleaseMbid,
+        };
+        change(snapshot);
+        state.Sync(snapshot);
+        _dirtyAlbums.Add(state);
+    }
+
+    private async Task FlushPendingUpdatesAsync(CancellationToken cancellationToken)
+    {
+        foreach (var (artistId, mbid) in _pendingArtistMbids)
+            await db.Artists.Where(a => a.Id == artistId).ExecuteUpdateAsync(s => s.SetProperty(a => a.MusicBrainzId, mbid), cancellationToken);
+        _pendingArtistMbids.Clear();
+
+        foreach (var album in _dirtyAlbums)
+        {
+            await db.Albums.Where(a => a.Id == album.Id).ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.ArtworkId, album.ArtworkId)
+                .SetProperty(a => a.Year, album.Year)
+                .SetProperty(a => a.MusicBrainzReleaseId, album.ReleaseMbid), cancellationToken);
+        }
+        _dirtyAlbums.Clear();
+
+        // Albums created in this batch are now rows like any other.
+        foreach (var state in _albumByKey.Values)
+            state.Entity = null;
+    }
+
+    private static string? FolderName(string relativePath)
+    {
+        var folder = AudioFormats.Folder(relativePath);
+        var name = folder.Length == 0 ? "" : folder[(folder.LastIndexOf('/') + 1)..];
+        return name.Length == 0 ? null : name;
+    }
+
+    /// <summary>What the writer needs to know about an album between batches.</summary>
+    private sealed class AlbumState(Guid id, Album? entity)
+    {
+        public Guid Id { get; } = id;
+
+        /// <summary>Set while the album is new in the current batch and tracked by the context.</summary>
+        public Album? Entity { get; set; } = entity;
+
+        public Guid? ArtworkId { get; set; }
+
+        public int? Year { get; set; }
+
+        public Guid? ReleaseMbid { get; set; }
+
+        public void Sync(Album album)
+        {
+            ArtworkId = album.ArtworkId;
+            Year = album.Year;
+            ReleaseMbid = album.MusicBrainzReleaseId;
+        }
+    }
+}

@@ -16,6 +16,9 @@ Arcanist includes or depends on the following third-party components. Each is us
 | GraphQL.NET (`GraphQL`, `GraphQL.SystemTextJson`, `GraphQL.Server.Transports.AspNetCore`) | MIT |
 | Microsoft.AspNetCore.OpenApi | MIT |
 | Scalar API reference (`Scalar.AspNetCore`, served at `/rest/docs`) | MIT |
+| ATL.NET (`z440.atl.core`) | MIT |
+| SkiaSharp (including `SkiaSharp.NativeAssets.Linux.NoDependencies`) | MIT |
+| Skia | BSD-3-Clause |
 
 GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr at `/graphql/ui`; they are not bundled.
 

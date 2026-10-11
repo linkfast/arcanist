@@ -108,7 +108,9 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             job.HasOne(j => j.Library).WithMany().OnDelete(DeleteBehavior.Cascade);
             job.Property(j => j.Kind).HasConversion<string>().HasMaxLength(EnumLength);
             job.Property(j => j.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            job.Property(j => j.ErrorCode).HasMaxLength(64);
             job.HasIndex(j => new { j.LibraryId, j.RequestedAt });
+            job.HasIndex(j => j.Status);
         });
     }
 

@@ -5,6 +5,10 @@ type Query {
   library(id: ID!): Library!
   "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only."
   serverDirectories(path: String): ServerDirectoryListing!
+  "Most recent scans first, of one library or of all libraries the user can see. Requires RUN_SCANS or MANAGE_LIBRARIES."
+  scanJobs(libraryId: ID, limit: Int): [ScanJob!]!
+  "A scan by id, including live progress while it runs. Requires RUN_SCANS or MANAGE_LIBRARIES."
+  scanJob(id: ID!): ScanJob!
   "Public description of the server. Does not require authentication."
   serverInfo: ServerInfo!
   "The signed-in user."
@@ -50,6 +54,49 @@ type ServerDirectory {
   name: String!
   path: String!
   isHidden: Boolean!
+}
+
+type ScanJob {
+  id: ID!
+  libraryId: ID!
+  kind: ScanKind!
+  status: ScanStatus!
+  requestedAt: DateTime!
+  startedAt: DateTime
+  finishedAt: DateTime
+  filesSeen: Int!
+  filesAdded: Int!
+  filesUpdated: Int!
+  filesMissing: Int!
+  errors: Int!
+  errorCode: String
+  progress: ScanProgress
+}
+
+enum ScanKind {
+  INCREMENTAL
+  FULL
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+type ScanProgress {
+  phase: ScanPhase!
+  filesFound: Int!
+  filesToRead: Int!
+  filesRead: Int!
+}
+
+enum ScanPhase {
+  DISCOVERING
+  READING
+  CLEANING_UP
 }
 
 type ServerInfo {
@@ -123,6 +170,10 @@ type Mutation {
   addLibrarySource(libraryId: ID!, input: LibrarySourceInput!): Library!
   "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES."
   removeLibrarySource(id: ID!): Library!
+  "Queues a scan, or returns the one already queued or running for the library. A full scan re-reads every file. Requires RUN_SCANS."
+  startScan(libraryId: ID!, full: Boolean!): ScanJob!
+  "Requires RUN_SCANS."
+  cancelScan(id: ID!): Boolean!
   "Requires MANAGE_USERS and a recent authentication."
   createUser(input: CreateUserInput!): UserAccount!
   "Requires MANAGE_USERS and a recent authentication."

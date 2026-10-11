@@ -96,7 +96,9 @@ public sealed class ScanJob : Entity
 
     public int FilesMissing { get; set; }
 
+    /// <summary>Files that could not be read.</summary>
     public int Errors { get; set; }
 
-    public string? ErrorMessage { get; set; }
+    /// <summary>Why the scan failed or was incomplete, as an <c>ErrorCodes</c> value.</summary>
+    public string? ErrorCode { get; set; }
 }

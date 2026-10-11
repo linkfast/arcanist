@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Arcanist.Core.Api.Rest;
+using Arcanist.Core.Auth;
 using Arcanist.Core.Capabilities;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
@@ -41,20 +42,28 @@ builder.Services.AddCapabilities();
 builder.Services.AddArcanistDatabase(builder.Configuration);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSetup(builder.Configuration);
+builder.Services.AddArcanistAuth(builder.Configuration);
 
 var app = builder.Build();
 
+// First, so everything after sees the real client address behind trusted reverse proxies.
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // Logs the path without the query string, which will carry stream tokens.
 app.UseSerilogRequestLogging();
 
 app.UseSetupGate();
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 
 var rest = app.MapGroup("/rest/v1");
 rest.MapSetupEndpoints();
+rest.MapAuthEndpoints();
 
 app.MapGet("/", () => "Hello World!");
 

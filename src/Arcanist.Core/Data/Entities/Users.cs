@@ -66,6 +66,9 @@ public sealed class UserSession : Entity
 
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
+    /// <summary>Last time the user entered their password on this session (login or step-up).</summary>
+    public DateTime AuthenticatedAt { get; set; } = DateTime.UtcNow;
+
     public DateTime LastSeenAt { get; set; } = DateTime.UtcNow;
 
     public DateTime ExpiresAt { get; set; }

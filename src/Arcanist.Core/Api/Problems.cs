@@ -18,6 +18,13 @@ public static class ErrorCodes
     public const string AccessDenied = "access_denied";
     public const string ConnectionFailed = "connection_failed";
     public const string DatabaseNotEmpty = "database_not_empty";
+    public const string Unauthorized = "unauthorized";
+    public const string Forbidden = "forbidden";
+    public const string ReauthenticationRequired = "reauthentication_required";
+    public const string InvalidCredentials = "invalid_credentials";
+    public const string AccountDisabled = "account_disabled";
+    public const string InvalidRefreshToken = "invalid_refresh_token";
+    public const string TooManyRequests = "too_many_requests";
 }
 
 public static class Problems

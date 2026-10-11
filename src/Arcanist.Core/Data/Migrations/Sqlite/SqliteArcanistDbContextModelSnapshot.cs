@@ -537,6 +537,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("AuthenticatedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 

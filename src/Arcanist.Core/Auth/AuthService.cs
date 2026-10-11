@@ -1,0 +1,183 @@
+using Arcanist.Core.Api;
+using Arcanist.Core.Data;
+using Arcanist.Core.Data.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace Arcanist.Core.Auth;
+
+public sealed record AuthenticatedUser(Guid Id, string UserName, string? DisplayName, UserRole Role, Permissions Permissions)
+{
+    public static AuthenticatedUser From(User user) => new(user.Id, user.UserName, user.DisplayName, user.Role, user.Permissions);
+
+    public static AuthenticatedUser From(UserAccess access) =>
+        new(access.UserId, access.UserName, access.DisplayName, access.Role, access.Permissions);
+}
+
+/// <summary>Tokens issued to a client. <see cref="RefreshToken"/> is only set when it was created or rotated.</summary>
+public sealed record IssuedTokens(
+    AccessToken AccessToken,
+    string? RefreshToken,
+    DateTime SessionExpiresAt,
+    AuthenticatedUser User);
+
+public sealed record ClientInfo(string? IpAddress, string? UserAgent, string? DeviceName);
+
+public abstract record AuthResult
+{
+    public sealed record Success(IssuedTokens Tokens) : AuthResult;
+
+    /// <param name="Code">One of <see cref="ErrorCodes"/>.</param>
+    public sealed record Failure(string Code, TimeSpan? RetryAfter = null) : AuthResult;
+}
+
+public sealed class AuthService(
+    ArcanistDbContext db,
+    IPasswordHasher<User> passwordHasher,
+    TokenService tokens,
+    LoginThrottle throttle,
+    UserAccessCache accessCache,
+    IOptions<AuthOptions> options,
+    TimeProvider time)
+{
+    // Verified against when the user does not exist, so both cases take the same time.
+    private static readonly User TimingUser = new() { UserName = "", NormalizedUserName = "", PasswordHash = "" };
+    private static readonly string TimingHash = new PasswordHasher<User>().HashPassword(TimingUser, Guid.NewGuid().ToString());
+
+    public async Task<AuthResult> LoginAsync(string? userName, string? password, ClientInfo client, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrEmpty(password))
+            return new AuthResult.Failure(ErrorCodes.InvalidCredentials);
+
+        var normalized = TextNormalizer.Normalize(userName);
+        if (throttle.GetLockout(normalized) is { } lockout)
+            return new AuthResult.Failure(ErrorCodes.TooManyRequests, lockout);
+
+        var user = await db.Users.SingleOrDefaultAsync(u => u.NormalizedUserName == normalized, cancellationToken);
+        if (user is null)
+        {
+            passwordHasher.VerifyHashedPassword(TimingUser, TimingHash, password);
+            throttle.RecordFailure(normalized);
+            return new AuthResult.Failure(ErrorCodes.InvalidCredentials);
+        }
+
+        var verification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        if (verification == PasswordVerificationResult.Failed)
+        {
+            throttle.RecordFailure(normalized);
+            return new AuthResult.Failure(ErrorCodes.InvalidCredentials);
+        }
+
+        throttle.RecordSuccess(normalized);
+
+        // Only revealed once the password is right, so it does not help guessing accounts.
+        if (user.IsDisabled)
+            return new AuthResult.Failure(ErrorCodes.AccountDisabled);
+
+        if (verification == PasswordVerificationResult.SuccessRehashNeeded)
+            user.PasswordHash = passwordHasher.HashPassword(user, password);
+
+        var now = Now();
+        var refreshToken = TokenService.CreateRefreshToken();
+        var session = new UserSession
+        {
+            UserId = user.Id,
+            RefreshTokenHash = TokenService.Hash(refreshToken),
+            DeviceName = Truncate(client.DeviceName, 512),
+            UserAgent = Truncate(client.UserAgent, 1024),
+            IpAddress = client.IpAddress,
+            CreatedAt = now,
+            AuthenticatedAt = now,
+            LastSeenAt = now,
+            ExpiresAt = now + options.Value.SessionLifetime,
+        };
+
+        user.LastLoginAt = now;
+        db.UserSessions.Add(session);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Issue(user, session, refreshToken);
+    }
+
+    public async Task<AuthResult> RefreshAsync(string? refreshToken, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(refreshToken))
+            return new AuthResult.Failure(ErrorCodes.InvalidRefreshToken);
+
+        var now = Now();
+        var hash = TokenService.Hash(refreshToken);
+        var session = await db.UserSessions
+            .Include(s => s.User)
+            .SingleOrDefaultAsync(s => s.RefreshTokenHash == hash && s.RevokedAt == null && s.ExpiresAt > now, cancellationToken);
+
+        if (session is null)
+            return new AuthResult.Failure(ErrorCodes.InvalidRefreshToken);
+
+        if (session.User.IsDisabled)
+            return new AuthResult.Failure(ErrorCodes.AccountDisabled);
+
+        // Rotate atomically: if two requests race with the same token, only one wins.
+        var next = TokenService.CreateRefreshToken();
+        var expiresAt = now + options.Value.SessionLifetime;
+        var rotated = await db.UserSessions
+            .Where(s => s.Id == session.Id && s.RefreshTokenHash == hash)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.RefreshTokenHash, TokenService.Hash(next))
+                .SetProperty(x => x.LastSeenAt, now)
+                .SetProperty(x => x.ExpiresAt, expiresAt), cancellationToken);
+
+        if (rotated == 0)
+            return new AuthResult.Failure(ErrorCodes.InvalidRefreshToken);
+
+        session.ExpiresAt = expiresAt;
+        return Issue(session.User, session, next);
+    }
+
+    /// <summary>Revokes the session identified by a refresh token or, failing that, by its id.</summary>
+    public async Task LogoutAsync(string? refreshToken, Guid? sessionId, CancellationToken cancellationToken)
+    {
+        var hash = string.IsNullOrEmpty(refreshToken) ? null : TokenService.Hash(refreshToken);
+        if (hash is null && sessionId is null)
+            return;
+
+        var now = Now();
+        var sessions = db.UserSessions.Where(s => s.RevokedAt == null && (s.RefreshTokenHash == hash || s.Id == sessionId));
+        var ids = await sessions.Select(s => s.Id).ToListAsync(cancellationToken);
+        await sessions.ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
+
+        foreach (var id in ids)
+            accessCache.InvalidateSession(id);
+    }
+
+    /// <summary>Confirms the password of an already signed-in user, unlocking sensitive actions for a while.</summary>
+    public async Task<AuthResult> ReauthenticateAsync(Guid sessionId, string? password, CancellationToken cancellationToken)
+    {
+        var session = await db.UserSessions.Include(s => s.User).SingleAsync(s => s.Id == sessionId, cancellationToken);
+        var user = session.User;
+
+        if (throttle.GetLockout(user.NormalizedUserName) is { } lockout)
+            return new AuthResult.Failure(ErrorCodes.TooManyRequests, lockout);
+
+        if (string.IsNullOrEmpty(password)
+            || passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
+        {
+            throttle.RecordFailure(user.NormalizedUserName);
+            return new AuthResult.Failure(ErrorCodes.InvalidCredentials);
+        }
+
+        throttle.RecordSuccess(user.NormalizedUserName);
+        session.AuthenticatedAt = Now();
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Issue(user, session, refreshToken: null);
+    }
+
+    private AuthResult.Success Issue(User user, UserSession session, string? refreshToken) =>
+        new(new IssuedTokens(tokens.CreateAccessToken(user, session), refreshToken, session.ExpiresAt, AuthenticatedUser.From(user)));
+
+    private DateTime Now() => time.GetUtcNow().UtcDateTime;
+
+    private static string? Truncate(string? value, int length) =>
+        value is null || value.Length <= length ? value : value[..length];
+}

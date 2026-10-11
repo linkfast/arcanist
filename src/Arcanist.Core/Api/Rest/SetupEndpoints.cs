@@ -1,3 +1,4 @@
+using Arcanist.Core.Auth;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Libraries;
 using Arcanist.Core.Setup;
@@ -15,7 +16,9 @@ public static class SetupEndpoints
             .WithName("GetSetupStatus");
 
         // Everything else is only available while setup is pending, and from other devices only with the code.
-        var guarded = setup.MapGroup("").AddEndpointFilter(RequireSetupAccess);
+        var guarded = setup.MapGroup("")
+            .AddEndpointFilter(RequireSetupAccess)
+            .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit);
 
         guarded.MapPost("/database/test", (SetupDatabase request, SetupService service, CancellationToken cancellationToken) =>
                 service.TestDatabaseAsync(request, cancellationToken))

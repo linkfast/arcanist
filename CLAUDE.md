@@ -138,9 +138,18 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - El asistente envía todo de una vez a `POST /rest/v1/setup/complete`, que valida, guarda la BD en `arcanist.json` (salvo que venga fijada por el entorno), migra, crea el admin, las bibliotecas y los ajustes, y marca el setup como completado.
   - Desde fuera de loopback (o a través de un proxy) se exige la cabecera `X-Setup-Code`.
   - `ISettingsFileWriter` escribe `arcanist.json` y recarga la configuración en el acto.
+- **Autenticación (implementada):** `Auth/` y `Api/Rest/AuthEndpoints.cs`.
+  - `POST /rest/v1/auth/{login,refresh,logout,reauthenticate}`.
+  - JWT HS256 de 15 min, firmado con la clave de `<datos>/keys/`. Claims: `sub`, `sid` (sesión), `sstamp`, `auth_time`.
+  - Token de refresco opaco y rotatorio, guardado como hash en `UserSession`; la rotación es atómica (`ExecuteUpdate` condicionado al hash anterior). Con `useCookie` va en la cookie HttpOnly `arcanist_refresh`, limitada a `/rest/v1/auth`.
+  - Cada petición valida usuario, `SecurityStamp` y sesión contra `UserAccessCache` (30 s). **Al cambiar permisos, acceso a bibliotecas, contraseña o estado de un usuario, llamar a `UserAccessCache.InvalidateUser/InvalidateSession/InvalidateAll`.**
+  - El usuario actual se obtiene con `ICurrentUser.Access` (`UserAccess`: `Has(permiso)`, `CanAccessLibrary(id)`).
+  - Políticas en `Auth/Policies`: `Policies.Permission(Permissions.X)`, `Policies.Admin` y `Policies.RecentAuthentication`. Esta última es el step-up y falla con 403 `reauthentication_required`.
+  - Protección del login: rate limit `auth` por IP (también en el setup) y bloqueo exponencial por cuenta en `LoginThrottle`.
+  - `TimeProvider` inyectado en todo lo que depende de la hora; los tests usan `FakeTimeProvider` a través de `new ArcanistFactory(time: …)`.
 - **Errores de API como códigos:** `Api/Problems.cs`. REST devuelve problem details con `code`, y los errores de validación son `{ campo: [código] }`. La UI traduce los códigos; no mostrar textos del servidor.
 - **Seguridad:**
-  - Se asume que el puerto puede estar abierto a internet: rate limiting en auth y setup, y `ForwardedHeaders` para proxies inversos.
+  - Se asume que el puerto puede estar abierto a internet: rate limiting en auth y setup, y `ForwardedHeaders` para proxies inversos. Se confía en loopback más lo que se liste en `Arcanist:Network:TrustedProxies`.
   - El código de setup se exige fuera de loopback.
   - Los frontends y extensiones de terceros tienen confianza total: se avisa al instalarlos y se pide reautenticación para las acciones sensibles.
 

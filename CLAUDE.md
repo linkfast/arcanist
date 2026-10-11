@@ -48,7 +48,7 @@ dotnet ef migrations add <Nombre> --project src/Arcanist.Core --context Postgres
 El proveedor se configura en `Arcanist:Database` (`Provider`: `Sqlite`/`Postgres`, `ConnectionString`). Nada se resuelve contra la BD hasta que esa sección existe. Los servicios obtienen el contexto por DI (`ArcanistDbContext`, scoped) o con `IArcanistDbContextFactory`, que es lo que usan los trabajos en segundo plano.
 
 **Publicación y Docker:**
-- `docker build -t arcanist .`: imagen multi-etapa (panel con Node 24, servidor con el SDK 10, runtime `aspnet:10.0`), usuario `app`, volumen `/data` y puerto 8080. Desde el host las peticiones no son loopback, así que el asistente pide el código de setup que aparece en `docker logs`.
+- `docker build -t arcanist .`: imagen multi-etapa (panel con Node 24, servidor con el SDK 10, runtime `aspnet:10.0`), usuario `app`, volumen `/data` y puerto 8484 (también el puerto por defecto fuera de Docker, en `appsettings.json`). Desde el host las peticiones no son loopback, así que el asistente pide el código de setup que aparece en `docker logs`.
 - `dotnet publish src/Arcanist.Core -c Release -p:IncludeAdminPanel=true` incluye el panel en `wwwroot/admin`. Requiere npm con Node 24 en el PATH, por eso está desactivado por defecto.
 - `docs/developers/README.md` es la guía pública para quien haga reproductores. **Actualizarla cuando cambie el contrato** (autenticación, paginación, streaming, errores…).
 

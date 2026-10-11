@@ -32,14 +32,14 @@ public abstract class DatabaseProviderTests
 
         await using var db = await OpenAsync();
 
-        var user = await db.Users.Include(u => u.LibraryAccess).SingleAsync(u => u.Id == ids.UserId);
+        var user = await db.Users.Include(u => u.LibraryAccess).SingleAsync(u => u.Id == ids.UserId, TestContext.Current.CancellationToken);
         Assert.Equal(UserRole.Admin, user.Role);
         Assert.Equal(Permissions.ManageLibraries | Permissions.Download, user.Permissions);
         Assert.Equal(Moment, user.LastLoginAt);
         Assert.Equal(DateTimeKind.Utc, user.LastLoginAt!.Value.Kind);
         Assert.Single(user.LibraryAccess);
 
-        var job = await db.ScanJobs.SingleAsync();
+        var job = await db.ScanJobs.SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal(ScanStatus.Completed, job.Status);
         Assert.Equal(DateTimeKind.Utc, job.RequestedAt.Kind);
 
@@ -49,7 +49,7 @@ public abstract class DatabaseProviderTests
             .Include(t => t.Genres).ThenInclude(g => g.Genre)
             .Include(t => t.Album).ThenInclude(a => a.Artwork)
             .Include(t => t.Recording)
-            .SingleAsync();
+            .SingleAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(ids.TrackId, track.Id);
         Assert.Equal(2, track.Files.Count);

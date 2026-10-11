@@ -4,6 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The executable users and service managers see: arcanist(.exe). -->
+    <AssemblyName>arcanist</AssemblyName>
+    <RootNamespace>Arcanist.Core</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -17,10 +17,15 @@ using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Scanning;
 using Arcanist.Core.Storage;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = ContentRoot.Resolve(),
+});
 
 builder.Configuration.AddCommandLine(args, new Dictionary<string, string>
 {
@@ -31,10 +36,13 @@ var paths = new ArcanistPaths(DataDirectory.Resolve(builder.Configuration, build
 paths.EnsureCreated();
 builder.Configuration.AddArcanistSettingsFile(paths);
 builder.Services.AddSingleton(paths);
+// ASP.NET Core creates these keys anyway; keep them with the rest of the state instead of the user profile.
+builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(paths.Keys, "data-protection")));
 
 // No-ops unless the process is actually started by the Windows SCM or systemd.
 builder.Services.AddWindowsService(options => options.ServiceName = "Arcanist");
 builder.Services.AddSystemd();
+builder.Services.AddSupervision(builder.Configuration);
 
 builder.Services.AddSerilog((_, logger) => logger
     .ReadFrom.Configuration(builder.Configuration)

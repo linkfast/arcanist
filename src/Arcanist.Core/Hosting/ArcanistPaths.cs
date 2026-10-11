@@ -29,6 +29,9 @@ public sealed class ArcanistPaths
 
     public string Logs => Path.Combine(Root, "logs");
 
+    /// <summary>Present while the server runs; see <see cref="RuntimeInfo"/>.</summary>
+    public string RuntimeFile => Path.Combine(Root, "runtime.json");
+
     public void EnsureCreated()
     {
         foreach (var directory in new[] { Root, Keys, Cache, Frontends, Extensions, Logs })

@@ -26,10 +26,10 @@ Arcanist is a self-hosted music server: your own personal and family "Spotify". 
 
 ```bash
 docker build -t arcanist .
-docker run -d -p 8080:8080 -v arcanist-data:/data -v /path/to/music:/music:ro arcanist
+docker run -d -p 8484:8484 -v arcanist-data:/data -v /path/to/music:/music:ro arcanist
 ```
 
-Open `http://<host>:8080/` and follow the setup wizard. From another device it asks for a one-time setup code,
+Open `http://<host>:8484/` and follow the setup wizard. From another device it asks for a one-time setup code,
 printed in `docker logs <container>`. Add `/music` as a library. Keep `/data` on a local disk: with SQLite, the
 database must not live on a network share (the music can).
 

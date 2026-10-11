@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Arcanist.Core.Api.GraphQL;
 using Arcanist.Core.Api.Rest;
 using Arcanist.Core.Application;
+using Arcanist.Core.Application.Libraries;
 using Arcanist.Core.Application.Server;
 using Arcanist.Core.Application.Users;
 using Arcanist.Core.Auth;
@@ -10,6 +11,7 @@ using Arcanist.Core.Capabilities;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
+using Arcanist.Core.Storage;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -45,6 +47,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddHealthChecks();
 
 builder.Services.AddCapabilities();
+builder.Services.AddLibraryStorage();
 builder.Services.AddArcanistDatabase(builder.Configuration);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSetup(builder.Configuration);
@@ -52,6 +55,8 @@ builder.Services.AddArcanistAuth(builder.Configuration);
 builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection("Arcanist"));
 builder.Services.AddScoped<AccessGuard>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddSingleton<LibraryRules>();
+builder.Services.AddScoped<LibraryService>();
 builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddArcanistRest();
 builder.Services.AddArcanistGraphQL(builder.Environment);

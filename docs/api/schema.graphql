@@ -1,4 +1,10 @@
 type Query {
+  "Libraries the signed-in user can access."
+  libraries: [Library!]!
+  "A library by id. Libraries the user cannot access are reported as not found."
+  library(id: ID!): Library!
+  "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only."
+  serverDirectories(path: String): ServerDirectoryListing!
   "Public description of the server. Does not require authentication."
   serverInfo: ServerInfo!
   "The signed-in user."
@@ -9,6 +15,41 @@ type Query {
   users: [UserAccount!]!
   "A user by id. Requires the MANAGE_USERS permission."
   user(id: ID!): UserAccount!
+}
+
+type Library {
+  id: ID!
+  name: String!
+  visibleToAll: Boolean!
+  scanIntervalHours: Int
+  createdAt: DateTime!
+  lastScanAt: DateTime
+  sources: [LibrarySource!]
+}
+
+"The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
+scalar DateTime
+
+type LibrarySource {
+  id: ID!
+  kind: LibrarySourceKind!
+  location: String!
+}
+
+enum LibrarySourceKind {
+  LOCAL
+}
+
+type ServerDirectoryListing {
+  path: String
+  parent: String
+  directories: [ServerDirectory!]!
+}
+
+type ServerDirectory {
+  name: String!
+  path: String!
+  isHidden: Boolean!
 }
 
 type ServerInfo {
@@ -60,9 +101,6 @@ enum Permission {
   VIEW_ALL_STATS
 }
 
-"The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
-scalar DateTime
-
 type Session {
   id: ID!
   deviceName: String
@@ -75,6 +113,16 @@ type Session {
 }
 
 type Mutation {
+  "Requires MANAGE_LIBRARIES."
+  createLibrary(input: CreateLibraryInput!): Library!
+  "Requires MANAGE_LIBRARIES."
+  updateLibrary(id: ID!, input: UpdateLibraryInput!): Library!
+  "Removes the library and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES and a recent authentication."
+  deleteLibrary(id: ID!): Boolean!
+  "Adds a location to a library. Requires MANAGE_LIBRARIES."
+  addLibrarySource(libraryId: ID!, input: LibrarySourceInput!): Library!
+  "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES."
+  removeLibrarySource(id: ID!): Library!
   "Requires MANAGE_USERS and a recent authentication."
   createUser(input: CreateUserInput!): UserAccount!
   "Requires MANAGE_USERS and a recent authentication."
@@ -89,6 +137,23 @@ type Mutation {
   changeMyPassword(input: ChangeMyPasswordInput!): Boolean!
   "Signs out one of the signed-in user's devices."
   revokeMySession(id: ID!): Boolean!
+}
+
+input CreateLibraryInput {
+  name: String!
+  visibleToAll: Boolean!
+  scanIntervalHours: Int
+  sources: [LibrarySourceInput!]!
+}
+
+input LibrarySourceInput {
+  location: String!
+}
+
+input UpdateLibraryInput {
+  name: String!
+  visibleToAll: Boolean!
+  scanIntervalHours: Int
 }
 
 input CreateUserInput {

@@ -1,4 +1,5 @@
 using Arcanist.Core.Application;
+using Arcanist.Core.Application.Libraries;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Libraries;
@@ -25,18 +26,8 @@ public static class SetupEndpoints
                 service.TestDatabaseAsync(request, cancellationToken))
             .WithName("TestSetupDatabase");
 
-        guarded.MapGet("/directories", (string? path, DirectoryBrowser browser) =>
-            {
-                var (listing, error) = browser.List(path);
-                return error switch
-                {
-                    null => Results.Ok(listing),
-                    DirectoryBrowseError.NotFound => Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound),
-                    _ => Problems.Create(StatusCodes.Status403Forbidden, ErrorCodes.AccessDenied),
-                };
-            })
-            .WithName("BrowseSetupDirectories")
-            .Produces<DirectoryListing>();
+        guarded.MapGet("/directories", (string? path, DirectoryBrowser browser) => LibraryService.Browse(browser, path))
+            .WithName("BrowseSetupDirectories");
 
         guarded.MapPost("/complete", async (SetupRequest request, SetupService service, CancellationToken cancellationToken) =>
                 await service.CompleteAsync(request, cancellationToken) switch

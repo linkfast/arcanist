@@ -28,6 +28,7 @@ public static class ErrorCodes
     public const string TooManyRequests = "too_many_requests";
     public const string LastAdministrator = "last_administrator";
     public const string CannotModifySelf = "cannot_modify_self";
+    public const string Overlapping = "overlapping";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

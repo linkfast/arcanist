@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Arcanist.Core.Api;
 using Arcanist.Core.Application;
+using LibraryRules = Arcanist.Core.Application.Libraries.LibraryRules;
 using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
@@ -58,6 +59,7 @@ public sealed class SetupService(
     ArcanistPaths paths,
     SetupCode setupCode,
     IPasswordHasher<User> passwordHasher,
+    LibraryRules libraryRules,
     ILogger<SetupService> logger)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -118,7 +120,7 @@ public sealed class SetupService(
             }
 
             var libraries = request.Libraries ?? [];
-            ValidateLibraries(libraries, errors);
+            var folders = await ValidateLibrariesAsync(libraries, errors, cancellationToken);
 
             if (request.ShareAnonymousStatistics is null)
                 errors.Add("shareAnonymousStatistics", ErrorCodes.Required);
@@ -152,7 +154,7 @@ public sealed class SetupService(
                     return new SetupResult.Invalid(errors);
                 }
 
-                Seed(db, request, libraries);
+                Seed(db, request, libraries, folders);
                 await db.SaveChangesAsync(cancellationToken);
             }
 
@@ -170,7 +172,7 @@ public sealed class SetupService(
         }
     }
 
-    private void Seed(ArcanistDbContext db, SetupRequest request, IReadOnlyList<SetupLibrary> libraries)
+    private void Seed(ArcanistDbContext db, SetupRequest request, IReadOnlyList<SetupLibrary> libraries, IReadOnlyList<IReadOnlyList<string?>> folders)
     {
         var admin = new User
         {
@@ -183,16 +185,16 @@ public sealed class SetupService(
         admin.PasswordHash = passwordHasher.HashPassword(admin, request.Admin.Password!);
         db.Users.Add(admin);
 
-        foreach (var item in libraries)
+        for (var i = 0; i < libraries.Count; i++)
         {
-            var library = new Library { Name = item.Name!.Trim(), VisibleToAll = item.VisibleToAll };
-            foreach (var folder in item.Folders!.Distinct(StringComparer.OrdinalIgnoreCase))
+            var library = new Library { Name = libraries[i].Name!.Trim(), VisibleToAll = libraries[i].VisibleToAll };
+            foreach (var folder in folders[i])
             {
                 library.Sources.Add(new LibrarySource
                 {
                     Library = library,
                     Kind = LibrarySourceKind.Local,
-                    Location = Path.GetFullPath(folder),
+                    Location = folder!,
                 });
             }
 
@@ -230,35 +232,33 @@ public sealed class SetupService(
         }
     }
 
-    private static void ValidateLibraries(IReadOnlyList<SetupLibrary> libraries, ValidationErrors errors)
+    private async Task<IReadOnlyList<IReadOnlyList<string?>>> ValidateLibrariesAsync(
+        IReadOnlyList<SetupLibrary> libraries, ValidationErrors errors, CancellationToken cancellationToken)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
+        var result = new List<IReadOnlyList<string?>>();
 
         for (var i = 0; i < libraries.Count; i++)
         {
             var library = libraries[i];
             var field = $"libraries[{i}]";
 
-            if (string.IsNullOrWhiteSpace(library.Name))
-                errors.Add(field + ".name", ErrorCodes.Required);
-            else if (!names.Add(TextNormalizer.Normalize(library.Name)))
+            LibraryRules.ValidateName(library.Name, field + ".name", errors);
+            if (!string.IsNullOrWhiteSpace(library.Name) && !names.Add(TextNormalizer.Normalize(library.Name)))
                 errors.Add(field + ".name", ErrorCodes.Duplicate);
 
             if (library.Folders is not { Count: > 0 })
             {
                 errors.Add(field + ".folders", ErrorCodes.Required);
+                result.Add([]);
                 continue;
             }
 
-            for (var j = 0; j < library.Folders.Count; j++)
-            {
-                var folder = library.Folders[j];
-                if (string.IsNullOrWhiteSpace(folder) || !Path.IsPathFullyQualified(folder))
-                    errors.Add($"{field}.folders[{j}]", ErrorCodes.InvalidFormat);
-                else if (!Directory.Exists(folder))
-                    errors.Add($"{field}.folders[{j}]", ErrorCodes.NotFound);
-            }
+            result.Add(await libraryRules.ValidateLocationsAsync(
+                library.Folders.Select(f => (string?)f).ToList(), [], j => $"{field}.folders[{j}]", errors, cancellationToken));
         }
+
+        return result;
     }
 
     private static DatabaseOptions? Required(ValidationErrors errors, string field)

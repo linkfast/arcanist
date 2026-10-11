@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 en curso: implementados setup, autenticación, usuarios y las dos APIs (GraphQL y REST). Faltan bibliotecas, escáner, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas y las dos APIs (GraphQL y REST). Faltan escáner, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -144,7 +144,17 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - `Recording` es la grabación lógica, identificada por MBID o AcoustID.
   - Los datos de usuario cuelgan de `Track`/`Recording`, nunca de rutas.
   - La deduplicación va por `ContentHash`/MBID y, más adelante, por Chromaprint/AcoustID.
-- **Almacenamiento:** `Library` → varias `LibrarySource`, siempre leídas a través de `ILibraryStorage`. Nunca usar `System.IO` directamente fuera de `LocalStorage`.
+- **Almacenamiento (implementado):** `Library` → varias `LibrarySource`, siempre leídas a través de `ILibraryStorage` (`Storage/`), que se obtiene por tipo con `ILibraryStorageResolver`.
+  - Nunca usar `System.IO` sobre archivos de bibliotecas fuera de `LocalStorage`. La única excepción es `DirectoryBrowser`, que lista carpetas del servidor para elegir ubicaciones.
+  - `LocalStorage` ignora archivos y carpetas ocultos (`.`) y carpetas de sistema de NAS y SO (`@eaDir`, `#recycle`, `$RECYCLE.BIN`…). También rechaza rutas relativas que escapen de la raíz.
+  - **Las rutas relativas se guardan tal cual están en disco, sin normalizar Unicode:** en Linux, un nombre en NFD (copiado desde un Mac) solo se abre con esa grafía exacta.
+  - Las ubicaciones se validan con `LibraryRules` (compartido con el setup): deben existir y ser legibles, y no pueden repetirse ni anidarse dentro de la misma biblioteca (código `overlapping`). Entre bibliotecas distintas sí pueden coincidir.
+- **Bibliotecas (implementado):** `Application/Libraries/`.
+  - Cada usuario ve las bibliotecas concedidas más las `VisibleToAll`; las demás responden 404, para no revelar que existen.
+  - `sources` (las rutas) solo se devuelve a quien tiene `MANAGE_LIBRARIES`.
+  - Un gestor que no es admin solo gestiona las bibliotecas que ve, y recibe acceso automático a las que crea.
+  - Borrar una biblioteca exige step-up y **nunca toca los archivos**.
+  - `serverDirectories` es solo para admins.
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.

@@ -86,7 +86,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DirectoryListing"
+                  "$ref": "#/components/schemas/ServerDirectoryListing"
                 }
               }
             }
@@ -256,6 +256,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServerInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/library-sources/{id}": {
+      "delete": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES.",
+        "operationId": "RemoveLibrarySource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server/directories": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only.",
+        "operationId": "ServerDirectories",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDirectoryListing"
                 }
               }
             }
@@ -581,6 +643,196 @@
           }
         }
       }
+    },
+    "/rest/v1/libraries": {
+      "get": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Libraries the signed-in user can access.",
+        "operationId": "Libraries",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Library"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Requires MANAGE_LIBRARIES.",
+        "operationId": "CreateLibrary",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLibraryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{id}": {
+      "get": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "A library by id. Libraries the user cannot access are reported as not found.",
+        "operationId": "Library",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Requires MANAGE_LIBRARIES.",
+        "operationId": "UpdateLibrary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLibraryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Removes the library and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES and a recent authentication.",
+        "operationId": "DeleteLibrary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{libraryId}/sources": {
+      "post": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Adds a location to a library. Requires MANAGE_LIBRARIES.",
+        "operationId": "AddLibrarySource",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibrarySourceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -614,6 +866,38 @@
           "FREE",
           "PAID"
         ]
+      },
+      "CreateLibraryInput": {
+        "required": [
+          "name",
+          "visibleToAll",
+          "scanIntervalHours",
+          "sources"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "visibleToAll": {
+            "type": "boolean"
+          },
+          "scanIntervalHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibrarySourceInput"
+            }
+          }
+        }
       },
       "CreateUserInput": {
         "required": [
@@ -687,52 +971,94 @@
           }
         }
       },
-      "DirectoryEntry": {
+      "Library": {
         "required": [
+          "id",
           "name",
-          "path",
-          "isHidden"
+          "visibleToAll",
+          "scanIntervalHours",
+          "createdAt",
+          "lastScanAt",
+          "sources"
         ],
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "name": {
             "type": "string"
           },
-          "path": {
-            "type": "string"
-          },
-          "isHidden": {
+          "visibleToAll": {
             "type": "boolean"
-          }
-        }
-      },
-      "DirectoryListing": {
-        "required": [
-          "path",
-          "parent",
-          "directories"
-        ],
-        "type": "object",
-        "properties": {
-          "path": {
+          },
+          "scanIntervalHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastScanAt": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "format": "date-time"
           },
-          "parent": {
+          "sources": {
             "type": [
               "null",
-              "string"
-            ]
-          },
-          "directories": {
-            "type": "array",
+              "array"
+            ],
             "items": {
-              "$ref": "#/components/schemas/DirectoryEntry"
+              "$ref": "#/components/schemas/LibrarySource"
             }
           }
         }
+      },
+      "LibrarySource": {
+        "required": [
+          "id",
+          "kind",
+          "location"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LibrarySourceKind"
+          },
+          "location": {
+            "type": "string"
+          }
+        }
+      },
+      "LibrarySourceInput": {
+        "required": [
+          "location"
+        ],
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string"
+          }
+        }
+      },
+      "LibrarySourceKind": {
+        "enum": [
+          "LOCAL"
+        ]
       },
       "LoginRequest": {
         "required": [
@@ -812,6 +1138,53 @@
         "properties": {
           "newPassword": {
             "type": "string"
+          }
+        }
+      },
+      "ServerDirectory": {
+        "required": [
+          "name",
+          "path",
+          "isHidden"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "isHidden": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ServerDirectoryListing": {
+        "required": [
+          "path",
+          "parent",
+          "directories"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "directories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServerDirectory"
+            }
           }
         }
       },
@@ -1147,6 +1520,31 @@
           }
         }
       },
+      "UpdateLibraryInput": {
+        "required": [
+          "name",
+          "visibleToAll",
+          "scanIntervalHours"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "visibleToAll": {
+            "type": "boolean"
+          },
+          "scanIntervalHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "UpdateUserInput": {
         "required": [
           "displayName",
@@ -1267,6 +1665,9 @@
     },
     {
       "name": "Server"
+    },
+    {
+      "name": "Libraries"
     },
     {
       "name": "Me"

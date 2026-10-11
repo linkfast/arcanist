@@ -59,6 +59,7 @@ public static class RestSetup
         rest.MapSetupEndpoints();
         rest.MapAuthEndpoints();
         rest.MapUserEndpoints();
+        rest.MapLibraryEndpoints();
         return app;
     }
 }

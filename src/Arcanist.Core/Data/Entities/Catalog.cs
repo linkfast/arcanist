@@ -141,7 +141,7 @@ public sealed class MediaFile : Entity
 
     public LibrarySource LibrarySource { get; init; } = null!;
 
-    /// <summary>Path inside the source, '/'-separated and Unicode NFC-normalized.</summary>
+    /// <summary>Path inside the source, '/'-separated and exactly as stored on disk (not Unicode-normalized).</summary>
     public required string RelativePath { get; set; }
 
     public long Size { get; set; }

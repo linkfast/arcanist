@@ -31,4 +31,21 @@
     <PackageReference Include="z440.atl.core" Version="7.18.0" />
   </ItemGroup>
 
+  <!--
+    `dotnet publish -p:IncludeAdminPanel=true` also builds the Angular admin panel and ships it as wwwroot/admin.
+    Off by default because it needs Node.js (see mise.toml); the Dockerfile builds the panel in its own stage.
+  -->
+  <PropertyGroup>
+    <AdminPanelDirectory>$(MSBuildThisFileDirectory)../Arcanist.Web/</AdminPanelDirectory>
+  </PropertyGroup>
+
+  <Target Name="PublishAdminPanel" BeforeTargets="ComputeResolvedFilesToPublishList" Condition="'$(IncludeAdminPanel)' == 'true'">
+    <Exec Command="npm ci" WorkingDirectory="$(AdminPanelDirectory)" />
+    <Exec Command="npm run build" WorkingDirectory="$(AdminPanelDirectory)" />
+    <ItemGroup>
+      <AdminPanelFile Include="$(AdminPanelDirectory)dist/arcanist-web/browser/**/*" />
+      <ResolvedFileToPublish Include="@(AdminPanelFile)" RelativePath="wwwroot/admin/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
 </Project>

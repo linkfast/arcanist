@@ -22,20 +22,41 @@ Arcanist is a self-hosted music server: your own personal and family "Spotify". 
 | `src/Arcanist.Core` | Server (ASP.NET Core, .NET 10) |
 | `src/Arcanist.Web` | Admin panel (Angular + spartan-ng), served at `/admin` |
 
+## Running with Docker
+
+```bash
+docker build -t arcanist .
+docker run -d -p 8080:8080 -v arcanist-data:/data -v /path/to/music:/music:ro arcanist
+```
+
+Open `http://<host>:8080/` and follow the setup wizard. From another device it asks for a one-time setup code,
+printed in `docker logs <container>`. Add `/music` as a library. Keep `/data` on a local disk: with SQLite, the
+database must not live on a network share (the music can).
+
 ## Building
 
 Requirements: .NET SDK 10 and Node.js 24 (pinned in `mise.toml`).
 
 ```bash
 dotnet build Arcanist.slnx
-dotnet run --project src/Arcanist.Core
+dotnet test
+dotnet run --project src/Arcanist.Core          # http://localhost:5263
 ```
+
+The admin panel (Angular) is developed with its own dev server, which proxies API calls to the running server:
 
 ```bash
 cd src/Arcanist.Web
 npm ci
-npm run build
+npm start                                        # http://localhost:4200/admin/
 ```
+
+`dotnet publish src/Arcanist.Core -c Release -p:IncludeAdminPanel=true` produces a self-contained folder with the
+panel included.
+
+## Building clients
+
+The GraphQL and REST APIs are documented for player developers in [docs/developers](docs/developers/README.md).
 
 ## Contributing
 

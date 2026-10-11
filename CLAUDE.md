@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 casi completa: backend y panel de administración implementados. Faltan la documentación para desarrolladores (`docs/developers/`) y el Dockerfile. La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fase 1 completa (backend, panel de administración, guía para desarrolladores en `docs/developers/` y Dockerfile). Siguiente: Fase 2 (distribución), ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -45,6 +45,11 @@ dotnet ef migrations add <Nombre> --project src/Arcanist.Core --context Postgres
 ```
 
 El proveedor se configura en `Arcanist:Database` (`Provider`: `Sqlite`/`Postgres`, `ConnectionString`). Nada se resuelve contra la BD hasta que esa sección existe. Los servicios obtienen el contexto por DI (`ArcanistDbContext`, scoped) o con `IArcanistDbContextFactory`, que es lo que usan los trabajos en segundo plano.
+
+**Publicación y Docker:**
+- `docker build -t arcanist .`: imagen multi-etapa (panel con Node 24, servidor con el SDK 10, runtime `aspnet:10.0`), usuario `app`, volumen `/data` y puerto 8080. Desde el host las peticiones no son loopback, así que el asistente pide el código de setup que aparece en `docker logs`.
+- `dotnet publish src/Arcanist.Core -c Release -p:IncludeAdminPanel=true` incluye el panel en `wwwroot/admin`. Requiere npm con Node 24 en el PATH, por eso está desactivado por defecto.
+- `docs/developers/README.md` es la guía pública para quien haga reproductores. **Actualizarla cuando cambie el contrato** (autenticación, paginación, streaming, errores…).
 
 **Directorio de datos** (`Hosting/DataDirectory.cs`, `Hosting/ArcanistPaths.cs`):
 - Se elige, por orden, con `--data-dir`, `Arcanist__DataDir` o `ARCANIST_DATA_DIR`.
@@ -228,7 +233,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 
 ## Roadmap
 
-- **F1:** fundaciones y biblioteca (en curso).
+- **F1:** fundaciones y biblioteca (completada).
 - **F2:** distribución (instalador de Windows con servicio y tray en Avalonia, systemd, Docker, Synology).
 - **F3:** escáner avanzado y ffmpeg (transcodificación, waveform, BPM y tonalidad, EBU R128, Chromaprint/AcoustID, letras, carátulas online, cue).
 - **F4:** drop folder y auto-organización.

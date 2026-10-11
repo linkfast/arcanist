@@ -38,6 +38,7 @@ public sealed class UserManagementTests : IAsyncLifetime
 
         Assert.Equal("Arcanist", rest.GetProperty("name").GetString());
         Assert.Equal("NONE", rest.GetProperty("cloudTier").GetString());
+        Assert.Equal("https://github.com/linkfast/arcanist", rest.GetProperty("sourceUrl").GetString());
         Assert.Equal(1, graphql.GetProperty("data").GetProperty("serverInfo").GetProperty("apiVersion").GetInt32());
         Assert.Equal("NONE", graphql.GetProperty("data").GetProperty("serverInfo").GetProperty("cloudTier").GetString());
     }

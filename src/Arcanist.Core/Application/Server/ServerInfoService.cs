@@ -9,9 +9,14 @@ public sealed class ServerOptions
 {
     /// <summary>
     /// Where users of this server can obtain its source code, as required by section 13 of the AGPL. Anyone
-    /// running a modified version must point this to their modified source.
+    /// running a modified version must point this to their modified source. Defaults to the repository the build
+    /// came from (<c>RepositoryUrl</c> in <c>Directory.Build.props</c>).
     /// </summary>
-    public string? SourceUrl { get; set; }
+    public string? SourceUrl { get; set; } = DefaultSourceUrl;
+
+    internal static readonly string? DefaultSourceUrl = typeof(ServerOptions).Assembly
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .FirstOrDefault(a => a.Key == "RepositoryUrl")?.Value;
 }
 
 /// <summary>Public description of the server, for clients deciding how to talk to it. Part of the API contract.</summary>

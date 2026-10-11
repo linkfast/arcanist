@@ -7,6 +7,12 @@
     <Authors>Arcanist Contributors</Authors>
     <Copyright>Copyright (C) 2026 Arcanist Contributors</Copyright>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <!-- Default for serverInfo.sourceUrl (AGPL section 13). Forks distributing modified builds must change it. -->
+    <RepositoryUrl>https://github.com/linkfast/arcanist</RepositoryUrl>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="RepositoryUrl" Value="$(RepositoryUrl)" />
+  </ItemGroup>
 
 </Project>

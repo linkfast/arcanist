@@ -19,6 +19,8 @@ RUN npm run build
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS server
 ARG TARGETARCH
+# Release version (the workflow passes it); defaults to the one in Directory.Build.props.
+ARG VERSION=
 WORKDIR /src
 COPY global.json Directory.Build.props ./
 COPY src/Arcanist.Core/Arcanist.Core.csproj src/Arcanist.Core/
@@ -27,7 +29,7 @@ RUN echo "linux-$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "$TARGETARCH")" 
     && dotnet restore src/Arcanist.Core/Arcanist.Core.csproj -r "$(cat /rid)"
 COPY src/Arcanist.Core/ src/Arcanist.Core/
 RUN dotnet publish src/Arcanist.Core/Arcanist.Core.csproj -c Release -o /app --no-restore \
-    -r "$(cat /rid)" --self-contained false -p:UseAppHost=false
+    -r "$(cat /rid)" --self-contained false -p:UseAppHost=false ${VERSION:+-p:Version=$VERSION}
 RUN mkdir /data
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

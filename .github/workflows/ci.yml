@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      # Docker is available on these runners, so the PostgreSQL tests run instead of being skipped.
+      - run: dotnet test --project tests/Arcanist.Core.Tests
+
+  tray:
+    name: Windows tray app
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - run: dotnet test --project tests/Arcanist.Tray.Tests
+
+  panel:
+    name: Admin panel
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Arcanist.Web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0 # keep in sync with mise.toml
+          cache: npm
+          cache-dependency-path: src/Arcanist.Web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx ng test --watch=false

@@ -43,7 +43,7 @@ Contributions are welcome. Every commit must be signed off under the [Developer 
 
 ## License
 
-Copyright (C) 2026 LinkFast and Arcanist contributors.
+Copyright (C) 2026 Arcanist Contributors.
 
 Arcanist is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE).
 

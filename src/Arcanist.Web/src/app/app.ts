@@ -1,11 +1,15 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmToasterImports } from '@spartan-ng/helm/sonner';
+import { ReauthDialog } from './shared/reauth-dialog';
 
 @Component({
-  imports: [RouterOutlet, HlmButtonImports],
   selector: 'app-root',
-  styleUrl: './app.css',
-  templateUrl: './app.html',
+  imports: [RouterOutlet, HlmToasterImports, ReauthDialog],
+  template: `
+    <router-outlet />
+    <hlm-toaster position="bottom-right" />
+    <app-reauth-dialog />
+  `,
 })
 export class App {}

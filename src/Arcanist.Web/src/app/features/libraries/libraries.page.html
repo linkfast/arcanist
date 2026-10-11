@@ -1,0 +1,374 @@
+<header class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-semibold">{{ 'libraries.title' | t }}</h1>
+    <p class="text-sm text-muted-foreground">{{ 'libraries.subtitle' | t }}</p>
+  </div>
+  @if (canManage()) {
+    <button hlmBtn type="button" class="gap-1" (click)="openCreate()">
+      <ng-icon name="lucidePlus" />
+      {{ 'libraries.create' | t }}
+    </button>
+  }
+</header>
+
+@if (libraries() === null) {
+  <div class="flex justify-center py-12"><hlm-spinner /></div>
+} @else if (libraries()!.length === 0) {
+  <div hlmEmpty class="rounded-lg border">
+    <div hlmEmptyHeader>
+      <p hlmEmptyTitle>{{ 'libraries.empty' | t }}</p>
+      <p hlmEmptyDescription>
+        {{ (canManage() ? 'libraries.emptyHelp' : 'libraries.emptyNoAccess') | t }}
+      </p>
+    </div>
+  </div>
+} @else {
+  <div class="grid gap-4 xl:grid-cols-2">
+    @for (library of libraries(); track library.id) {
+      @let job = scans()[library.id];
+      <section hlmCard>
+        <div hlmCardHeader>
+          <h2 hlmCardTitle class="flex flex-wrap items-center gap-2">
+            {{ library.name }}
+            <span hlmBadge [variant]="library.visibleToAll ? 'secondary' : 'outline'">
+              {{ (library.visibleToAll ? 'libraries.everyone' : 'libraries.restricted') | t }}
+            </span>
+          </h2>
+          <p hlmCardDescription>
+            @if (library.lastScanAt) {
+              {{ 'libraries.lastScan' | t }}
+              <span [title]="library.lastScanAt | dateTime">{{
+                library.lastScanAt | relativeTime
+              }}</span>
+            } @else {
+              {{ 'libraries.neverScanned' | t }}
+            }
+            @if (library.scanIntervalHours) {
+              · {{ 'libraries.every' | t: { hours: library.scanIntervalHours } }}
+            }
+          </p>
+          @if (canManage()) {
+            <div hlmCardAction class="flex gap-1">
+              <button
+                hlmBtn
+                variant="ghost"
+                size="icon"
+                type="button"
+                [attr.aria-label]="'common.edit' | t"
+                (click)="openEdit(library)"
+              >
+                <ng-icon name="lucidePencil" />
+              </button>
+              <button
+                hlmBtn
+                variant="ghost"
+                size="icon"
+                type="button"
+                [attr.aria-label]="'common.delete' | t"
+                (click)="deleting.set(library)"
+              >
+                <ng-icon name="lucideTrash2" />
+              </button>
+            </div>
+          }
+        </div>
+
+        <div hlmCardContent class="grid gap-4">
+          @if (library.sources) {
+            <ul class="grid gap-1">
+              @for (source of library.sources; track source.id) {
+                <li class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5">
+                  <span class="truncate font-mono text-xs" [title]="source.location">{{
+                    source.location
+                  }}</span>
+                  @if (canManage()) {
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="icon-sm"
+                      type="button"
+                      [attr.aria-label]="'common.remove' | t"
+                      [disabled]="busy()"
+                      (click)="removeSource(source.id)"
+                    >
+                      <ng-icon name="lucideX" />
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          @if (job) {
+            <div class="grid gap-2 text-sm">
+              @if (isRunning(job)) {
+                <div class="flex items-center justify-between gap-2">
+                  <span class="flex items-center gap-2">
+                    <hlm-spinner class="size-4" />
+                    {{
+                      (job.status === 'QUEUED'
+                        ? 'scan.queued'
+                        : 'scan.phase.' + (job.progress?.phase ?? 'DISCOVERING')
+                      ) | t
+                    }}
+                  </span>
+                  @if (job.progress; as progress) {
+                    <span class="text-muted-foreground">
+                      {{
+                        'scan.progress'
+                          | t
+                            : {
+                                read: (progress.filesRead | count),
+                                total: (progress.filesToRead | count),
+                                found: (progress.filesFound | count),
+                              }
+                      }}
+                    </span>
+                  }
+                </div>
+                <hlm-progress [value]="progressPercent(job)"
+                  ><hlm-progress-indicator
+                /></hlm-progress>
+              } @else {
+                <p class="text-muted-foreground">
+                  {{ 'scan.status.' + job.status | t }}
+                  @if (job.finishedAt) {
+                    ·
+                    <span [title]="job.finishedAt | dateTime">{{
+                      job.finishedAt | relativeTime
+                    }}</span>
+                  }
+                  @if (job.status === 'COMPLETED') {
+                    ·
+                    {{
+                      'scan.summary'
+                        | t
+                          : {
+                              seen: (job.filesSeen | count),
+                              added: (job.filesAdded | count),
+                              updated: (job.filesUpdated | count),
+                              missing: (job.filesMissing | count),
+                            }
+                    }}
+                  }
+                </p>
+                @if (job.errors > 0) {
+                  <p class="text-destructive">{{ 'scan.unreadable' | t: { count: job.errors } }}</p>
+                }
+                @if (job.errorCode) {
+                  <p class="text-destructive">{{ 'errors.' + job.errorCode | t }}</p>
+                }
+              }
+            </div>
+          }
+        </div>
+
+        <div hlmCardFooter class="flex flex-wrap gap-2">
+          @if (canScan()) {
+            @if (isRunning(job)) {
+              <button
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                [disabled]="busy()"
+                (click)="cancelScan(job!)"
+              >
+                {{ 'scan.cancel' | t }}
+              </button>
+            } @else {
+              <button
+                hlmBtn
+                size="sm"
+                type="button"
+                class="gap-1"
+                [disabled]="busy()"
+                (click)="scan(library, false)"
+              >
+                <ng-icon name="lucideRefreshCw" />
+                {{ 'scan.start' | t }}
+              </button>
+              <button
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                [disabled]="busy()"
+                (click)="scan(library, true)"
+              >
+                {{ 'scan.full' | t }}
+              </button>
+            }
+          }
+          @if (canManage()) {
+            @if (auth.isAdmin()) {
+              <button
+                hlmBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                class="gap-1"
+                (click)="picking.set({ libraryId: library.id })"
+              >
+                <ng-icon name="lucideFolderPlus" />
+                {{ 'libraries.addFolder' | t }}
+              </button>
+            }
+          }
+        </div>
+      </section>
+    }
+  </div>
+}
+
+<!-- Create / edit -->
+<hlm-dialog [state]="form() ? 'open' : 'closed'" (closed)="form.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-lg">
+    @if (form(); as current) {
+      <form class="grid gap-4" (ngSubmit)="saveForm()">
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>{{ (current.id ? 'libraries.edit' : 'libraries.create') | t }}</h3>
+        </hlm-dialog-header>
+
+        <hlm-field>
+          <label hlmFieldLabel for="library-name">{{ 'libraries.name' | t }}</label>
+          <input
+            hlmInput
+            id="library-name"
+            name="name"
+            [ngModel]="current.name"
+            (ngModelChange)="updateForm({ name: $event })"
+            required
+          />
+        </hlm-field>
+
+        @if (!current.id) {
+          <hlm-field>
+            <span hlmFieldLabel>{{ 'libraries.folders' | t }}</span>
+            @for (folder of current.folders; track folder) {
+              <div class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5">
+                <span class="truncate font-mono text-xs">{{ folder }}</span>
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon-sm"
+                  type="button"
+                  [attr.aria-label]="'common.remove' | t"
+                  (click)="updateForm({ folders: current.folders.filter((f) => f !== folder) })"
+                >
+                  <ng-icon name="lucideX" />
+                </button>
+              </div>
+            }
+            @if (auth.isAdmin()) {
+              <button
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                class="justify-self-start gap-1"
+                (click)="picking.set({ libraryId: null })"
+              >
+                <ng-icon name="lucideFolderPlus" />
+                {{ 'libraries.addFolder' | t }}
+              </button>
+            } @else {
+              <div class="flex gap-2">
+                <input
+                  hlmInput
+                  class="flex-1 font-mono text-xs"
+                  name="newFolder"
+                  [(ngModel)]="newFolder"
+                  [placeholder]="'folderPicker.typePath' | t"
+                />
+                <button hlmBtn variant="outline" type="button" (click)="addFormFolder(newFolder)">
+                  {{ 'common.add' | t }}
+                </button>
+              </div>
+            }
+          </hlm-field>
+        }
+
+        <label class="flex items-center gap-2 text-sm">
+          <hlm-switch
+            [checked]="current.visibleToAll"
+            (checkedChange)="updateForm({ visibleToAll: $event })"
+          />
+          {{ 'libraries.visibleToAll' | t }}
+        </label>
+
+        <hlm-field>
+          <label hlmFieldLabel for="interval">{{ 'libraries.interval' | t }}</label>
+          <input
+            hlmInput
+            id="interval"
+            name="interval"
+            type="number"
+            min="1"
+            max="720"
+            class="w-32"
+            [ngModel]="current.scanIntervalHours"
+            (ngModelChange)="updateForm({ scanIntervalHours: $event })"
+          />
+          <p hlmFieldDescription>{{ 'libraries.intervalHelp' | t }}</p>
+        </hlm-field>
+
+        @if (formError()) {
+          <p class="text-sm text-destructive">{{ formError() }}</p>
+        }
+
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" (click)="form.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button
+            hlmBtn
+            type="submit"
+            [disabled]="
+              busy() || !current.name.trim() || (!current.id && current.folders.length === 0)
+            "
+          >
+            {{ 'common.save' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Folder picker -->
+<hlm-dialog [state]="picking() ? 'open' : 'closed'" (closed)="picking.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="w-[min(36rem,calc(100vw-2rem))] sm:max-w-xl"
+  >
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'folderPicker.title' | t }}</h3>
+    </hlm-dialog-header>
+    <app-folder-picker
+      [load]="loadDirectories"
+      (picked)="picked($event)"
+      (cancelled)="picking.set(null)"
+    />
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Delete -->
+<hlm-alert-dialog [state]="deleting() ? 'open' : 'closed'" (closed)="deleting.set(null)">
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    <hlm-alert-dialog-header>
+      <h3 hlmAlertDialogTitle>
+        {{ 'libraries.deleteTitle' | t: { name: deleting()?.name ?? '' } }}
+      </h3>
+      <p hlmAlertDialogDescription>{{ 'libraries.deleteHelp' | t }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel type="button" (click)="deleting.set(null)">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button hlmAlertDialogAction type="button" (click)="confirmDelete()">
+        {{ 'common.delete' | t }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

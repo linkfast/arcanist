@@ -88,6 +88,28 @@ public sealed class ScannerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Untagged_files_take_artist_and_album_from_their_folders()
+    {
+        AudioFixtures.WriteWav(Path.Combine(Music, "Boards of Canada", "Geogaddi", "03 Gyroscope.wav"), 30, new FixtureTags());
+        AudioFixtures.WriteWav(Path.Combine(Music, "Loose", "untitled.wav"), 31, new FixtureTags());
+
+        await ScanAsync();
+
+        await using var db = Db();
+        var gyroscope = await db.Tracks.Include(t => t.Album).ThenInclude(a => a.AlbumArtist)
+            .Include(t => t.Artists).ThenInclude(a => a.Artist)
+            .SingleAsync(t => t.Title == "03 Gyroscope", Cancel);
+        Assert.Equal("Geogaddi", gyroscope.Album.Title);
+        Assert.Equal("Boards of Canada", gyroscope.Album.AlbumArtist.Name);
+        Assert.Equal("Boards of Canada", Assert.Single(gyroscope.Artists).Artist.Name);
+
+        // A single folder level is an album, not an artist.
+        var untitled = await db.Tracks.Include(t => t.Album).ThenInclude(a => a.AlbumArtist).SingleAsync(t => t.Title == "untitled", Cancel);
+        Assert.Equal("Loose", untitled.Album.Title);
+        Assert.Equal("Unknown Artist", untitled.Album.AlbumArtist.Name);
+    }
+
+    [Fact]
     public async Task Unchanged_files_are_skipped_by_incremental_scans()
     {
         var job = await ScanAsync();

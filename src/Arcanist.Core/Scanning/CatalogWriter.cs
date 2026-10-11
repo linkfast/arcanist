@@ -87,6 +87,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
 
     public async Task<BatchResult> ApplyAsync(IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
     {
+        files = files.Select(WithFolderArtist).ToList();
         var now = time.GetUtcNow().UtcDateTime;
         int added = 0, updated = 0;
 
@@ -443,6 +444,20 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         // Albums created in this batch are now rows like any other.
         foreach (var state in _albumByKey.Values)
             state.Entity = null;
+    }
+
+    /// <summary>
+    /// Untagged files in the common "Artist/Album/Track" layout take the artist from the folder, so they do not all
+    /// pile up under "Unknown Artist". Only applies with no artist tags at all and at least two folder levels.
+    /// </summary>
+    private static ScannedFile WithFolderArtist(ScannedFile file)
+    {
+        var meta = file.Metadata;
+        if (meta.Artists.Count > 0 || meta.AlbumArtist is not null || meta.IsCompilation)
+            return file;
+
+        var folders = AudioFormats.Folder(file.RelativePath).Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return folders.Length >= 2 ? file with { Metadata = meta with { Artists = [folders[^2]] } } : file;
     }
 
     private static string? FolderName(string relativePath)

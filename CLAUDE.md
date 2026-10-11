@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas, escáner y las dos APIs (GraphQL y REST). Faltan streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fase 1 casi completa: backend y panel de administración implementados. Faltan la documentación para desarrolladores (`docs/developers/`) y el Dockerfile. La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -60,8 +60,9 @@ El proveedor se configura en `Arcanist:Database` (`Provider`: `Sqlite`/`Postgres
 **Web (Angular)**, desde `src/Arcanist.Web`:
 
 ```bash
-npm start                        # ng serve
-npm run build
+npm start                        # ng serve en http://localhost:4200/admin/, con proxy de /rest, /graphql (WebSocket) y /health a Core :5263
+npm run build                    # dist/arcanist-web/browser; Core lo sirve en /admin con Arcanist__Frontends__AdminRoot=<esa ruta>
+npm run codegen                  # tipos de las operaciones GraphQL desde docs/api/schema.graphql (los generados se versionan)
 npm test                         # ng test (Vitest + jsdom); usar `npx ng test --watch=false` para una sola pasada
 npx ng test --watch=false --include="src/app/app.spec.ts"   # un solo archivo de test
 ```
@@ -74,6 +75,17 @@ mise exec -- npx ng test --watch=false
 ```
 
 mise solo lee `mise.toml` después de un `mise trust` (una vez por clon). Si falla con "not trusted", pedírselo al usuario en lugar de ejecutarlo.
+
+### Panel de administración (`src/Arcanist.Web`)
+
+- **Datos:** setup y autenticación van por REST (`core/api/rest.ts`); todo lo demás va por GraphQL con Apollo (`core/graphql/`). Las operaciones viven en `src/app/graphql/operations.ts` y se tipan con `npm run codegen`; **regenerar tras cambiar operaciones o el esquema** (codegen valida contra `docs/api/schema.graphql`).
+- **Sesión** (`core/auth/`):
+  - El token de acceso vive solo en memoria y el de refresco va en la cookie HttpOnly (`useCookie: true`). Tras recargar, `authGuard` restaura la sesión con `refresh()`.
+  - `authInterceptor` añade el Bearer a `/rest` y `/graphql`. Ante `unauthorized` refresca una vez y reintenta; ante `reauthentication_required` abre `ReauthDialog` y reintenta. Lo hace también para GraphQL, cuyos errores llegan en el cuerpo.
+  - Las suscripciones usan `graphql-ws` y envían el token en `connection_init`.
+- **i18n propia** (`core/i18n/`): diccionarios `es.ts`/`en.ts` con claves anidadas, pipe `t` y `I18n.error(code)` para los códigos de la API. `i18n.spec.ts` exige las mismas claves en ambos idiomas y una traducción para cada código de `Application/Errors.cs`: **al añadir un código en el servidor, traducirlo aquí**.
+- **Patrones:** componentes standalone, zoneless, señales y formularios por plantilla (`ngModel`). Los diálogos de spartan se abren con `[state]` y `*brnDialogContent`; como se ajustan a su contenido, los anchos fijos van en `hlm-dialog-content`. La interfaz oculta lo que el usuario no puede hacer (`AuthService.can`), pero la autorización real está en el servidor.
+- Prettier: `npx prettier --write src` (ignora `src/app/graphql/generated`). El presupuesto de bundle inicial es de 1 MB por Apollo y GraphQL.
 
 ### spartan-ng
 

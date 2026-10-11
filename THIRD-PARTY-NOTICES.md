@@ -34,4 +34,9 @@ GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr
 | clsx | MIT |
 | tailwind-merge | MIT |
 | RxJS | Apache-2.0 |
+| Apollo Client, apollo-angular | MIT |
+| GraphQL.js (`graphql`) | MIT |
+| graphql-ws | MIT |
+| ng-icons (`@ng-icons/core`) | MIT |
+| Lucide icons (`@ng-icons/lucide`) | ISC |
 | tslib | 0BSD |

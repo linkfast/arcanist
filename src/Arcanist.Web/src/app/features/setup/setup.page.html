@@ -1,0 +1,395 @@
+<main class="flex min-h-screen items-start justify-center bg-muted/40 p-4 md:items-center">
+  <section hlmCard class="w-full max-w-2xl">
+    <div hlmCardHeader>
+      <p class="text-xs text-muted-foreground">
+        {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}
+      </p>
+      <h1 hlmCardTitle class="text-xl">{{ 'setup.steps.' + step() + '.title' | t }}</h1>
+      <p hlmCardDescription>{{ 'setup.steps.' + step() + '.description' | t }}</p>
+    </div>
+
+    <div hlmCardContent class="grid gap-5">
+      @if (!status()) {
+        <div class="flex justify-center py-8"><hlm-spinner /></div>
+      }
+
+      @switch (step()) {
+        @case ('code') {
+          <hlm-field>
+            <label hlmFieldLabel for="code">{{ 'setup.code.label' | t }}</label>
+            <input
+              hlmInput
+              id="code"
+              name="code"
+              class="font-mono uppercase tracking-widest"
+              autocomplete="off"
+              [(ngModel)]="code"
+              placeholder="XXXX-XXXX"
+            />
+            <p hlmFieldDescription>{{ 'setup.code.help' | t }}</p>
+          </hlm-field>
+        }
+
+        @case ('welcome') {
+          <p class="text-sm">{{ 'setup.welcome.intro' | t }}</p>
+          <hlm-field>
+            <span hlmFieldLabel>{{ 'setup.welcome.language' | t }}</span>
+            <hlm-radio-group
+              class="grid gap-2"
+              name="language"
+              [ngModel]="i18n.language()"
+              (ngModelChange)="setLanguage($event)"
+            >
+              <label class="flex items-center gap-2 text-sm"
+                ><hlm-radio value="es"><hlm-radio-indicator indicator /></hlm-radio>Español</label
+              >
+              <label class="flex items-center gap-2 text-sm"
+                ><hlm-radio value="en"><hlm-radio-indicator indicator /></hlm-radio>English</label
+              >
+            </hlm-radio-group>
+          </hlm-field>
+        }
+
+        @case ('database') {
+          @if (status()?.database?.lockedByEnvironment) {
+            <div hlmAlert>
+              <p hlmAlertTitle>{{ 'setup.database.locked' | t }}</p>
+              <p hlmAlertDescription>{{ 'setup.database.lockedHelp' | t }}</p>
+            </div>
+          } @else {
+            <hlm-radio-group class="grid gap-3" name="provider" [(ngModel)]="provider">
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio value="SQLITE" class="mt-0.5"
+                  ><hlm-radio-indicator indicator
+                /></hlm-radio>
+                <span class="grid gap-1">
+                  <span class="font-medium"
+                    >SQLite
+                    <span hlmBadge variant="secondary">{{
+                      'setup.database.recommended' | t
+                    }}</span></span
+                  >
+                  <span class="text-muted-foreground">{{ 'setup.database.sqliteHelp' | t }}</span>
+                  <span class="font-mono text-xs text-muted-foreground">{{
+                    status()?.database?.defaultSqlitePath
+                  }}</span>
+                </span>
+              </label>
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio value="POSTGRES" class="mt-0.5"
+                  ><hlm-radio-indicator indicator
+                /></hlm-radio>
+                <span class="grid gap-1">
+                  <span class="font-medium">PostgreSQL</span>
+                  <span class="text-muted-foreground">{{ 'setup.database.postgresHelp' | t }}</span>
+                </span>
+              </label>
+            </hlm-radio-group>
+
+            <div hlmAlert>
+              <p hlmAlertTitle>{{ 'setup.database.whenTitle' | t }}</p>
+              <p hlmAlertDescription>{{ 'setup.database.whenHelp' | t }}</p>
+            </div>
+
+            @if (provider === 'POSTGRES') {
+              <hlm-field>
+                <label hlmFieldLabel for="connection">{{
+                  'setup.database.connectionString' | t
+                }}</label>
+                <input
+                  hlmInput
+                  id="connection"
+                  name="connection"
+                  class="font-mono text-xs"
+                  autocomplete="off"
+                  [(ngModel)]="connectionString"
+                  placeholder="Host=localhost;Database=arcanist;Username=arcanist;Password=…"
+                />
+                @if (fieldError('database')) {
+                  <hlm-field-error>{{ fieldError('database') }}</hlm-field-error>
+                }
+              </hlm-field>
+              <div class="flex items-center gap-3">
+                <button
+                  hlmBtn
+                  variant="outline"
+                  type="button"
+                  [disabled]="busy() || !connectionString"
+                  (click)="testDatabase()"
+                >
+                  {{ 'setup.database.test' | t }}
+                </button>
+                @if (databaseTest(); as test) {
+                  @if (test.success) {
+                    <span class="flex items-center gap-1 text-sm text-green-600"
+                      ><ng-icon name="lucideCheck" />{{ 'setup.database.ok' | t }}</span
+                    >
+                  } @else {
+                    <span class="text-sm text-destructive">{{ test.error }}</span>
+                  }
+                }
+              </div>
+            }
+          }
+        }
+
+        @case ('admin') {
+          <div class="grid gap-4 sm:grid-cols-2">
+            <hlm-field>
+              <label hlmFieldLabel for="userName">{{ 'common.userName' | t }}</label>
+              <input
+                hlmInput
+                id="userName"
+                name="userName"
+                autocomplete="username"
+                [(ngModel)]="userName"
+              />
+              @if (fieldError('admin.userName')) {
+                <hlm-field-error>{{ fieldError('admin.userName') }}</hlm-field-error>
+              }
+            </hlm-field>
+            <hlm-field>
+              <label hlmFieldLabel for="displayName">{{ 'common.displayName' | t }}</label>
+              <input
+                hlmInput
+                id="displayName"
+                name="displayName"
+                autocomplete="name"
+                [(ngModel)]="displayName"
+              />
+            </hlm-field>
+            <hlm-field>
+              <label hlmFieldLabel for="password">{{ 'common.password' | t }}</label>
+              <input
+                hlmInput
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                [(ngModel)]="password"
+              />
+              <p hlmFieldDescription>{{ 'setup.admin.passwordHelp' | t }}</p>
+              @if (fieldError('admin.password')) {
+                <hlm-field-error>{{ fieldError('admin.password') }}</hlm-field-error>
+              }
+            </hlm-field>
+            <hlm-field>
+              <label hlmFieldLabel for="passwordConfirmation">{{
+                'common.confirmPassword' | t
+              }}</label>
+              <input
+                hlmInput
+                id="passwordConfirmation"
+                name="passwordConfirmation"
+                type="password"
+                autocomplete="new-password"
+                [(ngModel)]="passwordConfirmation"
+              />
+            </hlm-field>
+          </div>
+        }
+
+        @case ('libraries') {
+          @for (library of libraries(); track $index; let index = $index) {
+            <div class="grid gap-3 rounded-lg border p-4">
+              <div class="flex items-end gap-2">
+                <hlm-field class="flex-1">
+                  <label hlmFieldLabel [for]="'library-' + index">{{ 'libraries.name' | t }}</label>
+                  <input
+                    hlmInput
+                    [id]="'library-' + index"
+                    [name]="'library-' + index"
+                    [ngModel]="library.name"
+                    (ngModelChange)="updateLibrary(index, { name: $event })"
+                    [placeholder]="'setup.libraries.namePlaceholder' | t"
+                  />
+                </hlm-field>
+                @if (libraries().length > 1) {
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    [attr.aria-label]="'common.remove' | t"
+                    (click)="removeLibrary(index)"
+                  >
+                    <ng-icon name="lucideTrash2" />
+                  </button>
+                }
+              </div>
+
+              <div class="grid gap-1">
+                @for (folder of library.folders; track folder) {
+                  <div
+                    class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5"
+                  >
+                    <span class="truncate font-mono text-xs" [title]="folder">{{ folder }}</span>
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="icon-sm"
+                      type="button"
+                      [attr.aria-label]="'common.remove' | t"
+                      (click)="removeFolder(index, folder)"
+                    >
+                      <ng-icon name="lucideX" />
+                    </button>
+                  </div>
+                }
+                @if (fieldError('libraries[' + index + ']')) {
+                  <p class="text-sm text-destructive">
+                    {{ fieldError('libraries[' + index + ']') }}
+                  </p>
+                }
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  class="gap-1"
+                  (click)="pickingFor.set(index)"
+                >
+                  <ng-icon name="lucideFolderPlus" />
+                  {{ 'libraries.addFolder' | t }}
+                </button>
+                <label class="flex items-center gap-2 text-sm">
+                  <hlm-switch
+                    [checked]="library.visibleToAll"
+                    (checkedChange)="updateLibrary(index, { visibleToAll: $event })"
+                  />
+                  {{ 'libraries.visibleToAll' | t }}
+                </label>
+              </div>
+            </div>
+          }
+          <button
+            hlmBtn
+            variant="ghost"
+            type="button"
+            class="justify-self-start gap-1"
+            (click)="addLibrary()"
+          >
+            <ng-icon name="lucidePlus" />
+            {{ 'setup.libraries.another' | t }}
+          </button>
+          <p class="text-xs text-muted-foreground">{{ 'setup.libraries.networkHelp' | t }}</p>
+        }
+
+        @case ('privacy') {
+          <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
+          <hlm-radio-group class="grid gap-3" name="statistics" [(ngModel)]="shareStatistics">
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="yes" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <span>{{ 'setup.privacy.yes' | t }}</span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="no" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <span>{{ 'setup.privacy.no' | t }}</span>
+            </label>
+          </hlm-radio-group>
+          <p class="text-xs text-muted-foreground">{{ 'setup.privacy.later' | t }}</p>
+        }
+
+        @case ('review') {
+          <dl class="grid gap-3 text-sm sm:grid-cols-[10rem_1fr]">
+            <dt class="text-muted-foreground">{{ 'setup.review.database' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{
+                status()?.database?.lockedByEnvironment
+                  ? ('setup.database.locked' | t)
+                  : provider === 'SQLITE'
+                    ? 'SQLite'
+                    : 'PostgreSQL'
+              }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('database')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.admin' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{ userName }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('admin')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.libraries' | t }}</dt>
+            <dd class="flex items-start justify-between gap-2">
+              <ul class="grid gap-1">
+                @for (library of libraries(); track $index) {
+                  @if (library.folders.length) {
+                    <li>
+                      {{ library.name }} ·
+                      {{ 'setup.review.folders' | t: { count: library.folders.length } }}
+                    </li>
+                  }
+                } @empty {
+                  <li class="text-muted-foreground">{{ 'setup.review.noLibraries' | t }}</li>
+                }
+              </ul>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('libraries')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.statistics' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{ (shareStatistics === 'yes' ? 'common.yes' : 'common.no') | t }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+          </dl>
+          <p class="text-sm text-muted-foreground">{{ 'setup.review.afterwards' | t }}</p>
+        }
+      }
+
+      @if (error()) {
+        <div hlmAlert variant="destructive">
+          <p hlmAlertDescription>{{ error() }}</p>
+        </div>
+      }
+    </div>
+
+    <div hlmCardFooter class="justify-between gap-2">
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        [disabled]="stepIndex() === 0 || busy()"
+        (click)="back()"
+      >
+        {{ 'common.back' | t }}
+      </button>
+      @if (step() === 'review') {
+        <button hlmBtn type="button" [disabled]="busy()" (click)="finish()">
+          @if (busy()) {
+            <hlm-spinner class="size-4" />
+          }
+          {{ 'setup.finish' | t }}
+        </button>
+      } @else {
+        <button hlmBtn type="button" [disabled]="busy() || !status()" (click)="next()">
+          {{ 'common.next' | t }}
+        </button>
+      }
+    </div>
+  </section>
+</main>
+
+<hlm-dialog [state]="pickingFor() !== null ? 'open' : 'closed'" (closed)="pickingFor.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="w-[min(36rem,calc(100vw-2rem))] sm:max-w-xl"
+  >
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'folderPicker.title' | t }}</h3>
+    </hlm-dialog-header>
+    <app-folder-picker
+      [load]="loadDirectories"
+      (picked)="addFolder($event)"
+      (cancelled)="pickingFor.set(null)"
+    />
+  </hlm-dialog-content>
+</hlm-dialog>

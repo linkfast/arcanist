@@ -18,6 +18,18 @@ public static class TextNormalizer
         ['ł'] = "l", ['đ'] = "d", ['ħ'] = "h", ['ı'] = "i", ['ŧ'] = "t",
     };
 
+    /// <summary>
+    /// Fails at startup when Unicode normalization is unavailable. On Linux it needs ICU; in globalization-invariant
+    /// mode (no libicu, or <c>DOTNET_SYSTEM_GLOBALIZATION_INVARIANT</c>) .NET silently returns strings unchanged, and
+    /// the stored values would stop ignoring accents.
+    /// </summary>
+    public static void EnsureSupported()
+    {
+        if ("é".Normalize(NormalizationForm.FormD).Length != 2)
+            throw new PlatformNotSupportedException(
+                "Arcanist needs the ICU library (libicu) for Unicode normalization. Install it, and do not set DOTNET_SYSTEM_GLOBALIZATION_INVARIANT.");
+    }
+
     public static string Normalize(string value)
     {
         // Compatibility decomposition also folds ligatures and full-width forms ("ﬁ" → "fi", "Ａ" → "A").

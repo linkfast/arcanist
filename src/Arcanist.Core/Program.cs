@@ -22,6 +22,8 @@ using Microsoft.AspNetCore.Identity;
 using Serilog;
 using Serilog.Events;
 
+TextNormalizer.EnsureSupported();
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,

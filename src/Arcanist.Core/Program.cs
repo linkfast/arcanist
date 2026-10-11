@@ -20,6 +20,7 @@ using Arcanist.Core.Storage;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -36,7 +37,9 @@ var paths = new ArcanistPaths(DataDirectory.Resolve(builder.Configuration, build
 paths.EnsureCreated();
 builder.Configuration.AddArcanistSettingsFile(paths);
 builder.Services.AddSingleton(paths);
-// ASP.NET Core creates these keys anyway; keep them with the rest of the state instead of the user profile.
+// ASP.NET Core creates these keys anyway; keep them with the rest of the state instead of the user profile. Arcanist
+// protects nothing with them (tokens have their own key), so they are stored unencrypted like that key, and the
+// warning saying so is silenced in appsettings.json.
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(paths.Keys, "data-protection")));
 
 // No-ops unless the process is actually started by the Windows SCM or systemd.
@@ -87,8 +90,12 @@ app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
-// Logs the path without the query string, which will carry stream tokens.
-app.UseSerilogRequestLogging();
+// Logs the path without the query string, which will carry stream tokens. Health checks are polled by launchers
+// and monitors every few seconds, so they only appear at Verbose unless they fail.
+app.UseSerilogRequestLogging(options => options.GetLevel = (context, _, exception) =>
+    exception is not null || context.Response.StatusCode >= 500 ? LogEventLevel.Error
+    : context.Request.Path.StartsWithSegments("/health") ? LogEventLevel.Verbose
+    : LogEventLevel.Information);
 
 app.UseSetupGate();
 app.UseWebSockets();

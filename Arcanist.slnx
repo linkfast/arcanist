@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Arcanist.Core/Arcanist.Core.csproj" />
+    <Project Path="src/Arcanist.Tray/Arcanist.Tray.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Arcanist.Core.Tests/Arcanist.Core.Tests.csproj" />
+    <Project Path="tests/Arcanist.Tray.Tests/Arcanist.Tray.Tests.csproj" />
   </Folder>
 </Solution>

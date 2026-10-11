@@ -104,6 +104,22 @@ public sealed class ArcanistFactory(
         return client;
     }
 
+    /// <summary>Waits until no scan is queued or running.</summary>
+    public async Task WaitForScansAsync(HttpClient admin)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (true)
+        {
+            var jobs = await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/scans?limit=100", Json);
+            if (jobs!.All(j => j.GetProperty("status").GetString() is not ("QUEUED" or "RUNNING")))
+                return;
+
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException("Scans did not finish in time.");
+            await Task.Delay(50);
+        }
+    }
+
     /// <summary>Logs in and returns a client that sends the access token.</summary>
     public async Task<HttpClient> CreateAuthenticatedClientAsync(string userName = AdminUserName) =>
         CreateClient((await LoginAsync(userName)).AccessToken);

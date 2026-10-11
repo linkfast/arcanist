@@ -6,10 +6,18 @@ namespace Arcanist.Core.Data;
 /// <summary>
 /// Builds the values stored in <c>Normalized*</c> columns: lowercase, without diacritics and with collapsed
 /// whitespace. Lookups and searches compare these columns instead of relying on database collations, which
-/// differ between SQLite (ASCII-only NOCASE) and PostgreSQL (case-sensitive).
+/// differ between SQLite (ASCII-only NOCASE) and PostgreSQL (case-sensitive). Letters that are not accented
+/// forms but are commonly typed as plain Latin ("æ", "ø", "ß"…) are folded too, so "agaetis" finds "Ágætis".
+/// Changing these rules after release needs a migration that recomputes every stored <c>Normalized*</c> value.
 /// </summary>
 public static class TextNormalizer
 {
+    private static readonly Dictionary<char, string> Foldings = new()
+    {
+        ['æ'] = "ae", ['œ'] = "oe", ['ø'] = "o", ['ß'] = "ss", ['ð'] = "d", ['þ'] = "th",
+        ['ł'] = "l", ['đ'] = "d", ['ħ'] = "h", ['ı'] = "i", ['ŧ'] = "t",
+    };
+
     public static string Normalize(string value)
     {
         // Compatibility decomposition also folds ligatures and full-width forms ("ﬁ" → "fi", "Ａ" → "A").
@@ -34,7 +42,11 @@ public static class TextNormalizer
                 pendingSpace = false;
             }
 
-            builder.Append(char.ToLowerInvariant(c));
+            var lower = char.ToLowerInvariant(c);
+            if (Foldings.TryGetValue(lower, out var folded))
+                builder.Append(folded);
+            else
+                builder.Append(lower);
         }
 
         return builder.ToString().Normalize(NormalizationForm.FormC);

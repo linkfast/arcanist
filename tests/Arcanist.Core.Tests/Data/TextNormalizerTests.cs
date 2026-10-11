@@ -11,6 +11,9 @@ public sealed class TextNormalizerTests
     [InlineData("ﬁve", "five")]
     [InlineData("ＡＢＣ", "abc")]
     [InlineData("AC/DC", "ac/dc")]
+    [InlineData("Ágætis byrjun", "agaetis byrjun")]
+    [InlineData("Øystein Straße", "oystein strasse")]
+    [InlineData("Łódź", "lodz")]
     [InlineData("坂本龍一", "坂本龍一")]
     [InlineData("", "")]
     public void Normalizes_case_diacritics_and_whitespace(string input, string expected)

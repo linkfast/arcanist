@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas, escáner y las dos APIs (GraphQL y REST). Faltan consultas del catálogo, progreso en vivo y escaneo programado, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas, escáner y las dos APIs (GraphQL y REST). Faltan progreso en vivo por suscripción, escaneo programado, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -172,6 +172,11 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
     - Los múltiples valores se separan por `;`, nunca por `/` (AC/DC); "feat." genera artistas `Featured`.
   - **Limitación conocida:** un álbum sin etiqueta AlbumArtist ni marca de recopilatorio, con artistas distintos por pista, se parte en varios álbumes. Se mejorará en la F3.
   - Tests: `AudioFixtures` genera WAV etiquetados al vuelo, sin binarios en el repo. `ScannerTests` espera a los trabajos sondeando `GET /rest/v1/scans/{id}`.
+- **Catálogo (implementado):** `Application/Catalog/`. Operaciones `artists`, `artist`, `albums`, `album`, `tracks` y `track`.
+  - **Visibilidad:** una pista es visible si tiene algún archivo presente (`MissingSince == null`) en una biblioteca accesible. Álbumes y artistas son visibles a través de esas pistas. Lo invisible responde 404.
+  - `Track.files` lista solo las copias accesibles, de mejor a peor calidad.
+  - **Paginación keyset** (`Keyset`) por clave normalizada + id, con cursor opaco (`after`/`nextCursor`) y `totalCount`. Probada en ambos proveedores. `tracks(albumId)` devuelve el álbum entero en orden de disco y pista, sin paginar.
+  - La búsqueda usa `Contains` sobre las columnas `Normalized*`. `TextNormalizer` quita acentos y pliega letras como æ/ø/ß/ł ("agaetis" encuentra "Ágætis"). **Cambiar sus reglas tras publicar exige una migración que recalcule los valores guardados.**
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.

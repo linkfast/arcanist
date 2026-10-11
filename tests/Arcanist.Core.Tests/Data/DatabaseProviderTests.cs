@@ -1,3 +1,4 @@
+using Keyset = Arcanist.Core.Application.Catalog.Keyset;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -104,6 +105,33 @@ public abstract class DatabaseProviderTests
         Assert.Equal(7, ids.TrackId.Version);
         await using var db = await OpenAsync();
         Assert.True(await db.Tracks.AnyAsync(t => t.Id == ids.TrackId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Keyset_pages_visit_every_row_once_even_with_equal_keys()
+    {
+        await using (var db = await OpenAsync())
+        {
+            // Equal names force the id tie-breaker; mixed case and accents check the provider's ordering.
+            foreach (var name in new[] { "b", "a", "b", "c", "b", "á", "B", "a" })
+                db.Artists.Add(new Artist { Name = name, NormalizedName = name });
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var seen = new List<Guid>();
+        string? cursor = null;
+        do
+        {
+            await using var db = await OpenAsync();
+            var (page, next, total) = await Keyset.PageAsync(db.Artists, a => a.NormalizedName, cursor, 3, TestContext.Current.CancellationToken);
+            Assert.Equal(8, total);
+            seen.AddRange(page.Select(a => a.Id));
+            cursor = next;
+        }
+        while (cursor is not null);
+
+        Assert.Equal(8, seen.Count);
+        Assert.Equal(8, seen.Distinct().Count());
     }
 
     private async Task<SeedIds> SeedAsync()

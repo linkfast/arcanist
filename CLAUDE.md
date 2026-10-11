@@ -34,6 +34,7 @@ dotnet test --project tests/Arcanist.Core.Tests -- --filter-class "*DataDirector
 ```
 
 - Los tests usan **xUnit v3 sobre Microsoft Testing Platform**, activado en `global.json` (`"test": { "runner": "Microsoft.Testing.Platform" }`). Por eso no hay `Microsoft.NET.Test.Sdk` ni `xunit.runner.visualstudio`, y los filtros van después de `--` con la sintaxis de MTP, no con `--filter` de VSTest.
+- `xunit.runner.json` amplía a 30 s la espera de xUnit al cerrar el proceso de tests (por defecto 10 s). Con la máquina muy cargada, el cierre normal superaba los 10 s y xUnit fallaba con "Foreground threads were left running" aunque todos los tests pasaran; se investigó y no había hilos de Arcanist vivos. Una fuga real sigue fallando, porque nunca termina.
 - Los tests de integración usan `ArcanistFactory` (`WebApplicationFactory<Program>`), que arranca el servidor con un directorio de datos temporal y el entorno `Testing`.
 - `DatabaseProviderTests` ejecuta las mismas aserciones contra SQLite en memoria y contra PostgreSQL 17 en un contenedor de Testcontainers. Si Docker no está disponible, los de PostgreSQL aparecen como **skipped**, no como verdes. Incluye un test que falla si el modelo cambió sin migración para alguno de los dos proveedores.
 

@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\src\Arcanist.Core\Arcanist.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Arcanist.Core.Data.Migrations.Sqlite
+namespace Arcanist.Core.Data.Migrations.Postgres
 {
     /// <inheritdoc />
     public partial class Initial : Migration
@@ -15,11 +15,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Artists",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    NormalizedName = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    SortName = table.Column<string>(type: "TEXT", maxLength: 512, nullable: true),
-                    MusicBrainzId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    NormalizedName = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    SortName = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    MusicBrainzId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -30,12 +30,12 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Artworks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Hash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    MimeType = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    Width = table.Column<int>(type: "INTEGER", nullable: false),
-                    Height = table.Column<int>(type: "INTEGER", nullable: false),
-                    Source = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Hash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    MimeType = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Width = table.Column<int>(type: "integer", nullable: false),
+                    Height = table.Column<int>(type: "integer", nullable: false),
+                    Source = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -46,9 +46,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Genres",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    NormalizedName = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    NormalizedName = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -59,12 +59,12 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Libraries",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    VisibleToAll = table.Column<bool>(type: "INTEGER", nullable: false),
-                    ScanIntervalHours = table.Column<int>(type: "INTEGER", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastScanAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    VisibleToAll = table.Column<bool>(type: "boolean", nullable: false),
+                    ScanIntervalHours = table.Column<int>(type: "integer", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastScanAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -75,9 +75,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Recordings",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MusicBrainzId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    AcoustId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    MusicBrainzId = table.Column<Guid>(type: "uuid", nullable: true),
+                    AcoustId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -88,9 +88,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Settings",
                 columns: table => new
                 {
-                    Key = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Value = table.Column<string>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Key = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -101,17 +101,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Users",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserName = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    NormalizedUserName = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    DisplayName = table.Column<string>(type: "TEXT", maxLength: 512, nullable: true),
-                    PasswordHash = table.Column<string>(type: "TEXT", nullable: false),
-                    Role = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    Permissions = table.Column<long>(type: "INTEGER", nullable: false),
-                    SecurityStamp = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    IsDisabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastLoginAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserName = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    NormalizedUserName = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    DisplayName = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    PasswordHash = table.Column<string>(type: "text", nullable: false),
+                    Role = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Permissions = table.Column<long>(type: "bigint", nullable: false),
+                    SecurityStamp = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    IsDisabled = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -122,14 +122,14 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Albums",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    NormalizedTitle = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    AlbumArtistId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Year = table.Column<int>(type: "INTEGER", nullable: true),
-                    IsCompilation = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MusicBrainzReleaseId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    ArtworkId = table.Column<Guid>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    NormalizedTitle = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    AlbumArtistId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Year = table.Column<int>(type: "integer", nullable: true),
+                    IsCompilation = table.Column<bool>(type: "boolean", nullable: false),
+                    MusicBrainzReleaseId = table.Column<Guid>(type: "uuid", nullable: true),
+                    ArtworkId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -152,11 +152,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "LibrarySources",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    LibraryId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Kind = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    Location = table.Column<string>(type: "TEXT", maxLength: 4096, nullable: false),
-                    Settings = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    LibraryId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Kind = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Location = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: false),
+                    Settings = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -173,20 +173,20 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "ScanJobs",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    LibraryId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Kind = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    Status = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    RequestedByUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    RequestedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    FinishedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    FilesSeen = table.Column<int>(type: "INTEGER", nullable: false),
-                    FilesAdded = table.Column<int>(type: "INTEGER", nullable: false),
-                    FilesUpdated = table.Column<int>(type: "INTEGER", nullable: false),
-                    FilesMissing = table.Column<int>(type: "INTEGER", nullable: false),
-                    Errors = table.Column<int>(type: "INTEGER", nullable: false),
-                    ErrorMessage = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    LibraryId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Kind = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    RequestedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    RequestedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FinishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    FilesSeen = table.Column<int>(type: "integer", nullable: false),
+                    FilesAdded = table.Column<int>(type: "integer", nullable: false),
+                    FilesUpdated = table.Column<int>(type: "integer", nullable: false),
+                    FilesMissing = table.Column<int>(type: "integer", nullable: false),
+                    Errors = table.Column<int>(type: "integer", nullable: false),
+                    ErrorCode = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -203,8 +203,8 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "LibraryAccess",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    LibraryId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LibraryId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -227,16 +227,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "UserSessions",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RefreshTokenHash = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
-                    DeviceName = table.Column<string>(type: "TEXT", maxLength: 512, nullable: true),
-                    UserAgent = table.Column<string>(type: "TEXT", nullable: true),
-                    IpAddress = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    LastSeenAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    RevokedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RefreshTokenHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    DeviceName = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    UserAgent = table.Column<string>(type: "text", nullable: true),
+                    IpAddress = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    AuthenticatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastSeenAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RevokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -253,17 +254,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "Tracks",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    NormalizedTitle = table.Column<string>(type: "TEXT", maxLength: 512, nullable: false),
-                    AlbumId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RecordingId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    DiscNumber = table.Column<int>(type: "INTEGER", nullable: true),
-                    TrackNumber = table.Column<int>(type: "INTEGER", nullable: true),
-                    DurationMs = table.Column<int>(type: "INTEGER", nullable: false),
-                    ArtworkId = table.Column<Guid>(type: "TEXT", nullable: true),
-                    AddedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    NormalizedTitle = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    AlbumId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RecordingId = table.Column<Guid>(type: "uuid", nullable: false),
+                    DiscNumber = table.Column<int>(type: "integer", nullable: true),
+                    TrackNumber = table.Column<int>(type: "integer", nullable: true),
+                    DurationMs = table.Column<int>(type: "integer", nullable: false),
+                    ArtworkId = table.Column<Guid>(type: "uuid", nullable: true),
+                    AddedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -292,26 +293,26 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "MediaFiles",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TrackId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    LibrarySourceId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    RelativePath = table.Column<string>(type: "TEXT", maxLength: 4096, nullable: false),
-                    Size = table.Column<long>(type: "INTEGER", nullable: false),
-                    ModifiedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ContentHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    Format = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
-                    BitRate = table.Column<int>(type: "INTEGER", nullable: true),
-                    SampleRate = table.Column<int>(type: "INTEGER", nullable: true),
-                    BitDepth = table.Column<int>(type: "INTEGER", nullable: true),
-                    Channels = table.Column<int>(type: "INTEGER", nullable: true),
-                    DurationMs = table.Column<int>(type: "INTEGER", nullable: false),
-                    ReplayGainTrackGain = table.Column<double>(type: "REAL", nullable: true),
-                    ReplayGainTrackPeak = table.Column<double>(type: "REAL", nullable: true),
-                    ReplayGainAlbumGain = table.Column<double>(type: "REAL", nullable: true),
-                    ReplayGainAlbumPeak = table.Column<double>(type: "REAL", nullable: true),
-                    AddedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ScannedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    MissingSince = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    TrackId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LibrarySourceId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RelativePath = table.Column<string>(type: "character varying(4096)", maxLength: 4096, nullable: false),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
+                    ModifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ContentHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Format = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    BitRate = table.Column<int>(type: "integer", nullable: true),
+                    SampleRate = table.Column<int>(type: "integer", nullable: true),
+                    BitDepth = table.Column<int>(type: "integer", nullable: true),
+                    Channels = table.Column<int>(type: "integer", nullable: true),
+                    DurationMs = table.Column<int>(type: "integer", nullable: false),
+                    ReplayGainTrackGain = table.Column<double>(type: "double precision", nullable: true),
+                    ReplayGainTrackPeak = table.Column<double>(type: "double precision", nullable: true),
+                    ReplayGainAlbumGain = table.Column<double>(type: "double precision", nullable: true),
+                    ReplayGainAlbumPeak = table.Column<double>(type: "double precision", nullable: true),
+                    AddedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ScannedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    MissingSince = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -334,10 +335,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "TrackArtists",
                 columns: table => new
                 {
-                    TrackId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    ArtistId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Role = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
-                    Position = table.Column<int>(type: "INTEGER", nullable: false)
+                    TrackId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ArtistId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Role = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -360,8 +361,8 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "TrackGenres",
                 columns: table => new
                 {
-                    TrackId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    GenreId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    TrackId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GenreId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -459,6 +460,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 name: "IX_ScanJobs_LibraryId_RequestedAt",
                 table: "ScanJobs",
                 columns: new[] { "LibraryId", "RequestedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScanJobs_Status",
+                table: "ScanJobs",
+                column: "Status");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TrackArtists_ArtistId",

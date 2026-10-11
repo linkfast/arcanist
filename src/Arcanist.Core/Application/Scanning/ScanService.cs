@@ -33,7 +33,8 @@ public sealed class ScanService(
     ArcanistDbContext db,
     AccessGuard guard,
     ScanCoordinator coordinator,
-    ScanProgressTracker progress)
+    ScanProgressTracker progress,
+    ScanEvents events)
 {
     public const int MaxJobs = 100;
 
@@ -87,6 +88,14 @@ public sealed class ScanService(
         return ToModel(job);
     }
 
+    /// <summary>Live updates of scans of one library, or of all the caller can see.</summary>
+    public IObservable<ScanJob> Watch(Guid? libraryId)
+    {
+        var access = Follower();
+        return new FilteredObservable<ScanJob>(events,
+            job => access.CanAccessLibrary(job.LibraryId) && (libraryId is null || job.LibraryId == libraryId));
+    }
+
     private UserAccess Follower()
     {
         var access = guard.Authenticated();
@@ -101,8 +110,6 @@ public sealed class ScanService(
             throw new ArcanistException.NotFound();
     }
 
-    private ScanJob ToModel(ScanJobEntity job) => new(
-        job.Id, job.LibraryId, job.Kind, job.Status, job.RequestedAt, job.StartedAt, job.FinishedAt,
-        job.FilesSeen, job.FilesAdded, job.FilesUpdated, job.FilesMissing, job.Errors, job.ErrorCode,
-        job.Status == ScanStatus.Running ? progress.Get(job.Id) : null);
+    private ScanJob ToModel(ScanJobEntity job) =>
+        ScanJobMapping.ToModel(job, job.Status == ScanStatus.Running ? progress.Get(job.Id) : null);
 }

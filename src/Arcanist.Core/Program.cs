@@ -78,6 +78,7 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseSerilogRequestLogging();
 
 app.UseSetupGate();
+app.UseWebSockets();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

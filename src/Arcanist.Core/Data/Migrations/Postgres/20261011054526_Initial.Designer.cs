@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Arcanist.Core.Data.Migrations.Postgres
 {
     [DbContext(typeof(PostgresArcanistDbContext))]
-    [Migration("20261011044511_ScanJobErrorCode")]
-    partial class ScanJobErrorCode
+    [Migration("20261011054526_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Arcanist.Core.Application;
+using ScanEvents = Arcanist.Core.Application.Scanning.ScanEvents;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Setup;
@@ -13,7 +14,7 @@ namespace Arcanist.Core.Scanning;
 /// Queue of scan jobs. A library never has two active jobs: asking again returns the one already queued or
 /// running. Jobs run one at a time, so scans never compete for the disk or the database writer.
 /// </summary>
-public sealed class ScanCoordinator(IArcanistDbContextFactory databases, TimeProvider time)
+public sealed class ScanCoordinator(IArcanistDbContextFactory databases, ScanEvents events, TimeProvider time)
 {
     private readonly Channel<Guid> _queue = Channel.CreateUnbounded<Guid>();
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _running = new();
@@ -46,6 +47,7 @@ public sealed class ScanCoordinator(IArcanistDbContextFactory databases, TimePro
             await db.SaveChangesAsync(cancellationToken);
 
             _queue.Writer.TryWrite(job.Id);
+            events.Publish(job);
             return job;
         }
         finally
@@ -64,11 +66,15 @@ public sealed class ScanCoordinator(IArcanistDbContextFactory databases, TimePro
         }
 
         await using var db = databases.CreateDbContext();
-        var now = time.GetUtcNow().UtcDateTime;
-        var cancelled = await db.ScanJobs
-            .Where(j => j.Id == jobId && j.Status == ScanStatus.Queued)
-            .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, ScanStatus.Cancelled).SetProperty(j => j.FinishedAt, now), cancellationToken);
-        return cancelled > 0;
+        var job = await db.ScanJobs.SingleOrDefaultAsync(j => j.Id == jobId && j.Status == ScanStatus.Queued, cancellationToken);
+        if (job is null)
+            return false;
+
+        job.Status = ScanStatus.Cancelled;
+        job.FinishedAt = time.GetUtcNow().UtcDateTime;
+        await db.SaveChangesAsync(cancellationToken);
+        events.Publish(job);
+        return true;
     }
 
     /// <summary>Stops any scan of a library, e.g. before deleting it.</summary>
@@ -171,6 +177,8 @@ public static class ScanningServiceCollectionExtensions
         services.Configure<ScannerOptions>(configuration.GetSection(ScannerOptions.Section));
         services.AddSingleton<ArtworkStore>();
         services.AddSingleton<ScanProgressTracker>();
+        services.AddSingleton<ScanEvents>();
+        services.AddHostedService<ScanScheduler>();
         services.AddSingleton<ScanCoordinator>();
         services.AddSingleton<LibraryScanner>();
         services.AddHostedService<ScanWorker>();

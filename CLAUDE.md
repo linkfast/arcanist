@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas, escáner y las dos APIs (GraphQL y REST). Faltan progreso en vivo por suscripción, escaneo programado, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fase 1 en curso: implementados setup, autenticación, usuarios, bibliotecas, escáner y las dos APIs (GraphQL y REST). Faltan streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -132,9 +132,11 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
     ARCANIST_UPDATE_CONTRACTS=1 dotnet test --project tests/Arcanist.Core.Tests -- --filter-class "*ApiContractTests"
     ```
 
+  - **Suscripciones** por WebSocket en `/graphql` (subprotocolos `graphql-transport-ws` y `graphql-ws`). El token va en el payload de `connection_init` como `{"Authorization": "Bearer …"}` y lo valida `WebSocketAuthentication` con `SessionValidator`, igual que en HTTP. Se comprueba al conectar; una suscripción abierta no caduca con el token. Las suscripciones no tienen equivalente REST.
   - Herramientas: GraphiQL en `/graphql/ui` (cargado de jsDelivr con SRI), SDL en `/graphql/schema.graphql`, Scalar en `/rest/docs` (embebido, funciona sin internet).
 - **Datos:** EF Core 10 con dos contextos, `SqliteArcanistDbContext` y `PostgresArcanistDbContext`, que heredan de `ArcanistDbContext`.
   - Cada contexto tiene sus migraciones en `Data/Migrations/{Sqlite,Postgres}`. Toda migración se genera **para ambos**.
+  - Antes de la primera versión publicada las migraciones se fusionaron en una `Initial`. **Una vez publicada, nunca reescribir ni fusionar migraciones.** Evitar operaciones que en SQLite obligan a reconstruir la tabla (renombrar o borrar columnas) salvo que sea imprescindible.
   - Claves `Guid.CreateVersion7()`, fechas como `DateTime` UTC, sin SQL específico de un proveedor.
   - El usuario elige SQLite o PostgreSQL en el asistente.
   - **Nunca** colocar el `.db` de SQLite en SMB/NFS.
@@ -171,6 +173,8 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
     - El álbum se agrupa por MBID de release o por artista del álbum + título normalizado. Sin etiqueta de álbum, se usa el nombre de la carpeta.
     - Los múltiples valores se separan por `;`, nunca por `/` (AC/DC); "feat." genera artistas `Featured`.
   - **Limitación conocida:** un álbum sin etiqueta AlbumArtist ni marca de recopilatorio, con artistas distintos por pista, se parte en varios álbumes. Se mejorará en la F3.
+  - **En vivo:** `ScanEvents` publica cambios de los trabajos (estado al momento; progreso como mucho cada 500 ms) para la suscripción GraphQL `scanJobUpdated(libraryId)`. Los clientes REST sondean `GET /rest/v1/scans/{id}`.
+  - **Escaneo programado:** `ScanScheduler` revisa cada minuto y encola un incremental cuando pasó `ScanIntervalHours` desde el último escaneo solicitado (aunque fallara, para no reintentar cada minuto).
   - Tests: `AudioFixtures` genera WAV etiquetados al vuelo, sin binarios en el repo. `ScannerTests` espera a los trabajos sondeando `GET /rest/v1/scans/{id}`.
 - **Catálogo (implementado):** `Application/Catalog/`. Operaciones `artists`, `artist`, `albums`, `album`, `tracks` y `track`.
   - **Visibilidad:** una pista es visible si tiene algún archivo presente (`MissingSince == null`) en una biblioteca accesible. Álbumes y artistas son visibles a través de esas pistas. Lo invisible responde 404.

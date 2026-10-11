@@ -84,28 +84,13 @@ public static class AuthServiceCollectionExtensions
             // A valid signature is not enough: the user, its security stamp and the session must still be current.
             OnTokenValidated = async context =>
             {
-                var principal = context.Principal!;
-                if (!Guid.TryParse(principal.FindFirst(ArcanistClaims.UserId)?.Value, out var userId)
-                    || !Guid.TryParse(principal.FindFirst(ArcanistClaims.SessionId)?.Value, out var sessionId))
-                {
-                    context.Fail("Malformed token.");
-                    return;
-                }
+                var access = await SessionValidator.ValidateAsync(context.Principal!, context.HttpContext.RequestServices,
+                    context.HttpContext.RequestAborted);
 
-                var cache = context.HttpContext.RequestServices.GetRequiredService<UserAccessCache>();
-                var cancellationToken = context.HttpContext.RequestAborted;
-                var access = await cache.GetUserAsync(userId, cancellationToken);
-
-                if (access is null
-                    || access.IsDisabled
-                    || access.SecurityStamp != principal.FindFirst(ArcanistClaims.SecurityStamp)?.Value
-                    || !await cache.IsSessionActiveAsync(sessionId, cancellationToken))
-                {
+                if (access is null)
                     context.Fail("Session is no longer valid.");
-                    return;
-                }
-
-                context.HttpContext.Items[typeof(UserAccess)] = access;
+                else
+                    context.HttpContext.Items[typeof(UserAccess)] = access;
             },
         };
     }

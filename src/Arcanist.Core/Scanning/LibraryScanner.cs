@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Arcanist.Core.Application;
+using ScanEvents = Arcanist.Core.Application.Scanning.ScanEvents;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Storage;
@@ -22,6 +23,7 @@ public sealed class LibraryScanner(
     ILibraryStorageResolver storages,
     ArtworkStore artworkStore,
     ScanProgressTracker progress,
+    ScanEvents events,
     IOptions<ScannerOptions> options,
     TimeProvider time,
     ILogger<LibraryScanner> logger)
@@ -44,6 +46,7 @@ public sealed class LibraryScanner(
         job.Status = ScanStatus.Running;
         job.StartedAt = Now();
         await db.SaveChangesAsync(cancellationToken);
+        events.Publish(job);
         logger.LogInformation("Scanning library {Library} ({Kind})", library.Name, job.Kind);
 
         try
@@ -76,12 +79,8 @@ public sealed class LibraryScanner(
             job.Status = ScanStatus.Failed;
             job.ErrorCode ??= ErrorCodes.ScanFailed;
         }
-        finally
-        {
-            progress.Stop(job.Id);
-        }
-
         job.FinishedAt = Now();
+        progress.Stop(job.Id);
         try
         {
             await db.SaveChangesAsync(CancellationToken.None);
@@ -90,6 +89,8 @@ public sealed class LibraryScanner(
         {
             // The library (and with it this job) was deleted while scanning.
         }
+
+        events.Publish(job);
 
         logger.LogInformation(
             "Scan of {Library} {Status}: {Seen} files, {Added} added, {Updated} updated, {Missing} missing, {Errors} unreadable",
@@ -258,6 +259,7 @@ public sealed class LibraryScanner(
             job.FilesUpdated += result.Updated;
             counter.Read(batch.Count);
             batch.Clear();
+            events.Publish(job);
         }
     }
 

@@ -336,3 +336,8 @@ input ChangeMyPasswordInput {
   currentPassword: String!
   newPassword: String!
 }
+
+type Subscription {
+  "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
+  scanJobUpdated(libraryId: ID): ScanJob!
+}

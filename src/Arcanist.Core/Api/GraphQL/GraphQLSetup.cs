@@ -13,8 +13,9 @@ public static class GraphQLSetup
     public static IServiceCollection AddArcanistGraphQL(this IServiceCollection services, IHostEnvironment environment)
     {
         services.AddGraphQL(graphql => graphql
-            .AddAutoSchema<Query>(schema => schema.WithMutation<Mutation>())
+            .AddAutoSchema<Query>(schema => schema.WithMutation<Mutation>().WithSubscription<Subscription>())
             .AddSystemTextJson()
+            .AddWebSocketAuthentication<WebSocketAuthentication>()
             .AddErrorInfoProvider(new ArcanistErrorInfoProvider(environment.IsDevelopment())));
 
         return services;
@@ -22,7 +23,7 @@ public static class GraphQLSetup
 
     public static IEndpointRouteBuilder MapArcanistGraphQL(this IEndpointRouteBuilder app)
     {
-        // HTTP and WebSocket (graphql-ws) transports.
+        // HTTP and WebSocket transports (graphql-transport-ws and the older graphql-ws subprotocols).
         app.MapGraphQL(Path);
 
         app.MapGet(Path + "/schema.graphql", (ISchema schema) =>

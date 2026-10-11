@@ -15,23 +15,54 @@ Arcanist is a self-hosted music server: your own personal and family "Spotify". 
 - **mStream compatibility** — mStream clients can use Arcanist as their server, and existing mStream installations can be imported.
 - **Optional Ultimate Cloud integration** — use music stored in Ultimate Cloud, and with a paid plan sync libraries to Ultimate Cloud or S3-compatible storage.
 
+## Installing
+
+Releases are published on [GitHub Releases](https://github.com/linkfast/arcanist/releases) and as a Docker image
+at `ghcr.io/linkfast/arcanist`. Every installation listens on port **8484**: open `http://<host>:8484/` and follow
+the setup wizard. From another device it asks for a one-time setup code, shown where each section below says.
+
+### Windows
+
+Run `Arcanist-win-Setup.exe`. It installs for the current user without administrator rights and starts the
+Arcanist tray icon, which runs the server in the background while you are signed in, starts with Windows and
+installs updates. Data lives in `%ProgramData%\Arcanist`.
+
+To keep Arcanist running when nobody is signed in, choose **Run as a Windows service…** in the tray menu. The
+service runs as the dedicated account `NT SERVICE\Arcanist`, which can only read the music folders you choose; for
+music on a NAS share, keep the app mode or change the service account in `services.msc`. The tray app keeps
+controlling and updating the service.
+
+The setup code is in `%ProgramData%\Arcanist\setup-code.txt` (you do not need it on the machine itself).
+
+### Linux
+
+Self-contained tarballs for x64 and arm64 with a systemd unit: see [packaging/linux](packaging/linux/README.md).
+The setup code is in `journalctl -u arcanist`.
+
+### Docker
+
+```bash
+docker run -d --name arcanist -p 8484:8484 -v arcanist-data:/data -v /path/to/music:/music:ro ghcr.io/linkfast/arcanist
+```
+
+The image supports linux/amd64 and linux/arm64. The setup code is in `docker logs arcanist`. Add `/music` as a
+library. Keep `/data` on a local disk: with SQLite, the database must not live on a network share (the music can).
+
+### Synology
+
+A package for DSM 7.2+ is prepared for SynoCommunity ([packaging/synology](packaging/synology/README.md)). Its install
+wizard shows the setup code.
+
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `src/Arcanist.Core` | Server (ASP.NET Core, .NET 10) |
+| `src/Arcanist.Core` | Server (ASP.NET Core, .NET 10), executable `arcanist` |
 | `src/Arcanist.Web` | Admin panel (Angular + spartan-ng), served at `/admin` |
-
-## Running with Docker
-
-```bash
-docker build -t arcanist .
-docker run -d -p 8484:8484 -v arcanist-data:/data -v /path/to/music:/music:ro arcanist
-```
-
-Open `http://<host>:8484/` and follow the setup wizard. From another device it asks for a one-time setup code,
-printed in `docker logs <container>`. Add `/music` as a library. Keep `/data` on a local disk: with SQLite, the
-database must not live on a network share (the music can).
+| `src/Arcanist.Tray` | Windows tray app (Avalonia), installed with Velopack |
+| `tests/` | Server and tray tests |
+| `packaging/` | Windows installer, Linux tarballs and systemd unit, Synology package |
+| `.github/workflows` | CI, and releases on `v*` tags |
 
 ## Building
 
@@ -51,8 +82,15 @@ npm ci
 npm start                                        # http://localhost:4200/admin/
 ```
 
-`dotnet publish src/Arcanist.Core -c Release -p:IncludeAdminPanel=true` produces a self-contained folder with the
-panel included.
+Packages, each including the admin panel:
+
+```bash
+docker build -t arcanist .                       # or: docker buildx build --platform linux/amd64,linux/arm64 .
+packaging/linux/pack.sh 0.2.0                    # artifacts/linux/*.tar.gz
+pwsh packaging/windows/pack.ps1 -Version 0.2.0   # artifacts/windows/releases/Arcanist-win-Setup.exe
+```
+
+Pushing a `v*` tag runs the same builds in GitHub Actions and publishes the release and the Docker image.
 
 ## Building clients
 

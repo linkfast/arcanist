@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 completa (backend, panel de administración, guía para desarrolladores en `docs/developers/` y Dockerfile). Siguiente: Fase 2 (distribución), ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fases 1 (fundaciones y biblioteca) y 2 (distribución) completas. Queda pendiente de la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity. Siguiente: Fase 3, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
-Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
+Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
 **Todos los commits llevan `Signed-off-by`** (`git commit -s`): el proyecto usa DCO (ver `CONTRIBUTING.md`).
 
@@ -17,8 +17,12 @@ Arcanist.slnx                 solución .NET (formato .slnx)
 Directory.Build.props         metadatos comunes (licencia AGPL-3.0-or-later, copyright)
 global.json                   SDK 10.0.100, rollForward latestFeature (la máquina tiene SDKs 8, 9 y 10)
 mise.toml                     fija Node 24.15.0 para todo el repo
-src/Arcanist.Core/            servidor ASP.NET Core, net10.0
+src/Arcanist.Core/            servidor ASP.NET Core, net10.0; el ejecutable se llama `arcanist`
 src/Arcanist.Web/             panel de administración: Angular 22 + Tailwind v4 + spartan-ng (paquete npm `arcanist-web`)
+src/Arcanist.Tray/            app de bandeja para Windows (Avalonia 12 + Velopack), net10.0-windows
+tests/                        Arcanist.Core.Tests y Arcanist.Tray.Tests
+packaging/                    instalador de Windows, tarballs y unidad systemd de Linux, paquete Synology (spksrc)
+.github/workflows/            ci.yml y release.yml
 ```
 
 `Arcanist.Web` **no está en la solución `.slnx`** (Angular no es un proyecto MSBuild); se construye y prueba por separado con npm.
@@ -31,6 +35,7 @@ dotnet run --project src/Arcanist.Core          # http://localhost:5263 / https:
 dotnet test                                      # todos los tests
 dotnet test --project tests/Arcanist.Core.Tests -- --filter-method "*Nombre_del_test"   # un test
 dotnet test --project tests/Arcanist.Core.Tests -- --filter-class "*DataDirectoryTests" # una clase
+dotnet test --project tests/Arcanist.Tray.Tests  # tests del tray (solo Windows)
 ```
 
 - Los tests usan **xUnit v3 sobre Microsoft Testing Platform**, activado en `global.json` (`"test": { "runner": "Microsoft.Testing.Platform" }`). Por eso no hay `Microsoft.NET.Test.Sdk` ni `xunit.runner.visualstudio`, y los filtros van después de `--` con la sintaxis de MTP, no con `--filter` de VSTest.
@@ -47,10 +52,22 @@ dotnet ef migrations add <Nombre> --project src/Arcanist.Core --context Postgres
 
 El proveedor se configura en `Arcanist:Database` (`Provider`: `Sqlite`/`Postgres`, `ConnectionString`). Nada se resuelve contra la BD hasta que esa sección existe. Los servicios obtienen el contexto por DI (`ArcanistDbContext`, scoped) o con `IArcanistDbContextFactory`, que es lo que usan los trabajos en segundo plano.
 
-**Publicación y Docker:**
-- `docker build -t arcanist .`: imagen multi-etapa (panel con Node 24, servidor con el SDK 10, runtime `aspnet:10.0`), usuario `app`, volumen `/data` y puerto 8484 (también el puerto por defecto fuera de Docker, en `appsettings.json`). Desde el host las peticiones no son loopback, así que el asistente pide el código de setup que aparece en `docker logs`.
-- `dotnet publish src/Arcanist.Core -c Release -p:IncludeAdminPanel=true` incluye el panel en `wwwroot/admin`. Requiere npm con Node 24 en el PATH, por eso está desactivado por defecto.
+**Distribución** (todas las variantes incluyen el panel y escuchan en el puerto 8484, definido en `appsettings.json`):
+- `docker build -t arcanist .`: imagen multi-etapa. El panel y el servidor se compilan en `$BUILDPLATFORM` y la etapa final no tiene `RUN`, así que `docker buildx build --platform linux/amd64,linux/arm64 .` no necesita QEMU. Usa el usuario `app` y el volumen `/data`; `--build-arg VERSION=x.y.z` fija la versión. Desde el host las peticiones no son loopback, así que el asistente pide el código de setup que aparece en `docker logs`.
+- `packaging/linux/pack.sh [versión] [--skip-panel]`: tarballs self-contained linux-x64/arm64 en `artifacts/linux/`, con `arcanist.service` (systemd con `DynamicUser`, `StateDirectory` y `Type=notify`). Probado bajo systemd real en un contenedor.
+- `pwsh packaging/windows/pack.ps1 [-Version x.y.z] [-SkipPanel]`: instalador Velopack en `artifacts/windows/releases/`, con el tray como `mainExe` y el servidor en `server\`. vpk se niega a empaquetar una versión igual o menor que otra que ya esté en esa carpeta: borrarla para repetir.
+- `packaging/build-panel.sh` compila el panel una vez para todos los paquetes (usa mise si existe). Se quitan los `.pdb`: los nativos de SkiaSharp duplicarían el tamaño.
+- `packaging/synology/spksrc/`: `cross/arcanist` y `spk/arcanist` para SynoCommunity; descargan los tarballs de la release. **No se han construido en spksrc**: hacerlo al enviarlos, tras la primera release.
+- `dotnet publish src/Arcanist.Core -c Release -p:IncludeAdminPanel=true` también incluye el panel en `wwwroot/admin` (necesita npm con Node 24 en el PATH).
+- **CI** (`ci.yml`): servidor en Linux (con PostgreSQL), tray en Windows y panel. **Release** (`release.yml`, al empujar un tag `v*`): crea un borrador de release, adjunta el instalador y los paquetes de Velopack (con delta respecto a la release anterior) y los tarballs, publica la imagen multi-arch en `ghcr.io/<owner>/arcanist` y después publica la release.
 - `docs/developers/README.md` es la guía pública para quien haga reproductores. **Actualizarla cuando cambie el contrato** (autenticación, paginación, streaming, errores…).
+
+**Supervisión** (`Hosting/Supervision.cs`), el contrato con los lanzadores:
+- Mientras el servidor corre existe `<datos>/runtime.json` con `processId`, `version`, `addresses` y `startedAt`. Se borra al parar.
+- Con `--Arcanist:Hosting:ExitWhenInputCloses=true`, el servidor se detiene limpiamente al cerrarse su stdin. Así lo para el tray, y no sobrevive si el tray muere.
+- Si el directorio de trabajo no tiene `appsettings.json` pero el del ejecutable sí, se usa este como content root (`Hosting/ContentRoot.cs`).
+- `SupervisionTests` lo comprueba lanzando el ejecutable real.
+- El servidor se niega a arrancar sin ICU (`TextNormalizer.EnsureSupported`): en modo invariante, .NET no normaliza y las búsquedas dejarían de ignorar los acentos.
 
 **Directorio de datos** (`Hosting/DataDirectory.cs`, `Hosting/ArcanistPaths.cs`):
 - Se elige, por orden, con `--data-dir`, `Arcanist__DataDir` o `ARCANIST_DATA_DIR`.
@@ -232,10 +249,24 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - El código de setup se exige fuera de loopback.
   - Los frontends y extensiones de terceros tienen confianza total: se avisa al instalarlos y se pide reautenticación para las acciones sensibles.
 
+- **Windows (implementado):** `src/Arcanist.Tray`.
+  - Velopack instala por usuario en `%LocalAppData%\Arcanist`, sin elevación. El tray arranca con Windows (clave `Run` de HKCU) y ejecuta el servidor de `current\server\` como proceso hijo. Si se cae, lo reinicia con espera creciente; tras 3 caídas seguidas se rinde.
+  - Actualiza desde GitHub Releases (`UpdateManager` + `GithubSource`). Antes de aplicar una actualización detiene el servidor.
+  - Los datos están en `%ProgramData%\Arcanist`, compartidos por los dos modos.
+  - **Modo servicio opcional:** `ServiceHelper` se ejecuta elevado (`Arcanist.Tray.exe --service-helper install|update|uninstall|start|stop`) y deja un registro en `logs/service-helper.log`. Al instalar:
+    - copia el servidor a `%ProgramFiles%\Arcanist\server`, nunca a una carpeta que el usuario pueda modificar;
+    - lo registra con `sc.exe` como `NT SERVICE\Arcanist` (cuenta virtual) con arranque retrasado y reinicio ante fallos;
+    - da permiso de escritura en los datos y de lectura en las carpetas de música elegidas;
+    - deja al usuario iniciar y detener el servicio sin elevación (ACE en el SDDL);
+    - abre el puerto en el firewall solo para redes privadas y de dominio.
+  - El tray detecta el servicio y lo controla. Tras una actualización aplicada en modo servicio, se reinicia con `--update-service` y actualiza también el servicio (con UAC).
+  - Para música en un NAS se recomienda el modo app o cambiar la cuenta del servicio en `services.msc`.
+- **Synology:** DSM 7.2+, x64 y ARMv8. Usa `SERVICE_USER=auto` (`sc-arcanist`), los datos van en `SYNOPKG_PKGVAR` y la carpeta compartida de música sale del asistente (`SERVICE_WIZARD_SHARENAME`). El asistente genera y muestra el código de setup, que `service_postinst` escribe en `setup-code.txt`.
+
 ## Roadmap
 
 - **F1:** fundaciones y biblioteca (completada).
-- **F2:** distribución (instalador de Windows con servicio y tray en Avalonia, systemd, Docker, Synology).
+- **F2:** distribución (completada): instalador Velopack con tray en Avalonia y servicio opcional, tarballs y systemd, Docker multi-arch en GHCR, paquete Synology y workflows de CI y release.
 - **F3:** escáner avanzado y ffmpeg (transcodificación, waveform, BPM y tonalidad, EBU R128, Chromaprint/AcoustID, letras, carátulas online, cue).
 - **F4:** drop folder y auto-organización.
 - **F5:** playlists, estadísticas y páginas tipo Spotify.
@@ -249,6 +280,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 
 Aún sin decidir. No asumir una opción sin consultar al usuario, y documentar aquí la elección cuando se tome:
 
-- Herramienta del instalador de Windows (WiX, Inno Setup o Velopack). Se decide en la F2.
 - DSP de análisis de audio en C# o en una crate Rust compartida. Se decide en la F3.
-- URL pública del repositorio, para `serverInfo.sourceUrl` (configurable en `Arcanist:SourceUrl`; hoy es `null`).
+- Firma de código del instalador de Windows (Authenticode). Sin firma, SmartScreen avisa al instalar; `vpk pack` acepta los parámetros de firma cuando haya certificado.
+
+Decididas: el instalador es Velopack. El repositorio es `github.com/linkfast/arcanist`: es el `RepositoryUrl` de `Directory.Build.props` y el valor por defecto de `serverInfo.sourceUrl`.

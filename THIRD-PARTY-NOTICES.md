@@ -40,3 +40,24 @@ GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr
 | ng-icons (`@ng-icons/core`) | MIT |
 | Lucide icons (`@ng-icons/lucide`) | ISC |
 | tslib | 0BSD |
+
+## Windows app (`src/Arcanist.Tray`)
+
+| Component | License |
+|---|---|
+| Avalonia (`Avalonia`, `.Desktop`, `.Themes.Fluent` and their platform packages) | MIT |
+| ANGLE (`Avalonia.Angle.Windows.Natives`) | BSD-3-Clause |
+| SkiaSharp, HarfBuzzSharp | MIT |
+| Skia | BSD-3-Clause |
+| HarfBuzz | MIT ("Old MIT") |
+| MicroCom.Runtime | MIT |
+| Tmds.DBus.Protocol | MIT |
+| Velopack (installer and updates) | MIT |
+| System.ServiceProcess.ServiceController, System.Diagnostics.EventLog | MIT |
+
+## Build tools (not distributed)
+
+| Component | License |
+|---|---|
+| Velopack CLI (`vpk`, local dotnet tool) | MIT |
+| Entity Framework Core tools (`dotnet-ef`) | MIT |

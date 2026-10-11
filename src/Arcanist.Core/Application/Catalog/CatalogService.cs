@@ -13,7 +13,7 @@ namespace Arcanist.Core.Application.Catalog;
 /// files is present in a library the caller can access, and albums and artists are visible through such tracks.
 /// Lists use keyset pagination, which stays fast and stable while scans add music.
 /// </summary>
-public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard)
+public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, StreamTokens streamTokens)
 {
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 500;
@@ -179,6 +179,9 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard)
         var files = (await VisibleFiles(access).AsNoTracking().Where(f => ids.Contains(f.TrackId)).ToListAsync(cancellationToken))
             .ToLookup(f => f.TrackId);
 
+        // One token per response; it is not tied to a track.
+        var streamToken = streamTokens.Create(access.UserId, guard.SessionId);
+
         return tracks.Select(t =>
         {
             var album = albums[t.AlbumId];
@@ -196,8 +199,9 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard)
                 files[t.Id]
                     .OrderByDescending(f => f.BitDepth ?? 0).ThenByDescending(f => f.SampleRate ?? 0).ThenByDescending(f => f.BitRate ?? 0)
                     .Select(f => new TrackFile(f.Id, f.Format, f.BitRate, f.SampleRate, f.BitDepth, f.Channels, f.Size, f.DurationMs,
-                        f.ReplayGainTrackGain, f.ReplayGainAlbumGain))
-                    .ToList());
+                        f.ReplayGainTrackGain, f.ReplayGainAlbumGain, StreamUrls.For(t.Id, streamToken, f.Id)))
+                    .ToList(),
+                StreamUrls.For(t.Id, streamToken));
         }).ToList();
     }
 
@@ -205,4 +209,10 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard)
 
     private static string? Search(string? search) =>
         string.IsNullOrWhiteSpace(search) ? null : TextNormalizer.Normalize(search);
+}
+
+public static class StreamUrls
+{
+    public static string For(Guid trackId, string token, Guid? fileId = null) =>
+        $"/rest/v1/stream/{trackId}?{StreamTokens.QueryParameter}={token}" + (fileId is { } id ? $"&fileId={id}" : "");
 }

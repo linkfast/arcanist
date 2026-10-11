@@ -27,6 +27,7 @@ public sealed record AlbumReference(Guid Id, string Title);
 public sealed record ArtistCredit(Guid ArtistId, string Name, ArtistRole Role);
 
 /// <summary>One stored copy of a track. A track can have several (e.g. FLAC and MP3).</summary>
+/// <param name="StreamUrl">Plays this copy. Relative to the server; valid for a few hours for the current session.</param>
 public sealed record TrackFile(
     Guid Id,
     string? Format,
@@ -37,10 +38,13 @@ public sealed record TrackFile(
     long Size,
     int DurationMs,
     double? ReplayGainTrackGain,
-    double? ReplayGainAlbumGain);
+    double? ReplayGainAlbumGain,
+    string StreamUrl);
 
 /// <param name="ArtworkId">The track's own image, or else its album's.</param>
 /// <param name="Files">Copies of the track in libraries the user can access, best quality first.</param>
+/// <param name="StreamUrl">Plays the best copy. Relative to the server; it carries a token valid for a few hours for
+/// the current session, so it works where headers cannot be sent (e.g. an HTML audio element).</param>
 public sealed record Track(
     Guid Id,
     string Title,
@@ -52,7 +56,8 @@ public sealed record Track(
     Guid? ArtworkId,
     IReadOnlyList<string> Genres,
     DateTime AddedAt,
-    IReadOnlyList<TrackFile> Files);
+    IReadOnlyList<TrackFile> Files,
+    string StreamUrl);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);

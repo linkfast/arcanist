@@ -86,6 +86,7 @@ type Track {
   genres: [String!]!
   addedAt: DateTime!
   files: [TrackFile!]!
+  streamUrl: String!
 }
 
 type AlbumReference {
@@ -123,6 +124,7 @@ type TrackFile {
   durationMs: Int!
   replayGainTrackGain: Float
   replayGainAlbumGain: Float
+  streamUrl: String!
 }
 
 type Library {

@@ -1,0 +1,103 @@
+using System.Security.Claims;
+using Arcanist.Core.Application.Artwork;
+using Arcanist.Core.Application.Streaming;
+using Arcanist.Core.Auth;
+using Arcanist.Core.Storage;
+using Microsoft.Net.Http.Headers;
+
+namespace Arcanist.Core.Api.Rest;
+
+public static class MediaEndpoints
+{
+    private static readonly string[] AudioTypes = ["audio/flac", "audio/ogg", "audio/opus", "audio/mp4", "audio/wav", "application/octet-stream"];
+
+    public static IEndpointRouteBuilder MapMediaEndpoints(this IEndpointRouteBuilder rest)
+    {
+        rest.MapMethods("/stream/{trackId:guid}", [HttpMethods.Get, HttpMethods.Head], StreamAsync)
+            .WithTags("Media")
+            .WithName("Stream")
+            .WithSummary("Audio of a track, with HTTP range support for seeking. Authenticate with a Bearer token or the `st` " +
+                         "parameter of a track's streamUrl. `fileId` picks a specific copy; `download=true` sends the original " +
+                         "as an attachment and requires DOWNLOAD.")
+            .Produces(StatusCodes.Status200OK, typeof(Stream), "audio/mpeg", AudioTypes)
+            .Produces(StatusCodes.Status206PartialContent, typeof(Stream), "audio/mpeg", AudioTypes);
+
+        rest.MapGet("/artwork/{id:guid}", ArtworkAsync)
+            .WithTags("Media")
+            .WithName("Artwork")
+            .WithSummary("An album or track image by artworkId. `size` scales it so its longest side fits (64, 128, 256, 512 or 1024). " +
+                         "Public and cacheable forever, so it can be used directly in image elements.")
+            .Produces(StatusCodes.Status200OK, typeof(Stream), "image/jpeg", "image/png", "image/webp");
+
+        return rest;
+    }
+
+    private static async Task<IResult> StreamAsync(
+        Guid trackId,
+        Guid? fileId,
+        bool? download,
+        HttpContext context,
+        StreamService streams,
+        ILibraryStorageResolver storages,
+        CancellationToken cancellationToken)
+    {
+        await AuthenticateStreamTokenAsync(context, cancellationToken);
+
+        var target = await streams.ResolveAsync(trackId, fileId, download == true, cancellationToken);
+
+        Stream stream;
+        try
+        {
+            stream = await storages.For(target.Location.Kind).OpenReadAsync(target.Location, target.RelativePath, cancellationToken);
+        }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Deleted since the last scan, or the share is gone.
+            return Problems.Create(StatusCodes.Status404NotFound, Application.ErrorCodes.NotFound);
+        }
+
+        // Private: the response depends on who is asking.
+        context.Response.Headers.CacheControl = "private, max-age=3600";
+
+        return Results.Stream(
+            stream,
+            target.ContentType,
+            fileDownloadName: download == true ? target.FileName : null,
+            lastModified: target.ModifiedAt,
+            entityTag: new EntityTagHeaderValue($"\"{target.ContentHash}\""),
+            enableRangeProcessing: true);
+    }
+
+    private static async Task<IResult> ArtworkAsync(Guid id, int? size, HttpContext context, ArtworkService artwork, CancellationToken cancellationToken)
+    {
+        var file = await artwork.GetAsync(id, size, cancellationToken);
+        context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        return Results.File(file.Path, file.ContentType, entityTag: new EntityTagHeaderValue(file.ETag));
+    }
+
+    /// <summary>Signs the request in with <c>?st=</c> when it has no Bearer token.</summary>
+    private static async Task AuthenticateStreamTokenAsync(HttpContext context, CancellationToken cancellationToken)
+    {
+        if (context.Items.ContainsKey(typeof(UserAccess)) || context.Request.Query[StreamTokens.QueryParameter] is not [{ } token])
+            return;
+
+        if (context.RequestServices.GetRequiredService<StreamTokens>().Read(token) is not { } claims)
+            return;
+
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(ArcanistClaims.UserId, claims.UserId.ToString()),
+            new Claim(ArcanistClaims.SessionId, claims.SessionId.ToString()),
+        ], "stream-token"));
+
+        var access = await context.RequestServices.GetRequiredService<UserAccessCache>().GetUserAsync(claims.UserId, cancellationToken);
+        if (access is null || access.IsDisabled
+            || !await context.RequestServices.GetRequiredService<UserAccessCache>().IsSessionActiveAsync(claims.SessionId, cancellationToken))
+        {
+            return;
+        }
+
+        context.User = principal;
+        context.Items[typeof(UserAccess)] = access;
+    }
+}

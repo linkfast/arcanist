@@ -39,6 +39,7 @@ public static class AuthServiceCollectionExtensions
 
         services.AddSingleton<SigningKey>();
         services.AddSingleton<TokenService>();
+        services.AddSingleton<StreamTokens>();
         services.AddSingleton<LoginThrottle>();
         services.AddSingleton<UserAccessCache>();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();

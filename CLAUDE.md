@@ -181,6 +181,10 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - `Track.files` lista solo las copias accesibles, de mejor a peor calidad.
   - **Paginación keyset** (`Keyset`) por clave normalizada + id, con cursor opaco (`after`/`nextCursor`) y `totalCount`. Probada en ambos proveedores. `tracks(albumId)` devuelve el álbum entero en orden de disco y pista, sin paginar.
   - La búsqueda usa `Contains` sobre las columnas `Normalized*`. `TextNormalizer` quita acentos y pliega letras como æ/ø/ß/ł ("agaetis" encuentra "Ágætis"). **Cambiar sus reglas tras publicar exige una migración que recalcule los valores guardados.**
+- **Streaming y carátulas (implementado):** `Api/Rest/MediaEndpoints.cs`, `Application/Streaming/` y `Application/Artwork/`. Solo REST.
+  - `GET|HEAD /rest/v1/stream/{trackId}`: elige la mejor copia accesible (o `fileId`). Admite `Range` (206), `ETag` = `ContentHash` y `Cache-Control: private`. Con `download=true` envía el original como adjunto y exige `DOWNLOAD`.
+  - **Autenticación del streaming:** `Bearer`, o `?st=` de `Track.streamUrl`/`TrackFile.streamUrl`. `StreamTokens` es un HMAC con clave propia en `<datos>/keys/`, ligado a usuario y sesión y válido 6 h. Revocar la sesión lo invalida. El log de peticiones no incluye la query string, así que el token no queda registrado.
+  - `GET /rest/v1/artwork/{id}?size=`: **pública** (para `<img>`; los ids no se adivinan) e inmutable. Las miniaturas JPEG (64…1024 px) se generan con SkiaSharp en `<datos>/cache/thumbnails/`.
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.

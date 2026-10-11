@@ -373,6 +373,292 @@
         }
       }
     },
+    "/rest/v1/stream/{trackId}": {
+      "get": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Audio of a track, with HTTP range support for seeking. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD.",
+        "operationId": "Stream",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fileId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/flac": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/opus": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial Content",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/flac": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/opus": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Audio of a track, with HTTP range support for seeking. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD.",
+        "operationId": "Stream",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fileId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/flac": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/opus": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial Content",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/flac": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/opus": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/artwork/{id}": {
+      "get": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "An album or track image by artworkId. \u0060size\u0060 scales it so its longest side fits (64, 128, 256, 512 or 1024). Public and cacheable forever, so it can be used directly in image elements.",
+        "operationId": "Artwork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/me": {
       "get": {
         "tags": [
@@ -2303,6 +2589,10 @@
           }
         }
       },
+      "Stream": {
+        "type": "string",
+        "format": "binary"
+      },
       "TokenResponse": {
         "required": [
           "accessToken",
@@ -2347,7 +2637,8 @@
           "artworkId",
           "genres",
           "addedAt",
-          "files"
+          "files",
+          "streamUrl"
         ],
         "type": "object",
         "properties": {
@@ -2415,6 +2706,9 @@
             "items": {
               "$ref": "#/components/schemas/TrackFile"
             }
+          },
+          "streamUrl": {
+            "type": "string"
           }
         }
       },
@@ -2429,7 +2723,8 @@
           "size",
           "durationMs",
           "replayGainTrackGain",
-          "replayGainAlbumGain"
+          "replayGainAlbumGain",
+          "streamUrl"
         ],
         "type": "object",
         "properties": {
@@ -2512,6 +2807,9 @@
               "string"
             ],
             "format": "double"
+          },
+          "streamUrl": {
+            "type": "string"
           }
         }
       },
@@ -2696,6 +2994,9 @@
     },
     {
       "name": "Scans"
+    },
+    {
+      "name": "Media"
     },
     {
       "name": "Me"

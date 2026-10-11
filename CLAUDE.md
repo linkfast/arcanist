@@ -185,6 +185,13 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - `GET|HEAD /rest/v1/stream/{trackId}`: elige la mejor copia accesible (o `fileId`). Admite `Range` (206), `ETag` = `ContentHash` y `Cache-Control: private`. Con `download=true` envía el original como adjunto y exige `DOWNLOAD`.
   - **Autenticación del streaming:** `Bearer`, o `?st=` de `Track.streamUrl`/`TrackFile.streamUrl`. `StreamTokens` es un HMAC con clave propia en `<datos>/keys/`, ligado a usuario y sesión y válido 6 h. Revocar la sesión lo invalida. El log de peticiones no incluye la query string, así que el token no queda registrado.
   - `GET /rest/v1/artwork/{id}?size=`: **pública** (para `<img>`; los ids no se adivinan) e inmutable. Las miniaturas JPEG (64…1024 px) se generan con SkiaSharp en `<datos>/cache/thumbnails/`.
+- **Hosting de frontends (implementado):** `Hosting/FrontendHost.cs`.
+  - `/admin/**` sirve `Arcanist:Frontends:AdminRoot` (por defecto `wwwroot/admin`, el build de Angular).
+  - `/` sirve `PlayerRoot` (por defecto `wwwroot/player`); si no existe, una página provisional con enlace al admin y aviso AGPL.
+  - Los fallbacks devuelven el archivo si existe y, si no, `index.html` (rutas del cliente). Los recursos con hash en el nombre se marcan `immutable`.
+  - Los prefijos de API y reservados (`/rest`, `/graphql`, `/api`, `/media`, `/players`, `/ext`…) responden 404 JSON y **nunca HTML**.
+  - Fallbacks y catch-alls solo atienden GET/HEAD: un catch-all con todos los métodos le quitaba peticiones POST sin cuerpo a los endpoints reales.
+  - No usar `UseStaticFiles` para los frontends: no actúa cuando el enrutado ya eligió un endpoint (el fallback).
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.

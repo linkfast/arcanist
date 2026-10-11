@@ -70,6 +70,7 @@ builder.Services.AddScanning(builder.Configuration);
 builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddArcanistRest();
 builder.Services.AddArcanistGraphQL(builder.Environment);
+builder.Services.AddFrontends(builder.Configuration);
 
 var app = builder.Build();
 
@@ -92,8 +93,7 @@ app.MapHealthChecks("/health");
 app.MapArcanistRest();
 app.MapArcanistGraphQL();
 
-// Placeholder until the frontend host serves the web player here.
-app.MapGet("/", () => "Hello World!").ExcludeFromDescription();
+app.UseFrontends();
 
 app.Logger.LogInformation("Data directory: {DataDirectory}", paths.Root);
 

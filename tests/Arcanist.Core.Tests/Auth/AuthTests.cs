@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Arcanist.Core.Api.Rest;
+using Arcanist.Core.Application.Users;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
@@ -33,7 +34,7 @@ public sealed class AuthTests : IAsyncLifetime
         Assert.NotNull(tokens.RefreshToken);
         Assert.Equal(UserRole.Admin, tokens.User.Role);
 
-        var me = await _factory.CreateClient(tokens.AccessToken).GetFromJsonAsync<AuthenticatedUser>("/rest/v1/me", ArcanistFactory.Json, Cancel);
+        var me = await _factory.CreateClient(tokens.AccessToken).GetFromJsonAsync<UserAccount>("/rest/v1/me", ArcanistFactory.Json, Cancel);
         Assert.Equal(ArcanistFactory.AdminUserName, me!.UserName);
     }
 

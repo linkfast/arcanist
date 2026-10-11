@@ -13,6 +13,11 @@ Arcanist includes or depends on the following third-party components. Each is us
 | SQLitePCLRaw | Apache-2.0 |
 | SQLite | Public domain |
 | Npgsql, Npgsql.EntityFrameworkCore.PostgreSQL | PostgreSQL License |
+| GraphQL.NET (`GraphQL`, `GraphQL.SystemTextJson`, `GraphQL.Server.Transports.AspNetCore`) | MIT |
+| Microsoft.AspNetCore.OpenApi | MIT |
+| Scalar API reference (`Scalar.AspNetCore`, served at `/rest/docs`) | MIT |
+
+GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr at `/graphql/ui`; they are not bundled.
 
 ## Admin panel (`src/Arcanist.Web`, production dependencies)
 

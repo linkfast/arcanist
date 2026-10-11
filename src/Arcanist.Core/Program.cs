@@ -1,5 +1,10 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using Arcanist.Core.Api.GraphQL;
 using Arcanist.Core.Api.Rest;
+using Arcanist.Core.Application;
+using Arcanist.Core.Application.Server;
+using Arcanist.Core.Application.Users;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Capabilities;
 using Arcanist.Core.Data;
@@ -34,8 +39,9 @@ builder.Services.AddSerilog((_, logger) => logger
         retainedFileCountLimit: 14));
 
 builder.Services.AddProblemDetails();
+// Enum values as UPPER_SNAKE_CASE, matching how the same enums appear in the GraphQL schema.
 builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper)));
 builder.Services.AddHealthChecks();
 
 builder.Services.AddCapabilities();
@@ -43,6 +49,12 @@ builder.Services.AddArcanistDatabase(builder.Configuration);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSetup(builder.Configuration);
 builder.Services.AddArcanistAuth(builder.Configuration);
+builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection("Arcanist"));
+builder.Services.AddScoped<AccessGuard>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddSingleton<ServerInfoService>();
+builder.Services.AddArcanistRest();
+builder.Services.AddArcanistGraphQL(builder.Environment);
 
 var app = builder.Build();
 
@@ -61,11 +73,11 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 
-var rest = app.MapGroup("/rest/v1");
-rest.MapSetupEndpoints();
-rest.MapAuthEndpoints();
+app.MapArcanistRest();
+app.MapArcanistGraphQL();
 
-app.MapGet("/", () => "Hello World!");
+// Placeholder until the frontend host serves the web player here.
+app.MapGet("/", () => "Hello World!").ExcludeFromDescription();
 
 app.Logger.LogInformation("Data directory: {DataDirectory}", paths.Root);
 

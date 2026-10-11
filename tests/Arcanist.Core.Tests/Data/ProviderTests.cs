@@ -35,7 +35,7 @@ public sealed class SqliteProviderTests : DatabaseProviderTests, IDisposable
 public sealed class PostgresProviderTests(PostgresContainer postgres)
     : DatabaseProviderTests, IClassFixture<PostgresContainer>
 {
-    private readonly string _connectionString = postgres.ConnectionStringFor($"arcanist_{Guid.NewGuid():N}");
+    private readonly string _database = $"arcanist_{Guid.NewGuid():N}";
     private bool _migrated;
 
     protected override async Task<ArcanistDbContext> OpenAsync()
@@ -43,7 +43,7 @@ public sealed class PostgresProviderTests(PostgresContainer postgres)
         Assert.SkipUnless(postgres.IsAvailable, $"PostgreSQL tests need Docker: {postgres.UnavailableReason}");
 
         var db = new PostgresArcanistDbContext(
-            new DbContextOptionsBuilder<PostgresArcanistDbContext>().UseNpgsql(_connectionString).Options);
+            new DbContextOptionsBuilder<PostgresArcanistDbContext>().UseNpgsql(postgres.ConnectionStringFor(_database)).Options);
 
         if (!_migrated)
         {
@@ -59,19 +59,21 @@ public sealed class PostgresProviderTests(PostgresContainer postgres)
 /// <summary>A disposable PostgreSQL server shared by the tests of a class. Each test uses its own database.</summary>
 public sealed class PostgresContainer : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine").Build();
+    // Built in InitializeAsync: building already contacts Docker, and that failure must become a skip.
+    private PostgreSqlContainer? _container;
 
     public bool IsAvailable { get; private set; }
 
     public string? UnavailableReason { get; private set; }
 
     public string ConnectionStringFor(string database) =>
-        new NpgsqlConnectionStringBuilder(_container.GetConnectionString()) { Database = database }.ConnectionString;
+        new NpgsqlConnectionStringBuilder(_container!.GetConnectionString()) { Database = database }.ConnectionString;
 
     public async ValueTask InitializeAsync()
     {
         try
         {
+            _container = new PostgreSqlBuilder("postgres:17-alpine").Build();
             await _container.StartAsync();
             IsAvailable = true;
         }
@@ -81,5 +83,9 @@ public sealed class PostgresContainer : IAsyncLifetime
         }
     }
 
-    public async ValueTask DisposeAsync() => await _container.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        if (_container is not null)
+            await _container.DisposeAsync();
+    }
 }

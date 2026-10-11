@@ -3,6 +3,7 @@
   <!-- Metadatos comunes a todos los proyectos .NET de Arcanist. -->
   <PropertyGroup>
     <Product>Arcanist</Product>
+    <Version>0.1.0</Version>
     <Authors>Arcanist Contributors</Authors>
     <Copyright>Copyright (C) 2026 Arcanist Contributors</Copyright>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>

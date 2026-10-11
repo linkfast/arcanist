@@ -1,4 +1,5 @@
 using Arcanist.Core.Api;
+using Arcanist.Core.Application;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -15,6 +16,7 @@ internal sealed class SetupGateMiddleware(RequestDelegate next, IOptionsMonitor<
     private static readonly PathString[] AllowedDuringSetup =
     [
         "/rest/v1/setup",
+        "/rest/v1/server-info",
         "/rest/v1/openapi.json",
         "/rest/docs",
         "/admin",

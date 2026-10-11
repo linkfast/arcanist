@@ -27,7 +27,7 @@ public sealed class ArcanistFactory(
 
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
-        Converters = { new JsonStringEnumConverter() },
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper) },
     };
 
     public string DataPath { get; } =
@@ -135,4 +135,21 @@ public sealed class ArcanistFactory(
             next(app);
         };
     }
+}
+
+public static class GraphQLClientExtensions
+{
+    /// <summary>Posts a GraphQL operation and returns the whole response (<c>data</c> and <c>errors</c>).</summary>
+    public static async Task<JsonElement> GraphQLAsync(this HttpClient client, string query, object? variables = null)
+    {
+        // GraphQL-over-HTTP may answer errors with a non-2xx status; the body still carries data and errors.
+        var response = await client.PostAsJsonAsync("/graphql", new { query, variables }, ArcanistFactory.Json);
+        return await response.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    /// <summary>The <c>code</c> extension of the first error, or null when the operation succeeded.</summary>
+    public static string? ErrorCode(this JsonElement response) =>
+        response.TryGetProperty("errors", out var errors) && errors.GetArrayLength() > 0
+            ? errors[0].GetProperty("extensions").GetProperty("code").GetString()
+            : null;
 }

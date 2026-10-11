@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.RateLimiting;
 using Arcanist.Core.Api;
+using Arcanist.Core.Application;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;

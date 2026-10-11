@@ -1,0 +1,121 @@
+type Query {
+  "Public description of the server. Does not require authentication."
+  serverInfo: ServerInfo!
+  "The signed-in user."
+  me: UserAccount!
+  "Devices where the signed-in user is currently signed in."
+  mySessions: [Session!]!
+  "All users. Requires the MANAGE_USERS permission."
+  users: [UserAccount!]!
+  "A user by id. Requires the MANAGE_USERS permission."
+  user(id: ID!): UserAccount!
+}
+
+type ServerInfo {
+  name: String!
+  version: String!
+  apiVersion: Int!
+  sourceUrl: String
+  setupCompleted: Boolean!
+  capabilities: [Capability!]!
+  cloudTier: CloudTier!
+}
+
+enum Capability {
+  ULTIMATE_CLOUD_SOURCE
+  CLOUD_SYNC
+  THIRD_PARTY_STORAGE
+  CLOUD_CONNECT
+}
+
+enum CloudTier {
+  NONE
+  FREE
+  PAID
+}
+
+type UserAccount {
+  id: ID!
+  userName: String!
+  displayName: String
+  role: UserRole!
+  permissions: [Permission!]!
+  isDisabled: Boolean!
+  createdAt: DateTime!
+  lastLoginAt: DateTime
+  libraryIds: [ID!]!
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Permission {
+  MANAGE_LIBRARIES
+  MANAGE_USERS
+  MANAGE_SETTINGS
+  RUN_SCANS
+  DOWNLOAD
+  VIEW_ALL_STATS
+}
+
+"The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
+scalar DateTime
+
+type Session {
+  id: ID!
+  deviceName: String
+  userAgent: String
+  ipAddress: String
+  createdAt: DateTime!
+  lastSeenAt: DateTime!
+  expiresAt: DateTime!
+  isCurrent: Boolean!
+}
+
+type Mutation {
+  "Requires MANAGE_USERS and a recent authentication."
+  createUser(input: CreateUserInput!): UserAccount!
+  "Requires MANAGE_USERS and a recent authentication."
+  updateUser(id: ID!, input: UpdateUserInput!): UserAccount!
+  "Replaces the libraries explicitly granted to a user. Requires MANAGE_USERS and a recent authentication."
+  setUserLibraries(id: ID!, input: SetUserLibrariesInput!): UserAccount!
+  "Sets a new password and signs the user out everywhere. Requires MANAGE_USERS and a recent authentication."
+  resetUserPassword(id: ID!, input: ResetUserPasswordInput!): Boolean!
+  "Requires MANAGE_USERS and a recent authentication."
+  deleteUser(id: ID!): Boolean!
+  "Changes the signed-in user's password and signs out their other devices."
+  changeMyPassword(input: ChangeMyPasswordInput!): Boolean!
+  "Signs out one of the signed-in user's devices."
+  revokeMySession(id: ID!): Boolean!
+}
+
+input CreateUserInput {
+  userName: String!
+  password: String!
+  displayName: String
+  role: UserRole!
+  permissions: [Permission!]
+  libraryIds: [ID!]
+}
+
+input UpdateUserInput {
+  displayName: String
+  role: UserRole!
+  permissions: [Permission!]
+  isDisabled: Boolean!
+}
+
+input SetUserLibrariesInput {
+  libraryIds: [ID!]!
+}
+
+input ResetUserPasswordInput {
+  newPassword: String!
+}
+
+input ChangeMyPasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}

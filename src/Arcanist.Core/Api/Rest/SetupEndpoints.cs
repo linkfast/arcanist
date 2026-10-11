@@ -1,3 +1,4 @@
+using Arcanist.Core.Application;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Libraries;

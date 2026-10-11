@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Arcanist.Core.Api;
+using Arcanist.Core.Application;
 using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;

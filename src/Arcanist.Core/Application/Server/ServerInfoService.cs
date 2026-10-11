@@ -1,0 +1,51 @@
+using System.Reflection;
+using Arcanist.Core.Capabilities;
+using Microsoft.Extensions.Options;
+
+namespace Arcanist.Core.Application.Server;
+
+/// <summary>Bound from <c>Arcanist</c>.</summary>
+public sealed class ServerOptions
+{
+    /// <summary>
+    /// Where users of this server can obtain its source code, as required by section 13 of the AGPL. Anyone
+    /// running a modified version must point this to their modified source.
+    /// </summary>
+    public string? SourceUrl { get; set; }
+}
+
+/// <summary>Public description of the server, for clients deciding how to talk to it. Part of the API contract.</summary>
+/// <param name="ApiVersion">Major version of the GraphQL and REST contracts. Incremented only on breaking changes.</param>
+/// <param name="Capabilities">Ultimate Cloud features currently enabled; local features are always available.</param>
+public sealed record ServerInfo(
+    string Name,
+    string Version,
+    int ApiVersion,
+    string? SourceUrl,
+    bool SetupCompleted,
+    IReadOnlyList<Capability> Capabilities,
+    CloudTier CloudTier);
+
+public sealed class ServerInfoService(
+    ICapabilityService capabilities,
+    ICloudLinkState cloudLink,
+    IOptionsMonitor<ServerOptions> options,
+    IOptionsMonitor<Setup.SetupOptions> setup)
+{
+    public const int ApiVersion = 1;
+
+    private static readonly string Version =
+        typeof(ServerInfoService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            .Split('+')[0]
+        ?? "0.0.0";
+
+    /// <summary>Available without authentication.</summary>
+    public ServerInfo Get() => new(
+        "Arcanist",
+        Version,
+        ApiVersion,
+        options.CurrentValue.SourceUrl,
+        setup.CurrentValue.Completed,
+        Enum.GetValues<Capability>().Where(capabilities.IsEnabled).ToList(),
+        cloudLink.Tier);
+}

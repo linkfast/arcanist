@@ -87,6 +87,9 @@ public interface ICurrentUser
     UserAccess Access { get; }
 
     Guid SessionId { get; }
+
+    /// <summary>When the password was last entered on this session (login or re-authentication).</summary>
+    DateTimeOffset? AuthenticatedAt { get; }
 }
 
 internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
@@ -97,4 +100,9 @@ internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentU
                                 ?? throw new InvalidOperationException("The request is not authenticated.");
 
     public Guid SessionId => Guid.Parse(accessor.HttpContext!.User.FindFirst(ArcanistClaims.SessionId)!.Value);
+
+    public DateTimeOffset? AuthenticatedAt =>
+        long.TryParse(accessor.HttpContext?.User.FindFirst(ArcanistClaims.AuthenticatedAt)?.Value, out var seconds)
+            ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+            : null;
 }

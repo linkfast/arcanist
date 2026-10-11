@@ -70,5 +70,6 @@ public sealed class AuthorizationHandlerTests
         public bool IsAuthenticated => true;
         public UserAccess Access => access;
         public Guid SessionId => Guid.Empty;
+        public DateTimeOffset? AuthenticatedAt => null;
     }
 }

@@ -1,4 +1,6 @@
 using Arcanist.Core.Api;
+using Arcanist.Core.Application;
+using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -7,20 +9,12 @@ using Microsoft.Extensions.Options;
 
 namespace Arcanist.Core.Auth;
 
-public sealed record AuthenticatedUser(Guid Id, string UserName, string? DisplayName, UserRole Role, Permissions Permissions)
-{
-    public static AuthenticatedUser From(User user) => new(user.Id, user.UserName, user.DisplayName, user.Role, user.Permissions);
-
-    public static AuthenticatedUser From(UserAccess access) =>
-        new(access.UserId, access.UserName, access.DisplayName, access.Role, access.Permissions);
-}
-
 /// <summary>Tokens issued to a client. <see cref="RefreshToken"/> is only set when it was created or rotated.</summary>
 public sealed record IssuedTokens(
     AccessToken AccessToken,
     string? RefreshToken,
     DateTime SessionExpiresAt,
-    AuthenticatedUser User);
+    UserAccount User);
 
 public sealed record ClientInfo(string? IpAddress, string? UserAgent, string? DeviceName);
 
@@ -97,7 +91,7 @@ public sealed class AuthService(
         db.UserSessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
 
-        return Issue(user, session, refreshToken);
+        return await IssueAsync(user, session, refreshToken, cancellationToken);
     }
 
     public async Task<AuthResult> RefreshAsync(string? refreshToken, CancellationToken cancellationToken)
@@ -131,7 +125,7 @@ public sealed class AuthService(
             return new AuthResult.Failure(ErrorCodes.InvalidRefreshToken);
 
         session.ExpiresAt = expiresAt;
-        return Issue(session.User, session, next);
+        return await IssueAsync(session.User, session, next, cancellationToken);
     }
 
     /// <summary>Revokes the session identified by a refresh token or, failing that, by its id.</summary>
@@ -170,11 +164,15 @@ public sealed class AuthService(
         session.AuthenticatedAt = Now();
         await db.SaveChangesAsync(cancellationToken);
 
-        return Issue(user, session, refreshToken: null);
+        return await IssueAsync(user, session, refreshToken: null, cancellationToken);
     }
 
-    private AuthResult.Success Issue(User user, UserSession session, string? refreshToken) =>
-        new(new IssuedTokens(tokens.CreateAccessToken(user, session), refreshToken, session.ExpiresAt, AuthenticatedUser.From(user)));
+    private async Task<AuthResult> IssueAsync(User user, UserSession session, string? refreshToken, CancellationToken cancellationToken)
+    {
+        var libraryIds = await db.LibraryAccess.Where(a => a.UserId == user.Id).Select(a => a.LibraryId).ToListAsync(cancellationToken);
+        var account = user.ToAccount(libraryIds.Order().ToList());
+        return new AuthResult.Success(new IssuedTokens(tokens.CreateAccessToken(user, session), refreshToken, session.ExpiresAt, account));
+    }
 
     private DateTime Now() => time.GetUtcNow().UtcDateTime;
 

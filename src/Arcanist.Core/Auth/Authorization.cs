@@ -1,4 +1,5 @@
 using Arcanist.Core.Api;
+using Arcanist.Core.Application;
 using Arcanist.Core.Data.Entities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace Arcanist.Core.Auth;
 
-/// <summary>Policy names. Use them in <c>RequireAuthorization</c> and in Hot Chocolate's <c>[Authorize(Policy = …)]</c>.</summary>
+/// <summary>Policy names for endpoint-level checks (<c>RequireAuthorization</c>). Application services use <c>AccessGuard</c> instead.</summary>
 public static class Policies
 {
     private const string PermissionPrefix = "perm:";

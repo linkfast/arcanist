@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fase 1 en curso. Hasta ahora solo existe el scaffolding: `Program.cs` mapea `GET /` → `"Hello World!"` y el panel Angular tiene una página de prueba. La sección "Arquitectura decidida" describe el diseño aprobado, que **todavía se está implementando**: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fase 1 en curso: implementados setup, autenticación, usuarios y las dos APIs (GraphQL y REST). Faltan bibliotecas, escáner, streaming, hosting de frontends y el panel Angular (que sigue siendo una página de prueba; `GET /` aún responde `"Hello World!"`). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto. Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -108,7 +108,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 ## Arquitectura decidida (en implementación)
 
 - **Mapa de rutas (un solo puerto).** No crear rutas fuera de este esquema:
-  - `/graphql`: la API principal.
+  - `/graphql`: la API principal (HTTP y WebSocket). `/graphql/ui` (GraphiQL) y `/graphql/schema.graphql` (SDL).
   - `/rest/v1/**`: la API OpenAPI, equivalente a GraphQL salvo las suscripciones. Contrato en `/rest/v1/openapi.json` y documentación Scalar en `/rest/docs`.
   - `/admin/**`: este panel, compilado con `--base-href /admin/`.
   - `/health`.
@@ -118,7 +118,21 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **Rutas reservadas:**
     - Para la extensión de compatibilidad con mStream: `/api/**`, `/media/**`, `/album-art/**`, `/transcode/**` y `/shared/**`.
     - Para la extensión Subsonic: `/rest/{método}[.view]`.
-- **Una lógica, dos APIs:** los resolvers de Hot Chocolate y los endpoints Minimal API son capas finas sobre los servicios de `Application/`. La autorización y el filtrado por biblioteca viven **solo** en esa capa. Un test de contrato verifica la paridad GraphQL ↔ REST. Los contratos `schema.graphql` y `openapi.json` se versionan en el repo y se documentan en `docs/developers/` para quien haga players.
+- **Una lógica, dos APIs (implementado):**
+  - Los resolvers GraphQL (`Api/GraphQL/`) y los endpoints Minimal API (`Api/Rest/`) son capas finas sobre los servicios de `Application/`.
+  - La autorización vive **solo** en esos servicios: cada operación empieza con `AccessGuard` (`Authenticated()`, `Permission(...)`, `Admin()`, `RecentAuthentication()`), y lo mismo aplicará al filtrado por biblioteca.
+  - Los fallos esperados se lanzan como `ArcanistException` (`Application/Errors.cs`). REST los convierte en problem details con `code`; GraphQL, en errores con `extensions.code` (y `extensions.errors` para validación).
+  - **GraphQL usa GraphQL.NET** (MIT) con esquema "type-first": clases parciales `Query` y `Mutation` con métodos **estáticos**, `[Name("campo")]`, `[Description]`, `[Id]` para los Guid y `[FromServices]` para los servicios. Cada funcionalidad añade sus operaciones en su propio archivo parcial.
+  - **Hot Chocolate quedó descartado:** todas sus versiones cargan en tiempo de ejecución el IDE Nitro (ChilliCream License 1.0, incompatible con AGPL). No reintroducirlo.
+  - **Convención de nombres:** el `operationId` REST (`.WithName(...)`) es el campo GraphQL en PascalCase (`createUser` ↔ `CreateUser`). `ApiContractTests` falla si una operación GraphQL no tiene su equivalente REST. Login y setup existen solo en REST.
+  - Los enums se serializan en UPPER_SNAKE_CASE en ambas APIs (`MANAGE_USERS`). Los tipos de contrato no se llaman igual que las entidades (`UserAccount`, no `User`).
+  - Contratos versionados en `docs/api/schema.graphql` y `docs/api/openapi.json`. `ApiContractTests` falla si difieren de lo que sirve el servidor. Tras un cambio intencionado de API, regenerarlos y revisar el diff:
+
+    ```bash
+    ARCANIST_UPDATE_CONTRACTS=1 dotnet test --project tests/Arcanist.Core.Tests -- --filter-class "*ApiContractTests"
+    ```
+
+  - Herramientas: GraphiQL en `/graphql/ui` (cargado de jsDelivr con SRI), SDL en `/graphql/schema.graphql`, Scalar en `/rest/docs` (embebido, funciona sin internet).
 - **Datos:** EF Core 10 con dos contextos, `SqliteArcanistDbContext` y `PostgresArcanistDbContext`, que heredan de `ArcanistDbContext`.
   - Cada contexto tiene sus migraciones en `Data/Migrations/{Sqlite,Postgres}`. Toda migración se genera **para ambos**.
   - Claves `Guid.CreateVersion7()`, fechas como `DateTime` UTC, sin SQL específico de un proveedor.
@@ -172,5 +186,4 @@ Aún sin decidir. No asumir una opción sin consultar al usuario, y documentar a
 
 - Herramienta del instalador de Windows (WiX, Inno Setup o Velopack). Se decide en la F2.
 - DSP de análisis de audio en C# o en una crate Rust compartida. Se decide en la F3.
-- Licencia del IDE Nitro de ChilliCream. Si no es compatible con AGPL, usar GraphiQL (MIT).
-- URL pública del repositorio, para `serverInfo.sourceUrl`.
+- URL pública del repositorio, para `serverInfo.sourceUrl` (configurable en `Arcanist:SourceUrl`; hoy es `null`).

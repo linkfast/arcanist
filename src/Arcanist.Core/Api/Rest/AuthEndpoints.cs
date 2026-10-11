@@ -1,3 +1,5 @@
+using Arcanist.Core.Application;
+using Arcanist.Core.Application.Users;
 using Arcanist.Core.Auth;
 
 namespace Arcanist.Core.Api.Rest;
@@ -14,7 +16,7 @@ public sealed record TokenResponse(
     DateTime AccessTokenExpiresAt,
     string? RefreshToken,
     DateTime SessionExpiresAt,
-    AuthenticatedUser User);
+    UserAccount User);
 
 public static class AuthEndpoints
 {
@@ -69,11 +71,6 @@ public static class AuthEndpoints
             .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit)
             .WithName("Reauthenticate")
             .Produces<TokenResponse>();
-
-        rest.MapGet("/me", (ICurrentUser user) => AuthenticatedUser.From(user.Access))
-            .RequireAuthorization()
-            .WithTags("Users")
-            .WithName("GetMe");
 
         return rest;
     }

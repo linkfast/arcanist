@@ -39,6 +39,12 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
     private readonly HashSet<Guid> _artistsWithoutMbid = [];
     private readonly Dictionary<Guid, AlbumState> _albumByRelease = [];
     private readonly Dictionary<(Guid ArtistId, string Title), AlbumState> _albumByKey = [];
+    private readonly Dictionary<Guid, AlbumState> _albumById = [];
+    // Albums with files directly in a folder, by title: how a folder of several artists' songs is recognized as a compilation.
+    private readonly Dictionary<(Guid SourceId, string Folder, string Title), AlbumState> _albumByFolder = [];
+    private readonly HashSet<(Guid SourceId, string Folder)> _foldersLoaded = [];
+    // Albums merged into a compilation in this batch: their tracks move after saving.
+    private readonly Dictionary<Guid, Guid> _albumMoves = [];
     private readonly Dictionary<Guid, Guid> _recordingByMbid = [];
     private readonly Dictionary<Guid, Guid> _mbidByRecording = [];
     private readonly Dictionary<string, Guid> _genreByName = new(StringComparer.Ordinal);
@@ -61,12 +67,20 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         }
 
         var albums = await db.Albums.AsNoTracking()
-            .Select(a => new { a.Id, a.AlbumArtistId, a.NormalizedTitle, a.MusicBrainzReleaseId, a.ArtworkId, a.Year })
+            .Select(a => new { a.Id, a.AlbumArtistId, a.NormalizedTitle, a.MusicBrainzReleaseId, a.ArtworkId, a.Year, a.IsCompilation })
             .ToListAsync(cancellationToken);
         foreach (var album in albums)
         {
-            var state = new AlbumState(album.Id, null) { ArtworkId = album.ArtworkId, Year = album.Year, ReleaseMbid = album.MusicBrainzReleaseId };
+            var state = new AlbumState(album.Id, null)
+            {
+                ArtworkId = album.ArtworkId,
+                Year = album.Year,
+                ReleaseMbid = album.MusicBrainzReleaseId,
+                ArtistId = album.AlbumArtistId,
+                IsCompilation = album.IsCompilation,
+            };
             _albumByKey.TryAdd((album.AlbumArtistId, album.NormalizedTitle), state);
+            _albumById[album.Id] = state;
             if (album.MusicBrainzReleaseId is { } release)
                 _albumByRelease.TryAdd(release, state);
         }
@@ -95,6 +109,8 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
 
         var existingIds = files.Where(f => f.ExistingFileId is not null).Select(f => f.ExistingFileId!.Value).ToList();
         var existingFiles = await db.MediaFiles.Where(f => existingIds.Contains(f.Id)).ToDictionaryAsync(f => f.Id, cancellationToken);
+
+        await LoadFolderAlbumsAsync(files, cancellationToken);
 
         // Albums first, so the tracks they may share are loaded in one query.
         var resolved = files.Select(f => (File: f, Album: ResolveAlbum(f))).ToList();
@@ -314,6 +330,18 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             return byRelease;
 
         var key = (artistId, TextNormalizer.Normalize(title));
+
+        // Songs of several artists in one folder, under one album title and without album artist tags: a compilation
+        // (its tags did not say so). Without this rule each artist got an album of their own.
+        var folderKey = (file.SourceId, AudioFormats.Folder(file.RelativePath), key.Item2);
+        var untagged = meta.AlbumArtist is null && !meta.IsCompilation && meta.Album is not null && folderKey.Item2.Length > 0;
+        if (untagged && _albumByFolder.TryGetValue(folderKey, out var neighbor) && neighbor.ArtistId != artistId)
+        {
+            var compilation = ToCompilation(neighbor, key.Item2, title);
+            _albumByFolder[folderKey] = compilation;
+            return compilation;
+        }
+
         if (_albumByKey.TryGetValue(key, out var state))
         {
             if (meta.ReleaseMbid is { } adopted && state.ReleaseMbid is null)
@@ -322,6 +350,8 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
                 _albumByRelease.TryAdd(adopted, state);
             }
 
+            if (untagged)
+                _albumByFolder.TryAdd(folderKey, state);
             return state;
         }
 
@@ -336,12 +366,74 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         };
         db.Albums.Add(album);
 
-        state = new AlbumState(album.Id, album) { Year = album.Year, ReleaseMbid = album.MusicBrainzReleaseId };
+        state = new AlbumState(album.Id, album)
+        {
+            Year = album.Year,
+            ReleaseMbid = album.MusicBrainzReleaseId,
+            ArtistId = album.AlbumArtistId,
+            IsCompilation = album.IsCompilation,
+        };
         _albumByKey[key] = state;
+        _albumById[album.Id] = state;
+        if (untagged)
+            _albumByFolder.TryAdd(folderKey, state);
         if (meta.ReleaseMbid is { } newRelease)
             _albumByRelease.TryAdd(newRelease, state);
 
         return state;
+    }
+
+    /// <summary>
+    /// Makes <paramref name="album"/> a Various Artists compilation, or merges it into the one that already exists
+    /// with that title (its tracks move there after saving).
+    /// </summary>
+    private AlbumState ToCompilation(AlbumState album, string normalizedTitle, string title)
+    {
+        var various = ResolveArtist(VariousArtists, null, null);
+        if (album.ArtistId == various)
+            return album;
+
+        if (_albumByKey.TryGetValue((various, normalizedTitle), out var existing) && existing != album)
+        {
+            _albumMoves[album.Id] = existing.Id;
+            foreach (var folder in _albumByFolder.Where(f => f.Value == album).Select(f => f.Key).ToList())
+                _albumByFolder[folder] = existing;
+            return existing;
+        }
+
+        _albumByKey.Remove((album.ArtistId, normalizedTitle));
+        SetAlbum(album, a =>
+        {
+            a.AlbumArtistId = various;
+            a.IsCompilation = true;
+        });
+        _albumByKey[(various, normalizedTitle)] = album;
+        return album;
+    }
+
+    /// <summary>Albums with files already in the batch's folders, for compilations that grow file by file.</summary>
+    private async Task LoadFolderAlbumsAsync(IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
+    {
+        var folders = files
+            .Where(f => f.Metadata.AlbumArtist is null && !f.Metadata.IsCompilation && f.Metadata.Album is not null)
+            .Select(f => (f.SourceId, Folder: AudioFormats.Folder(f.RelativePath)))
+            .Where(f => f.Folder.Length > 0 && _foldersLoaded.Add(f))
+            .ToList();
+
+        foreach (var (sourceId, folder) in folders)
+        {
+            var prefix = folder + "/";
+            var known = await db.MediaFiles.AsNoTracking()
+                .Where(f => f.LibrarySourceId == sourceId && f.MissingSince == null && f.RelativePath.StartsWith(prefix))
+                .Select(f => new { f.RelativePath, f.Track.AlbumId, f.Track.Album.NormalizedTitle })
+                .ToListAsync(cancellationToken);
+
+            foreach (var file in known.Where(f => f.RelativePath.IndexOf('/', prefix.Length) < 0))
+            {
+                if (_albumById.TryGetValue(file.AlbumId, out var state))
+                    _albumByFolder.TryAdd((sourceId, folder, file.NormalizedTitle), state);
+            }
+        }
     }
 
     private Guid ResolveArtist(string name, Guid? mbid, string? sortName)
@@ -464,6 +556,8 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             ArtworkId = state.ArtworkId,
             Year = state.Year,
             MusicBrainzReleaseId = state.ReleaseMbid,
+            AlbumArtistId = state.ArtistId,
+            IsCompilation = state.IsCompilation,
         };
         change(snapshot);
         state.Sync(snapshot);
@@ -481,9 +575,16 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             await db.Albums.Where(a => a.Id == album.Id).ExecuteUpdateAsync(s => s
                 .SetProperty(a => a.ArtworkId, album.ArtworkId)
                 .SetProperty(a => a.Year, album.Year)
-                .SetProperty(a => a.MusicBrainzReleaseId, album.ReleaseMbid), cancellationToken);
+                .SetProperty(a => a.MusicBrainzReleaseId, album.ReleaseMbid)
+                .SetProperty(a => a.AlbumArtistId, album.ArtistId)
+                .SetProperty(a => a.IsCompilation, album.IsCompilation), cancellationToken);
         }
         _dirtyAlbums.Clear();
+
+        // The emptied albums are removed by the cleaner at the end of the scan.
+        foreach (var (from, to) in _albumMoves)
+            await db.Tracks.Where(t => t.AlbumId == from).ExecuteUpdateAsync(s => s.SetProperty(t => t.AlbumId, to), cancellationToken);
+        _albumMoves.Clear();
 
         // Albums created in this batch are now rows like any other.
         foreach (var state in _albumByKey.Values)
@@ -525,11 +626,17 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
 
         public Guid? ReleaseMbid { get; set; }
 
+        public Guid ArtistId { get; set; }
+
+        public bool IsCompilation { get; set; }
+
         public void Sync(Album album)
         {
             ArtworkId = album.ArtworkId;
             Year = album.Year;
             ReleaseMbid = album.MusicBrainzReleaseId;
+            ArtistId = album.AlbumArtistId;
+            IsCompilation = album.IsCompilation;
         }
     }
 }

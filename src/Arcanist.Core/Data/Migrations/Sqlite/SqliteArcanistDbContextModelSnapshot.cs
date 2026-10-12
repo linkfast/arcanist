@@ -31,6 +31,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<bool>("IsCompilation")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("Loudness")
+                        .HasColumnType("REAL");
+
                     b.Property<Guid?>("MusicBrainzReleaseId")
                         .HasColumnType("TEXT");
 
@@ -43,6 +46,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
+
+                    b.Property<double?>("TruePeak")
+                        .HasColumnType("REAL");
 
                     b.Property<int?>("Year")
                         .HasColumnType("INTEGER");
@@ -122,6 +128,83 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsUnique();
 
                     b.ToTable("Artworks");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.AudioAnalysis", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AcoustIdFingerprint")
+                        .HasMaxLength(8000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AnalyzedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AnalyzerVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<float?>("Bpm")
+                        .HasColumnType("REAL");
+
+                    b.Property<float?>("BpmConfidence")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("Fingerprint")
+                        .HasColumnType("BLOB");
+
+                    b.Property<int?>("FingerprintDurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<float?>("KeyConfidence")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool?>("KeyMinor")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("KeyTonic")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("Loudness")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("LoudnessHistogram")
+                        .HasMaxLength(8000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("LoudnessRange")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("TruePeak")
+                        .HasColumnType("REAL");
+
+                    b.Property<byte[]>("Waveform")
+                        .HasColumnType("BLOB");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentHash")
+                        .IsUnique();
+
+                    b.ToTable("AudioAnalyses");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Genre", b =>

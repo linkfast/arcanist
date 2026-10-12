@@ -5,7 +5,7 @@ namespace Arcanist.Core.Scanning;
 
 /// <summary>
 /// Removes files missing for longer than the retention period, then everything left without files: tracks,
-/// albums, recordings, artists, genres and artwork (including cached images).
+/// albums, recordings, artists, genres, audio analyses and artwork (including cached images).
 /// </summary>
 internal sealed class CatalogCleaner(ArcanistDbContext db, ArtworkStore artworkStore, TimeProvider time)
 {
@@ -21,6 +21,8 @@ internal sealed class CatalogCleaner(ArcanistDbContext db, ArtworkStore artworkS
             .Where(a => !db.Albums.Any(al => al.AlbumArtistId == a.Id) && !db.TrackArtists.Any(ta => ta.ArtistId == a.Id))
             .ExecuteDeleteAsync(cancellationToken);
         await db.Genres.Where(g => !db.TrackGenres.Any(tg => tg.GenreId == g.Id)).ExecuteDeleteAsync(cancellationToken);
+        // Analyses belong to the audio, not to a file: kept while any copy of that audio is in the catalog.
+        await db.AudioAnalyses.Where(a => !db.MediaFiles.Any(f => f.ContentHash == a.ContentHash)).ExecuteDeleteAsync(cancellationToken);
 
         var unusedArtwork = await db.Artworks
             .Where(a => !db.Albums.Any(al => al.ArtworkId == a.Id) && !db.Tracks.Any(t => t.ArtworkId == a.Id))

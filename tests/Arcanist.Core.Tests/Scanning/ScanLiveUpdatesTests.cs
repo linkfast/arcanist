@@ -45,6 +45,10 @@ public sealed class ScanLiveUpdatesTests : IAsyncLifetime
     [Fact]
     public async Task Subscribers_receive_scan_updates_until_completion()
     {
+        // Server components (background analysis) subscribe too; count only ours.
+        var events = _factory.Services.GetRequiredService<ScanEvents>();
+        var internalSubscribers = events.SubscriberCount;
+
         var token = (await _factory.LoginAsync()).AccessToken;
         using var socket = await ConnectAsync(token);
         await SendAsync(socket, new
@@ -55,8 +59,7 @@ public sealed class ScanLiveUpdatesTests : IAsyncLifetime
         });
 
         // The protocol does not acknowledge subscriptions; wait until it is live so no event is missed.
-        var events = _factory.Services.GetRequiredService<ScanEvents>();
-        while (events.SubscriberCount == 0)
+        while (events.SubscriberCount == internalSubscribers)
             await Task.Delay(10, Cancel);
 
         await _admin.PostAsJsonAsync($"/rest/v1/libraries/{_libraryId}/scans", new StartScanInput(Full: true), Cancel);

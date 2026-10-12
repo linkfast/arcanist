@@ -31,6 +31,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<TrackGenre> TrackGenres => Set<TrackGenre>();
     public DbSet<MediaFile> MediaFiles => Set<MediaFile>();
     public DbSet<Artwork> Artworks => Set<Artwork>();
+    public DbSet<AudioAnalysis> AudioAnalyses => Set<AudioAnalysis>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -185,6 +186,17 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             file.HasIndex(f => new { f.LibrarySourceId, f.RelativePath }).IsUnique();
             file.HasIndex(f => f.ContentHash);
             file.HasIndex(f => f.TrackId);
+        });
+
+        modelBuilder.Entity<AudioAnalysis>(analysis =>
+        {
+            // No foreign key to MediaFile: the analysis belongs to the audio, and outlives any one copy.
+            analysis.Property(a => a.ContentHash).HasMaxLength(64);
+            analysis.HasIndex(a => a.ContentHash).IsUnique();
+            analysis.Property(a => a.State).HasConversion<string>().HasMaxLength(EnumLength);
+            analysis.Property(a => a.Error).HasMaxLength(500);
+            analysis.Property(a => a.AcoustIdFingerprint).HasMaxLength(8000);
+            analysis.Property(a => a.LoudnessHistogram).HasMaxLength(8000);
         });
 
         modelBuilder.Entity<Artwork>(artwork =>

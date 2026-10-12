@@ -38,6 +38,12 @@ public sealed class Album : Entity
 
     public Artwork? Artwork { get; set; }
 
+    /// <summary>EBU R128 loudness of the whole album (its best copy of each track), LUFS, once all are analyzed.</summary>
+    public double? Loudness { get; set; }
+
+    /// <summary>Highest true peak over the album, linear.</summary>
+    public double? TruePeak { get; set; }
+
     public List<Track> Tracks { get; } = [];
 }
 

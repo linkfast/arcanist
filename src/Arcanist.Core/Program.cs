@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Arcanist.Core.Analysis;
 using Arcanist.Core.Api.GraphQL;
 using Arcanist.Core.Api.Rest;
 using Arcanist.Core.Application;
@@ -80,6 +81,7 @@ builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<StreamService>();
 builder.Services.AddScoped<ArtworkService>();
 builder.Services.AddScanning(builder.Configuration);
+builder.Services.AddAnalysis(builder.Configuration);
 builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddArcanistRest();
 builder.Services.AddArcanistGraphQL(builder.Environment);

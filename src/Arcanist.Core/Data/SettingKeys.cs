@@ -8,4 +8,7 @@ public static class SettingKeys
 
     /// <summary>Default UI language for new users, as a BCP 47 tag.</summary>
     public const string DefaultLanguage = "ui.defaultLanguage";
+
+    /// <summary>Whether audio is analyzed in the background (loudness, fingerprints, waveform, tempo, key). Default true.</summary>
+    public const string AnalysisEnabled = "analysis.enabled";
 }

@@ -44,6 +44,9 @@ public sealed class ScanEvents : IObservable<ScanJob>
 
     internal int SubscriberCount => _observers.Count;
 
+    /// <summary>Whether any scan is queued or running; background analysis waits for them to avoid competing for the disks.</summary>
+    public bool HasActiveJobs => !_active.IsEmpty;
+
     public IDisposable Subscribe(IObserver<ScanJob> observer)
     {
         var id = Guid.NewGuid();

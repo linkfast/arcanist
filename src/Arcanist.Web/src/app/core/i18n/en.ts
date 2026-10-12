@@ -127,6 +127,27 @@ export const en: Dictionary = {
     sourceCode: 'Source code',
     license: 'Free software under the AGPL-3.0-or-later license.',
   },
+  analysis: {
+    title: 'Audio analysis',
+    description:
+      'Arcanist measures the loudness, acoustic fingerprint, waveform, tempo and key of every song in the background.',
+    enabled: 'On',
+    activity: {
+      DISABLED: 'Off',
+      UNAVAILABLE: 'Unavailable',
+      IDLE: 'Up to date',
+      WAITING_FOR_SCAN: 'Waiting for the scan to finish',
+      RUNNING: 'Analyzing',
+    },
+    speed: '{count} songs per minute',
+    analyzed: 'Analyzed',
+    pending: 'Pending',
+    needsFfmpeg: 'Need ffmpeg',
+    failed: 'Failed',
+    unavailable: 'This installation does not include the audio analysis module.',
+    needsFfmpegHelp:
+      'Some formats (such as Opus or WMA) will be analyzed once ffmpeg is available.',
+  },
   libraries: {
     title: 'Libraries',
     subtitle: 'Music folders and their analysis.',

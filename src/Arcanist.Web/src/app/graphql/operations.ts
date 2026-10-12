@@ -243,3 +243,41 @@ export const ChangeMyPasswordMutation = graphql(`
     changeMyPassword(input: $input)
   }
 `);
+
+export const AnalysisProgressFields = graphql(`
+  fragment AnalysisProgressFields on AnalysisProgress {
+    activity
+    enabled
+    pending
+    analyzed
+    needsFfmpeg
+    failed
+    filesPerMinute
+    lastAnalyzedAt
+    error
+  }
+`);
+
+export const AnalysisProgressQuery = graphql(`
+  query AnalysisProgress {
+    analysisProgress {
+      ...AnalysisProgressFields
+    }
+  }
+`);
+
+export const SetAnalysisEnabledMutation = graphql(`
+  mutation SetAnalysisEnabled($enabled: Boolean!) {
+    setAnalysisEnabled(enabled: $enabled) {
+      ...AnalysisProgressFields
+    }
+  }
+`);
+
+export const AnalysisProgressChangedSubscription = graphql(`
+  subscription AnalysisProgressChanged {
+    analysisProgressChanged {
+      ...AnalysisProgressFields
+    }
+  }
+`);

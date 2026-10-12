@@ -132,6 +132,27 @@ export const es: Dictionary = {
     sourceCode: 'Código fuente',
     license: 'Software libre bajo la licencia AGPL-3.0-or-later.',
   },
+  analysis: {
+    title: 'Análisis de audio',
+    description:
+      'Arcanist mide el volumen, la huella acústica, la forma de onda, el tempo y la tonalidad de cada canción en segundo plano.',
+    enabled: 'Activado',
+    activity: {
+      DISABLED: 'Desactivado',
+      UNAVAILABLE: 'No disponible',
+      IDLE: 'Al día',
+      WAITING_FOR_SCAN: 'Esperando a que termine el escaneo',
+      RUNNING: 'Analizando',
+    },
+    speed: '{count} canciones por minuto',
+    analyzed: 'Analizadas',
+    pending: 'Pendientes',
+    needsFfmpeg: 'Necesitan ffmpeg',
+    failed: 'Con errores',
+    unavailable: 'Esta instalación no incluye el módulo de análisis de audio.',
+    needsFfmpegHelp:
+      'Algunos formatos (como Opus o WMA) se analizarán cuando ffmpeg esté disponible.',
+  },
   libraries: {
     title: 'Bibliotecas',
     subtitle: 'Carpetas de música y su análisis.',

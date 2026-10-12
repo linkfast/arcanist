@@ -12,6 +12,7 @@ import type {
 } from '../../graphql/generated/graphql';
 import { OverviewQuery, ServerInfoQuery } from '../../graphql/operations';
 import { CountPipe } from '../../shared/format';
+import { AnalysisCard } from './analysis-card';
 
 @Component({
   selector: 'app-overview-page',
@@ -22,6 +23,7 @@ import { CountPipe } from '../../shared/format';
     HlmSkeletonImports,
     TranslatePipe,
     CountPipe,
+    AnalysisCard,
   ],
   template: `
     <header class="mb-6">
@@ -59,6 +61,8 @@ import { CountPipe } from '../../shared/format';
         </div>
       </section>
     }
+
+    <app-analysis-card class="mt-6 block" />
 
     <footer class="mt-10 text-xs text-muted-foreground">
       @if (server(); as info) {

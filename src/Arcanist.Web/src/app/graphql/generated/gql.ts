@@ -38,6 +38,10 @@ type Documents = {
     "\n  query MySessions {\n    mySessions {\n      id\n      deviceName\n      userAgent\n      ipAddress\n      createdAt\n      lastSeenAt\n      expiresAt\n      isCurrent\n    }\n  }\n": typeof types.MySessionsDocument,
     "\n  mutation RevokeMySession($id: ID!) {\n    revokeMySession(id: $id)\n  }\n": typeof types.RevokeMySessionDocument,
     "\n  mutation ChangeMyPassword($input: ChangeMyPasswordInput!) {\n    changeMyPassword(input: $input)\n  }\n": typeof types.ChangeMyPasswordDocument,
+    "\n  fragment AnalysisProgressFields on AnalysisProgress {\n    activity\n    enabled\n    pending\n    analyzed\n    needsFfmpeg\n    failed\n    filesPerMinute\n    lastAnalyzedAt\n    error\n  }\n": typeof types.AnalysisProgressFieldsFragmentDoc,
+    "\n  query AnalysisProgress {\n    analysisProgress {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.AnalysisProgressDocument,
+    "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.SetAnalysisEnabledDocument,
+    "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.AnalysisProgressChangedDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -64,6 +68,10 @@ const documents: Documents = {
     "\n  query MySessions {\n    mySessions {\n      id\n      deviceName\n      userAgent\n      ipAddress\n      createdAt\n      lastSeenAt\n      expiresAt\n      isCurrent\n    }\n  }\n": types.MySessionsDocument,
     "\n  mutation RevokeMySession($id: ID!) {\n    revokeMySession(id: $id)\n  }\n": types.RevokeMySessionDocument,
     "\n  mutation ChangeMyPassword($input: ChangeMyPasswordInput!) {\n    changeMyPassword(input: $input)\n  }\n": types.ChangeMyPasswordDocument,
+    "\n  fragment AnalysisProgressFields on AnalysisProgress {\n    activity\n    enabled\n    pending\n    analyzed\n    needsFfmpeg\n    failed\n    filesPerMinute\n    lastAnalyzedAt\n    error\n  }\n": types.AnalysisProgressFieldsFragmentDoc,
+    "\n  query AnalysisProgress {\n    analysisProgress {\n      ...AnalysisProgressFields\n    }\n  }\n": types.AnalysisProgressDocument,
+    "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": types.SetAnalysisEnabledDocument,
+    "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": types.AnalysisProgressChangedDocument,
 };
 
 /**
@@ -176,6 +184,22 @@ export function graphql(source: "\n  mutation RevokeMySession($id: ID!) {\n    r
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation ChangeMyPassword($input: ChangeMyPasswordInput!) {\n    changeMyPassword(input: $input)\n  }\n"): (typeof documents)["\n  mutation ChangeMyPassword($input: ChangeMyPasswordInput!) {\n    changeMyPassword(input: $input)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment AnalysisProgressFields on AnalysisProgress {\n    activity\n    enabled\n    pending\n    analyzed\n    needsFfmpeg\n    failed\n    filesPerMinute\n    lastAnalyzedAt\n    error\n  }\n"): (typeof documents)["\n  fragment AnalysisProgressFields on AnalysisProgress {\n    activity\n    enabled\n    pending\n    analyzed\n    needsFfmpeg\n    failed\n    filesPerMinute\n    lastAnalyzedAt\n    error\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query AnalysisProgress {\n    analysisProgress {\n      ...AnalysisProgressFields\n    }\n  }\n"): (typeof documents)["\n  query AnalysisProgress {\n    analysisProgress {\n      ...AnalysisProgressFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n"): (typeof documents)["\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

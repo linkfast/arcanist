@@ -6,6 +6,7 @@ using Arcanist.Core.Application;
 using ScanEvents = Arcanist.Core.Application.Scanning.ScanEvents;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Organization;
 using Arcanist.Core.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -26,6 +27,7 @@ public sealed class LibraryScanner(
     ArtworkStore artworkStore,
     ScanProgressTracker progress,
     ScanEvents events,
+    LibraryLocks locks,
     IOptions<ScannerOptions> options,
     TimeProvider time,
     ILogger<LibraryScanner> logger)
@@ -43,6 +45,23 @@ public sealed class LibraryScanner(
             return;
 
         var library = await db.Libraries.AsNoTracking().Include(l => l.Sources).SingleAsync(l => l.Id == job.LibraryId, cancellationToken);
+
+        // The job stays queued while the library's files are being organized or imported.
+        IDisposable libraryLock;
+        try
+        {
+            libraryLock = await locks.AcquireAsync(library.Id, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            job.Status = ScanStatus.Cancelled;
+            job.FinishedAt = Now();
+            await db.SaveChangesAsync(CancellationToken.None);
+            events.Publish(job);
+            return;
+        }
+
+        using var _ = libraryLock;
         var counter = progress.Start(job.Id);
 
         job.Status = ScanStatus.Running;
@@ -189,7 +208,7 @@ public sealed class LibraryScanner(
             return;
         }
 
-        var cues = await PairCueSheetsAsync(location, storage, cueFiles, seen, cancellationToken);
+        var cues = await PairCueSheetsAsync(location, storage, cueFiles, seen, logger, cancellationToken);
 
         // Sidecars added, edited or removed next to an unchanged file: read it again to pick the change up.
         foreach (var (entry, existing) in unchanged)
@@ -402,8 +421,8 @@ public sealed class LibraryScanner(
     /// name a .wav that was later compressed to .flac, so the extension is ignored), or the file with the cue
     /// sheet's own name. Cue sheets that name several files describe files that are scanned on their own.
     /// </summary>
-    private async Task<Dictionary<string, (CueSheet Sheet, StorageEntry Entry)>> PairCueSheetsAsync(
-        StorageLocation location, ILibraryStorage storage, List<StorageEntry> cueFiles, HashSet<string> audio, CancellationToken cancellationToken)
+    internal static async Task<Dictionary<string, (CueSheet Sheet, StorageEntry Entry)>> PairCueSheetsAsync(
+        StorageLocation location, ILibraryStorage storage, List<StorageEntry> cueFiles, IReadOnlySet<string> audio, ILogger logger, CancellationToken cancellationToken)
     {
         var pairs = new Dictionary<string, (CueSheet, StorageEntry)>(StringComparer.Ordinal);
         if (cueFiles.Count == 0)

@@ -82,6 +82,10 @@ library they can use, and albums and artists appear through such tracks. Anythin
 A track can have several files (the same song in FLAC and MP3, or in two libraries). `Track.files` lists the copies
 the user can reach, best quality first, with format, bit rate, sample rate, bit depth and ReplayGain values.
 
+Files move: administrators organize libraries into folders by template, and drop folders import new files (or
+better copies that replace old ones). Track, album and artist ids survive all of that, so store ids, never file
+paths or file ids.
+
 ## Playing audio
 
 Each `Track` has a `streamUrl`, and each of its `files` has its own. They are relative to the server and carry a

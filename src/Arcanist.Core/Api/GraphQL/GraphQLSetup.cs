@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arcanist.Core.Application;
 using GraphQL;
 using GraphQL.Execution;
@@ -12,6 +13,13 @@ public static class GraphQLSetup
 
     public static IServiceCollection AddArcanistGraphQL(this IServiceCollection services, IHostEnvironment environment)
     {
+        // Process-wide, and tests build many hosts: added once.
+        lock (GlobalSwitches.GlobalAttributes)
+        {
+            if (!GlobalSwitches.GlobalAttributes.OfType<RestEnumNamesAttribute>().Any())
+                GlobalSwitches.GlobalAttributes.Add(new RestEnumNamesAttribute());
+        }
+
         services.AddGraphQL(graphql => graphql
             .AddAutoSchema<Query>(schema => schema.WithMutation<Mutation>().WithSubscription<Subscription>())
             .AddSystemTextJson()
@@ -32,6 +40,19 @@ public static class GraphQLSetup
 
         app.MapGet(Path + "/ui", GraphiQL.Page).ExcludeFromDescription();
         return app;
+    }
+}
+
+/// <summary>
+/// Spells enum values as the REST API does (System.Text.Json's upper snake case), so both APIs agree: GraphQL.NET's
+/// own constant case splits digits off ("MP_3" where REST says "MP3").
+/// </summary>
+internal sealed class RestEnumNamesAttribute : GraphQLAttribute
+{
+    public override void Modify(EnumValueDefinition enumValueDefinition)
+    {
+        if (enumValueDefinition.Value is Enum value)
+            enumValueDefinition.Name = JsonNamingPolicy.SnakeCaseUpper.ConvertName(value.ToString());
     }
 }
 

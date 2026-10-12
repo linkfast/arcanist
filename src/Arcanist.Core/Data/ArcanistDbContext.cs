@@ -14,6 +14,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     private const int NameLength = 512;
     private const int PathLength = 4096;
     private const int EnumLength = 32;
+    private const int TemplateLength = 1024;
 
     public DbSet<User> Users => Set<User>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
@@ -35,6 +36,10 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<AudioAnalysis> AudioAnalyses => Set<AudioAnalysis>();
     public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
     public DbSet<OnlineLookup> OnlineLookups => Set<OnlineLookup>();
+    public DbSet<DropFolder> DropFolders => Set<DropFolder>();
+    public DbSet<ImportItem> ImportItems => Set<ImportItem>();
+    public DbSet<OrganizeRun> OrganizeRuns => Set<OrganizeRun>();
+    public DbSet<OrganizeMove> OrganizeMoves => Set<OrganizeMove>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -49,6 +54,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         ConfigureUsers(modelBuilder);
         ConfigureLibraries(modelBuilder);
         ConfigureCatalog(modelBuilder);
+        ConfigureOrganization(modelBuilder);
 
         // Keys come from Entity.Id (UUIDv7), never from the database.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -91,6 +97,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<Library>(library =>
         {
             library.Property(l => l.Name).HasMaxLength(NameLength);
+            library.Property(l => l.OrganizeTemplate).HasMaxLength(TemplateLength);
         });
 
         modelBuilder.Entity<LibrarySource>(source =>
@@ -115,6 +122,52 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             job.Property(j => j.ErrorCode).HasMaxLength(64);
             job.HasIndex(j => new { j.LibraryId, j.RequestedAt });
             job.HasIndex(j => j.Status);
+        });
+    }
+
+    private static void ConfigureOrganization(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<DropFolder>(folder =>
+        {
+            folder.HasOne(f => f.LibrarySource).WithMany().OnDelete(DeleteBehavior.Cascade);
+            folder.Property(f => f.Path).HasMaxLength(PathLength);
+            folder.Property(f => f.DuplicatePolicy).HasConversion<string>().HasMaxLength(EnumLength);
+            folder.Property(f => f.ConvertTo).HasConversion<string>().HasMaxLength(EnumLength);
+        });
+
+        modelBuilder.Entity<ImportItem>(item =>
+        {
+            item.HasOne(i => i.DropFolder).WithMany().OnDelete(DeleteBehavior.Cascade);
+            item.Property(i => i.RelativePath).HasMaxLength(PathLength);
+            item.Property(i => i.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            item.Property(i => i.Reason).HasConversion<string>().HasMaxLength(EnumLength);
+            item.Property(i => i.ContentHash).HasMaxLength(64);
+            item.Property(i => i.Tags).HasMaxLength(8000);
+            item.Property(i => i.Request).HasMaxLength(8000);
+            item.Property(i => i.DestinationPath).HasMaxLength(PathLength);
+            item.HasIndex(i => new { i.DropFolderId, i.RelativePath });
+            item.HasIndex(i => new { i.Status, i.UpdatedAt });
+            item.HasIndex(i => i.ContentHash);
+        });
+
+        modelBuilder.Entity<OrganizeRun>(run =>
+        {
+            run.HasOne(r => r.Library).WithMany().OnDelete(DeleteBehavior.Cascade);
+            run.Property(r => r.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            run.Property(r => r.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            run.Property(r => r.Template).HasMaxLength(TemplateLength);
+            run.Property(r => r.ErrorCode).HasMaxLength(64);
+            run.HasIndex(r => new { r.LibraryId, r.StartedAt });
+        });
+
+        modelBuilder.Entity<OrganizeMove>(move =>
+        {
+            move.HasOne(m => m.Run).WithMany(r => r.Moves).OnDelete(DeleteBehavior.Cascade);
+            // No foreign key to the source: when a location is removed, its moves stay in the run's record and
+            // undoing them finds nothing to move back.
+            move.Property(m => m.FromPath).HasMaxLength(PathLength);
+            move.Property(m => m.ToPath).HasMaxLength(PathLength);
+            move.HasIndex(m => new { m.RunId, m.Sequence });
         });
     }
 

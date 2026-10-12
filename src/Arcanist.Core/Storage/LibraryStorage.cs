@@ -32,9 +32,13 @@ public sealed record StorageProbe(StorageProblem? Problem)
 }
 
 /// <summary>
-/// Access to the files of library sources of one <see cref="LibrarySourceKind"/>. The scanner, streaming and
-/// artwork go exclusively through this interface, so remote storage (Ultimate Cloud, S3) only needs a new
-/// implementation. Read-only for now; writes arrive with automatic organization.
+/// Access to the files of library sources of one <see cref="LibrarySourceKind"/>. The scanner, streaming, artwork
+/// and organization go exclusively through this interface, so remote storage (Ultimate Cloud, S3) only needs a new
+/// implementation.
+/// <para>
+/// Writes never overwrite: a move to a path that exists fails with <see cref="StorageConflictException"/>. Files
+/// are never deleted either, only moved to the location's trash (<see cref="TrashFolder"/>), which is purged later.
+/// </para>
 /// </summary>
 public interface ILibraryStorage
 {
@@ -59,6 +63,52 @@ public interface ILibraryStorage
 
     /// <summary>True when <paramref name="inner"/> is <paramref name="outer"/> or lies inside it.</summary>
     bool Contains(string outer, string inner);
+
+    /// <summary>How relative paths compare in this storage (case-insensitive on Windows and macOS file systems).</summary>
+    StringComparer PathComparer { get; }
+
+    /// <summary>Hidden folder at the root of a location where removed files wait to be purged.</summary>
+    public const string TrashFolder = ".arcanist-trash";
+
+    /// <summary>Whether the server can create, move and remove files in the location.</summary>
+    Task<bool> CanWriteAsync(StorageLocation location, CancellationToken cancellationToken);
+
+    Task<bool> ExistsAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken);
+
+    /// <summary>Moves a file within the location, creating the folders it needs.</summary>
+    /// <exception cref="StorageConflictException">Something already exists at <paramref name="to"/>.</exception>
+    Task MoveAsync(StorageLocation location, string from, string to, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Moves a file of this machine (a converted file, or one from a drop folder) into the location. It appears at
+    /// <paramref name="relativePath"/> complete, never half-copied.
+    /// </summary>
+    /// <exception cref="StorageConflictException">Something already exists at <paramref name="relativePath"/>.</exception>
+    Task ImportAsync(StorageLocation location, string relativePath, string localPath, CancellationToken cancellationToken);
+
+    /// <summary>Moves a file to the location's trash. Returns its path there.</summary>
+    Task<string> TrashAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken);
+
+    /// <summary>Removes what went to the trash before <paramref name="before"/>.</summary>
+    Task PurgeTrashAsync(StorageLocation location, DateTime before, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes the folder, then its parents, while they hold nothing but clutter left by operating systems
+    /// (Thumbs.db, .DS_Store…). Never removes the location itself.
+    /// </summary>
+    Task RemoveEmptyFoldersAsync(StorageLocation location, string relativeFolder, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Calls <paramref name="changed"/> when something below the location changes, until disposed. Null when the
+    /// storage cannot watch; callers also poll, since watching is unreliable on network shares.
+    /// </summary>
+    IDisposable? Watch(StorageLocation location, Action changed);
+}
+
+/// <summary>A write would overwrite something that already exists.</summary>
+public sealed class StorageConflictException(string relativePath) : IOException($"'{relativePath}' already exists.")
+{
+    public string RelativePath { get; } = relativePath;
 }
 
 public interface ILibraryStorageResolver

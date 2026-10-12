@@ -171,7 +171,91 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
             throw;
         }
     }
+
+    /// <summary>Container and file extension for files kept in a library (streams use <see cref="TranscodeProfile.Container"/>).</summary>
+    public static (string Container, string Extension) FileFormat(TranscodeFormat format) => format switch
+    {
+        TranscodeFormat.Opus => ("ogg", ".opus"),
+        TranscodeFormat.Mp3 => ("mp3", ".mp3"),
+        // ADTS cannot hold tags; MP4 can.
+        TranscodeFormat.Aac => ("ipod", ".m4a"),
+        _ => ("flac", ".flac"),
+    };
+
+    /// <summary>
+    /// Converts a whole file to keep it (rather than to play it): ffmpeg writes a seekable file, so the container
+    /// gets complete headers (a FLAC file's length and checksum). Tags are not copied; the caller copies them.
+    /// </summary>
+    public async Task<ConversionResult> ConvertAsync(
+        string inputPath, string outputPath, TranscodeProfile profile, int bitRate, CancellationToken cancellationToken)
+    {
+        var ffmpeg = await locator.GetAsync(cancellationToken);
+        if (ffmpeg is null || !ffmpeg.Encoders.Contains(profile.Encoder))
+            return new ConversionResult(false, Available: false, null);
+
+        await _slots.WaitAsync(cancellationToken);
+        try
+        {
+            var start = new ProcessStartInfo(ffmpeg.Path)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            foreach (var argument in new[] { "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", inputPath,
+                         "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-c:a", profile.Encoder })
+            {
+                start.ArgumentList.Add(argument);
+            }
+
+            if (!profile.IsLossless)
+            {
+                start.ArgumentList.Add("-b:a");
+                start.ArgumentList.Add($"{bitRate}k");
+            }
+
+            // MP3 holds at most two channels.
+            if (profile.Format == TranscodeFormat.Mp3)
+            {
+                start.ArgumentList.Add("-ac");
+                start.ArgumentList.Add("2");
+            }
+
+            start.ArgumentList.Add("-f");
+            start.ArgumentList.Add(FileFormat(profile.Format).Container);
+            start.ArgumentList.Add(outputPath);
+
+            using var process = Process.Start(start)!;
+            var output = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+            var errors = process.StandardError.ReadToEndAsync(CancellationToken.None);
+            try
+            {
+                await process.WaitForExitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                process.Kill(entireProcessTree: true);
+                throw;
+            }
+
+            await output;
+            var error = (await errors).Split('\n').FirstOrDefault(line => line.Length > 0);
+            if (process.ExitCode == 0 && File.Exists(outputPath))
+                return new ConversionResult(true, Available: true, null);
+
+            logger.LogWarning("ffmpeg could not convert {Input}: {Error}", inputPath, error);
+            return new ConversionResult(false, Available: true, error);
+        }
+        finally
+        {
+            _slots.Release();
+        }
+    }
 }
+
+/// <param name="Available">False when there is no ffmpeg, or it lacks the encoder.</param>
+public sealed record ConversionResult(bool Succeeded, bool Available, string? Error);
 
 /// <summary>A running conversion: read <see cref="Output"/>, then dispose to stop ffmpeg and free the slot.</summary>
 public sealed class TranscodeSession(Process process, Task feeding, Task<string> errors, SemaphoreSlim slots, ILogger logger) : IAsyncDisposable

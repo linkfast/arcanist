@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca), 2 (distribución) y 3 (análisis de audio, ffmpeg y servicios en línea) completas. Pendiente:
+Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea) y 4 (carpetas de entrada y organización) completas. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
-- De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`) y probar la descarga real de ffmpeg desde el panel.
+- De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`). La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
+- De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (necesita la clave del proyecto).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-Siguiente: Fase 4, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Siguiente: Fase 5, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -121,7 +122,7 @@ mise solo lee `mise.toml` después de un `mise trust` (una vez por clon). Si fal
   - `authInterceptor` añade el Bearer a `/rest` y `/graphql`. Ante `unauthorized` refresca una vez y reintenta; ante `reauthentication_required` abre `ReauthDialog` y reintenta. Lo hace también para GraphQL, cuyos errores llegan en el cuerpo.
   - Las suscripciones usan `graphql-ws` y envían el token en `connection_init`.
 - **i18n propia** (`core/i18n/`): diccionarios `es.ts`/`en.ts` con claves anidadas, pipe `t` y `I18n.error(code)` para los códigos de la API. `i18n.spec.ts` exige las mismas claves en ambos idiomas y una traducción para cada código de `Application/Errors.cs`: **al añadir un código en el servidor, traducirlo aquí**.
-- **Patrones:** componentes standalone, zoneless, señales y formularios por plantilla (`ngModel`). Los diálogos de spartan se abren con `[state]` y `*brnDialogContent`; como se ajustan a su contenido, los anchos fijos van en `hlm-dialog-content`. La interfaz oculta lo que el usuario no puede hacer (`AuthService.can`), pero la autorización real está en el servidor.
+- **Patrones:** componentes standalone, zoneless, señales y formularios por plantilla (`ngModel`). Los diálogos de spartan se abren con `[state]` y `*brnDialogContent`; como se ajustan a su contenido, los anchos fijos van en `hlm-dialog-content`. La interfaz oculta lo que el usuario no puede hacer (`AuthService.can`), pero la autorización real está en el servidor. Los tiempos relativos (`relativeTime`) leen un reloj-señal que avanza cada 10 s: sin zone.js, un pipe impuro dentro de un `@for` no se reevalúa por sí solo.
 - Prettier: `npx prettier --write src` (ignora `src/app/graphql/generated`). El presupuesto de bundle inicial es de 1 MB por Apollo y GraphQL.
 
 ### spartan-ng
@@ -174,7 +175,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **GraphQL usa GraphQL.NET** (MIT) con esquema "type-first": clases parciales `Query` y `Mutation` con métodos **estáticos**, `[Name("campo")]`, `[Description]`, `[Id]` para los Guid y `[FromServices]` para los servicios. Cada funcionalidad añade sus operaciones en su propio archivo parcial.
   - **Hot Chocolate quedó descartado:** todas sus versiones cargan en tiempo de ejecución el IDE Nitro (ChilliCream License 1.0, incompatible con AGPL). No reintroducirlo.
   - **Convención de nombres:** el `operationId` REST (`.WithName(...)`) es el campo GraphQL en PascalCase (`createUser` ↔ `CreateUser`). `ApiContractTests` falla si una operación GraphQL no tiene su equivalente REST. Login y setup existen solo en REST.
-  - Los enums se serializan en UPPER_SNAKE_CASE en ambas APIs (`MANAGE_USERS`). Los tipos de contrato no se llaman igual que las entidades (`UserAccount`, no `User`).
+  - Los enums se serializan en UPPER_SNAKE_CASE en ambas APIs (`MANAGE_USERS`). GraphQL.NET separaría los dígitos (`MP_3`); `RestEnumNamesAttribute` (atributo global en `GraphQLSetup`) usa la misma conversión que System.Text.Json, así que ambas dicen `MP3`. Los tipos de contrato no se llaman igual que las entidades (`UserAccount`, no `User`).
   - Contratos versionados en `docs/api/schema.graphql` y `docs/api/openapi.json`. `ApiContractTests` falla si difieren de lo que sirve el servidor. Tras un cambio intencionado de API, regenerarlos y revisar el diff:
 
     ```bash
@@ -200,6 +201,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - `LocalStorage` ignora archivos y carpetas ocultos (`.`) y carpetas de sistema de NAS y SO (`@eaDir`, `#recycle`, `$RECYCLE.BIN`…). También rechaza rutas relativas que escapen de la raíz.
   - **Las rutas relativas se guardan tal cual están en disco, sin normalizar Unicode:** en Linux, un nombre en NFD (copiado desde un Mac) solo se abre con esa grafía exacta.
   - Las ubicaciones se validan con `LibraryRules` (compartido con el setup): deben existir y ser legibles, y no pueden repetirse ni anidarse dentro de la misma biblioteca (código `overlapping`). Entre bibliotecas distintas sí pueden coincidir.
+  - **Escrituras (F4):** `MoveAsync`, `ImportAsync` (trae un archivo local; entra con un nombre oculto `.arcanist-partial-*` y se renombra, así nunca se ve a medias), `TrashAsync`, `PurgeTrashAsync`, `RemoveEmptyFoldersAsync`, `CanWriteAsync` y `Watch` (FileSystemWatcher; null si no se puede vigilar). **Nunca sobrescriben** (`StorageConflictException`) **ni borran**: lo que se quita va a `.arcanist-trash/<aaaa-mm-dd>/` en la raíz de la ubicación (oculta, así que los escaneos no la ven) y se purga a los `Arcanist:Organization:TrashRetentionDays` (30).
 - **Bibliotecas (implementado):** `Application/Libraries/`.
   - Cada usuario ve las bibliotecas concedidas más las `VisibleToAll`; las demás responden 404, para no revelar que existen.
   - `sources` (las rutas) solo se devuelve a quien tiene `MANAGE_LIBRARIES`.
@@ -270,6 +272,14 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **LRCLib:** busca letras para las pistas que no las tienen.
 
   `OnlineLookups` evita repetir consultas: lo encontrado no se repite; lo no encontrado se reintenta a los 90 días; los fallos esperan más con cada intento. Los problemas de conexión pausan el servicio sin marcar nada. Todo está desactivado salvo lo que el admin active (`online.services`, asistente y Ajustes). La clave de AcoustID es la del admin (`online.acoustIdKey`) o la del proyecto.
+- **Organización (implementado):** `Organization/` y `Application/Organization/`.
+  - **Plantillas** (`PathTemplate`): `{albumartist}/<{year} - >{album}/<{disc}-><{track} >{title}` por defecto. El texto entre `<` y `>` desaparece si falta un dato dentro (no pueden aparecer en nombres de Windows, así que nunca chocan con texto literal). `{disc}` solo sale en álbumes de varios discos; `{track}` lleva dos cifras. La última parte debe tener `{title}`. Los nombres se limpian con las reglas de Windows (las más estrictas), sin punto inicial (ocultaría el archivo), sin nombres reservados y cortados a 150 caracteres / 230 bytes UTF-8. La plantilla vive en `Library.OrganizeTemplate` (null = la de por defecto).
+  - **`LibraryOrganizer`:** planifica (`PlanAsync`) y mueve. Las letras `.lrc` y la `.cue` de un álbum en un archivo siguen a su audio; los demás archivos de una carpeta (carátulas, libretos, logs, subcarpetas sin audio) la siguen si todo su audio va a una misma carpeta (`Companions`). Un archivo partido por CUE conserva su nombre (la CUE lo nombra). Los choques reciben " (2)", y organizar dos veces no mueve nada. Cada movimiento se guarda en `OrganizeMove` al hacerse y la BD se actualiza en el acto (`MediaFile.RelativePath`), sin reescanear; deshacer recorre los movimientos al revés y salta los que ya no cuadran.
+  - **Ejecución:** "Organizar ahora" y deshacer exigen step-up y van a `OrganizeQueue`/`OrganizeWorker` en segundo plano; un reinicio a mitad deja la ejecución `FAILED/interrupted`, que se puede deshacer. Con `Library.AutoOrganize`, `ScanWorker` organiza tras cada escaneo **solo los archivos añadidos desde `AutoOrganizeSince`** que lleven `StableSeconds` sin cambiar; los anteriores solo se mueven a petición, tras ver la vista previa. `LibraryWatcher` vigila esas bibliotecas y las escanea cuando sus archivos dejan de cambiar.
+  - **`LibraryLocks`:** escaneo, organización e importación de una biblioteca nunca se solapan (el escaneo espera en cola). `IsWriting` permite al vigilante ignorar los cambios que hace el propio Arcanist.
+  - **Carpetas de entrada** (`DropFolder`, solo admins: son rutas del servidor; no pueden estar dentro de una biblioteca ni de otra carpeta de entrada). `DropFolderWorker` las vigila y además las lista cada `PollSeconds` (60). Una carpeta de primer nivel se procesa cuando todos sus archivos llevan `StableSeconds` (30) sin cambiar. `DropFolderImporter`, con el candado de la biblioteca: lee etiquetas y hash; sin título, artista o álbum queda `NEEDS_REVIEW`; mismo audio en la biblioteca, `DUPLICATE`; misma canción del mismo álbum (MBID, o disco + número + título), según `DuplicatePolicy`: `Skip`, `KeepBest` (si es mejor: lossless > lossy; luego profundidad y frecuencia, o bitrate) o `AddVersion`. Convierte si se pidió (`ConvertTo`: los lossless siempre, los lossy solo con `ConvertLossy` y nunca a FLAC), copia etiquetas y carátula con ATL y deja el original en la papelera de la carpeta. Después escanea la biblioteca y espera a que termine, para que la siguiente pasada conozca lo importado.
+  - **Cola por revisar** (`ImportItem`): aceptar (con etiquetas que se **escriben en el archivo**, la única vez que Arcanist escribe etiquetas, o "importar tal cual"/"añadir como copia"), reintentar, ignorar (hasta que el archivo cambie) o descartar (a la papelera). Lo importado se guarda como historial 30 días; `MaintainAsync` purga papeleras, historial y ejecuciones antiguas (20 por biblioteca) cada hora.
+  - Tests: `Arcanist:Organization:StableSeconds=0` y `ArcanistFactory.WaitForImportsAsync()`/`WaitForOrganizeAsync()`. Con 0 s el importador puede leer un archivo mientras el test lo escribe: preparar los archivos fuera y moverlos dentro.
 - **Hosting de frontends (implementado):** `Hosting/FrontendHost.cs`.
   - `/admin/**` sirve `Arcanist:Frontends:AdminRoot` (por defecto `wwwroot/admin`, el build de Angular).
   - `/` sirve `PlayerRoot` (por defecto `wwwroot/player`); si no existe, una página provisional con enlace al admin y aviso AGPL.
@@ -318,7 +328,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **F1:** fundaciones y biblioteca (completada).
 - **F2:** distribución (completada): instalador Velopack con tray en Avalonia y servicio opcional, tarballs y systemd, Docker multi-arch en GHCR, paquete Synology y workflows de CI y release.
 - **F3:** escáner avanzado y ffmpeg (completada): crate de análisis en Rust, transcodificación, waveform, BPM y tonalidad, EBU R128, duplicados por huella, AcoustID/MusicBrainz/Cover Art Archive/LRCLib opcionales, letras y hojas CUE. Las carátulas solo vienen del Cover Art Archive: iTunes y Deezer se descartaron por sus términos de uso.
-- **F4:** drop folder y auto-organización.
+- **F4:** carpetas de entrada y organización (completada): plantillas de rutas, organizar con vista previa y deshacer, organización automática de lo nuevo, carpetas de entrada con política de duplicados, conversión opcional y cola de revisión en el panel. Pendiente: sugerencias de AcoustID para lo que no se puede identificar.
 - **F5:** playlists, estadísticas y páginas tipo Spotify.
 - **F6:** gestor de frontends, SDK de extensiones, compatibilidad e importador de mStream, Subsonic.
 - **F7:** DLNA.
@@ -337,5 +347,11 @@ Decididas en la F3:
 - **ffmpeg no se empaqueta:** se detecta en el sistema o en la ruta configurada (también desde el asistente), y el panel ofrece descargarlo si falta.
 - **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
 - **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
+
+Decididas en la F4 (sin consultar, por ser las opciones conservadoras; revisables):
+- **Organizar nunca es automático sobre lo que ya existe:** activar la organización automática solo afecta a lo añadido después; el resto requiere "Organizar ahora" tras la vista previa, con step-up y registro para deshacer.
+- **Nada se borra:** lo que sustituye `KeepBest`, los originales convertidos y lo descartado van a la papelera de su ubicación durante 30 días.
+- **Las etiquetas solo se escriben cuando un admin las completa en la cola de revisión**, en el archivo de la carpeta de entrada antes de importarlo. Los archivos de las bibliotecas nunca se re-etiquetan.
+- La política de duplicados por defecto es omitir.
 
 Decididas antes: el instalador es Velopack. El repositorio es `github.com/linkfast/arcanist`: es el `RepositoryUrl` de `Directory.Build.props` y el valor por defecto de `serverInfo.sourceUrl`.

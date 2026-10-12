@@ -212,6 +212,47 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("AudioAnalyses");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.DropFolder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ConvertBitRate")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ConvertLossy")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ConvertTo")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DuplicatePolicy")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LibrarySourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibrarySourceId");
+
+                    b.ToTable("DropFolders");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DuplicateCandidate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -275,10 +316,83 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("Genres");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ImportItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DestinationPath")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<Guid?>("DestinationSourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DropFolderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("RelativePath")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("Request")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentHash");
+
+                    b.HasIndex("DropFolderId", "RelativePath");
+
+                    b.HasIndex("Status", "UpdatedAt");
+
+                    b.ToTable("ImportItems");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("AutoOrganize")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("AutoOrganizeSince")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -290,6 +404,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<string>("OrganizeTemplate")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<int?>("ScanIntervalHours")
                         .HasColumnType("integer");
@@ -498,6 +616,95 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("OnlineLookups");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeMove", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FromPath")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<Guid>("LibrarySourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ToPath")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<bool>("Undone")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunId", "Sequence");
+
+                    b.ToTable("OrganizeMoves");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Failed")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Moved")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Template")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<int>("Total")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UndoneAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "StartedAt");
+
+                    b.ToTable("OrganizeRuns");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Recording", b =>
@@ -806,6 +1013,28 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Artwork");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.DropFolder", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.LibrarySource", "LibrarySource")
+                        .WithMany()
+                        .HasForeignKey("LibrarySourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LibrarySource");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ImportItem", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.DropFolder", "DropFolder")
+                        .WithMany()
+                        .HasForeignKey("DropFolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DropFolder");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.LibraryAccess", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.Library", "Library")
@@ -864,6 +1093,28 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("LibrarySource");
 
                     b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeMove", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.OrganizeRun", "Run")
+                        .WithMany("Moves")
+                        .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Run");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeRun", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.ScanJob", b =>
@@ -962,6 +1213,11 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Access");
 
                     b.Navigation("Sources");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeRun", b =>
+                {
+                    b.Navigation("Moves");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Recording", b =>

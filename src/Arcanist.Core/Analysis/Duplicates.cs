@@ -114,6 +114,8 @@ public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetect
             .Where(t => t.AlbumId == track.AlbumId || t.NormalizedTitle == title
                         || db.TrackArtists.Any(ta => ta.TrackId == t.Id && artists.Contains(ta.ArtistId)))
             .Where(t => t.Files.Any(f => f.MissingSince == null))
+            // Tracks of the same album first: only those can be merged automatically.
+            .OrderByDescending(t => t.AlbumId == track.AlbumId).ThenBy(t => t.Id)
             .Select(t => new TrackFacts(t.Id, t.AlbumId, t.DurationMs, t.TrackNumber, t.DiscNumber, t.AddedAt, t.RecordingId))
             .Take(200)
             .ToListAsync(cancellationToken);

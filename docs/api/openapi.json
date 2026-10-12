@@ -403,6 +403,38 @@
         }
       }
     },
+    "/rest/v1/organize-runs/{id}/undo": {
+      "post": {
+        "tags": [
+          "Organization"
+        ],
+        "summary": "Moves the files of a finished organizing run back where they were, in the background. Requires MANAGE_LIBRARIES and a recent authentication.",
+        "operationId": "UndoOrganizeRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizeRun"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/stream/{trackId}": {
       "get": {
         "tags": [
@@ -1600,6 +1632,490 @@
         }
       }
     },
+    "/rest/v1/libraries/{libraryId}/organization": {
+      "put": {
+        "tags": [
+          "Organization"
+        ],
+        "summary": "Sets the library\u0027s path template and whether files added to it are organized automatically. Requires MANAGE_LIBRARIES.",
+        "operationId": "UpdateLibraryOrganization",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLibraryOrganizationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{libraryId}/organize/preview": {
+      "get": {
+        "tags": [
+          "Organization"
+        ],
+        "summary": "What organizing the library would move, with the given template or the library\u0027s own. Requires MANAGE_LIBRARIES.",
+        "operationId": "OrganizePreview",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "template",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizePreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{libraryId}/organize": {
+      "post": {
+        "tags": [
+          "Organization"
+        ],
+        "summary": "Moves the library\u0027s files to the paths its template gives them, in the background. Requires MANAGE_LIBRARIES and a recent authentication.",
+        "operationId": "OrganizeLibrary",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizeRun"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{libraryId}/organize/runs": {
+      "get": {
+        "tags": [
+          "Organization"
+        ],
+        "summary": "The library\u0027s latest organizing runs, newest first. Requires MANAGE_LIBRARIES.",
+        "operationId": "OrganizeRuns",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizeRun"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/drop-folders": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Folders whose files are imported into libraries. Administrators only.",
+        "operationId": "DropFolders",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DropFolder"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Administrators only.",
+        "operationId": "CreateDropFolder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DropFolderInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DropFolder"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/drop-folders/{id}": {
+      "put": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Administrators only.",
+        "operationId": "UpdateDropFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DropFolderInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DropFolder"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Stops importing from the folder and forgets its history; its files are not touched. Administrators only.",
+        "operationId": "DeleteDropFolder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/import-items": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Files found in drop folders, most recently changed first: in the given \u0060status\u0060, or else those still in a drop folder. Requires MANAGE_LIBRARIES.",
+        "operationId": "ImportItems",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dropFolderId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ImportItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/import-items/summary": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "How many files of the drop folders are in each state. Requires MANAGE_LIBRARIES.",
+        "operationId": "ImportSummary",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/import-items/{id}/accept": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Imports a file even though it is incomplete or a duplicate (then as another copy of its track), first writing the given tags into it. Requires MANAGE_LIBRARIES.",
+        "operationId": "AcceptImportItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AcceptImportItemInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/import-items/{id}/retry": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Looks at a file again, as if it had just been dropped. Requires MANAGE_LIBRARIES.",
+        "operationId": "RetryImportItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/import-items/{id}/ignore": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Leaves a file in its drop folder; it is looked at again only if it changes. Requires MANAGE_LIBRARIES.",
+        "operationId": "IgnoreImportItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/import-items/{id}/discard": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Moves a file to its drop folder\u0027s trash, from which it is deleted after a while. Requires MANAGE_LIBRARIES.",
+        "operationId": "DiscardImportItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -2020,6 +2536,24 @@
   },
   "components": {
     "schemas": {
+      "AcceptImportItemInput": {
+        "required": [
+          "tags"
+        ],
+        "type": "object",
+        "properties": {
+          "tags": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImportTagsInput"
+              }
+            ]
+          }
+        }
+      },
       "Album": {
         "required": [
           "id",
@@ -2460,6 +2994,123 @@
           }
         }
       },
+      "DropFolder": {
+        "required": [
+          "id",
+          "path",
+          "libraryId",
+          "librarySourceId",
+          "enabled",
+          "duplicatePolicy",
+          "convertTo",
+          "convertBitRate",
+          "convertLossy",
+          "createdAt",
+          "available"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "librarySourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "duplicatePolicy": {
+            "$ref": "#/components/schemas/DuplicatePolicy"
+          },
+          "convertTo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TranscodeFormat"
+              }
+            ]
+          },
+          "convertBitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "convertLossy": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DropFolderInput": {
+        "required": [
+          "path",
+          "librarySourceId",
+          "enabled",
+          "duplicatePolicy",
+          "convertTo",
+          "convertBitRate",
+          "convertLossy"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "librarySourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "duplicatePolicy": {
+            "$ref": "#/components/schemas/DuplicatePolicy"
+          },
+          "convertTo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TranscodeFormat"
+              }
+            ]
+          },
+          "convertBitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "convertLossy": {
+            "type": "boolean"
+          }
+        }
+      },
       "DuplicatePair": {
         "required": [
           "id",
@@ -2497,6 +3148,13 @@
             "format": "date-time"
           }
         }
+      },
+      "DuplicatePolicy": {
+        "enum": [
+          "SKIP",
+          "KEEP_BEST",
+          "ADD_VERSION"
+        ]
       },
       "DuplicateStatus": {
         "enum": [
@@ -2621,6 +3279,363 @@
           }
         }
       },
+      "ImportFileDetails": {
+        "required": [
+          "title",
+          "artist",
+          "album",
+          "albumArtist",
+          "year",
+          "trackNumber",
+          "discNumber",
+          "genre",
+          "format",
+          "bitRate",
+          "sampleRate",
+          "bitDepth",
+          "durationMs"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "albumArtist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trackNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "discNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "genre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "format": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sampleRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bitDepth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ImportItem": {
+        "required": [
+          "id",
+          "dropFolderId",
+          "path",
+          "size",
+          "status",
+          "reason",
+          "details",
+          "destinationPath",
+          "trackId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dropFolderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ImportStatus"
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImportReason"
+              }
+            ]
+          },
+          "details": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImportFileDetails"
+              }
+            ]
+          },
+          "destinationPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ImportReason": {
+        "enum": [
+          "MISSING_TAGS",
+          "SAME_AUDIO",
+          "SAME_TRACK",
+          "NOT_BETTER",
+          "REPLACED_WORSE",
+          "UNREADABLE",
+          "TRANSCODING_UNAVAILABLE",
+          "TRANSCODING_FAILED",
+          "WRITE_FAILED",
+          null
+        ]
+      },
+      "ImportStatus": {
+        "enum": [
+          "PENDING",
+          "IMPORTED",
+          "NEEDS_REVIEW",
+          "DUPLICATE",
+          "FAILED",
+          "IGNORED",
+          "DISCARDED"
+        ]
+      },
+      "ImportSummary": {
+        "required": [
+          "pending",
+          "needsReview",
+          "duplicate",
+          "failed",
+          "ignored",
+          "imported"
+        ],
+        "type": "object",
+        "properties": {
+          "pending": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "needsReview": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duplicate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ignored": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "imported": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ImportTagsInput": {
+        "required": [
+          "title",
+          "artist",
+          "album",
+          "albumArtist",
+          "year",
+          "trackNumber",
+          "discNumber",
+          "genre"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "albumArtist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trackNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "discNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "genre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "KeyMode": {
         "enum": [
           "MAJOR",
@@ -2635,7 +3650,8 @@
           "scanIntervalHours",
           "createdAt",
           "lastScanAt",
-          "sources"
+          "sources",
+          "organization"
         ],
         "type": "object",
         "properties": {
@@ -2677,6 +3693,43 @@
             "items": {
               "$ref": "#/components/schemas/LibrarySource"
             }
+          },
+          "organization": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LibraryOrganization"
+              }
+            ]
+          }
+        }
+      },
+      "LibraryOrganization": {
+        "required": [
+          "template",
+          "isDefaultTemplate",
+          "autoOrganize",
+          "autoOrganizeSince"
+        ],
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "string"
+          },
+          "isDefaultTemplate": {
+            "type": "boolean"
+          },
+          "autoOrganize": {
+            "type": "boolean"
+          },
+          "autoOrganizeSince": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -3014,6 +4067,158 @@
           }
         }
       },
+      "OrganizePreview": {
+        "required": [
+          "template",
+          "filesToMove",
+          "filesInPlace",
+          "otherFilesToMove",
+          "moves",
+          "unavailableSourceIds"
+        ],
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "string"
+          },
+          "filesToMove": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesInPlace": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "otherFilesToMove": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "moves": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlannedMove"
+            }
+          },
+          "unavailableSourceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "OrganizeRun": {
+        "required": [
+          "id",
+          "libraryId",
+          "kind",
+          "status",
+          "template",
+          "startedAt",
+          "finishedAt",
+          "undoneAt",
+          "total",
+          "moved",
+          "failed",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/OrganizeRunKind"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrganizeRunStatus"
+          },
+          "template": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "undoneAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "moved": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OrganizeRunKind": {
+        "enum": [
+          "MANUAL",
+          "AUTOMATIC"
+        ]
+      },
+      "OrganizeRunStatus": {
+        "enum": [
+          "RUNNING",
+          "COMPLETED",
+          "FAILED",
+          "UNDOING",
+          "UNDONE"
+        ]
+      },
       "Permission": {
         "enum": [
           "MANAGE_LIBRARIES",
@@ -3023,6 +4228,26 @@
           "DOWNLOAD",
           "VIEW_ALL_STATS"
         ]
+      },
+      "PlannedMove": {
+        "required": [
+          "sourceId",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
       },
       "ReauthenticateRequest": {
         "required": [
@@ -4069,6 +5294,24 @@
           }
         }
       },
+      "UpdateLibraryOrganizationInput": {
+        "required": [
+          "template",
+          "autoOrganize"
+        ],
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "autoOrganize": {
+            "type": "boolean"
+          }
+        }
+      },
       "UpdateUserInput": {
         "required": [
           "displayName",
@@ -4235,6 +5478,9 @@
       "name": "Scans"
     },
     {
+      "name": "Organization"
+    },
+    {
       "name": "Media"
     },
     {
@@ -4251,6 +5497,9 @@
     },
     {
       "name": "Duplicates"
+    },
+    {
+      "name": "Import"
     },
     {
       "name": "Online services"

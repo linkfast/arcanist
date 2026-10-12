@@ -14,6 +14,18 @@ public sealed class Library : Entity
 
     public DateTime? LastScanAt { get; set; }
 
+    /// <summary>Where files go when organized (<c>PathTemplate</c> syntax); null for the default template.</summary>
+    public string? OrganizeTemplate { get; set; }
+
+    /// <summary>Files added to the library are moved to their template path after each scan.</summary>
+    public bool AutoOrganize { get; set; }
+
+    /// <summary>
+    /// When <see cref="AutoOrganize"/> was turned on: only files added since then are moved automatically. The
+    /// rest are organized on request, after reviewing a preview.
+    /// </summary>
+    public DateTime? AutoOrganizeSince { get; set; }
+
     public List<LibrarySource> Sources { get; } = [];
 
     public List<LibraryAccess> Access { get; } = [];

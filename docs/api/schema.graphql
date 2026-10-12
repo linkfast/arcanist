@@ -26,6 +26,16 @@ type Query {
   ffmpeg: FfmpegStatus!
   "Which online services are on (MusicBrainz, AcoustID, Cover Art Archive, LRCLib) and what each has done. Requires MANAGE_SETTINGS."
   onlineServices: OnlineServicesStatus!
+  "What organizing the library would move, with the given template or the library's own. Requires MANAGE_LIBRARIES."
+  organizePreview(libraryId: ID!, template: String): OrganizePreview!
+  "The library's latest organizing runs, newest first. Requires MANAGE_LIBRARIES."
+  organizeRuns(libraryId: ID!): [OrganizeRun!]!
+  "Folders whose files are imported into libraries. Administrators only."
+  dropFolders: [DropFolder!]!
+  "Files found in drop folders, most recently changed first: in the given state, or else those still in a drop folder. Requires MANAGE_LIBRARIES."
+  importItems(status: ImportStatus, dropFolderId: ID, first: Int): [ImportItem!]!
+  "How many files of the drop folders are in each state. Requires MANAGE_LIBRARIES."
+  importSummary: ImportSummary!
   "Most recent scans first, of one library or of all libraries the user can see. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobs(libraryId: ID, limit: Int): [ScanJob!]!
   "A scan by id, including live progress while it runs. Requires RUN_SCANS or MANAGE_LIBRARIES."
@@ -234,6 +244,7 @@ type Library {
   createdAt: DateTime!
   lastScanAt: DateTime
   sources: [LibrarySource!]
+  organization: LibraryOrganization
 }
 
 type LibrarySource {
@@ -244,6 +255,13 @@ type LibrarySource {
 
 enum LibrarySourceKind {
   LOCAL
+}
+
+type LibraryOrganization {
+  template: String!
+  isDefaultTemplate: Boolean!
+  autoOrganize: Boolean!
+  autoOrganizeSince: DateTime
 }
 
 type ServerDirectoryListing {
@@ -325,6 +343,137 @@ type OnlineServiceStatus {
   lastError: String
 }
 
+type OrganizePreview {
+  template: String!
+  filesToMove: Int!
+  filesInPlace: Int!
+  otherFilesToMove: Int!
+  moves: [PlannedMove!]!
+  unavailableSourceIds: [ID!]!
+}
+
+type PlannedMove {
+  sourceId: ID!
+  from: String!
+  to: String!
+}
+
+type OrganizeRun {
+  id: ID!
+  libraryId: ID!
+  kind: OrganizeRunKind!
+  status: OrganizeRunStatus!
+  template: String!
+  startedAt: DateTime!
+  finishedAt: DateTime
+  undoneAt: DateTime
+  total: Int!
+  moved: Int!
+  failed: Int!
+  errorCode: String
+}
+
+enum OrganizeRunKind {
+  MANUAL
+  AUTOMATIC
+}
+
+enum OrganizeRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  UNDOING
+  UNDONE
+}
+
+type DropFolder {
+  id: ID!
+  path: String!
+  libraryId: ID!
+  librarySourceId: ID!
+  enabled: Boolean!
+  duplicatePolicy: DuplicatePolicy!
+  convertTo: TranscodeFormat
+  convertBitRate: Int
+  convertLossy: Boolean!
+  createdAt: DateTime!
+  available: Boolean!
+}
+
+enum DuplicatePolicy {
+  SKIP
+  KEEP_BEST
+  ADD_VERSION
+}
+
+enum TranscodeFormat {
+  OPUS
+  MP3
+  AAC
+  FLAC
+}
+
+type ImportItem {
+  id: ID!
+  dropFolderId: ID!
+  path: String!
+  size: Long!
+  status: ImportStatus!
+  reason: ImportReason
+  details: ImportFileDetails
+  destinationPath: String
+  trackId: ID
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum ImportStatus {
+  PENDING
+  IMPORTED
+  NEEDS_REVIEW
+  DUPLICATE
+  FAILED
+  IGNORED
+  DISCARDED
+}
+
+enum ImportReason {
+  MISSING_TAGS
+  SAME_AUDIO
+  SAME_TRACK
+  NOT_BETTER
+  REPLACED_WORSE
+  UNREADABLE
+  TRANSCODING_UNAVAILABLE
+  TRANSCODING_FAILED
+  WRITE_FAILED
+}
+
+type ImportFileDetails {
+  title: String
+  artist: String
+  album: String
+  albumArtist: String
+  year: Int
+  trackNumber: Int
+  discNumber: Int
+  genre: String
+  format: String
+  bitRate: Int
+  sampleRate: Int
+  bitDepth: Int
+  durationMs: Int!
+}
+
+type ImportSummary {
+  pending: Int!
+  needsReview: Int!
+  duplicate: Int!
+  failed: Int!
+  ignored: Int!
+  imported: Int!
+}
+
 type ScanJob {
   id: ID!
   libraryId: ID!
@@ -392,13 +541,6 @@ enum CloudTier {
   PAID
 }
 
-enum TranscodeFormat {
-  OPUS
-  MP_3
-  AAC
-  FLAC
-}
-
 type UserAccount {
   id: ID!
   userName: String!
@@ -461,6 +603,26 @@ type Mutation {
   setOnlineServices(input: SetOnlineServicesInput!): OnlineServicesStatus!
   "Uses your own AcoustID application key instead of the project's; null or empty goes back to the project's. Requires MANAGE_SETTINGS."
   setAcoustIdKey(input: SetAcoustIdKeyInput!): OnlineServicesStatus!
+  "Sets the library's path template and whether files added to it are organized automatically. Requires MANAGE_LIBRARIES."
+  updateLibraryOrganization(libraryId: ID!, input: UpdateLibraryOrganizationInput!): Library!
+  "Moves the library's files to the paths its template gives them, in the background. Requires MANAGE_LIBRARIES and a recent authentication."
+  organizeLibrary(libraryId: ID!): OrganizeRun!
+  "Moves the files of a finished organizing run back where they were, in the background. Requires MANAGE_LIBRARIES and a recent authentication."
+  undoOrganizeRun(id: ID!): OrganizeRun!
+  "Administrators only."
+  createDropFolder(input: DropFolderInput!): DropFolder!
+  "Administrators only."
+  updateDropFolder(id: ID!, input: DropFolderInput!): DropFolder!
+  "Stops importing from the folder and forgets its history; its files are not touched. Administrators only."
+  deleteDropFolder(id: ID!): Boolean!
+  "Imports a file even though it is incomplete or a duplicate (then as another copy of its track), first writing the given tags into it. Requires MANAGE_LIBRARIES."
+  acceptImportItem(id: ID!, tags: ImportTagsInput): ImportItem!
+  "Looks at a file again, as if it had just been dropped. Requires MANAGE_LIBRARIES."
+  retryImportItem(id: ID!): ImportItem!
+  "Leaves a file in its drop folder; it is looked at again only if it changes. Requires MANAGE_LIBRARIES."
+  ignoreImportItem(id: ID!): ImportItem!
+  "Moves a file to its drop folder's trash, from which it is deleted after a while. Requires MANAGE_LIBRARIES."
+  discardImportItem(id: ID!): ImportItem!
   "Queues a scan, or returns the one already queued or running for the library. A full scan re-reads every file. Requires RUN_SCANS."
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
@@ -507,6 +669,32 @@ input SetOnlineServicesInput {
 
 input SetAcoustIdKeyInput {
   key: String
+}
+
+input UpdateLibraryOrganizationInput {
+  template: String
+  autoOrganize: Boolean!
+}
+
+input DropFolderInput {
+  path: String!
+  librarySourceId: ID!
+  enabled: Boolean!
+  duplicatePolicy: DuplicatePolicy!
+  convertTo: TranscodeFormat
+  convertBitRate: Int
+  convertLossy: Boolean!
+}
+
+input ImportTagsInput {
+  title: String
+  artist: String
+  album: String
+  albumArtist: String
+  year: Int
+  trackNumber: Int
+  discNumber: Int
+  genre: String
 }
 
 input CreateUserInput {

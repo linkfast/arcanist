@@ -178,7 +178,10 @@ public sealed class LibraryService(
         };
     }
 
-    private IQueryable<LibraryEntity> Visible(UserAccess access)
+    private IQueryable<LibraryEntity> Visible(UserAccess access) => Visible(db, access);
+
+    /// <summary>The libraries a user can access (all of them for administrators).</summary>
+    internal static IQueryable<LibraryEntity> Visible(ArcanistDbContext db, UserAccess access)
     {
         if (access.IsAdmin)
             return db.Libraries;

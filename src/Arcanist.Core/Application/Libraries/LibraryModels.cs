@@ -1,4 +1,6 @@
+using Arcanist.Core.Application.Organization;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Organization;
 using LibraryEntity = Arcanist.Core.Data.Entities.Library;
 using LibrarySourceEntity = Arcanist.Core.Data.Entities.LibrarySource;
 
@@ -8,6 +10,7 @@ namespace Arcanist.Core.Application.Libraries;
 
 /// <param name="Sources">Where the files live. Null unless the caller has the MANAGE_LIBRARIES permission, since
 /// locations reveal the server's file system layout.</param>
+/// <param name="Organization">How files are organized. Null unless the caller has the MANAGE_LIBRARIES permission.</param>
 public sealed record Library(
     Guid Id,
     string Name,
@@ -15,7 +18,8 @@ public sealed record Library(
     int? ScanIntervalHours,
     DateTime CreatedAt,
     DateTime? LastScanAt,
-    IReadOnlyList<LibrarySource>? Sources);
+    IReadOnlyList<LibrarySource>? Sources,
+    LibraryOrganization? Organization);
 
 public sealed record LibrarySource(Guid Id, LibrarySourceKind Kind, string Location);
 
@@ -40,6 +44,7 @@ public sealed record ServerDirectoryListing(string? Path, string? Parent, IReadO
 
 internal static class LibraryMapping
 {
+    /// <param name="includeSources">Whether the caller manages libraries, and sees their locations and organization.</param>
     public static Library ToModel(this LibraryEntity library, bool includeSources) => new(
         library.Id,
         library.Name,
@@ -47,7 +52,14 @@ internal static class LibraryMapping
         library.ScanIntervalHours,
         library.CreatedAt,
         library.LastScanAt,
-        includeSources ? library.Sources.OrderBy(s => s.Location).Select(ToModel).ToList() : null);
+        includeSources ? library.Sources.OrderBy(s => s.Location).Select(ToModel).ToList() : null,
+        includeSources ? library.ToOrganization() : null);
+
+    public static LibraryOrganization ToOrganization(this LibraryEntity library) => new(
+        string.IsNullOrEmpty(library.OrganizeTemplate) ? PathTemplate.Default : library.OrganizeTemplate,
+        string.IsNullOrEmpty(library.OrganizeTemplate),
+        library.AutoOrganize,
+        library.AutoOrganize ? library.AutoOrganizeSince : null);
 
     public static LibrarySource ToModel(this LibrarySourceEntity source) => new(source.Id, source.Kind, source.Location);
 }

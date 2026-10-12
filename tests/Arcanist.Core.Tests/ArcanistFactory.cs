@@ -9,6 +9,7 @@ using Arcanist.Core.Application.Analysis;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
+using Arcanist.Core.Organization;
 using Arcanist.Core.Setup;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -140,6 +141,41 @@ public sealed class ArcanistFactory(
         }
 
         return monitor.Current;
+    }
+
+    /// <summary>
+    /// Waits for a pass over the drop folders that started after this call (including the scan of what it imported),
+    /// with no file still changing. Set <c>Arcanist:Organization:StableSeconds</c> to 0 so files settle at once.
+    /// </summary>
+    public async Task WaitForImportsAsync()
+    {
+        var monitor = Services.GetRequiredService<ImportMonitor>();
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        // The pass running now may have listed the folders before the test changed them.
+        var started = monitor.Runs + 1;
+        while (monitor.Runs <= started || monitor.Unsettled > 0)
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException("Drop folders were not processed in time.");
+            monitor.RequestRun();
+            await Task.Delay(50);
+        }
+    }
+
+    /// <summary>Waits until the library has no organizing run in progress, and returns its latest run.</summary>
+    public static async Task<JsonElement> WaitForOrganizeAsync(HttpClient admin, Guid libraryId)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        while (true)
+        {
+            var runs = await admin.GetFromJsonAsync<List<JsonElement>>($"/rest/v1/libraries/{libraryId}/organize/runs", Json);
+            if (runs!.Count > 0 && runs.All(r => r.GetProperty("status").GetString() is not ("RUNNING" or "UNDOING")))
+                return runs[0];
+
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException("Organizing did not finish in time.");
+            await Task.Delay(50);
+        }
     }
 
     /// <summary>Logs in and returns a client that sends the access token.</summary>

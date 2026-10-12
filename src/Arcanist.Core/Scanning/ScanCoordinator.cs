@@ -4,6 +4,7 @@ using Arcanist.Core.Application;
 using ScanEvents = Arcanist.Core.Application.Scanning.ScanEvents;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Organization;
 using Arcanist.Core.Setup;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -111,6 +112,7 @@ public sealed class ScanCoordinator(IArcanistDbContextFactory databases, ScanEve
 internal sealed class ScanWorker(
     ScanCoordinator coordinator,
     LibraryScanner scanner,
+    LibraryOrganizer organizer,
     IArcanistDbContextFactory databases,
     IOptions<SetupOptions> setup,
     TimeProvider time,
@@ -129,6 +131,7 @@ internal sealed class ScanWorker(
             try
             {
                 await scanner.RunAsync(jobId, token);
+                await organizer.AfterScanAsync(jobId, token);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

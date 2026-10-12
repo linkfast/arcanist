@@ -1,5 +1,6 @@
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Storage;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Arcanist.Core.Tests.Storage;
 
@@ -70,6 +71,96 @@ public sealed class LocalStorageTests : IDisposable
         Assert.True(_storage.Contains(music + Path.DirectorySeparatorChar, Path.Combine(music, "Rock")));
         Assert.False(_storage.Contains(music, Path.Combine(_root, "Music Videos")));
         Assert.False(_storage.Contains(Path.Combine(music, "Rock"), music));
+    }
+
+    [Fact]
+    public async Task Moves_create_folders_and_never_overwrite()
+    {
+        Write("in/a.flac", 3);
+        Write("taken/b.flac", 5);
+
+        await _storage.MoveAsync(Location, "in/a.flac", "Artist/Album/01 A.flac", Cancel);
+
+        Assert.True(File.Exists(Path.Combine(_root, "Artist", "Album", "01 A.flac")));
+        Assert.False(File.Exists(Path.Combine(_root, "in", "a.flac")));
+
+        Write("in/c.flac", 7);
+        await Assert.ThrowsAsync<StorageConflictException>(() => _storage.MoveAsync(Location, "in/c.flac", "taken/b.flac", Cancel));
+        Assert.Equal(5, new FileInfo(Path.Combine(_root, "taken", "b.flac")).Length);
+        await Assert.ThrowsAsync<FileNotFoundException>(() => _storage.MoveAsync(Location, "in/c.flac", "../escaped.flac", Cancel));
+    }
+
+    [Fact]
+    public async Task Imports_local_files_without_leaving_partial_copies()
+    {
+        var outside = Directory.CreateTempSubdirectory("arcanist-import").FullName;
+        try
+        {
+            var file = Path.Combine(outside, "song.flac");
+            File.WriteAllBytes(file, new byte[11]);
+
+            await _storage.ImportAsync(Location, "Artist/song.flac", file, Cancel);
+
+            Assert.False(File.Exists(file));
+            Assert.Equal(["Artist/song.flac"], (await ListAsync()).Select(e => e.RelativePath));
+            Assert.DoesNotContain(Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories), f => Path.GetFileName(f).StartsWith(".arcanist-partial"));
+
+            File.WriteAllBytes(file, new byte[2]);
+            await Assert.ThrowsAsync<StorageConflictException>(() => _storage.ImportAsync(Location, "Artist/song.flac", file, Cancel));
+            Assert.True(File.Exists(file));
+        }
+        finally
+        {
+            Directory.Delete(outside, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Trash_keeps_files_hidden_until_purged()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero));
+        var storage = new LocalStorage(time);
+        Write("Album/song.mp3");
+        Write("Album/other/song.mp3");
+
+        var first = await storage.TrashAsync(Location, "Album/song.mp3", Cancel);
+        Write("Album/song.mp3");
+        var second = await storage.TrashAsync(Location, "Album/song.mp3", Cancel);
+
+        Assert.Equal(".arcanist-trash/2026-03-01/Album/song.mp3", first);
+        Assert.Equal(".arcanist-trash/2026-03-01/Album/song (2).mp3", second);
+        // Scans never see the trash.
+        Assert.Equal(["Album/other/song.mp3"], (await ListAsync()).Select(e => e.RelativePath));
+
+        await storage.PurgeTrashAsync(Location, new DateTime(2026, 3, 1, 23, 0, 0, DateTimeKind.Utc), Cancel);
+        Assert.True(File.Exists(Path.Combine(_root, ".arcanist-trash", "2026-03-01", "Album", "song.mp3")));
+
+        await storage.PurgeTrashAsync(Location, new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc), Cancel);
+        Assert.False(Directory.Exists(Path.Combine(_root, ".arcanist-trash")));
+    }
+
+    [Fact]
+    public async Task Removes_emptied_folders_up_to_the_root_ignoring_system_clutter()
+    {
+        Write("Artist/Album/CD1/Thumbs.db");
+        Write("Artist/Album/.DS_Store");
+        Write("Artist/Album/@eaDir/x/SYNOPHOTO_THUMB.jpg");
+        Write("Artist/Other/keep.flac");
+
+        await _storage.RemoveEmptyFoldersAsync(Location, "Artist/Album/CD1", Cancel);
+
+        Assert.False(Directory.Exists(Path.Combine(_root, "Artist", "Album")));
+        // A parent with something left in it stays, and so does the root.
+        Assert.True(File.Exists(Path.Combine(_root, "Artist", "Other", "keep.flac")));
+        Assert.True(Directory.Exists(_root));
+    }
+
+    [Fact]
+    public async Task Reports_whether_the_location_is_writable()
+    {
+        Assert.True(await _storage.CanWriteAsync(Location, Cancel));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(_root));
+        Assert.False(await _storage.CanWriteAsync(Location with { Location = Path.Combine(_root, "missing") }, Cancel));
     }
 
     private async Task<List<StorageEntry>> ListAsync()

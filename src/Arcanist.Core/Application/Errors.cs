@@ -42,6 +42,18 @@ public static class ErrorCodes
     public const string FfmpegChecksumMismatch = "ffmpeg_checksum_mismatch";
     /// <summary>The requested conversion cannot be done now: no ffmpeg (or no encoder for the format), or too many running.</summary>
     public const string TranscodingUnavailable = "transcoding_unavailable";
+    /// <summary>The server cannot create or move files in the location (permissions, or a read-only mount).</summary>
+    public const string ReadOnly = "read_only";
+    /// <summary>A path template names a placeholder that does not exist.</summary>
+    public const string TemplateUnknownPlaceholder = "template_unknown_placeholder";
+    /// <summary>The file name part of a path template lacks <c>{title}</c>, so files would collide.</summary>
+    public const string TemplateTitleRequired = "template_title_required";
+    /// <summary>Files could not be written or moved in a location.</summary>
+    public const string WriteFailed = "write_failed";
+    /// <summary>The library is already being organized, or a run is being undone.</summary>
+    public const string OrganizeRunning = "organize_running";
+    /// <summary>Only finished runs can be undone, and only once.</summary>
+    public const string NotUndoable = "not_undoable";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

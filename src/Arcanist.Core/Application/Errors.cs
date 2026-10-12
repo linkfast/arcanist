@@ -33,6 +33,13 @@ public static class ErrorCodes
     public const string SourceUnavailable = "source_unavailable";
     public const string Interrupted = "interrupted";
     public const string ScanFinished = "scan_finished";
+    /// <summary>The given path is not a working ffmpeg executable.</summary>
+    public const string NotFfmpeg = "not_ffmpeg";
+    /// <summary>No ffmpeg build can be downloaded for this operating system or processor.</summary>
+    public const string FfmpegPlatformUnsupported = "ffmpeg_platform_unsupported";
+    public const string FfmpegDownloadFailed = "ffmpeg_download_failed";
+    /// <summary>The downloaded ffmpeg did not match its published checksum and was discarded.</summary>
+    public const string FfmpegChecksumMismatch = "ffmpeg_checksum_mismatch";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

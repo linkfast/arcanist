@@ -18,7 +18,11 @@ Arcanist includes or depends on the following third-party components. Each is us
 | Scalar API reference (`Scalar.AspNetCore`, served at `/rest/docs`) | MIT |
 | ATL.NET (`z440.atl.core`) | MIT |
 | SkiaSharp (including `SkiaSharp.NativeAssets.Linux.NoDependencies`) | MIT |
+| SharpCompress (XZ decompression of downloaded ffmpeg builds) | MIT |
 | Skia | BSD-3-Clause |
+
+ffmpeg is not shipped. When an administrator asks for it, the server downloads a static GPL build from
+[BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds), whose releases link to the corresponding source code.
 
 GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr at `/graphql/ui`; they are not bundled.
 

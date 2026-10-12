@@ -281,3 +281,46 @@ export const AnalysisProgressChangedSubscription = graphql(`
     }
   }
 `);
+
+export const FfmpegStatusFields = graphql(`
+  fragment FfmpegStatusFields on FfmpegStatus {
+    available
+    path
+    version
+    source
+    configuredPath
+    configuredPathWorks
+    canDownload
+    download {
+      state
+      bytesReceived
+      totalBytes
+      version
+      error
+    }
+  }
+`);
+
+export const FfmpegQuery = graphql(`
+  query Ffmpeg {
+    ffmpeg {
+      ...FfmpegStatusFields
+    }
+  }
+`);
+
+export const SetFfmpegPathMutation = graphql(`
+  mutation SetFfmpegPath($path: String) {
+    setFfmpegPath(path: $path) {
+      ...FfmpegStatusFields
+    }
+  }
+`);
+
+export const InstallFfmpegMutation = graphql(`
+  mutation InstallFfmpeg {
+    installFfmpeg {
+      ...FfmpegStatusFields
+    }
+  }
+`);

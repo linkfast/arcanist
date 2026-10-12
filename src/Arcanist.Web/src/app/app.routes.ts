@@ -39,6 +39,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/users/users.page').then((m) => m.UsersPage),
       },
       {
+        path: 'settings',
+        canActivate: [permissionGuard('MANAGE_SETTINGS')],
+        loadComponent: () =>
+          import('./features/settings/settings.page').then((m) => m.SettingsPage),
+      },
+      {
         path: 'account',
         loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
       },

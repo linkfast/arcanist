@@ -5,6 +5,7 @@ import {
   ApiError,
   DatabaseProvider,
   ServerDirectoryListing,
+  SetupFfmpegCheck,
   SetupRequest,
   SetupStatus,
 } from '../api/rest';
@@ -55,6 +56,14 @@ export class SetupService {
         params,
         headers: this.headers(),
       }),
+    );
+  }
+
+  /** The ffmpeg at the path, or the one the server would find by itself when path is null. */
+  checkFfmpeg(path: string | null): Promise<SetupFfmpegCheck> {
+    const params = path ? new HttpParams().set('path', path) : undefined;
+    return this.call(
+      this.http.get<SetupFfmpegCheck>('/rest/v1/setup/ffmpeg', { params, headers: this.headers() }),
     );
   }
 

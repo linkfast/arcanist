@@ -42,6 +42,10 @@ type Documents = {
     "\n  query AnalysisProgress {\n    analysisProgress {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.AnalysisProgressDocument,
     "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.SetAnalysisEnabledDocument,
     "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.AnalysisProgressChangedDocument,
+    "\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n": typeof types.FfmpegStatusFieldsFragmentDoc,
+    "\n  query Ffmpeg {\n    ffmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": typeof types.FfmpegDocument,
+    "\n  mutation SetFfmpegPath($path: String) {\n    setFfmpegPath(path: $path) {\n      ...FfmpegStatusFields\n    }\n  }\n": typeof types.SetFfmpegPathDocument,
+    "\n  mutation InstallFfmpeg {\n    installFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": typeof types.InstallFfmpegDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -72,6 +76,10 @@ const documents: Documents = {
     "\n  query AnalysisProgress {\n    analysisProgress {\n      ...AnalysisProgressFields\n    }\n  }\n": types.AnalysisProgressDocument,
     "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": types.SetAnalysisEnabledDocument,
     "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": types.AnalysisProgressChangedDocument,
+    "\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n": types.FfmpegStatusFieldsFragmentDoc,
+    "\n  query Ffmpeg {\n    ffmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": types.FfmpegDocument,
+    "\n  mutation SetFfmpegPath($path: String) {\n    setFfmpegPath(path: $path) {\n      ...FfmpegStatusFields\n    }\n  }\n": types.SetFfmpegPathDocument,
+    "\n  mutation InstallFfmpeg {\n    installFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": types.InstallFfmpegDocument,
 };
 
 /**
@@ -200,6 +208,22 @@ export function graphql(source: "\n  mutation SetAnalysisEnabled($enabled: Boole
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n"): (typeof documents)["\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n"): (typeof documents)["\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Ffmpeg {\n    ffmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n"): (typeof documents)["\n  query Ffmpeg {\n    ffmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetFfmpegPath($path: String) {\n    setFfmpegPath(path: $path) {\n      ...FfmpegStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetFfmpegPath($path: String) {\n    setFfmpegPath(path: $path) {\n      ...FfmpegStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation InstallFfmpeg {\n    installFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation InstallFfmpeg {\n    installFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

@@ -29,6 +29,11 @@ public static class SetupEndpoints
         guarded.MapGet("/directories", (string? path, DirectoryBrowser browser) => LibraryService.Browse(browser, path))
             .WithName("BrowseSetupDirectories");
 
+        guarded.MapGet("/ffmpeg", (string? path, SetupService service, CancellationToken cancellationToken) =>
+                service.CheckFfmpegAsync(path, cancellationToken))
+            .WithName("CheckSetupFfmpeg")
+            .WithSummary("Checks the ffmpeg at the given path, or which one would be found automatically.");
+
         guarded.MapPost("/complete", async (SetupRequest request, SetupService service, CancellationToken cancellationToken) =>
                 await service.CompleteAsync(request, cancellationToken) switch
                 {

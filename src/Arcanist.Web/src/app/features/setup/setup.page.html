@@ -278,6 +278,61 @@
           <p class="text-xs text-muted-foreground">{{ 'setup.libraries.networkHelp' | t }}</p>
         }
 
+        @case ('media') {
+          <p class="text-sm">{{ 'setup.media.explanation' | t }}</p>
+          @if (ffmpegDetected(); as detected) {
+            <div hlmAlert>
+              <p hlmAlertDescription class="break-all">
+                @if (detected.available) {
+                  {{
+                    'setup.media.found'
+                      | t: { version: detected.version ?? '', path: detected.path ?? '' }
+                  }}
+                } @else {
+                  {{ 'setup.media.notFound' | t }}
+                }
+              </p>
+            </div>
+          } @else {
+            <hlm-spinner class="size-5" />
+          }
+          <div hlmField>
+            <label hlmFieldLabel for="ffmpeg-path">{{ 'setup.media.path' | t }}</label>
+            <div class="flex gap-2">
+              <input
+                hlmInput
+                id="ffmpeg-path"
+                class="min-w-0 flex-1"
+                [(ngModel)]="ffmpegPath"
+                (ngModelChange)="ffmpegCheck.set(null)"
+                [placeholder]="'setup.media.pathPlaceholder' | t"
+              />
+              <button
+                hlmBtn
+                variant="outline"
+                type="button"
+                [disabled]="busy() || !ffmpegPath.trim()"
+                (click)="checkFfmpeg()"
+              >
+                {{ 'setup.media.check' | t }}
+              </button>
+            </div>
+            <p hlmFieldDescription>{{ 'setup.media.pathHelp' | t }}</p>
+            @if (ffmpegCheck(); as check) {
+              <p class="text-sm" [class.text-destructive]="!check.available">
+                {{
+                  check.available
+                    ? ('setup.media.works' | t: { version: check.version ?? '' })
+                    : ('errors.not_ffmpeg' | t)
+                }}
+              </p>
+            }
+            @if (fieldError('ffmpegPath'); as message) {
+              <p class="text-sm text-destructive">{{ message }}</p>
+            }
+          </div>
+        }
+
         @case ('privacy') {
           <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
           <hlm-radio-group class="grid gap-3" name="statistics" [(ngModel)]="shareStatistics">
@@ -330,6 +385,18 @@
                 }
               </ul>
               <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('libraries')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">ffmpeg</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span class="min-w-0 break-all">{{
+                ffmpegPath.trim() ||
+                  (ffmpegDetected()?.available
+                    ? ffmpegDetected()?.path
+                    : ('setup.review.ffmpegLater' | t))
+              }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('media')">
                 {{ 'common.edit' | t }}
               </button>
             </dd>

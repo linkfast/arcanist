@@ -6,6 +6,7 @@ import {
   lucideHouse,
   lucideLibrary,
   lucideLogOut,
+  lucideSettings,
   lucideUserCog,
   lucideUsers,
 } from '@ng-icons/lucide';
@@ -33,6 +34,7 @@ import { LanguageSelect } from '../shared/language-select';
       lucideUsers,
       lucideUserCog,
       lucideLogOut,
+      lucideSettings,
       lucideExternalLink,
     }),
   ],
@@ -110,6 +112,12 @@ export class Shell {
         label: 'nav.users',
         icon: 'lucideUsers',
         visible: this.auth.can('MANAGE_USERS'),
+      },
+      {
+        path: '/settings',
+        label: 'nav.settings',
+        icon: 'lucideSettings',
+        visible: this.auth.can('MANAGE_SETTINGS'),
       },
       { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
     ].filter((item) => item.visible),

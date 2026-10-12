@@ -6,6 +6,7 @@ using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
+using Arcanist.Core.Media;
 using Arcanist.Core.Scanning;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -34,12 +35,17 @@ public sealed record SetupAdmin(string? UserName, string? Password, string? Disp
 public sealed record SetupLibrary(string? Name, IReadOnlyList<string>? Folders, bool VisibleToAll = true);
 
 /// <summary>Everything the wizard collects, submitted at once so setup never ends half-done.</summary>
+/// <param name="FfmpegPath">ffmpeg to use; null to find it automatically (or download it later from the panel).</param>
 public sealed record SetupRequest(
     SetupDatabase? Database,
     SetupAdmin? Admin,
     IReadOnlyList<SetupLibrary>? Libraries,
     bool? ShareAnonymousStatistics,
-    string? Language);
+    string? Language,
+    string? FfmpegPath = null);
+
+/// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
+public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
 
 public sealed record DatabaseTestResult(bool Success, string? Error);
 
@@ -62,6 +68,7 @@ public sealed class SetupService(
     IPasswordHasher<User> passwordHasher,
     LibraryRules libraryRules,
     ScanCoordinator scans,
+    FfmpegLocator ffmpeg,
     ILogger<SetupService> logger)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -83,6 +90,19 @@ public sealed class SetupService(
                 database.Provider,
                 Path.Combine(paths.Root, "arcanist.db")),
             paths.Root);
+    }
+
+    /// <summary>Checks the ffmpeg at <paramref name="path"/>, or which one would be found automatically.</summary>
+    public async Task<SetupFfmpegCheck> CheckFfmpegAsync(string? path, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            var version = await FfmpegLocator.ProbeAsync(path.Trim(), cancellationToken);
+            return new SetupFfmpegCheck(version is not null, path.Trim(), version, version is null ? null : FfmpegSource.Configured);
+        }
+
+        var found = (await ffmpeg.RefreshAsync(cancellationToken)).Installation;
+        return new SetupFfmpegCheck(found is not null, found?.Path, found?.Version, found?.Source);
     }
 
     public async Task<DatabaseTestResult> TestDatabaseAsync(SetupDatabase request, CancellationToken cancellationToken)
@@ -127,6 +147,9 @@ public sealed class SetupService(
             if (request.ShareAnonymousStatistics is null)
                 errors.Add("shareAnonymousStatistics", ErrorCodes.Required);
 
+            if (!string.IsNullOrWhiteSpace(request.FfmpegPath) && await FfmpegLocator.ProbeAsync(request.FfmpegPath.Trim(), cancellationToken) is null)
+                errors.Add("ffmpegPath", ErrorCodes.NotFfmpeg);
+
             if (!errors.IsEmpty || database is null)
                 return new SetupResult.Invalid(errors);
 
@@ -163,6 +186,9 @@ public sealed class SetupService(
 
             await settingsWriter.SetAsync(new Dictionary<string, object?> { [SetupOptions.CompletedKey] = true }, cancellationToken);
             setupCode.Discard();
+
+            // The chosen ffmpeg is in the database now.
+            await ffmpeg.RefreshAsync(cancellationToken);
 
             // The wizard's last step shows this first scan in progress.
             foreach (var libraryId in libraryIds)
@@ -218,6 +244,9 @@ public sealed class SetupService(
 
         if (!string.IsNullOrWhiteSpace(request.Language))
             db.Settings.Add(new Setting { Key = SettingKeys.DefaultLanguage, Value = JsonSerializer.Serialize(request.Language.Trim()) });
+
+        if (!string.IsNullOrWhiteSpace(request.FfmpegPath))
+            db.Settings.Add(new Setting { Key = SettingKeys.FfmpegPath, Value = JsonSerializer.Serialize(request.FfmpegPath.Trim()) });
 
         return libraryIds;
     }

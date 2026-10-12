@@ -3,6 +3,7 @@ using Arcanist.Core.Application.Analysis;
 using Arcanist.Core.Application.Scanning;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Media;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,7 @@ internal sealed class AnalysisWorker(
     AnalysisMonitor monitor,
     ScanEvents scans,
     SettingsStore settings,
+    FfmpegLocator ffmpeg,
     IOptionsMonitor<SetupOptions> setup,
     IOptionsMonitor<AnalysisOptions> options,
     TimeProvider time,
@@ -122,30 +124,31 @@ internal sealed class AnalysisWorker(
         }
 
         await using var db = databases.CreateDbContext();
-        var batch = await PendingAsync(db, options.CurrentValue.BatchSize, cancellationToken);
+        var ffmpegPath = (await ffmpeg.GetAsync(cancellationToken))?.Path;
+        var batch = await PendingAsync(db, options.CurrentValue.BatchSize, ffmpegPath is not null, cancellationToken);
         if (batch.Count == 0)
         {
-            await RefreshCountsAsync(db, AnalysisActivity.Idle, cancellationToken);
+            await RefreshCountsAsync(db, AnalysisActivity.Idle, ffmpegPath is not null, cancellationToken);
             return IdleDelay;
         }
 
         monitor.Update(p => p with { Activity = AnalysisActivity.Running, Enabled = true, Error = null });
-        var results = await AnalyzeAsync(batch, cancellationToken);
+        var results = await AnalyzeAsync(batch, ffmpegPath, cancellationToken);
         await SaveAsync(db, results, cancellationToken);
         monitor.Analyzed(results.Count);
-        await RefreshCountsAsync(db, AnalysisActivity.Running, cancellationToken);
+        await RefreshCountsAsync(db, AnalysisActivity.Running, ffmpegPath is not null, cancellationToken);
         return TimeSpan.Zero;
     }
 
     private sealed record WorkItem(string ContentHash, string RelativePath, StorageLocation Location);
 
-    private async Task<List<WorkItem>> PendingAsync(ArcanistDbContext db, int size, CancellationToken cancellationToken)
+    private async Task<List<WorkItem>> PendingAsync(ArcanistDbContext db, int size, bool withFfmpeg, CancellationToken cancellationToken)
     {
         var version = AudioAnalyzer.Version;
         var now = time.GetUtcNow().UtcDateTime;
 
         // Oldest files first (UUIDv7 ids). Copies of the same audio are rare, so a few extra rows cover them.
-        var candidates = await Pending(db, version)
+        var candidates = await Pending(db, version, withFfmpeg)
             .OrderBy(f => f.Id)
             .Select(f => new { f.ContentHash, f.RelativePath, f.LibrarySource })
             .Take(size * 4)
@@ -159,12 +162,14 @@ internal sealed class AnalysisWorker(
             .ToList();
     }
 
-    private static IQueryable<MediaFile> Pending(ArcanistDbContext db, int version) =>
+    /// <summary>Present files whose audio has no result from this analyzer version; with ffmpeg, also those that were waiting for it.</summary>
+    private static IQueryable<MediaFile> Pending(ArcanistDbContext db, int version, bool withFfmpeg) =>
         db.MediaFiles.AsNoTracking()
             .Where(f => f.MissingSince == null)
-            .Where(f => !db.AudioAnalyses.Any(a => a.ContentHash == f.ContentHash && a.AnalyzerVersion == version));
+            .Where(f => !db.AudioAnalyses.Any(a => a.ContentHash == f.ContentHash && a.AnalyzerVersion == version
+                                                   && !(withFfmpeg && a.State == AnalysisState.NeedsFfmpeg)));
 
-    private async Task<List<(string ContentHash, AnalysisOutcome Outcome)>> AnalyzeAsync(List<WorkItem> batch, CancellationToken cancellationToken)
+    private async Task<List<(string ContentHash, AnalysisOutcome Outcome)>> AnalyzeAsync(List<WorkItem> batch, string? ffmpegPath, CancellationToken cancellationToken)
     {
         var queue = new ConcurrentQueue<WorkItem>(batch);
         var results = new ConcurrentBag<(string, AnalysisOutcome)>();
@@ -175,7 +180,7 @@ internal sealed class AnalysisWorker(
             Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
             while (!cancellationToken.IsCancellationRequested && queue.TryDequeue(out var item))
             {
-                if (Analyze(item, cancellationToken) is { } outcome)
+                if (Analyze(item, ffmpegPath, cancellationToken) is { } outcome)
                     results.Add((item.ContentHash, outcome));
             }
         }, cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Default));
@@ -185,7 +190,20 @@ internal sealed class AnalysisWorker(
         return results.ToList();
     }
 
-    private AnalysisOutcome? Analyze(WorkItem item, CancellationToken cancellationToken)
+    private AnalysisOutcome? Analyze(WorkItem item, string? ffmpegPath, CancellationToken cancellationToken)
+    {
+        var outcome = WithFile(item, stream => AudioAnalyzer.Analyze(stream, Path.GetExtension(item.RelativePath)), cancellationToken);
+
+        // Formats the built-in decoder does not read go through ffmpeg when there is one.
+        if (outcome?.Status == AnalyzerStatus.Unsupported && ffmpegPath is not null)
+            outcome = WithFile(item, stream => FfmpegDecoder.Analyze(ffmpegPath, stream, cancellationToken), cancellationToken);
+
+        if (outcome?.Status == AnalyzerStatus.Invalid)
+            logger.LogInformation("Could not analyze {Path}: {Error}", item.RelativePath, outcome.Error);
+        return outcome;
+    }
+
+    private AnalysisOutcome? WithFile(WorkItem item, Func<Stream, AnalysisOutcome> analyze, CancellationToken cancellationToken)
     {
         Stream stream;
         try
@@ -201,12 +219,7 @@ internal sealed class AnalysisWorker(
         }
 
         using (stream)
-        {
-            var outcome = AudioAnalyzer.Analyze(stream, Path.GetExtension(item.RelativePath));
-            if (outcome.Status == AnalyzerStatus.Invalid)
-                logger.LogInformation("Could not analyze {Path}: {Error}", item.RelativePath, outcome.Error);
-            return outcome;
-        }
+            return analyze(stream);
     }
 
     private async Task SaveAsync(ArcanistDbContext db, List<(string ContentHash, AnalysisOutcome Outcome)> results, CancellationToken cancellationToken)
@@ -265,10 +278,10 @@ internal sealed class AnalysisWorker(
         analysis.Waveform = result?.Waveform is { } waveform ? Convert.FromBase64String(waveform) : null;
     }
 
-    private async Task RefreshCountsAsync(ArcanistDbContext db, AnalysisActivity activity, CancellationToken cancellationToken)
+    private async Task RefreshCountsAsync(ArcanistDbContext db, AnalysisActivity activity, bool withFfmpeg, CancellationToken cancellationToken)
     {
         var version = AudioAnalyzer.Version;
-        var pending = await Pending(db, version).Select(f => f.ContentHash).Distinct().CountAsync(cancellationToken);
+        var pending = await Pending(db, version, withFfmpeg).Select(f => f.ContentHash).Distinct().CountAsync(cancellationToken);
         var states = await db.AudioAnalyses.AsNoTracking()
             .Where(a => a.AnalyzerVersion == version)
             .GroupBy(a => a.State)

@@ -22,6 +22,7 @@ export const en: Dictionary = {
     overview: 'Home',
     libraries: 'Libraries',
     users: 'Users',
+    settings: 'Settings',
     account: 'My account',
     player: 'Open the player',
     logout: 'Sign out',
@@ -56,6 +57,7 @@ export const en: Dictionary = {
         title: 'Your libraries',
         description: 'The folders that hold your music. You can add more later.',
       },
+      media: { title: 'Audio', description: 'Tools to convert and analyze your music.' },
       privacy: { title: 'Privacy', description: 'You decide what is shared.' },
       review: { title: 'All set', description: 'Review the setup before finishing.' },
     },
@@ -96,6 +98,17 @@ export const en: Dictionary = {
       another: 'Another library',
       networkHelp: 'Folders can be on another disk or on a network drive mounted on the server.',
     },
+    media: {
+      explanation:
+        'Arcanist uses ffmpeg to convert songs to lighter formats when listening away from home and to analyze some formats (such as Opus or WMA). It is optional: without it, you can download it later from Settings.',
+      found: 'Found ffmpeg {version} at {path}.',
+      notFound: 'ffmpeg was not found on this server.',
+      path: 'Use another ffmpeg (optional)',
+      pathPlaceholder: 'Full path to ffmpeg',
+      pathHelp: 'Leave it empty to let Arcanist find it automatically.',
+      check: 'Check',
+      works: 'It works: ffmpeg {version}.',
+    },
     privacy: {
       explanation:
         "Arcanist can contribute anonymous play counts (which songs are played, without personal data or file names) to the Ultimate network's global statistics, which power rankings and recommendations for everyone.",
@@ -111,6 +124,7 @@ export const en: Dictionary = {
       folders: '{count} folder(s)',
       noLibraries: 'None for now',
       statistics: 'Anonymous statistics',
+      ffmpegLater: 'Later, from Settings',
       afterwards:
         'Once finished, Arcanist starts analyzing your music. You can follow the progress in Libraries.',
     },
@@ -126,6 +140,31 @@ export const en: Dictionary = {
     noLibrariesHelp: 'Add the folders that hold your music to get started.',
     sourceCode: 'Source code',
     license: 'Free software under the AGPL-3.0-or-later license.',
+  },
+  settings: {
+    title: 'Settings',
+    subtitle: 'Server tools and services.',
+    ffmpeg: {
+      description:
+        'Used to convert songs to lighter formats and to analyze the formats Arcanist cannot read by itself (Opus, WMA…).',
+      available: 'Available',
+      missing: 'Not available',
+      source: {
+        CONFIGURED: 'configured path',
+        DOWNLOADED: 'downloaded by Arcanist',
+        SYSTEM: 'from the system',
+      },
+      configuredBroken: 'The configured path ({path}) is not a working ffmpeg.',
+      path: 'ffmpeg path',
+      automatic: 'Automatic',
+      pathHelp: 'Leave it empty to let Arcanist find it automatically.',
+      download: 'Download ffmpeg',
+      update: 'Download the latest version',
+      downloadHelp:
+        "A static build from BtbN/FFmpeg-Builds (GPL) is saved in Arcanist's data folder.",
+      downloading: 'Downloading ffmpeg: {received} of {total}…',
+      installed: 'ffmpeg {version} installed.',
+    },
   },
   analysis: {
     title: 'Audio analysis',
@@ -295,5 +334,11 @@ export const en: Dictionary = {
     source_unavailable:
       'A folder was not available (disk or network drive disconnected?). Nothing was removed.',
     interrupted: 'The scan was interrupted by a server restart and has been queued again.',
+    not_ffmpeg: 'That file is not a working ffmpeg.',
+    ffmpeg_platform_unsupported:
+      'There is no ffmpeg download for this system; install it with the package manager and enter its path.',
+    ffmpeg_download_failed:
+      'ffmpeg could not be downloaded. Check the internet connection and try again.',
+    ffmpeg_checksum_mismatch: 'The downloaded ffmpeg did not match its checksum and was discarded.',
   },
 };

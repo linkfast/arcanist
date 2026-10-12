@@ -38,6 +38,28 @@ export class RelativeTimePipe implements PipeTransform {
   }
 }
 
+/** File sizes in the user's language: "184 MB". */
+@Pipe({ name: 'bytes', pure: false })
+export class BytesPipe implements PipeTransform {
+  private readonly i18n = inject(I18n);
+
+  transform(value: number | null | undefined): string {
+    const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'];
+    let size = value ?? 0;
+    let unit = 0;
+    while (size >= 1000 && unit < units.length - 1) {
+      size /= 1000;
+      unit++;
+    }
+    return new Intl.NumberFormat(this.i18n.language(), {
+      style: 'unit',
+      unit: units[unit],
+      unitDisplay: 'short',
+      maximumFractionDigits: unit < 2 ? 0 : 1,
+    }).format(size);
+  }
+}
+
 /** Thousands separators in the user's language. */
 @Pipe({ name: 'count', pure: false })
 export class CountPipe implements PipeTransform {

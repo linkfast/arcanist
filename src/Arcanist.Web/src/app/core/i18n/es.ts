@@ -22,6 +22,7 @@ export const es: Dictionary = {
     overview: 'Inicio',
     libraries: 'Bibliotecas',
     users: 'Usuarios',
+    settings: 'Ajustes',
     account: 'Mi cuenta',
     player: 'Abrir el reproductor',
     logout: 'Cerrar sesión',
@@ -59,6 +60,7 @@ export const es: Dictionary = {
         title: 'Tus bibliotecas',
         description: 'Las carpetas donde está tu música. Puedes añadir más después.',
       },
+      media: { title: 'Audio', description: 'Herramientas para convertir y analizar tu música.' },
       privacy: { title: 'Privacidad', description: 'Tú decides qué se comparte.' },
       review: { title: 'Todo listo', description: 'Revisa la configuración antes de terminar.' },
     },
@@ -101,6 +103,17 @@ export const es: Dictionary = {
       networkHelp:
         'Las carpetas pueden estar en otro disco o en una unidad de red montada en el servidor.',
     },
+    media: {
+      explanation:
+        'Arcanist usa ffmpeg para convertir canciones a formatos más ligeros al escuchar fuera de casa y para analizar algunos formatos (como Opus o WMA). Es opcional: si no lo tienes, podrás descargarlo más tarde desde Ajustes.',
+      found: 'Encontrado ffmpeg {version} en {path}.',
+      notFound: 'No se ha encontrado ffmpeg en este servidor.',
+      path: 'Usar otro ffmpeg (opcional)',
+      pathPlaceholder: 'Ruta completa a ffmpeg',
+      pathHelp: 'Déjalo vacío para que Arcanist lo busque automáticamente.',
+      check: 'Comprobar',
+      works: 'Funciona: ffmpeg {version}.',
+    },
     privacy: {
       explanation:
         'Arcanist puede aportar recuentos anónimos de reproducción (qué canciones se escuchan, sin datos personales ni nombres de archivo) a las estadísticas globales de la red Ultimate, que alimentan rankings y recomendaciones para todos.',
@@ -116,6 +129,7 @@ export const es: Dictionary = {
       folders: '{count} carpeta(s)',
       noLibraries: 'Ninguna por ahora',
       statistics: 'Estadísticas anónimas',
+      ffmpegLater: 'Más tarde, desde Ajustes',
       afterwards:
         'Al terminar, Arcanist empezará a analizar tu música. Puedes seguir el progreso en Bibliotecas.',
     },
@@ -131,6 +145,31 @@ export const es: Dictionary = {
     noLibrariesHelp: 'Añade las carpetas donde está tu música para empezar.',
     sourceCode: 'Código fuente',
     license: 'Software libre bajo la licencia AGPL-3.0-or-later.',
+  },
+  settings: {
+    title: 'Ajustes',
+    subtitle: 'Herramientas y servicios del servidor.',
+    ffmpeg: {
+      description:
+        'Se usa para convertir canciones a formatos más ligeros y para analizar los formatos que Arcanist no lee por sí mismo (Opus, WMA…).',
+      available: 'Disponible',
+      missing: 'No disponible',
+      source: {
+        CONFIGURED: 'ruta configurada',
+        DOWNLOADED: 'descargado por Arcanist',
+        SYSTEM: 'del sistema',
+      },
+      configuredBroken: 'La ruta configurada ({path}) no es un ffmpeg que funcione.',
+      path: 'Ruta de ffmpeg',
+      automatic: 'Automática',
+      pathHelp: 'Déjala vacía para que Arcanist lo busque automáticamente.',
+      download: 'Descargar ffmpeg',
+      update: 'Descargar la última versión',
+      downloadHelp:
+        'Una build estática de BtbN/FFmpeg-Builds (GPL) se guarda en la carpeta de datos de Arcanist.',
+      downloading: 'Descargando ffmpeg: {received} de {total}…',
+      installed: 'ffmpeg {version} instalado.',
+    },
   },
   analysis: {
     title: 'Análisis de audio',
@@ -300,5 +339,12 @@ export const es: Dictionary = {
     source_unavailable:
       'Alguna carpeta no estaba disponible (¿disco o unidad de red desconectados?). No se ha borrado nada.',
     interrupted: 'El escaneo se interrumpió al reiniciar el servidor; se ha vuelto a encolar.',
+    not_ffmpeg: 'Ese archivo no es un ffmpeg que funcione.',
+    ffmpeg_platform_unsupported:
+      'No hay una descarga de ffmpeg para este sistema; instálalo con el gestor de paquetes e indica su ruta.',
+    ffmpeg_download_failed:
+      'No se pudo descargar ffmpeg. Comprueba la conexión a internet y vuelve a intentarlo.',
+    ffmpeg_checksum_mismatch:
+      'El ffmpeg descargado no coincidía con su suma de comprobación y se ha descartado.',
   },
 };

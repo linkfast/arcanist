@@ -94,6 +94,36 @@
         }
       }
     },
+    "/rest/v1/setup/ffmpeg": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Checks the ffmpeg at the given path, or which one would be found automatically.",
+        "operationId": "CheckSetupFfmpeg",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupFfmpegCheck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/setup/complete": {
       "post": {
         "tags": [
@@ -1323,6 +1353,79 @@
         }
       }
     },
+    "/rest/v1/ffmpeg": {
+      "get": {
+        "tags": [
+          "Media tools"
+        ],
+        "summary": "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS.",
+        "operationId": "Ffmpeg",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FfmpegStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ffmpeg/path": {
+      "put": {
+        "tags": [
+          "Media tools"
+        ],
+        "summary": "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password.",
+        "operationId": "SetFfmpegPath",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetFfmpegPathInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FfmpegStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ffmpeg/install": {
+      "post": {
+        "tags": [
+          "Media tools"
+        ],
+        "summary": "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Poll the status to follow it. Administrators only, with a recent password.",
+        "operationId": "InstallFfmpeg",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FfmpegStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/artists": {
       "get": {
         "tags": [
@@ -2070,6 +2173,122 @@
           }
         }
       },
+      "FfmpegDownloadProgress": {
+        "required": [
+          "state",
+          "bytesReceived",
+          "totalBytes",
+          "version",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/FfmpegDownloadState"
+          },
+          "bytesReceived": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "totalBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FfmpegDownloadState": {
+        "enum": [
+          "IDLE",
+          "DOWNLOADING",
+          "INSTALLING",
+          "COMPLETED",
+          "FAILED"
+        ]
+      },
+      "FfmpegSource": {
+        "enum": [
+          "CONFIGURED",
+          "DOWNLOADED",
+          "SYSTEM",
+          null
+        ]
+      },
+      "FfmpegStatus": {
+        "required": [
+          "available",
+          "path",
+          "version",
+          "source",
+          "configuredPath",
+          "configuredPathWorks",
+          "canDownload",
+          "download"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FfmpegSource"
+              }
+            ]
+          },
+          "configuredPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "configuredPathWorks": {
+            "type": "boolean"
+          },
+          "canDownload": {
+            "type": "boolean"
+          },
+          "download": {
+            "$ref": "#/components/schemas/FfmpegDownloadProgress"
+          }
+        }
+      },
       "KeyMode": {
         "enum": [
           "MAJOR",
@@ -2671,6 +2890,20 @@
           }
         }
       },
+      "SetFfmpegPathInput": {
+        "required": [
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SetupAdmin": {
         "required": [
           "userName",
@@ -2754,6 +2987,42 @@
           }
         }
       },
+      "SetupFfmpegCheck": {
+        "required": [
+          "available",
+          "path",
+          "version",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FfmpegSource"
+              }
+            ]
+          }
+        }
+      },
       "SetupLibrary": {
         "required": [
           "name",
@@ -2828,6 +3097,12 @@
             ]
           },
           "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ffmpegPath": {
             "type": [
               "null",
               "string"
@@ -3369,6 +3644,9 @@
     },
     {
       "name": "Analysis"
+    },
+    {
+      "name": "Media tools"
     },
     {
       "name": "Catalog"

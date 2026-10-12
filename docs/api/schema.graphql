@@ -18,6 +18,8 @@ type Query {
   library(id: ID!): Library!
   "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only."
   serverDirectories(path: String): ServerDirectoryListing!
+  "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS."
+  ffmpeg: FfmpegStatus!
   "Most recent scans first, of one library or of all libraries the user can see. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobs(libraryId: ID, limit: Int): [ScanJob!]!
   "A scan by id, including live progress while it runs. Requires RUN_SCANS or MANAGE_LIBRARIES."
@@ -215,6 +217,39 @@ type ServerDirectory {
   isHidden: Boolean!
 }
 
+type FfmpegStatus {
+  available: Boolean!
+  path: String
+  version: String
+  source: FfmpegSource
+  configuredPath: String
+  configuredPathWorks: Boolean!
+  canDownload: Boolean!
+  download: FfmpegDownloadProgress!
+}
+
+enum FfmpegSource {
+  CONFIGURED
+  DOWNLOADED
+  SYSTEM
+}
+
+type FfmpegDownloadProgress {
+  state: FfmpegDownloadState!
+  bytesReceived: Long!
+  totalBytes: Long
+  version: String
+  error: String
+}
+
+enum FfmpegDownloadState {
+  IDLE
+  DOWNLOADING
+  INSTALLING
+  COMPLETED
+  FAILED
+}
+
 type ScanJob {
   id: ID!
   libraryId: ID!
@@ -331,6 +366,10 @@ type Mutation {
   addLibrarySource(libraryId: ID!, input: LibrarySourceInput!): Library!
   "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES."
   removeLibrarySource(id: ID!): Library!
+  "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password."
+  setFfmpegPath(path: String): FfmpegStatus!
+  "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password."
+  installFfmpeg: FfmpegStatus!
   "Queues a scan, or returns the one already queued or running for the library. A full scan re-reads every file. Requires RUN_SCANS."
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."

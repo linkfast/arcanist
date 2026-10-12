@@ -14,13 +14,14 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
-import { ApiError, DatabaseProvider, SetupStatus } from '../../core/api/rest';
+import { ApiError, DatabaseProvider, SetupFfmpegCheck, SetupStatus } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
 import { I18n, Language, TranslatePipe } from '../../core/i18n/i18n';
 import { SetupService } from '../../core/setup/setup.service';
 import { DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 
-type Step = 'code' | 'welcome' | 'database' | 'admin' | 'libraries' | 'privacy' | 'review';
+type Step =
+  'code' | 'welcome' | 'database' | 'admin' | 'libraries' | 'media' | 'privacy' | 'review';
 
 interface DraftLibrary {
   name: string;
@@ -64,7 +65,15 @@ export class SetupPage implements OnInit {
 
   protected readonly steps = computed<Step[]>(() => {
     const status = this.status();
-    const steps: Step[] = ['welcome', 'database', 'admin', 'libraries', 'privacy', 'review'];
+    const steps: Step[] = [
+      'welcome',
+      'database',
+      'admin',
+      'libraries',
+      'media',
+      'privacy',
+      'review',
+    ];
     return status?.requiresCode ? ['code', ...steps] : steps;
   });
   protected readonly stepIndex = computed(() => this.steps().indexOf(this.step()));
@@ -82,6 +91,11 @@ export class SetupPage implements OnInit {
     { name: '', folders: [], visibleToAll: true },
   ]);
   protected shareStatistics: 'yes' | 'no' | null = null;
+  protected ffmpegPath = '';
+  /** What the server finds by itself, shown when the step opens. */
+  protected readonly ffmpegDetected = signal<SetupFfmpegCheck | null>(null);
+  /** Result of checking the path the user typed. */
+  protected readonly ffmpegCheck = signal<SetupFfmpegCheck | null>(null);
 
   // Folder picker
   protected readonly pickingFor = signal<number | null>(null);
@@ -106,6 +120,34 @@ export class SetupPage implements OnInit {
     this.error.set(null);
     if (!(await this.validate(this.step()))) return;
     this.step.set(this.steps()[this.stepIndex() + 1]);
+    if (this.step() === 'media' && !this.ffmpegDetected()) await this.detectFfmpeg();
+  }
+
+  private async detectFfmpeg(): Promise<void> {
+    try {
+      this.ffmpegDetected.set(await this.setup.checkFfmpeg(null));
+    } catch {
+      this.ffmpegDetected.set({ available: false, path: null, version: null, source: null });
+    }
+  }
+
+  protected async checkFfmpeg(): Promise<boolean> {
+    const path = this.ffmpegPath.trim();
+    if (!path) {
+      this.ffmpegCheck.set(null);
+      return true;
+    }
+    this.busy.set(true);
+    try {
+      const check = await this.setup.checkFfmpeg(path);
+      this.ffmpegCheck.set(check);
+      return check.available;
+    } catch (error) {
+      this.error.set(this.i18n.error(ApiError.from(error).code));
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   protected goTo(step: Step): void {
@@ -202,6 +244,7 @@ export class SetupPage implements OnInit {
           })),
         shareAnonymousStatistics: this.shareStatistics === 'yes',
         language: this.i18n.language(),
+        ffmpegPath: this.ffmpegPath.trim() || null,
       });
 
       await this.setup.loadStatus();
@@ -212,9 +255,9 @@ export class SetupPage implements OnInit {
       this.fieldErrors.set(apiError.fields);
       this.error.set(this.i18n.error(apiError.code));
       // Show the first step with a problem.
-      const step = (['database', 'admin', 'libraries'] as Step[]).find((s) =>
+      const step = (['database', 'admin', 'libraries', 'media'] as Step[]).find((s) =>
         Object.keys(apiError.fields).some((field) =>
-          field.startsWith(s === 'libraries' ? 'libraries' : s),
+          field.startsWith(s === 'media' ? 'ffmpegPath' : s),
         ),
       );
       if (step) this.step.set(step);
@@ -268,6 +311,12 @@ export class SetupPage implements OnInit {
           this.libraries().some((library) => library.folders.length > 0 && !library.name.trim())
         ) {
           this.error.set(this.i18n.t('setup.libraries.nameRequired'));
+          return false;
+        }
+        return true;
+      case 'media':
+        if (!(await this.checkFfmpeg())) {
+          this.error.set(this.i18n.error('not_ffmpeg'));
           return false;
         }
         return true;

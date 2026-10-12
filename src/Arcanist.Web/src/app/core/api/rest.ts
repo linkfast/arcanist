@@ -51,6 +51,14 @@ export interface SetupRequest {
   libraries: { name: string; folders: string[]; visibleToAll: boolean }[];
   shareAnonymousStatistics: boolean;
   language: string;
+  ffmpegPath: string | null;
+}
+
+export interface SetupFfmpegCheck {
+  available: boolean;
+  path: string | null;
+  version: string | null;
+  source: 'CONFIGURED' | 'DOWNLOADED' | 'SYSTEM' | null;
 }
 
 export interface ServerDirectoryListing {

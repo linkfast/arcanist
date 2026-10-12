@@ -31,6 +31,7 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.17.14" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="SharpCompress" Version="1.0.0" />
     <PackageReference Include="SkiaSharp" Version="4.153.1" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
     <PackageReference Include="z440.atl.core" Version="7.18.0" />
@@ -73,14 +74,11 @@
     <NativeAudioSource Include="$(NativeAudioCrate)src/**/*.rs;$(NativeAudioCrate)Cargo.toml;$(NativeAudioCrate)Cargo.lock" />
   </ItemGroup>
 
-  <Target Name="BuildNativeAudio"
-          Condition="'$(NativeAudioRid)' == '$(NETCoreSdkRuntimeIdentifier)' And '$(SkipNativeAudioBuild)' != 'true'"
-          Inputs="@(NativeAudioSource)" Outputs="$(NativeAudioDir)$(NativeAudioFile)">
+  <Target Name="BuildNativeAudio" Condition="'$(NativeAudioRid)' == '$(NETCoreSdkRuntimeIdentifier)' And '$(SkipNativeAudioBuild)' != 'true'" Inputs="@(NativeAudioSource)" Outputs="$(NativeAudioDir)$(NativeAudioFile)">
     <Exec Command="cargo --version" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="CargoExitCode" />
     </Exec>
-    <Warning Condition="'$(CargoExitCode)' != '0' And !Exists('$(NativeAudioDir)$(NativeAudioFile)')"
-             Text="Rust (cargo) is not installed, so the native audio library was not built: audio analysis will be unavailable." />
+    <Warning Condition="'$(CargoExitCode)' != '0' And !Exists('$(NativeAudioDir)$(NativeAudioFile)')" Text="Rust (cargo) is not installed, so the native audio library was not built: audio analysis will be unavailable." />
     <Exec Condition="'$(CargoExitCode)' == '0'" Command="cargo build --release --manifest-path &quot;$(NativeAudioCrate)Cargo.toml&quot;" />
     <Copy Condition="'$(CargoExitCode)' == '0'" SourceFiles="$(NativeAudioCrate)target/release/$(NativeAudioFile)" DestinationFolder="$(NativeAudioDir)" />
   </Target>

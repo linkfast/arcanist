@@ -26,6 +26,15 @@ public static class AudioFormats
     private static readonly string[] ArtworkNames = ["cover", "folder", "front", "album", "albumart"];
     private static readonly string[] ArtworkExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
+    public static bool IsLyrics(string path) => path.EndsWith(".lrc", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The path without its extension, to pair a file with its sidecars.</summary>
+    public static string WithoutExtension(string path)
+    {
+        var dot = path.LastIndexOf('.');
+        return dot > path.LastIndexOf('/') ? path[..dot] : path;
+    }
+
     public static bool IsAudio(string path) => MimeTypes.ContainsKey(Path.GetExtension(path));
 
     public static string MimeType(string path) =>

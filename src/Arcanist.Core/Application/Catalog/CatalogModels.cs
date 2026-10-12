@@ -67,6 +67,15 @@ public sealed record TrackFile(
     Loudness? Loudness,
     string StreamUrl);
 
+/// <summary>A line of synchronized lyrics, shown from <paramref name="TimeMs"/> until the next line.</summary>
+public sealed record LyricsLine(int TimeMs, string Text);
+
+/// <summary>A track's lyrics.</summary>
+/// <param name="Plain">The whole text (also available when only synchronized lyrics exist).</param>
+/// <param name="Synced">Time-synchronized lines, when known.</param>
+/// <param name="Instrumental">The track has no lyrics.</param>
+public sealed record TrackLyrics(Guid TrackId, string? Plain, IReadOnlyList<LyricsLine>? Synced, LyricsSource Source, bool Instrumental);
+
 /// <summary>Overview of a copy's audio for seek bars: peak amplitudes from start to end.</summary>
 /// <param name="Peaks">1000 values from 0 (silence) to 255 (full scale), evenly spread over the duration.</param>
 public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOnlyList<int> Peaks);
@@ -74,6 +83,7 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// <param name="ArtworkId">The track's own image, or else its album's.</param>
 /// <param name="Bpm">Tempo measured from the best copy; null until analyzed, or when there is no steady beat.</param>
 /// <param name="Key">Key estimated from the best copy; null until analyzed.</param>
+/// <param name="HasLyrics">Whether trackLyrics has lyrics for it (instrumental tracks included).</param>
 /// <param name="Files">Copies of the track in libraries the user can access, best quality first.</param>
 /// <param name="StreamUrl">Plays the best copy. Relative to the server; it carries a token valid for a few hours for
 /// the current session, so it works where headers cannot be sent (e.g. an HTML audio element).</param>
@@ -90,6 +100,7 @@ public sealed record Track(
     DateTime AddedAt,
     double? Bpm,
     MusicalKey? Key,
+    bool HasLyrics,
     IReadOnlyList<TrackFile> Files,
     string StreamUrl);
 

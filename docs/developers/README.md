@@ -130,6 +130,13 @@ null (and the waveform answers `not_found`); clients should cope with that.
 - **Waveform:** `trackWaveform(trackId, fileId)` / `GET /rest/v1/tracks/{trackId}/waveform` returns 1000 peak values
   (0–255) spread evenly over the duration, for seek bars. It is a separate call so track lists stay small.
 
+## Lyrics
+
+`Track.hasLyrics` says whether `trackLyrics(trackId)` / `GET /rest/v1/tracks/{trackId}/lyrics` has something
+(otherwise it answers `not_found`). The result has the whole text in `plain`, time-synchronized `synced` lines
+(`timeMs`, `text`; each shown until the next) when known, `instrumental` for tracks without words, and `source`:
+`SIDECAR` (a `.lrc` file next to the audio), `EMBEDDED` (the file's tags) or `ONLINE`.
+
 ## Artwork
 
 Albums and tracks have an `artworkId`. Images are public, so they work directly in `<img>`:

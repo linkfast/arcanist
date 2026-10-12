@@ -32,6 +32,11 @@ public static class CatalogEndpoints
         catalog.MapGet("/tracks/{id:guid}", (Guid id, CatalogService service, CancellationToken ct) => service.TrackAsync(id, ct))
             .WithName("Track");
 
+        catalog.MapGet("/tracks/{trackId:guid}/lyrics", (Guid trackId, CatalogService service, CancellationToken ct) =>
+                service.LyricsAsync(trackId, ct))
+            .WithName("TrackLyrics")
+            .WithSummary("A track's lyrics, with synchronized lines when known. not_found when it has none.");
+
         catalog.MapGet("/tracks/{trackId:guid}/waveform", (Guid trackId, Guid? fileId, CatalogService service, CancellationToken ct) =>
                 service.WaveformAsync(trackId, fileId, ct))
             .WithName("TrackWaveform")

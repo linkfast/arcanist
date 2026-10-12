@@ -1864,6 +1864,38 @@
         }
       }
     },
+    "/rest/v1/tracks/{trackId}/lyrics": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "A track\u0027s lyrics, with synchronized lines when known. not_found when it has none.",
+        "operationId": "TrackLyrics",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackLyrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/tracks/{trackId}/waveform": {
       "get": {
         "tags": [
@@ -2698,6 +2730,33 @@
           }
         }
       },
+      "LyricsLine": {
+        "required": [
+          "timeMs",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "timeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "LyricsSource": {
+        "enum": [
+          "SIDECAR",
+          "EMBEDDED",
+          "ONLINE"
+        ]
+      },
       "MergeDuplicateInput": {
         "required": [
           "keepTrackId"
@@ -3445,6 +3504,7 @@
           "addedAt",
           "bpm",
           "key",
+          "hasLyrics",
           "files",
           "streamUrl"
         ],
@@ -3527,6 +3587,9 @@
                 "$ref": "#/components/schemas/MusicalKey"
               }
             ]
+          },
+          "hasLyrics": {
+            "type": "boolean"
           },
           "files": {
             "type": "array",
@@ -3648,6 +3711,43 @@
           },
           "streamUrl": {
             "type": "string"
+          }
+        }
+      },
+      "TrackLyrics": {
+        "required": [
+          "trackId",
+          "plain",
+          "synced",
+          "source",
+          "instrumental"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plain": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "synced": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LyricsLine"
+            }
+          },
+          "source": {
+            "$ref": "#/components/schemas/LyricsSource"
+          },
+          "instrumental": {
+            "type": "boolean"
           }
         }
       },

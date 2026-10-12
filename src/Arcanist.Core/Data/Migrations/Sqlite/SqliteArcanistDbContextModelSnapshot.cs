@@ -340,6 +340,33 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("LibrarySources");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.Lyrics", b =>
+                {
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Instrumental")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Plain")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Synced")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("TrackId");
+
+                    b.ToTable("Lyrics");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.MediaFile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -756,6 +783,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.Lyrics", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithOne()
+                        .HasForeignKey("Arcanist.Core.Data.Entities.Lyrics", "TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Track");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.MediaFile", b =>

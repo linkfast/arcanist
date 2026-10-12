@@ -36,6 +36,14 @@ public sealed record AudioMetadata
     public int? BitDepth { get; init; }
     public int? Channels { get; init; }
     public int DurationMs { get; init; }
+
+    /// <summary>Unsynchronized lyrics from the tags, or the text of a sidecar .lrc file.</summary>
+    public string? Lyrics { get; init; }
+
+    /// <summary>Synchronized lyrics as LRC, from the tags or a sidecar .lrc file.</summary>
+    public string? SyncedLyrics { get; init; }
+
+    public Data.Entities.LyricsSource? LyricsSource { get; init; }
     public long AudioDataOffset { get; init; }
     public long AudioDataSize { get; init; }
 
@@ -62,6 +70,7 @@ public static partial class TagReader
         var fields = NormalizeKeys(track.AdditionalFields);
 
         var (artists, featured) = SplitFeatured(Split(track.Artist));
+        var (lyrics, syncedLyrics) = EmbeddedLyrics(track);
 
         return new AudioMetadata
         {
@@ -99,7 +108,24 @@ public static partial class TagReader
             AudioDataOffset = track.TechnicalInformation?.AudioDataOffset ?? 0,
             AudioDataSize = track.TechnicalInformation?.AudioDataSize ?? 0,
             EmbeddedPicture = Picture(track),
+            Lyrics = lyrics,
+            SyncedLyrics = syncedLyrics,
+            LyricsSource = lyrics is null && syncedLyrics is null ? null : Data.Entities.LyricsSource.Embedded,
         };
+    }
+
+    /// <summary>The first lyrics in the tags: plain text, and synchronized ones as LRC.</summary>
+    private static (string? Plain, string? Synced) EmbeddedLyrics(Track track)
+    {
+        foreach (var lyrics in track.Lyrics ?? [])
+        {
+            var plain = Clean(lyrics.UnsynchronizedLyrics);
+            var synced = lyrics.SynchronizedLyrics is { Count: > 0 } phrases ? Clean(Lrc.Format(phrases.Select(p => (p.TimestampStart, p.Text)))) : null;
+            if (plain is not null || synced is not null)
+                return (plain, synced);
+        }
+
+        return (null, null);
     }
 
     private static byte[]? Picture(Track track)

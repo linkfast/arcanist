@@ -212,3 +212,31 @@ public sealed class Artwork : Entity
 
     public ArtworkSource Source { get; init; }
 }
+
+/// <summary>Where a track's lyrics came from, from most to least trusted: a sidecar file next to the audio, the audio's tags, an online service.</summary>
+public enum LyricsSource
+{
+    Sidecar,
+    Embedded,
+    Online,
+}
+
+/// <summary>A track's lyrics. Each track keeps the most trusted ones it has found.</summary>
+public sealed class Lyrics
+{
+    public Guid TrackId { get; init; }
+
+    public Track Track { get; init; } = null!;
+
+    public string? Plain { get; set; }
+
+    /// <summary>Time-synchronized lyrics in LRC format.</summary>
+    public string? Synced { get; set; }
+
+    public LyricsSource Source { get; set; }
+
+    /// <summary>The track has no lyrics (known from an online service).</summary>
+    public bool Instrumental { get; set; }
+
+    public DateTime UpdatedAt { get; set; }
+}

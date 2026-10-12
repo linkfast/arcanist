@@ -10,6 +10,8 @@ type Query {
   "Tracks the user can play, by title. With albumId, all of the album's tracks in disc and track order, without paging."
   tracks(search: String, albumId: ID, artistId: ID, after: String, first: Int): TrackPage!
   track(id: ID!): Track!
+  "A track's lyrics, with synchronized lines when known. not_found when it has none."
+  trackLyrics(trackId: ID!): TrackLyrics!
   "Overview of a track's audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed."
   trackWaveform(trackId: ID!, fileId: ID): Waveform!
   "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
@@ -118,6 +120,7 @@ type Track {
   addedAt: DateTime!
   bpm: Float
   key: MusicalKey
+  hasLyrics: Boolean!
   files: [TrackFile!]!
   streamUrl: String!
 }
@@ -178,6 +181,25 @@ type Loudness {
   trackGain: Float!
   albumGain: Float
   albumPeak: Float
+}
+
+type TrackLyrics {
+  trackId: ID!
+  plain: String
+  synced: [LyricsLine!]
+  source: LyricsSource!
+  instrumental: Boolean!
+}
+
+type LyricsLine {
+  timeMs: Int!
+  text: String!
+}
+
+enum LyricsSource {
+  SIDECAR
+  EMBEDDED
+  ONLINE
 }
 
 type Waveform {

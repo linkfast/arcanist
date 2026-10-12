@@ -114,13 +114,16 @@ public sealed class LibraryScanner(
         await using var db = databases.CreateDbContext();
         var known = await db.MediaFiles.AsNoTracking()
             .Where(f => f.LibrarySourceId == source.Id)
-            .Select(f => new KnownFile(f.Id, f.RelativePath, f.Size, f.ModifiedAt, f.MissingSince))
+            .Select(f => new KnownFile(f.Id, f.RelativePath, f.Size, f.ModifiedAt, f.MissingSince, f.ScannedAt))
             .ToDictionaryAsync(f => f.RelativePath, StringComparer.Ordinal, cancellationToken);
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var toRead = new List<(StorageEntry Entry, Guid? ExistingId)>();
         var reappeared = new List<Guid>();
         var folderArtwork = new Dictionary<string, (int Rank, string Path)>(StringComparer.Ordinal);
+        // Sidecar lyrics by the path of their audio without extension ("Album/01 Song.lrc" goes with "Album/01 Song.flac").
+        var sidecars = new Dictionary<string, StorageEntry>(StringComparer.Ordinal);
+        var unchanged = new List<(StorageEntry Entry, KnownFile Known)>();
 
         try
         {
@@ -131,6 +134,12 @@ public sealed class LibraryScanner(
                     var folder = AudioFormats.Folder(entry.RelativePath);
                     if (!folderArtwork.TryGetValue(folder, out var best) || rank < best.Rank)
                         folderArtwork[folder] = (rank, entry.RelativePath);
+                    continue;
+                }
+
+                if (AudioFormats.IsLyrics(entry.RelativePath))
+                {
+                    sidecars[AudioFormats.WithoutExtension(entry.RelativePath)] = entry;
                     continue;
                 }
 
@@ -147,6 +156,7 @@ public sealed class LibraryScanner(
                 {
                     if (existing.MissingSince is not null)
                         reappeared.Add(existing.Id);
+                    unchanged.Add((entry, existing));
                     continue;
                 }
 
@@ -167,11 +177,18 @@ public sealed class LibraryScanner(
             return;
         }
 
+        // Lyrics added or edited next to an unchanged song: read the song again to pick them up.
+        foreach (var (entry, existing) in unchanged)
+        {
+            if (sidecars.TryGetValue(AudioFormats.WithoutExtension(entry.RelativePath), out var lyrics) && lyrics.ModifiedAt > existing.ScannedAt)
+                toRead.Add((entry, existing.Id));
+        }
+
         job.FilesSeen += seen.Count;
         counter.ToRead(toRead.Count);
         counter.Phase(ScanPhase.Reading);
 
-        await ReadAndWriteAsync(job, source, location, storage, toRead, folderArtwork, writer, counter, cancellationToken);
+        await ReadAndWriteAsync(job, source, location, storage, toRead, folderArtwork, sidecars, writer, counter, cancellationToken);
 
         var now = Now();
         foreach (var chunk in reappeared.Chunk(UpdateChunk))
@@ -190,6 +207,7 @@ public sealed class LibraryScanner(
         ILibraryStorage storage,
         List<(StorageEntry Entry, Guid? ExistingId)> toRead,
         Dictionary<string, (int Rank, string Path)> folderArtwork,
+        Dictionary<string, StorageEntry> sidecars,
         CatalogWriter writer,
         ScanProgressTracker.Counter counter,
         CancellationToken cancellationToken)
@@ -211,7 +229,7 @@ public sealed class LibraryScanner(
                     new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, options.Value.Parallelism), CancellationToken = readToken },
                     async (item, ct) =>
                     {
-                        var scanned = await ReadFileAsync(source, location, storage, item.Entry, item.ExistingId, folderArtwork, folderImages, ct);
+                        var scanned = await ReadFileAsync(source, location, storage, item.Entry, item.ExistingId, folderArtwork, folderImages, sidecars, ct);
                         if (scanned is null)
                         {
                             Interlocked.Increment(ref errors);
@@ -271,6 +289,7 @@ public sealed class LibraryScanner(
         Guid? existingId,
         Dictionary<string, (int Rank, string Path)> folderArtwork,
         ConcurrentDictionary<string, Lazy<Task<StoredArtwork?>>> folderImages,
+        Dictionary<string, StorageEntry> sidecars,
         CancellationToken cancellationToken)
     {
         try
@@ -282,6 +301,9 @@ public sealed class LibraryScanner(
                 metadata = TagReader.Read(stream, AudioFormats.MimeType(entry.RelativePath));
                 hash = await ContentHasher.HashAsync(stream, metadata.AudioDataOffset, metadata.AudioDataSize, cancellationToken);
             }
+
+            if (sidecars.TryGetValue(AudioFormats.WithoutExtension(entry.RelativePath), out var lyrics))
+                metadata = await WithSidecarLyricsAsync(metadata, location, storage, lyrics, cancellationToken);
 
             var artwork = metadata.EmbeddedPicture is { } picture ? artworkStore.Store(picture) : null;
             if (artwork is null && folderArtwork.TryGetValue(AudioFormats.Folder(entry.RelativePath), out var image))
@@ -318,5 +340,35 @@ public sealed class LibraryScanner(
 
     private DateTime Now() => time.GetUtcNow().UtcDateTime;
 
-    private sealed record KnownFile(Guid Id, string RelativePath, long Size, DateTime ModifiedAt, DateTime? MissingSince);
+    /// <summary>Lyrics from a .lrc file next to the audio, which win over the ones in its tags.</summary>
+    private async Task<AudioMetadata> WithSidecarLyricsAsync(
+        AudioMetadata metadata, StorageLocation location, ILibraryStorage storage, StorageEntry lyrics, CancellationToken cancellationToken)
+    {
+        // Lyrics files are small; anything bigger is not one.
+        if (lyrics.Size > MaxLyricsBytes)
+            return metadata;
+
+        try
+        {
+            await using var stream = await storage.OpenReadAsync(location, lyrics.RelativePath, cancellationToken);
+            using var reader = new StreamReader(stream, detectEncodingFromByteOrderMarks: true);
+            var text = (await reader.ReadToEndAsync(cancellationToken)).Replace("\r\n", "\n").Trim();
+            if (text.Length == 0)
+                return metadata;
+
+            var lines = Lrc.Parse(text);
+            return lines.Count > 0
+                ? metadata with { SyncedLyrics = text, Lyrics = string.Join('\n', lines.Select(l => l.Text)), LyricsSource = LyricsSource.Sidecar }
+                : metadata with { SyncedLyrics = null, Lyrics = text, LyricsSource = LyricsSource.Sidecar };
+        }
+        catch (IOException e)
+        {
+            logger.LogDebug(e, "Could not read {Path}", lyrics.RelativePath);
+            return metadata;
+        }
+    }
+
+    private const long MaxLyricsBytes = 256 * 1024;
+
+    private sealed record KnownFile(Guid Id, string RelativePath, long Size, DateTime ModifiedAt, DateTime? MissingSince, DateTime ScannedAt);
 }

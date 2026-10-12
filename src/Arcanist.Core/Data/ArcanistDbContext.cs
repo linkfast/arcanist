@@ -30,6 +30,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<Genre> Genres => Set<Genre>();
     public DbSet<TrackGenre> TrackGenres => Set<TrackGenre>();
     public DbSet<MediaFile> MediaFiles => Set<MediaFile>();
+    public DbSet<Lyrics> Lyrics => Set<Lyrics>();
     public DbSet<Artwork> Artworks => Set<Artwork>();
     public DbSet<AudioAnalysis> AudioAnalyses => Set<AudioAnalysis>();
     public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
@@ -207,6 +208,13 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             candidate.HasIndex(c => new { c.TrackAId, c.TrackBId }).IsUnique();
             candidate.HasIndex(c => c.TrackBId);
             candidate.HasIndex(c => c.Status);
+        });
+
+        modelBuilder.Entity<Lyrics>(lyrics =>
+        {
+            lyrics.HasKey(l => l.TrackId);
+            lyrics.HasOne(l => l.Track).WithOne().HasForeignKey<Lyrics>(l => l.TrackId).OnDelete(DeleteBehavior.Cascade);
+            lyrics.Property(l => l.Source).HasConversion<string>().HasMaxLength(EnumLength);
         });
 
         modelBuilder.Entity<Artwork>(artwork =>

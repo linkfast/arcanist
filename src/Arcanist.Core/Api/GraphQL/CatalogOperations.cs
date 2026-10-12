@@ -34,6 +34,11 @@ public sealed partial class Query
     public static Task<Track> Track([Id] Guid id, [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>
         catalog.TrackAsync(id, cancellationToken);
 
+    [Name("trackLyrics")]
+    [Description("A track's lyrics, with synchronized lines when known. not_found when it has none.")]
+    public static Task<TrackLyrics> TrackLyrics([Id] Guid trackId, [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>
+        catalog.LyricsAsync(trackId, cancellationToken);
+
     [Name("trackWaveform")]
     [Description("Overview of a track's audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed.")]
     public static Task<Waveform> TrackWaveform([Id] Guid trackId, [Id] Guid? fileId, [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>

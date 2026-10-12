@@ -186,6 +186,8 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         var visibleFiles = await VisibleFiles(access).AsNoTracking().Where(f => ids.Contains(f.TrackId)).ToListAsync(cancellationToken);
         var files = visibleFiles.ToLookup(f => f.TrackId);
 
+        var withLyrics = (await db.Lyrics.AsNoTracking().Where(l => ids.Contains(l.TrackId)).Select(l => l.TrackId).ToListAsync(cancellationToken)).ToHashSet();
+
         var hashes = visibleFiles.Select(f => f.ContentHash).Distinct().ToList();
         var analyses = await db.AudioAnalyses.AsNoTracking()
             .Where(a => hashes.Contains(a.ContentHash) && a.State == AnalysisState.Analyzed)
@@ -214,6 +216,7 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                 // Below this, the strongest periodicity is too weak to call it a beat.
                 best is { Bpm: { } bpm, BpmConfidence: >= 0.1f } ? bpm : null,
                 best is { KeyTonic: { } tonic, KeyMinor: { } minor } ? MusicalKeys.Create(tonic, minor, best.KeyConfidence ?? 0) : null,
+                withLyrics.Contains(t.Id),
                 copies
                     .Select(f => new TrackFile(f.Id, f.Format, f.BitRate, f.SampleRate, f.BitDepth, f.Channels, f.Size, f.DurationMs,
                         f.ReplayGainTrackGain, f.ReplayGainAlbumGain,
@@ -240,6 +243,21 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
             ?? throw new ArcanistException.NotFound();
 
         return new Waveform(trackId, file.Id, analysis.DurationMs, analysis.Waveform!.Select(b => (int)b).ToList());
+    }
+
+    /// <summary>The lyrics of a track the caller can see; not_found when it has none.</summary>
+    public async Task<TrackLyrics> LyricsAsync(Guid trackId, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        if (!await VisibleTracks(access).AnyAsync(t => t.Id == trackId, cancellationToken))
+            throw new ArcanistException.NotFound();
+
+        var lyrics = await db.Lyrics.AsNoTracking().SingleOrDefaultAsync(l => l.TrackId == trackId, cancellationToken)
+                     ?? throw new ArcanistException.NotFound();
+
+        var synced = lyrics.Synced is { } lrc ? Core.Scanning.Lrc.Parse(lrc).Select(l => new LyricsLine(l.TimeMs, l.Text)).ToList() : null;
+        var plain = lyrics.Plain ?? (synced is { Count: > 0 } ? string.Join('\n', synced.Select(l => l.Text)) : null);
+        return new TrackLyrics(trackId, plain, synced is { Count: > 0 } ? synced : null, lyrics.Source, lyrics.Instrumental);
     }
 
     /// <summary>Best quality first: the order of <see cref="Track.Files"/> and of playback.</summary>

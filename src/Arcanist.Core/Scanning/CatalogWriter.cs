@@ -110,6 +110,8 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             .Select(g => new { TrackId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.TrackId, x => x.Count, cancellationToken);
 
+        var lyrics = await db.Lyrics.Where(l => trackIds.Contains(l.TrackId)).ToDictionaryAsync(l => l.TrackId, cancellationToken);
+
         var existingTracksToRelink = new HashSet<Guid>();
         var links = new Dictionary<Guid, (List<TrackArtist> Artists, List<TrackGenre> Genres)>();
 
@@ -210,6 +212,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             }
 
             UpdateFile(mediaFile, file, meta, now);
+            SetLyrics(lyrics, track.Id, meta, now);
 
             if (file.Artwork is { } artwork && album.ArtworkId is null)
                 SetAlbum(album, a => a.ArtworkId = ResolveArtwork(artwork));
@@ -236,6 +239,30 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         db.ChangeTracker.Clear();
 
         return new BatchResult(added, updated);
+    }
+
+    /// <summary>Keeps the file's lyrics unless the track already has more trusted ones (see <see cref="LyricsSource"/>).</summary>
+    private void SetLyrics(Dictionary<Guid, Lyrics> lyrics, Guid trackId, AudioMetadata meta, DateTime now)
+    {
+        if (meta.LyricsSource is not { } source)
+            return;
+
+        if (!lyrics.TryGetValue(trackId, out var current))
+        {
+            current = new Lyrics { TrackId = trackId };
+            db.Lyrics.Add(current);
+            lyrics[trackId] = current;
+        }
+        else if (current.Source < source)
+        {
+            return;
+        }
+
+        current.Plain = meta.Lyrics;
+        current.Synced = meta.SyncedLyrics;
+        current.Source = source;
+        current.Instrumental = false;
+        current.UpdatedAt = now;
     }
 
     private static void UpdateFile(MediaFile mediaFile, ScannedFile file, AudioMetadata meta, DateTime now)

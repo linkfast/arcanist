@@ -14,7 +14,8 @@ public sealed record FixtureTags(
     int? Year = null,
     string? Genre = null,
     string? RecordingMbid = null,
-    bool WithCover = false);
+    bool WithCover = false,
+    string? Lyrics = null);
 
 /// <summary>Tiny tagged WAV files generated on the fly, so tests need no binary fixtures in the repository.</summary>
 public static class AudioFixtures
@@ -54,6 +55,9 @@ public static class AudioFixtures
 
         if (tags.RecordingMbid is not null)
             track.AdditionalFields["MUSICBRAINZ_TRACKID"] = tags.RecordingMbid;
+
+        if (tags.Lyrics is not null)
+            track.Lyrics = [new LyricsInfo { UnsynchronizedLyrics = tags.Lyrics }];
 
         if (tags.WithCover)
             track.EmbeddedPictures.Add(PictureInfo.fromBinaryData(Png(seed: 1), PictureInfo.PIC_TYPE.Front));

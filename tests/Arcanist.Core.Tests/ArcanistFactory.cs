@@ -22,7 +22,8 @@ namespace Arcanist.Core.Tests;
 /// <summary>Runs the server in-memory against a throwaway data directory.</summary>
 public sealed class ArcanistFactory(
     IReadOnlyDictionary<string, string?>? settings = null,
-    TimeProvider? time = null) : WebApplicationFactory<Program>
+    TimeProvider? time = null,
+    Action<IServiceCollection>? services = null) : WebApplicationFactory<Program>
 {
     /// <summary>Requests carrying this header appear to come from that IP address instead of loopback.</summary>
     public const string RemoteIpHeader = "X-Test-Remote-Ip";
@@ -45,11 +46,12 @@ public sealed class ArcanistFactory(
         foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
             builder.UseSetting(key, value);
 
-        builder.ConfigureServices(services =>
+        builder.ConfigureServices(collection =>
         {
-            services.AddSingleton<IStartupFilter, RemoteIpStartupFilter>();
+            collection.AddSingleton<IStartupFilter, RemoteIpStartupFilter>();
             if (time is not null)
-                services.AddSingleton(time);
+                collection.AddSingleton(time);
+            services?.Invoke(collection);
         });
     }
 

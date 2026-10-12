@@ -36,13 +36,15 @@ public sealed record SetupLibrary(string? Name, IReadOnlyList<string>? Folders, 
 
 /// <summary>Everything the wizard collects, submitted at once so setup never ends half-done.</summary>
 /// <param name="FfmpegPath">ffmpeg to use; null to find it automatically (or download it later from the panel).</param>
+/// <param name="OnlineServices">Online services to turn on; none when null.</param>
 public sealed record SetupRequest(
     SetupDatabase? Database,
     SetupAdmin? Admin,
     IReadOnlyList<SetupLibrary>? Libraries,
     bool? ShareAnonymousStatistics,
     string? Language,
-    string? FfmpegPath = null);
+    string? FfmpegPath = null,
+    Application.Online.OnlineServicesSettings? OnlineServices = null);
 
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
@@ -247,6 +249,9 @@ public sealed class SetupService(
 
         if (!string.IsNullOrWhiteSpace(request.FfmpegPath))
             db.Settings.Add(new Setting { Key = SettingKeys.FfmpegPath, Value = JsonSerializer.Serialize(request.FfmpegPath.Trim()) });
+
+        if (request.OnlineServices is { } online)
+            db.Settings.Add(new Setting { Key = SettingKeys.OnlineServices, Value = JsonSerializer.Serialize(online, JsonSerializerOptions.Web) });
 
         return libraryIds;
     }

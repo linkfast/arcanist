@@ -34,6 +34,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<Artwork> Artworks => Set<Artwork>();
     public DbSet<AudioAnalysis> AudioAnalyses => Set<AudioAnalysis>();
     public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
+    public DbSet<OnlineLookup> OnlineLookups => Set<OnlineLookup>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -215,6 +216,14 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             lyrics.HasKey(l => l.TrackId);
             lyrics.HasOne(l => l.Track).WithOne().HasForeignKey<Lyrics>(l => l.TrackId).OnDelete(DeleteBehavior.Cascade);
             lyrics.Property(l => l.Source).HasConversion<string>().HasMaxLength(EnumLength);
+        });
+
+        modelBuilder.Entity<OnlineLookup>(lookup =>
+        {
+            lookup.Property(l => l.Service).HasConversion<string>().HasMaxLength(EnumLength);
+            lookup.Property(l => l.Outcome).HasConversion<string>().HasMaxLength(EnumLength);
+            lookup.Property(l => l.Subject).HasMaxLength(64);
+            lookup.HasIndex(l => new { l.Service, l.Subject }).IsUnique();
         });
 
         modelBuilder.Entity<Artwork>(artwork =>

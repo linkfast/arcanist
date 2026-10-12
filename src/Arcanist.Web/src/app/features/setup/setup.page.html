@@ -345,6 +345,27 @@
               <span>{{ 'setup.privacy.no' | t }}</span>
             </label>
           </hlm-radio-group>
+          <div class="grid gap-2">
+            <p class="text-sm font-medium">{{ 'setup.privacy.online' | t }}</p>
+            <p class="text-sm text-muted-foreground">{{ 'setup.privacy.onlineExplanation' | t }}</p>
+            @for (key of onlineServiceKeys; track key) {
+              <label class="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
+                <span class="grid gap-0.5">
+                  <span class="font-medium">{{
+                    'setup.privacy.services.' + key + '.name' | t
+                  }}</span>
+                  <span class="text-muted-foreground">{{
+                    'setup.privacy.services.' + key + '.help' | t
+                  }}</span>
+                </span>
+                <hlm-switch
+                  [checked]="onlineServices[key]"
+                  (checkedChange)="onlineServices[key] = $event"
+                  [aria-label]="'setup.privacy.services.' + key + '.name' | t"
+                />
+              </label>
+            }
+          </div>
           <p class="text-xs text-muted-foreground">{{ 'setup.privacy.later' | t }}</p>
         }
 

@@ -14,7 +14,13 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
-import { ApiError, DatabaseProvider, SetupFfmpegCheck, SetupStatus } from '../../core/api/rest';
+import {
+  ApiError,
+  DatabaseProvider,
+  OnlineServicesChoice,
+  SetupFfmpegCheck,
+  SetupStatus,
+} from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
 import { I18n, Language, TranslatePipe } from '../../core/i18n/i18n';
 import { SetupService } from '../../core/setup/setup.service';
@@ -92,6 +98,19 @@ export class SetupPage implements OnInit {
   ]);
   protected shareStatistics: 'yes' | 'no' | null = null;
   protected ffmpegPath = '';
+  /** Off until the user turns each on: they contact other servers. */
+  protected readonly onlineServices: OnlineServicesChoice = {
+    musicBrainz: false,
+    acoustId: false,
+    coverArtArchive: false,
+    lyrics: false,
+  };
+  protected readonly onlineServiceKeys = [
+    'musicBrainz',
+    'acoustId',
+    'coverArtArchive',
+    'lyrics',
+  ] as const;
   /** What the server finds by itself, shown when the step opens. */
   protected readonly ffmpegDetected = signal<SetupFfmpegCheck | null>(null);
   /** Result of checking the path the user typed. */
@@ -245,6 +264,7 @@ export class SetupPage implements OnInit {
         shareAnonymousStatistics: this.shareStatistics === 'yes',
         language: this.i18n.language(),
         ffmpegPath: this.ffmpegPath.trim() || null,
+        onlineServices: { ...this.onlineServices },
       });
 
       await this.setup.loadStatus();

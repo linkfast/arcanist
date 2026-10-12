@@ -91,3 +91,31 @@ public sealed class DuplicateCandidate : Entity
 
     public Guid? ResolvedByUserId { get; set; }
 }
+
+public enum LookupOutcome
+{
+    Found,
+    NotFound,
+    Failed,
+}
+
+/// <summary>
+/// That an online service was asked about something (a content hash, an album, a track) and what came of it, so
+/// nothing is looked up twice and failures back off. Not retried when found; when not found, after a long while.
+/// </summary>
+public sealed class OnlineLookup : Entity
+{
+    public Application.Online.OnlineService Service { get; init; }
+
+    /// <summary>What was looked up: a content hash, or an album or track id.</summary>
+    public required string Subject { get; init; }
+
+    public LookupOutcome Outcome { get; set; }
+
+    public int Attempts { get; set; }
+
+    public DateTime CheckedAt { get; set; }
+
+    /// <summary>When the subject may be looked up again; null when found.</summary>
+    public DateTime? RetryAfter { get; set; }
+}

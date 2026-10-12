@@ -454,6 +454,43 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("MediaFiles");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.OnlineLookup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CheckedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("RetryAfter")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Service")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Service", "Subject")
+                        .IsUnique();
+
+                    b.ToTable("OnlineLookups");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Recording", b =>
                 {
                     b.Property<Guid>("Id")

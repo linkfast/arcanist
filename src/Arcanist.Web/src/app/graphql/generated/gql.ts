@@ -50,6 +50,10 @@ type Documents = {
     "\n  query DuplicateCandidates($status: DuplicateStatus) {\n    duplicateCandidates(status: $status, first: 200) {\n      id\n      similarity\n      status\n      detectedAt\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n": typeof types.DuplicateCandidatesDocument,
     "\n  mutation MergeDuplicate($id: ID!, $keepTrackId: ID!) {\n    mergeDuplicate(id: $id, keepTrackId: $keepTrackId) {\n      id\n    }\n  }\n": typeof types.MergeDuplicateDocument,
     "\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n": typeof types.DismissDuplicateDocument,
+    "\n  fragment OnlineServicesFields on OnlineServicesStatus {\n    settings {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    hasAcoustIdKey\n    hasOwnAcoustIdKey\n    services {\n      service\n      enabled\n      ready\n      pending\n      found\n      notFound\n      failed\n      lastRequestAt\n      lastError\n    }\n  }\n": typeof types.OnlineServicesFieldsFragmentDoc,
+    "\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.OnlineServicesDocument,
+    "\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.SetOnlineServicesDocument,
+    "\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.SetAcoustIdKeyDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -88,6 +92,10 @@ const documents: Documents = {
     "\n  query DuplicateCandidates($status: DuplicateStatus) {\n    duplicateCandidates(status: $status, first: 200) {\n      id\n      similarity\n      status\n      detectedAt\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n": types.DuplicateCandidatesDocument,
     "\n  mutation MergeDuplicate($id: ID!, $keepTrackId: ID!) {\n    mergeDuplicate(id: $id, keepTrackId: $keepTrackId) {\n      id\n    }\n  }\n": types.MergeDuplicateDocument,
     "\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n": types.DismissDuplicateDocument,
+    "\n  fragment OnlineServicesFields on OnlineServicesStatus {\n    settings {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    hasAcoustIdKey\n    hasOwnAcoustIdKey\n    services {\n      service\n      enabled\n      ready\n      pending\n      found\n      notFound\n      failed\n      lastRequestAt\n      lastError\n    }\n  }\n": types.OnlineServicesFieldsFragmentDoc,
+    "\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n": types.OnlineServicesDocument,
+    "\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": types.SetOnlineServicesDocument,
+    "\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": types.SetAcoustIdKeyDocument,
 };
 
 /**
@@ -248,6 +256,22 @@ export function graphql(source: "\n  mutation MergeDuplicate($id: ID!, $keepTrac
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n"): (typeof documents)["\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment OnlineServicesFields on OnlineServicesStatus {\n    settings {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    hasAcoustIdKey\n    hasOwnAcoustIdKey\n    services {\n      service\n      enabled\n      ready\n      pending\n      found\n      notFound\n      failed\n      lastRequestAt\n      lastError\n    }\n  }\n"): (typeof documents)["\n  fragment OnlineServicesFields on OnlineServicesStatus {\n    settings {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    hasAcoustIdKey\n    hasOwnAcoustIdKey\n    services {\n      service\n      enabled\n      ready\n      pending\n      found\n      notFound\n      failed\n      lastRequestAt\n      lastError\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n"): (typeof documents)["\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

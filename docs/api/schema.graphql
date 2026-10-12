@@ -24,6 +24,8 @@ type Query {
   serverDirectories(path: String): ServerDirectoryListing!
   "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS."
   ffmpeg: FfmpegStatus!
+  "Which online services are on (MusicBrainz, AcoustID, Cover Art Archive, LRCLib) and what each has done. Requires MANAGE_SETTINGS."
+  onlineServices: OnlineServicesStatus!
   "Most recent scans first, of one library or of all libraries the user can see. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobs(libraryId: ID, limit: Int): [ScanJob!]!
   "A scan by id, including live progress while it runs. Requires RUN_SCANS or MANAGE_LIBRARIES."
@@ -289,6 +291,40 @@ enum FfmpegDownloadState {
   FAILED
 }
 
+type OnlineServicesStatus {
+  settings: OnlineServicesSettings!
+  hasAcoustIdKey: Boolean!
+  hasOwnAcoustIdKey: Boolean!
+  services: [OnlineServiceStatus!]!
+}
+
+type OnlineServicesSettings {
+  musicBrainz: Boolean!
+  acoustId: Boolean!
+  coverArtArchive: Boolean!
+  lyrics: Boolean!
+  isEnabled(service: OnlineService!): Boolean!
+}
+
+enum OnlineService {
+  MUSIC_BRAINZ
+  ACOUST_ID
+  COVER_ART_ARCHIVE
+  LYRICS
+}
+
+type OnlineServiceStatus {
+  service: OnlineService!
+  enabled: Boolean!
+  ready: Boolean!
+  pending: Int!
+  found: Int!
+  notFound: Int!
+  failed: Int!
+  lastRequestAt: DateTime
+  lastError: String
+}
+
 type ScanJob {
   id: ID!
   libraryId: ID!
@@ -420,6 +456,10 @@ type Mutation {
   setFfmpegPath(path: String): FfmpegStatus!
   "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password."
   installFfmpeg: FfmpegStatus!
+  "Turns online services on or off. They send only fingerprints, identifiers and artist, album and track names. Requires MANAGE_SETTINGS."
+  setOnlineServices(input: SetOnlineServicesInput!): OnlineServicesStatus!
+  "Uses your own AcoustID application key instead of the project's; null or empty goes back to the project's. Requires MANAGE_SETTINGS."
+  setAcoustIdKey(input: SetAcoustIdKeyInput!): OnlineServicesStatus!
   "Queues a scan, or returns the one already queued or running for the library. A full scan re-reads every file. Requires RUN_SCANS."
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
@@ -455,6 +495,17 @@ input UpdateLibraryInput {
   name: String!
   visibleToAll: Boolean!
   scanIntervalHours: Int
+}
+
+input SetOnlineServicesInput {
+  musicBrainz: Boolean!
+  acoustId: Boolean!
+  coverArtArchive: Boolean!
+  lyrics: Boolean!
+}
+
+input SetAcoustIdKeyInput {
+  key: String
 }
 
 input CreateUserInput {

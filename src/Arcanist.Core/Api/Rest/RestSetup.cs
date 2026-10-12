@@ -64,6 +64,7 @@ public static class RestSetup
         rest.MapAnalysisEndpoints();
         rest.MapFfmpegEndpoints();
         rest.MapDuplicateEndpoints();
+        rest.MapOnlineEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();
         return app;

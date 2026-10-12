@@ -449,6 +449,43 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("MediaFiles");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.OnlineLookup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CheckedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RetryAfter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Service")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Service", "Subject")
+                        .IsUnique();
+
+                    b.ToTable("OnlineLookups");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Recording", b =>
                 {
                     b.Property<Guid>("Id")

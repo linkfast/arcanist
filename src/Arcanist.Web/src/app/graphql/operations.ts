@@ -381,3 +381,51 @@ export const DismissDuplicateMutation = graphql(`
     dismissDuplicate(id: $id)
   }
 `);
+
+export const OnlineServicesFields = graphql(`
+  fragment OnlineServicesFields on OnlineServicesStatus {
+    settings {
+      musicBrainz
+      acoustId
+      coverArtArchive
+      lyrics
+    }
+    hasAcoustIdKey
+    hasOwnAcoustIdKey
+    services {
+      service
+      enabled
+      ready
+      pending
+      found
+      notFound
+      failed
+      lastRequestAt
+      lastError
+    }
+  }
+`);
+
+export const OnlineServicesQuery = graphql(`
+  query OnlineServices {
+    onlineServices {
+      ...OnlineServicesFields
+    }
+  }
+`);
+
+export const SetOnlineServicesMutation = graphql(`
+  mutation SetOnlineServices($input: SetOnlineServicesInput!) {
+    setOnlineServices(input: $input) {
+      ...OnlineServicesFields
+    }
+  }
+`);
+
+export const SetAcoustIdKeyMutation = graphql(`
+  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {
+    setAcoustIdKey(input: $input) {
+      ...OnlineServicesFields
+    }
+  }
+`);

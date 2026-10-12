@@ -122,6 +122,18 @@ export const es: Dictionary = {
       no: 'No, mantener todo en este servidor',
       choose: 'Elige una opción.',
       later: 'Podrás cambiarlo en cualquier momento desde los ajustes.',
+      online: 'Servicios en línea',
+      onlineExplanation:
+        'Arcanist puede completar tu biblioteca consultando servicios gratuitos. Solo se envían huellas acústicas, identificadores y nombres de artista, álbum y canción; nunca rutas, usuarios ni lo que escuchas.',
+      services: {
+        musicBrainz: { name: 'MusicBrainz', help: 'Identifica tus álbumes, su año y su artista.' },
+        acoustId: {
+          name: 'AcoustID',
+          help: 'Reconoce canciones por cómo suenan, aunque no tengan etiquetas.',
+        },
+        coverArtArchive: { name: 'Cover Art Archive', help: 'Añade las carátulas que falten.' },
+        lyrics: { name: 'LRCLib', help: 'Busca la letra de las canciones que no la traigan.' },
+      },
     },
     review: {
       database: 'Base de datos',
@@ -163,6 +175,41 @@ export const es: Dictionary = {
   settings: {
     title: 'Ajustes',
     subtitle: 'Herramientas y servicios del servidor.',
+    online: {
+      title: 'Servicios en línea',
+      description:
+        'Completan tu biblioteca en segundo plano, a una consulta por segundo. Solo envían huellas acústicas, identificadores y nombres de artista, álbum y canción.',
+      service: {
+        MUSIC_BRAINZ: { name: 'MusicBrainz', help: 'Identifica los álbumes, su año y su artista.' },
+        ACOUST_ID: { name: 'AcoustID', help: 'Reconoce canciones por su huella acústica.' },
+        COVER_ART_ARCHIVE: {
+          name: 'Cover Art Archive',
+          help: 'Añade las carátulas que falten a los álbumes identificados.',
+        },
+        LYRICS: { name: 'LRCLib', help: 'Busca letras para las canciones que no las traen.' },
+      },
+      found: '{count} encontrados',
+      notFound: '{count} sin resultado',
+      pending: '{count} pendientes',
+      lastRequest: 'última consulta {when}',
+      needsKey: 'Falta una clave de AcoustID',
+      error: {
+        connection_failed: 'Sin conexión con el servicio',
+        timeout: 'El servicio no respondió a tiempo',
+        rate_limited: 'El servicio pidió esperar',
+        invalid_key: 'La clave de AcoustID no es válida',
+        service_error: 'El servicio devolvió un error',
+        unexpected_response: 'Respuesta inesperada del servicio',
+        unexpected_error: 'Error inesperado',
+      },
+      acoustIdKey: 'Clave de AcoustID propia (opcional)',
+      keyPlaceholder: 'Clave de aplicación',
+      keySaved: 'Usando tu clave; escribe otra para cambiarla',
+      acoustIdKeyNeeded:
+        'AcoustID necesita una clave de aplicación, gratuita: regístrala en acoustid.org/new-application y pégala aquí.',
+      acoustIdKeyHelp:
+        'Arcanist trae su propia clave. Si prefieres usar la tuya, regístrala gratis en acoustid.org/new-application. Guarda el campo vacío para volver a la de Arcanist.',
+    },
     ffmpeg: {
       description:
         'Se usa para convertir canciones a formatos más ligeros y para analizar los formatos que Arcanist no lee por sí mismo (Opus, WMA…).',

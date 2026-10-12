@@ -52,6 +52,14 @@ export interface SetupRequest {
   shareAnonymousStatistics: boolean;
   language: string;
   ffmpegPath: string | null;
+  onlineServices: OnlineServicesChoice;
+}
+
+export interface OnlineServicesChoice {
+  musicBrainz: boolean;
+  acoustId: boolean;
+  coverArtArchive: boolean;
+  lyrics: boolean;
 }
 
 export interface SetupFfmpegCheck {

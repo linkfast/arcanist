@@ -1600,6 +1600,87 @@
         }
       }
     },
+    "/rest/v1/online-services": {
+      "get": {
+        "tags": [
+          "Online services"
+        ],
+        "summary": "Which online services are on (MusicBrainz, AcoustID, Cover Art Archive, LRCLib) and what each has done. Requires MANAGE_SETTINGS.",
+        "operationId": "OnlineServices",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnlineServicesStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Online services"
+        ],
+        "summary": "Turns online services on or off. They send only fingerprints, identifiers and artist, album and track names. Requires MANAGE_SETTINGS.",
+        "operationId": "SetOnlineServices",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOnlineServicesInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnlineServicesStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/online-services/acoustid-key": {
+      "put": {
+        "tags": [
+          "Online services"
+        ],
+        "summary": "Uses your own AcoustID application key instead of the project\u0027s; null or empty goes back to the project\u0027s. Requires MANAGE_SETTINGS.",
+        "operationId": "SetAcoustIdKey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAcoustIdKeyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnlineServicesStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/artists": {
       "get": {
         "tags": [
@@ -2806,6 +2887,133 @@
           }
         }
       },
+      "OnlineService": {
+        "enum": [
+          "MUSIC_BRAINZ",
+          "ACOUST_ID",
+          "COVER_ART_ARCHIVE",
+          "LYRICS"
+        ]
+      },
+      "OnlineServicesSettings": {
+        "required": [
+          "musicBrainz",
+          "acoustId",
+          "coverArtArchive",
+          "lyrics"
+        ],
+        "type": "object",
+        "properties": {
+          "musicBrainz": {
+            "type": "boolean"
+          },
+          "acoustId": {
+            "type": "boolean"
+          },
+          "coverArtArchive": {
+            "type": "boolean"
+          },
+          "lyrics": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OnlineServicesStatus": {
+        "required": [
+          "settings",
+          "hasAcoustIdKey",
+          "hasOwnAcoustIdKey",
+          "services"
+        ],
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/OnlineServicesSettings"
+          },
+          "hasAcoustIdKey": {
+            "type": "boolean"
+          },
+          "hasOwnAcoustIdKey": {
+            "type": "boolean"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OnlineServiceStatus"
+            }
+          }
+        }
+      },
+      "OnlineServiceStatus": {
+        "required": [
+          "service",
+          "enabled",
+          "ready",
+          "pending",
+          "found",
+          "notFound",
+          "failed",
+          "lastRequestAt",
+          "lastError"
+        ],
+        "type": "object",
+        "properties": {
+          "service": {
+            "$ref": "#/components/schemas/OnlineService"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "pending": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "found": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "notFound": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastRequestAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Permission": {
         "enum": [
           "MANAGE_LIBRARIES",
@@ -3176,6 +3384,20 @@
           }
         }
       },
+      "SetAcoustIdKeyInput": {
+        "required": [
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SetAnalysisEnabledInput": {
         "required": [
           "enabled"
@@ -3198,6 +3420,29 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SetOnlineServicesInput": {
+        "required": [
+          "musicBrainz",
+          "acoustId",
+          "coverArtArchive",
+          "lyrics"
+        ],
+        "type": "object",
+        "properties": {
+          "musicBrainz": {
+            "type": "boolean"
+          },
+          "acoustId": {
+            "type": "boolean"
+          },
+          "coverArtArchive": {
+            "type": "boolean"
+          },
+          "lyrics": {
+            "type": "boolean"
           }
         }
       },
@@ -3403,6 +3648,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "onlineServices": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OnlineServicesSettings"
+              }
             ]
           }
         }
@@ -3995,6 +4250,9 @@
     },
     {
       "name": "Duplicates"
+    },
+    {
+      "name": "Online services"
     },
     {
       "name": "Catalog"

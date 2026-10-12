@@ -14,4 +14,10 @@ public static class SettingKeys
 
     /// <summary>Path to ffmpeg chosen in the setup wizard or the admin panel; null to find it automatically.</summary>
     public const string FfmpegPath = "media.ffmpegPath";
+
+    /// <summary>Which online services are on (<c>OnlineServicesSettings</c>); all off when absent.</summary>
+    public const string OnlineServices = "online.services";
+
+    /// <summary>The administrator's own AcoustID application key, used instead of the project's.</summary>
+    public const string AcoustIdKey = "online.acoustIdKey";
 }

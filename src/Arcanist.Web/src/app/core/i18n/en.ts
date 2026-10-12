@@ -117,6 +117,21 @@ export const en: Dictionary = {
       no: 'No, keep everything on this server',
       choose: 'Choose an option.',
       later: 'You can change this at any time in the settings.',
+      online: 'Online services',
+      onlineExplanation:
+        'Arcanist can complete your library by asking free services. It only sends acoustic fingerprints, identifiers and artist, album and song names; never paths, users or what you listen to.',
+      services: {
+        musicBrainz: {
+          name: 'MusicBrainz',
+          help: 'Identifies your albums, their year and their artist.',
+        },
+        acoustId: {
+          name: 'AcoustID',
+          help: 'Recognizes songs by how they sound, even without tags.',
+        },
+        coverArtArchive: { name: 'Cover Art Archive', help: 'Adds missing covers.' },
+        lyrics: { name: 'LRCLib', help: 'Finds lyrics for songs that do not have them.' },
+      },
     },
     review: {
       database: 'Database',
@@ -158,6 +173,44 @@ export const en: Dictionary = {
   settings: {
     title: 'Settings',
     subtitle: 'Server tools and services.',
+    online: {
+      title: 'Online services',
+      description:
+        'They complete your library in the background, one request per second. They only send acoustic fingerprints, identifiers and artist, album and song names.',
+      service: {
+        MUSIC_BRAINZ: {
+          name: 'MusicBrainz',
+          help: 'Identifies albums, their year and their artist.',
+        },
+        ACOUST_ID: { name: 'AcoustID', help: 'Recognizes songs by their acoustic fingerprint.' },
+        COVER_ART_ARCHIVE: {
+          name: 'Cover Art Archive',
+          help: 'Adds missing covers to identified albums.',
+        },
+        LYRICS: { name: 'LRCLib', help: 'Finds lyrics for songs that do not have them.' },
+      },
+      found: '{count} found',
+      notFound: '{count} without results',
+      pending: '{count} pending',
+      lastRequest: 'last request {when}',
+      needsKey: 'An AcoustID key is missing',
+      error: {
+        connection_failed: 'Cannot reach the service',
+        timeout: 'The service did not answer in time',
+        rate_limited: 'The service asked to slow down',
+        invalid_key: 'The AcoustID key is not valid',
+        service_error: 'The service returned an error',
+        unexpected_response: 'Unexpected answer from the service',
+        unexpected_error: 'Unexpected error',
+      },
+      acoustIdKey: 'Your own AcoustID key (optional)',
+      keyPlaceholder: 'Application key',
+      keySaved: 'Using your key; type another one to change it',
+      acoustIdKeyNeeded:
+        'AcoustID needs an application key, which is free: register one at acoustid.org/new-application and paste it here.',
+      acoustIdKeyHelp:
+        'Arcanist comes with its own key. To use yours, register one for free at acoustid.org/new-application. Save the field empty to go back to the Arcanist key.',
+    },
     ffmpeg: {
       description:
         'Used to convert songs to lighter formats and to analyze the formats Arcanist cannot read by itself (Opus, WMA…).',

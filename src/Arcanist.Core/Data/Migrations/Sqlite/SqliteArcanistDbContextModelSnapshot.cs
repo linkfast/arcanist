@@ -207,6 +207,46 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("AudioAnalyses");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.DuplicateCandidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DetectedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("Similarity")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TrackAId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("TrackBId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TrackBId");
+
+                    b.HasIndex("TrackAId", "TrackBId")
+                        .IsUnique();
+
+                    b.ToTable("DuplicateCandidates");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Genre", b =>
                 {
                     b.Property<Guid>("Id")
@@ -366,6 +406,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.Property<Guid>("TrackId")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("TrackLocked")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

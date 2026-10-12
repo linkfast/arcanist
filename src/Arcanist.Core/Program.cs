@@ -83,6 +83,7 @@ builder.Services.AddScoped<ScanService>();
 builder.Services.AddScoped<AnalysisService>();
 builder.Services.AddScoped<FfmpegService>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<DuplicateService>();
 builder.Services.AddScoped<StreamService>();
 builder.Services.AddScoped<ArtworkService>();
 builder.Services.AddScanning(builder.Configuration);

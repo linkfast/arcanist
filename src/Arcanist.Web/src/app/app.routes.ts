@@ -34,6 +34,12 @@ export const routes: Routes = [
           import('./features/libraries/libraries.page').then((m) => m.LibrariesPage),
       },
       {
+        path: 'duplicates',
+        canActivate: [permissionGuard('MANAGE_LIBRARIES')],
+        loadComponent: () =>
+          import('./features/duplicates/duplicates.page').then((m) => m.DuplicatesPage),
+      },
+      {
         path: 'users',
         canActivate: [permissionGuard('MANAGE_USERS')],
         loadComponent: () => import('./features/users/users.page').then((m) => m.UsersPage),

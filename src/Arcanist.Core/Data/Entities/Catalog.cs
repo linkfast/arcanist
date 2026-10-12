@@ -184,6 +184,12 @@ public sealed class MediaFile : Entity
 
     /// <summary>Set when a scan no longer finds the file; it is purged after a grace period.</summary>
     public DateTime? MissingSince { get; set; }
+
+    /// <summary>
+    /// Joined to its track by duplicate detection or by an administrator rather than by its tags: scans keep it on
+    /// that track and do not let its tags change the track.
+    /// </summary>
+    public bool TrackLocked { get; set; }
 }
 
 public enum ArtworkSource

@@ -107,6 +107,13 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         return new TrackPage(await ToModelsAsync(page, access, cancellationToken), next, total);
     }
 
+    /// <summary>The tracks with these ids that <paramref name="access"/> can see, by id.</summary>
+    internal async Task<Dictionary<Guid, Track>> VisibleTracksAsync(UserAccess access, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        var tracks = await VisibleTracks(access).AsNoTracking().Where(t => ids.Contains(t.Id)).ToListAsync(cancellationToken);
+        return (await ToModelsAsync(tracks, access, cancellationToken)).ToDictionary(t => t.Id);
+    }
+
     public async Task<Track> TrackAsync(Guid id, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();

@@ -23,6 +23,7 @@ export const en: Dictionary = {
     libraries: 'Libraries',
     users: 'Users',
     settings: 'Settings',
+    duplicates: 'Duplicates',
     account: 'My account',
     player: 'Open the player',
     logout: 'Sign out',
@@ -140,6 +141,19 @@ export const en: Dictionary = {
     noLibrariesHelp: 'Add the folders that hold your music to get started.',
     sourceCode: 'Source code',
     license: 'Free software under the AGPL-3.0-or-later license.',
+  },
+  duplicates: {
+    title: 'Possible duplicates',
+    subtitle:
+      'Songs that sound the same but are not clearly the same song. Keep one to join their copies into a single song, or keep both.',
+    similarity: '{percent}% alike',
+    keepThis: 'Keep this one',
+    keepBoth: 'They are different',
+    number: 'Track {number}',
+    merged: 'Songs joined.',
+    none: 'No possible duplicates',
+    noneHelp:
+      'Arcanist compares the acoustic fingerprint of every song when it analyzes it. Obvious copies are joined automatically; only doubtful cases show up here.',
   },
   settings: {
     title: 'Settings',

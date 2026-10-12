@@ -1488,6 +1488,118 @@
         }
       }
     },
+    "/rest/v1/duplicates": {
+      "get": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. \u0060status\u0060 is OPEN (default) or DISMISSED. Requires MANAGE_LIBRARIES.",
+        "operationId": "DuplicateCandidates",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DuplicatePair"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/duplicates/{id}/merge": {
+      "post": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Merges an open pair into keepTrackId, one of its two tracks, and returns it. Requires MANAGE_LIBRARIES.",
+        "operationId": "MergeDuplicate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeDuplicateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/duplicates/{id}/dismiss": {
+      "post": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES.",
+        "operationId": "DismissDuplicate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/rest/v1/artists": {
       "get": {
         "tags": [
@@ -2235,6 +2347,51 @@
           }
         }
       },
+      "DuplicatePair": {
+        "required": [
+          "id",
+          "trackA",
+          "trackB",
+          "similarity",
+          "status",
+          "detectedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trackA": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "trackB": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "similarity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DuplicateStatus"
+          },
+          "detectedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DuplicateStatus": {
+        "enum": [
+          "OPEN",
+          "MERGED",
+          "DISMISSED"
+        ]
+      },
       "FfmpegDownloadProgress": {
         "required": [
           "state",
@@ -2538,6 +2695,18 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "MergeDuplicateInput": {
+        "required": [
+          "keepTrackId"
+        ],
+        "type": "object",
+        "properties": {
+          "keepTrackId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -3723,6 +3892,9 @@
     },
     {
       "name": "Media tools"
+    },
+    {
+      "name": "Duplicates"
     },
     {
       "name": "Catalog"

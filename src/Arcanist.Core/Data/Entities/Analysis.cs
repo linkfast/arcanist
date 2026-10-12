@@ -62,3 +62,32 @@ public sealed class AudioAnalysis : Entity
     /// <summary>Overview of the audio: 1000 peak amplitudes, one byte each.</summary>
     public byte[]? Waveform { get; set; }
 }
+
+public enum DuplicateStatus
+{
+    Open,
+    Merged,
+    Dismissed,
+}
+
+/// <summary>
+/// Two tracks whose audio is similar but not enough to merge them automatically, for an administrator to decide.
+/// Track ids are stored ordered (A before B), so a pair is proposed once; a dismissed pair is never proposed again.
+/// </summary>
+public sealed class DuplicateCandidate : Entity
+{
+    public Guid TrackAId { get; init; }
+
+    public Guid TrackBId { get; init; }
+
+    /// <summary>Fingerprint similarity, 0–1.</summary>
+    public double Similarity { get; set; }
+
+    public DuplicateStatus Status { get; set; }
+
+    public DateTime DetectedAt { get; init; }
+
+    public DateTime? ResolvedAt { get; set; }
+
+    public Guid? ResolvedByUserId { get; set; }
+}

@@ -38,6 +38,20 @@ export class RelativeTimePipe implements PipeTransform {
   }
 }
 
+/** Track length as m:ss (or h:mm:ss) from milliseconds. */
+@Pipe({ name: 'duration' })
+export class DurationPipe implements PipeTransform {
+  transform(milliseconds: number | null | undefined): string {
+    const total = Math.round((milliseconds ?? 0) / 1000);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = String(total % 60).padStart(2, '0');
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}`
+      : `${minutes}:${seconds}`;
+  }
+}
+
 /** File sizes in the user's language: "184 MB". */
 @Pipe({ name: 'bytes', pure: false })
 export class BytesPipe implements PipeTransform {

@@ -29,10 +29,10 @@ public static class AudioFixtures
     }
 
     /// <summary>Writes <see cref="Music"/> to a file and tags it.</summary>
-    public static string WriteMusic(string path, FixtureTags tags, double bpm = 120, double seconds = 15, int chordSeed = 0)
+    public static string WriteMusic(string path, FixtureTags tags, double bpm = 120, double seconds = 15, int chordSeed = 0, int variant = 0)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllBytes(path, Music(bpm, seconds, chordSeed));
+        File.WriteAllBytes(path, Music(bpm, seconds, chordSeed, variant: variant));
         Tag(path, tags);
         return path;
     }
@@ -74,8 +74,10 @@ public static class AudioFixtures
     /// <summary>
     /// Music-like stereo WAV for analysis tests: a sustained triad (<paramref name="chordSeed"/> picks it, so
     /// different seeds sound different) under noise bursts on every beat at <paramref name="bpm"/>.
+    /// A non-zero <paramref name="variant"/> silences that many tenths of a second at the end: different bytes (and
+    /// content hash), practically the same audio, like another rip or encoding of a song.
     /// </summary>
-    public static byte[] Music(double bpm, double seconds, int chordSeed = 0, int sampleRate = 44100)
+    public static byte[] Music(double bpm, double seconds, int chordSeed = 0, int sampleRate = 44100, int variant = 0)
     {
         var frames = (int)(seconds * sampleRate);
         var root = 220.0 * Math.Pow(2, chordSeed % 12 / 12.0);
@@ -92,6 +94,9 @@ public static class AudioFixtures
             var click = offset < 600 ? (random.NextDouble() - 0.5) * (1 - offset / 600.0) * 1.2 : 0;
             pcm[2 * i] = pcm[2 * i + 1] = (short)(Math.Clamp(tone + click, -1, 1) * 32000);
         }
+
+        if (variant > 0)
+            Array.Clear(pcm, pcm.Length - Math.Min(pcm.Length, variant * sampleRate / 10 * 2), Math.Min(pcm.Length, variant * sampleRate / 10 * 2));
 
         return Wav(pcm, sampleRate, channels: 2);
     }

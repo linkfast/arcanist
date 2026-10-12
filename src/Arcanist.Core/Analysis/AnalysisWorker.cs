@@ -37,6 +37,7 @@ internal sealed class AnalysisWorker(
     ScanEvents scans,
     SettingsStore settings,
     FfmpegLocator ffmpeg,
+    DuplicateDetector duplicates,
     IOptionsMonitor<SetupOptions> setup,
     IOptionsMonitor<AnalysisOptions> options,
     TimeProvider time,
@@ -245,6 +246,12 @@ internal sealed class AnalysisWorker(
 
         await db.SaveChangesAsync(cancellationToken);
 
+        var fingerprinted = results.Where(r => r.Outcome.Analysis?.Fingerprint is not null).Select(r => r.ContentHash).ToList();
+        var found = await duplicates.ProcessAsync(db, fingerprinted, cancellationToken);
+        if (found != new DuplicateDetector.Outcome(0, 0, 0))
+            logger.LogInformation("Duplicates: {Merged} merged, {Linked} linked, {Proposed} proposed", found.Merged, found.Linked, found.Proposed);
+
+        // After merges, which can change albums' track lists.
         var albums = await db.MediaFiles.Where(f => hashes.Contains(f.ContentHash)).Select(f => f.Track.AlbumId).Distinct().ToListAsync(cancellationToken);
         await AlbumLoudness.UpdateAsync(db, albums, cancellationToken);
     }
@@ -328,6 +335,7 @@ public static class AnalysisServiceCollectionExtensions
         services.Configure<AnalysisOptions>(configuration.GetSection(AnalysisOptions.Section));
         services.AddSingleton<SettingsStore>();
         services.AddSingleton<AnalysisMonitor>();
+        services.AddSingleton<DuplicateDetector>();
         services.AddSingleton<AnalysisWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<AnalysisWorker>());
         return services;

@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideCopy,
   lucideExternalLink,
   lucideHouse,
   lucideLibrary,
@@ -29,6 +30,7 @@ import { LanguageSelect } from '../shared/language-select';
   ],
   providers: [
     provideIcons({
+      lucideCopy,
       lucideHouse,
       lucideLibrary,
       lucideUsers,
@@ -107,6 +109,12 @@ export class Shell {
     [
       { path: '/', label: 'nav.overview', icon: 'lucideHouse', visible: true },
       { path: '/libraries', label: 'nav.libraries', icon: 'lucideLibrary', visible: true },
+      {
+        path: '/duplicates',
+        label: 'nav.duplicates',
+        icon: 'lucideCopy',
+        visible: this.auth.can('MANAGE_LIBRARIES'),
+      },
       {
         path: '/users',
         label: 'nav.users',

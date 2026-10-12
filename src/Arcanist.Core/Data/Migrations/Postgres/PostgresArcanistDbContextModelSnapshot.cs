@@ -212,6 +212,46 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("AudioAnalyses");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.DuplicateCandidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("DetectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Similarity")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("TrackAId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrackBId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TrackBId");
+
+                    b.HasIndex("TrackAId", "TrackBId")
+                        .IsUnique();
+
+                    b.ToTable("DuplicateCandidates");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Genre", b =>
                 {
                     b.Property<Guid>("Id")
@@ -371,6 +411,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<Guid>("TrackId")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("TrackLocked")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

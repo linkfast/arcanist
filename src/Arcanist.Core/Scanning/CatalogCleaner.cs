@@ -21,6 +21,9 @@ internal sealed class CatalogCleaner(ArcanistDbContext db, ArtworkStore artworkS
             .Where(a => !db.Albums.Any(al => al.AlbumArtistId == a.Id) && !db.TrackArtists.Any(ta => ta.ArtistId == a.Id))
             .ExecuteDeleteAsync(cancellationToken);
         await db.Genres.Where(g => !db.TrackGenres.Any(tg => tg.GenreId == g.Id)).ExecuteDeleteAsync(cancellationToken);
+        await db.DuplicateCandidates
+            .Where(c => !db.Tracks.Any(t => t.Id == c.TrackAId) || !db.Tracks.Any(t => t.Id == c.TrackBId))
+            .ExecuteDeleteAsync(cancellationToken);
         // Analyses belong to the audio, not to a file: kept while any copy of that audio is in the catalog.
         await db.AudioAnalyses.Where(a => !db.MediaFiles.Any(f => f.ContentHash == a.ContentHash)).ExecuteDeleteAsync(cancellationToken);
 

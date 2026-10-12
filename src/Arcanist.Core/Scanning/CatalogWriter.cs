@@ -123,6 +123,18 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             if (!tracksByAlbum.TryGetValue(album.Id, out var albumTracks))
                 tracksByAlbum[album.Id] = albumTracks = [];
 
+            // A file merged into its track by duplicate detection or an administrator stays there while its album is
+            // the same, and does not get to change the track (the track's own files describe it).
+            if (mediaFile is { TrackLocked: true } && tracksById.TryGetValue(mediaFile.TrackId, out var locked) && locked.AlbumId == album.Id)
+            {
+                UpdateFile(mediaFile, file, meta, now);
+                updated++;
+                continue;
+            }
+
+            if (mediaFile is not null)
+                mediaFile.TrackLocked = false;
+
             var track = Match(albumTracks, meta, normalizedTitle);
 
             // Re-tagged file that is alone on its track: keep the track, so what users attached to it follows.
@@ -197,21 +209,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
                 updated++;
             }
 
-            mediaFile.Size = file.Size;
-            mediaFile.ModifiedAt = file.ModifiedAt;
-            mediaFile.ContentHash = file.ContentHash;
-            mediaFile.Format = meta.Format;
-            mediaFile.BitRate = meta.BitRate;
-            mediaFile.SampleRate = meta.SampleRate;
-            mediaFile.BitDepth = meta.BitDepth;
-            mediaFile.Channels = meta.Channels;
-            mediaFile.DurationMs = meta.DurationMs;
-            mediaFile.ReplayGainTrackGain = meta.ReplayGainTrackGain;
-            mediaFile.ReplayGainTrackPeak = meta.ReplayGainTrackPeak;
-            mediaFile.ReplayGainAlbumGain = meta.ReplayGainAlbumGain;
-            mediaFile.ReplayGainAlbumPeak = meta.ReplayGainAlbumPeak;
-            mediaFile.ScannedAt = now;
-            mediaFile.MissingSince = null;
+            UpdateFile(mediaFile, file, meta, now);
 
             if (file.Artwork is { } artwork && album.ArtworkId is null)
                 SetAlbum(album, a => a.ArtworkId = ResolveArtwork(artwork));
@@ -238,6 +236,25 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         db.ChangeTracker.Clear();
 
         return new BatchResult(added, updated);
+    }
+
+    private static void UpdateFile(MediaFile mediaFile, ScannedFile file, AudioMetadata meta, DateTime now)
+    {
+        mediaFile.Size = file.Size;
+        mediaFile.ModifiedAt = file.ModifiedAt;
+        mediaFile.ContentHash = file.ContentHash;
+        mediaFile.Format = meta.Format;
+        mediaFile.BitRate = meta.BitRate;
+        mediaFile.SampleRate = meta.SampleRate;
+        mediaFile.BitDepth = meta.BitDepth;
+        mediaFile.Channels = meta.Channels;
+        mediaFile.DurationMs = meta.DurationMs;
+        mediaFile.ReplayGainTrackGain = meta.ReplayGainTrackGain;
+        mediaFile.ReplayGainTrackPeak = meta.ReplayGainTrackPeak;
+        mediaFile.ReplayGainAlbumGain = meta.ReplayGainAlbumGain;
+        mediaFile.ReplayGainAlbumPeak = meta.ReplayGainAlbumPeak;
+        mediaFile.ScannedAt = now;
+        mediaFile.MissingSince = null;
     }
 
     private Track? Match(List<Track> albumTracks, AudioMetadata meta, string normalizedTitle)

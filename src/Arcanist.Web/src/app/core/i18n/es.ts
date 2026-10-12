@@ -23,6 +23,7 @@ export const es: Dictionary = {
     libraries: 'Bibliotecas',
     users: 'Usuarios',
     settings: 'Ajustes',
+    duplicates: 'Duplicados',
     account: 'Mi cuenta',
     player: 'Abrir el reproductor',
     logout: 'Cerrar sesión',
@@ -145,6 +146,19 @@ export const es: Dictionary = {
     noLibrariesHelp: 'Añade las carpetas donde está tu música para empezar.',
     sourceCode: 'Código fuente',
     license: 'Software libre bajo la licencia AGPL-3.0-or-later.',
+  },
+  duplicates: {
+    title: 'Posibles duplicados',
+    subtitle:
+      'Canciones que suenan igual pero no son claramente la misma. Conserva una para unir sus copias en una sola canción, o mantén ambas.',
+    similarity: '{percent} % de parecido',
+    keepThis: 'Conservar esta',
+    keepBoth: 'Son distintas',
+    number: 'Pista {number}',
+    merged: 'Canciones unidas.',
+    none: 'No hay posibles duplicados',
+    noneHelp:
+      'Arcanist compara la huella acústica de cada canción al analizarla. Las copias evidentes se unen solas; aquí solo aparecen los casos dudosos.',
   },
   settings: {
     title: 'Ajustes',

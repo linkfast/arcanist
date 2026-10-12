@@ -12,6 +12,8 @@ type Query {
   track(id: ID!): Track!
   "Overview of a track's audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed."
   trackWaveform(trackId: ID!, fileId: ID): Waveform!
+  "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
+  duplicateCandidates(status: DuplicateStatus, first: Int): [DuplicatePair!]!
   "Libraries the signed-in user can access."
   libraries: [Library!]!
   "A library by id. Libraries the user cannot access are reported as not found."
@@ -183,6 +185,21 @@ type Waveform {
   fileId: ID!
   durationMs: Int!
   peaks: [Int!]!
+}
+
+type DuplicatePair {
+  id: ID!
+  trackA: Track!
+  trackB: Track!
+  similarity: Float!
+  status: DuplicateStatus!
+  detectedAt: DateTime!
+}
+
+enum DuplicateStatus {
+  OPEN
+  MERGED
+  DISMISSED
 }
 
 type Library {
@@ -363,6 +380,10 @@ type Session {
 type Mutation {
   "Turns the background audio analysis on or off. Requires MANAGE_SETTINGS."
   setAnalysisEnabled(enabled: Boolean!): AnalysisProgress!
+  "Merges an open pair into keepTrackId, one of its two tracks, and returns it. Requires MANAGE_LIBRARIES."
+  mergeDuplicate(id: ID!, keepTrackId: ID!): Track!
+  "Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES."
+  dismissDuplicate(id: ID!): Boolean!
   "Requires MANAGE_LIBRARIES."
   createLibrary(input: CreateLibraryInput!): Library!
   "Requires MANAGE_LIBRARIES."

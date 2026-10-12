@@ -324,3 +324,60 @@ export const InstallFfmpegMutation = graphql(`
     }
   }
 `);
+
+export const DuplicateTrackFields = graphql(`
+  fragment DuplicateTrackFields on Track {
+    id
+    title
+    durationMs
+    trackNumber
+    discNumber
+    album {
+      id
+      title
+    }
+    artists {
+      artistId
+      name
+      role
+    }
+    files {
+      id
+      format
+      bitRate
+      sampleRate
+      bitDepth
+    }
+  }
+`);
+
+export const DuplicateCandidatesQuery = graphql(`
+  query DuplicateCandidates($status: DuplicateStatus) {
+    duplicateCandidates(status: $status, first: 200) {
+      id
+      similarity
+      status
+      detectedAt
+      trackA {
+        ...DuplicateTrackFields
+      }
+      trackB {
+        ...DuplicateTrackFields
+      }
+    }
+  }
+`);
+
+export const MergeDuplicateMutation = graphql(`
+  mutation MergeDuplicate($id: ID!, $keepTrackId: ID!) {
+    mergeDuplicate(id: $id, keepTrackId: $keepTrackId) {
+      id
+    }
+  }
+`);
+
+export const DismissDuplicateMutation = graphql(`
+  mutation DismissDuplicate($id: ID!) {
+    dismissDuplicate(id: $id)
+  }
+`);

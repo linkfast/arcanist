@@ -32,6 +32,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<MediaFile> MediaFiles => Set<MediaFile>();
     public DbSet<Artwork> Artworks => Set<Artwork>();
     public DbSet<AudioAnalysis> AudioAnalyses => Set<AudioAnalysis>();
+    public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -197,6 +198,15 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             analysis.Property(a => a.Error).HasMaxLength(500);
             analysis.Property(a => a.AcoustIdFingerprint).HasMaxLength(8000);
             analysis.Property(a => a.LoudnessHistogram).HasMaxLength(8000);
+        });
+
+        modelBuilder.Entity<DuplicateCandidate>(candidate =>
+        {
+            // No foreign keys: a candidate whose track disappeared is removed with it by the cleaner.
+            candidate.Property(c => c.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            candidate.HasIndex(c => new { c.TrackAId, c.TrackBId }).IsUnique();
+            candidate.HasIndex(c => c.TrackBId);
+            candidate.HasIndex(c => c.Status);
         });
 
         modelBuilder.Entity<Artwork>(artwork =>

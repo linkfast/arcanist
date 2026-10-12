@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca) y 2 (distribución) completas. Queda pendiente de la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity. Siguiente: Fase 3, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Fases 1 (fundaciones y biblioteca), 2 (distribución) y 3 (análisis de audio, ffmpeg y servicios en línea) completas. Pendiente:
+- De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
+- De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`) y probar la descarga real de ffmpeg desde el panel.
+- Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
+
+Siguiente: Fase 4, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -20,12 +25,19 @@ mise.toml                     fija Node 24.15.0 para todo el repo
 src/Arcanist.Core/            servidor ASP.NET Core, net10.0; el ejecutable se llama `arcanist`
 src/Arcanist.Web/             panel de administración: Angular 22 + Tailwind v4 + spartan-ng (paquete npm `arcanist-web`)
 src/Arcanist.Tray/            app de bandeja para Windows (Avalonia 12 + Velopack), net10.0-windows
+native/arcanist-audio/        crate Rust de análisis de audio (Symphonia), con C ABI para .NET
 tests/                        Arcanist.Core.Tests y Arcanist.Tray.Tests
 packaging/                    instalador de Windows, tarballs y unidad systemd de Linux, paquete Synology (spksrc)
 .github/workflows/            ci.yml y release.yml
 ```
 
 `Arcanist.Web` **no está en la solución `.slnx`** (Angular no es un proyecto MSBuild); se construye y prueba por separado con npm.
+
+**Crate nativa** (`native/arcanist-audio`, Rust 1.85+ por la edición 2024):
+- `dotnet build` del servidor ejecuta `cargo build --release` si hay Rust (incremental, target `BuildNativeAudio` del csproj) y copia `arcanist_audio.dll`/`libarcanist_audio.so` a la salida. Sin Rust ni librería precompilada, avisa y el servidor funciona sin análisis.
+- Para otros RID: `packaging/native/build.sh <rid>` deja la librería en `artifacts/native/<rid>/`, de donde la toma `dotnet publish -r <rid>`. Linux usa cargo-zigbuild con glibc 2.27 (`pip install cargo-zigbuild ziglang`).
+- `cargo test --release --manifest-path native/arcanist-audio/Cargo.toml` para sus tests. Ejemplos de diagnóstico: `cargo run --release --example analyze -- <archivos>` (análisis y velocidad) y `--example compare -- <referencia> <archivos>` (similitud de huellas).
+- Los pánicos se capturan en la frontera FFI: un archivo corrupto nunca tumba el servidor. **No poner `panic = "abort"`.**
 
 **Core (.NET)**, desde la raíz:
 
@@ -41,6 +53,8 @@ dotnet test --project tests/Arcanist.Tray.Tests  # tests del tray (solo Windows)
 - Los tests usan **xUnit v3 sobre Microsoft Testing Platform**, activado en `global.json` (`"test": { "runner": "Microsoft.Testing.Platform" }`). Por eso no hay `Microsoft.NET.Test.Sdk` ni `xunit.runner.visualstudio`, y los filtros van después de `--` con la sintaxis de MTP, no con `--filter` de VSTest.
 - `xunit.runner.json` amplía a 30 s la espera de xUnit al cerrar el proceso de tests (por defecto 10 s). Con la máquina muy cargada, el cierre normal superaba los 10 s y xUnit fallaba con "Foreground threads were left running" aunque todos los tests pasaran; se investigó y no había hilos de Arcanist vivos. Una fuga real sigue fallando, porque nunca termina.
 - Los tests de integración usan `ArcanistFactory` (`WebApplicationFactory<Program>`), que arranca el servidor con un directorio de datos temporal y el entorno `Testing`.
+- `ArcanistFactory` desactiva el análisis en segundo plano (`Arcanist:Analysis:Enabled=false`); los tests que lo necesitan lo activan y esperan con `WaitForAnalysisAsync()`. Su tercer parámetro permite reemplazar servicios (por ejemplo, `FakeOnlineServices` para los clientes HTTP de los servicios en línea: los tests nunca salen a internet).
+- Los tests que necesitan un ffmpeg real (`TestFfmpeg.Require()`) se marcan como **skipped** si no hay ffmpeg en el `PATH`.
 - `DatabaseProviderTests` ejecuta las mismas aserciones contra SQLite en memoria y contra PostgreSQL 17 en un contenedor de Testcontainers. Si Docker no está disponible, los de PostgreSQL aparecen como **skipped**, no como verdes. Incluye un test que falla si el modelo cambió sin migración para alguno de los dos proveedores.
 
 **Migraciones EF Core** (herramienta local `dotnet-ef` en `dotnet-tools.json`; ejecutar `dotnet tool restore` una vez). Cada cambio de modelo necesita **las dos**:
@@ -171,7 +185,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - Herramientas: GraphiQL en `/graphql/ui` (cargado de jsDelivr con SRI), SDL en `/graphql/schema.graphql`, Scalar en `/rest/docs` (embebido, funciona sin internet).
 - **Datos:** EF Core 10 con dos contextos, `SqliteArcanistDbContext` y `PostgresArcanistDbContext`, que heredan de `ArcanistDbContext`.
   - Cada contexto tiene sus migraciones en `Data/Migrations/{Sqlite,Postgres}`. Toda migración se genera **para ambos**.
-  - Antes de la primera versión publicada las migraciones se fusionaron en una `Initial`. **Una vez publicada, nunca reescribir ni fusionar migraciones.** Evitar operaciones que en SQLite obligan a reconstruir la tabla (renombrar o borrar columnas) salvo que sea imprescindible.
+  - Antes de la primera versión publicada las migraciones se fusionaron en una `Initial`, y se volverán a fusionar justo antes de publicarla (la F3 añadió varias). **Una vez publicada, nunca reescribir ni fusionar migraciones.** Evitar operaciones que en SQLite obligan a reconstruir la tabla (renombrar o borrar columnas) salvo que sea imprescindible.
   - Claves `Guid.CreateVersion7()`, fechas como `DateTime` UTC, sin SQL específico de un proveedor.
   - El usuario elige SQLite o PostgreSQL en el asistente.
   - **Nunca** colocar el `.db` de SQLite en SMB/NFS.
@@ -207,7 +221,10 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
     - Un archivo re-etiquetado que es el único de su pista **conserva la pista**, para que los datos de usuario no se pierdan.
     - El álbum se agrupa por MBID de release o por artista del álbum + título normalizado. Sin etiqueta de álbum, se usa el nombre de la carpeta.
     - Los múltiples valores se separan por `;`, nunca por `/` (AC/DC); "feat." genera artistas `Featured`.
-  - **Limitación conocida:** un álbum sin etiqueta AlbumArtist ni marca de recopilatorio, con artistas distintos por pista, se parte en varios álbumes. Se mejorará en la F3.
+    - **Recopilatorios sin etiquetar:** archivos de artistas distintos en una misma carpeta, con el mismo título de álbum y sin AlbumArtist, forman un álbum "Various Artists" (`ToCompilation`). En escaneos incrementales se precargan los álbumes de esas carpetas. Los discos en subcarpetas acaban en el mismo álbum.
+    - Un archivo con `TrackLocked` (unido por detección de duplicados o por un admin) se queda en su pista y sus etiquetas no la modifican.
+  - **Letras:** se leen de las etiquetas y de un `.lrc` junto al audio, que gana. Un `.lrc` más reciente que el último escaneo de su canción la hace releer. Cada pista guarda las más fiables (`Lyrics`: Sidecar > Embedded > Online).
+  - **Hojas CUE:** un `.cue` junto a un archivo (que lo nombre, aunque con otra extensión, o que se llame igual) convierte cada pista en una fila `MediaFile` con `CueTrack`, `StartMs`/`EndMs` y un `ContentHash` derivado del rango. Las filas de una ruta viajan juntas en el mismo lote; el escritor borra las de una CUE anterior. Añadir, editar o quitar la CUE hace releer el archivo.
   - **En vivo:** `ScanEvents` publica cambios de los trabajos (estado al momento; progreso como mucho cada 500 ms) para la suscripción GraphQL `scanJobUpdated(libraryId)`. Los clientes REST sondean `GET /rest/v1/scans/{id}`.
   - **Escaneo programado:** `ScanScheduler` revisa cada minuto y encola un incremental cuando pasó `ScanIntervalHours` desde el último escaneo solicitado (aunque fallara, para no reintentar cada minuto).
   - Tests: `AudioFixtures` genera WAV etiquetados al vuelo, sin binarios en el repo. `ScannerTests` espera a los trabajos sondeando `GET /rest/v1/scans/{id}`.
@@ -219,7 +236,40 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **Streaming y carátulas (implementado):** `Api/Rest/MediaEndpoints.cs`, `Application/Streaming/` y `Application/Artwork/`. Solo REST.
   - `GET|HEAD /rest/v1/stream/{trackId}`: elige la mejor copia accesible (o `fileId`). Admite `Range` (206), `ETag` = `ContentHash` y `Cache-Control: private`. Con `download=true` envía el original como adjunto y exige `DOWNLOAD`.
   - **Autenticación del streaming:** `Bearer`, o `?st=` de `Track.streamUrl`/`TrackFile.streamUrl`. `StreamTokens` es un HMAC con clave propia en `<datos>/keys/`, ligado a usuario y sesión y válido 6 h. Revocar la sesión lo invalida. El log de peticiones no incluye la query string, así que el token no queda registrado.
+  - **Transcodificación** (`Media/Transcoder.cs`) con `format` (opus, mp3, aac, flac), `maxBitRate` y `timeOffset`: sale por streaming sin Range, con `X-Content-Duration`; ffmpeg abre directamente los archivos locales (`ILibraryStorage.TryGetLocalPath`) y lee de stdin los remotos; se mata si el cliente se va; hay un límite de conversiones simultáneas. Sin ffmpeg: 503 `transcoding_unavailable`. Las pistas CUE siempre se convierten (FLAC si el original es sin pérdida). `serverInfo.transcodingFormats` anuncia lo que el ffmpeg instalado sabe codificar.
   - `GET /rest/v1/artwork/{id}?size=`: **pública** (para `<img>`; los ids no se adivinan) e inmutable. Las miniaturas JPEG (64…1024 px) se generan con SkiaSharp en `<datos>/cache/thumbnails/`.
+- **Análisis de audio (implementado):** `Analysis/`, `native/arcanist-audio` y `Application/Analysis/`.
+  - `AnalysisWorker` analiza cada audio distinto (por `ContentHash`) una vez por versión del analizador (`ANALYZER_VERSION` en `analyzer.rs`: subirla hace reanalizar), en hilos de prioridad baja (`Arcanist:Analysis:Parallelism`), y espera mientras hay escaneos. Una sola decodificación alimenta todo:
+    - EBU R128 con histograma de bloques: `AlbumLoudness` combina los histogramas de las mejores copias de cada pista para la ganancia del álbum.
+    - Huella Chromaprint de 120 s, compatible con AcoustID.
+    - Waveform de 1000 puntos.
+    - BPM por autocorrelación de flujo espectral, con un prior en 120.
+    - Tonalidad por cromagrama y perfiles Krumhansl.
+  - **Estados del análisis:**
+    - Los formatos que Symphonia no lee quedan como `NeedsFfmpeg` y se reanalizan con `FfmpegDecoder` cuando hay ffmpeg.
+    - Los archivos corruptos quedan como `Failed`.
+    - Si un origen no se puede abrir, se reintenta en una hora sin marcar nada.
+  - `AnalysisMonitor` + `analysisProgress`/`analysisProgressChanged`/`setAnalysisEnabled` (ajuste `analysis.enabled`). En el contrato: `Track.bpm`, `Track.key` (con código Camelot), `TrackFile.loudness` (ganancias ReplayGain 2.0 a −18 LUFS) y `trackWaveform`.
+  - **Duplicados por huella** (`DuplicateDetector`, tras cada lote): compara con pistas del mismo álbum, título o artista y duración parecida.
+    - Similitud ≥ 0,85 en el mismo álbum, con la misma duración (±3 s) y sin números de pista distintos: se fusionan (`TrackMerger`, que fija los archivos con `TrackLocked`).
+    - Similitud ≥ 0,85 en otros álbumes: comparten `Recording`, salvo que tengan MBIDs distintos.
+    - Similitud ≥ 0,7: van a `DuplicateCandidate` para el admin (página Duplicados). Los descartados no se vuelven a proponer.
+    - Las señales sintéticas de los tests se parecen entre sí más que la música real; los umbrales se eligieron con eso en cuenta.
+- **ffmpeg (implementado):** `Media/`. `FfmpegLocator` busca, por orden:
+  1. `Arcanist:Ffmpeg:Path`.
+  2. El ajuste `media.ffmpegPath` (del asistente o del panel; solo se lee con el setup completado).
+  3. `<datos>/tools/ffmpeg`.
+  4. Los paquetes de Synology.
+  5. El `PATH` (los dos últimos, desactivables con `Arcanist:Ffmpeg:SearchSystem`).
+
+  `FfmpegDownloader` descarga la build GPL estática de BtbN (zip en Windows, tar.xz en Linux, x64/arm64) y la verifica contra su SHA-256. Fijar la ruta o descargar exige admin con step-up: el servidor ejecutará ese archivo.
+- **Servicios en línea (implementado):** `Online/` y `Application/Online/`. `EnrichmentWorker` ejecuta un bucle por servicio a `Arcanist:Online:RequestInterval` (1 s):
+  - **AcoustID:** identifica grabaciones sin MBID.
+  - **MusicBrainz:** identifica álbumes por título, artista y número de pistas.
+  - **Cover Art Archive:** añade la carátula a los álbumes identificados que no tienen.
+  - **LRCLib:** busca letras para las pistas que no las tienen.
+
+  `OnlineLookups` evita repetir consultas: lo encontrado no se repite; lo no encontrado se reintenta a los 90 días; los fallos esperan más con cada intento. Los problemas de conexión pausan el servicio sin marcar nada. Todo está desactivado salvo lo que el admin active (`online.services`, asistente y Ajustes). La clave de AcoustID es la del admin (`online.acoustIdKey`) o la del proyecto.
 - **Hosting de frontends (implementado):** `Hosting/FrontendHost.cs`.
   - `/admin/**` sirve `Arcanist:Frontends:AdminRoot` (por defecto `wwwroot/admin`, el build de Angular).
   - `/` sirve `PlayerRoot` (por defecto `wwwroot/player`); si no existe, una página provisional con enlace al admin y aviso AGPL.
@@ -267,7 +317,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 
 - **F1:** fundaciones y biblioteca (completada).
 - **F2:** distribución (completada): instalador Velopack con tray en Avalonia y servicio opcional, tarballs y systemd, Docker multi-arch en GHCR, paquete Synology y workflows de CI y release.
-- **F3:** escáner avanzado y ffmpeg (transcodificación, waveform, BPM y tonalidad, EBU R128, Chromaprint/AcoustID, letras, carátulas online, cue).
+- **F3:** escáner avanzado y ffmpeg (completada): crate de análisis en Rust, transcodificación, waveform, BPM y tonalidad, EBU R128, duplicados por huella, AcoustID/MusicBrainz/Cover Art Archive/LRCLib opcionales, letras y hojas CUE. Las carátulas solo vienen del Cover Art Archive: iTunes y Deezer se descartaron por sus términos de uso.
 - **F4:** drop folder y auto-organización.
 - **F5:** playlists, estadísticas y páginas tipo Spotify.
 - **F6:** gestor de frontends, SDK de extensiones, compatibilidad e importador de mStream, Subsonic.

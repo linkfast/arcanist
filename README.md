@@ -60,13 +60,16 @@ wizard shows the setup code.
 | `src/Arcanist.Core` | Server (ASP.NET Core, .NET 10), executable `arcanist` |
 | `src/Arcanist.Web` | Admin panel (Angular + spartan-ng), served at `/admin` |
 | `src/Arcanist.Tray` | Windows tray app (Avalonia), installed with Velopack |
+| `native/arcanist-audio` | Audio analysis in Rust (Symphonia): loudness, fingerprints, waveform, tempo and key |
 | `tests/` | Server and tray tests |
 | `packaging/` | Windows installer, Linux tarballs and systemd unit, Synology package |
 | `.github/workflows` | CI, and releases on `v*` tags |
 
 ## Building
 
-Requirements: .NET SDK 10 and Node.js 24 (pinned in `mise.toml`).
+Requirements: .NET SDK 10, Node.js 24 (pinned in `mise.toml`) and Rust 1.85+ for the audio analysis library in
+`native/arcanist-audio` (the server builds without it, but then analyzes nothing). ffmpeg is optional at runtime:
+it converts streams and decodes the formats the built-in decoder does not read, and the admin panel can download it.
 
 ```bash
 dotnet build Arcanist.slnx

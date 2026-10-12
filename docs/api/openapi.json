@@ -408,7 +408,7 @@
         "tags": [
           "Media"
         ],
-        "summary": "Audio of a track, with HTTP range support for seeking. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD.",
+        "summary": "Audio of a track. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD. Without \u0060format\u0060, \u0060maxBitRate\u0060 or \u0060timeOffset\u0060 the original is sent with HTTP range support. \u0060format\u0060 (see serverInfo.transcodingFormats) converts it, at \u0060maxBitRate\u0060 kbit/s if given; \u0060maxBitRate\u0060 alone converts to MP3 only when the original exceeds it. Converted audio has no range support: seek by requesting again with \u0060timeOffset\u0060 in seconds. 503 transcoding_unavailable without ffmpeg.",
         "operationId": "Stream",
         "parameters": [
           {
@@ -433,6 +433,37 @@
             "in": "query",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxBitRate",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "timeOffset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
             }
           }
         ],
@@ -523,7 +554,7 @@
         "tags": [
           "Media"
         ],
-        "summary": "Audio of a track, with HTTP range support for seeking. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD.",
+        "summary": "Audio of a track. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD. Without \u0060format\u0060, \u0060maxBitRate\u0060 or \u0060timeOffset\u0060 the original is sent with HTTP range support. \u0060format\u0060 (see serverInfo.transcodingFormats) converts it, at \u0060maxBitRate\u0060 kbit/s if given; \u0060maxBitRate\u0060 alone converts to MP3 only when the original exceeds it. Converted audio has no range support: seek by requesting again with \u0060timeOffset\u0060 in seconds. 503 transcoding_unavailable without ffmpeg.",
         "operationId": "Stream",
         "parameters": [
           {
@@ -548,6 +579,37 @@
             "in": "query",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxBitRate",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "timeOffset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
             }
           }
         ],
@@ -2789,7 +2851,8 @@
           "sourceUrl",
           "setupCompleted",
           "capabilities",
-          "cloudTier"
+          "cloudTier",
+          "transcodingFormats"
         ],
         "type": "object",
         "properties": {
@@ -2824,6 +2887,12 @@
           },
           "cloudTier": {
             "$ref": "#/components/schemas/CloudTier"
+          },
+          "transcodingFormats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscodeFormat"
+            }
           }
         }
       },
@@ -3442,6 +3511,13 @@
             "format": "int32"
           }
         }
+      },
+      "TranscodeFormat": {
+        "enum": [
+          "OPUS",
+          "MP3",
+          "AAC"
+        ]
       },
       "UpdateLibraryInput": {
         "required": [

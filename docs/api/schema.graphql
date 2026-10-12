@@ -301,6 +301,7 @@ type ServerInfo {
   setupCompleted: Boolean!
   capabilities: [Capability!]!
   cloudTier: CloudTier!
+  transcodingFormats: [TranscodeFormat!]!
 }
 
 enum Capability {
@@ -314,6 +315,12 @@ enum CloudTier {
   NONE
   FREE
   PAID
+}
+
+enum TranscodeFormat {
+  OPUS
+  MP_3
+  AAC
 }
 
 type UserAccount {

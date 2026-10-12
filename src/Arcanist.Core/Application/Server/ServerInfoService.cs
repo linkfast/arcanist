@@ -22,6 +22,7 @@ public sealed class ServerOptions
 /// <summary>Public description of the server, for clients deciding how to talk to it. Part of the API contract.</summary>
 /// <param name="ApiVersion">Major version of the GraphQL and REST contracts. Incremented only on breaking changes.</param>
 /// <param name="Capabilities">Ultimate Cloud features currently enabled; local features are always available.</param>
+/// <param name="TranscodingFormats">Formats the stream endpoint can convert to (none without ffmpeg).</param>
 public sealed record ServerInfo(
     string Name,
     string Version,
@@ -29,13 +30,16 @@ public sealed record ServerInfo(
     string? SourceUrl,
     bool SetupCompleted,
     IReadOnlyList<Capability> Capabilities,
-    CloudTier CloudTier);
+    CloudTier CloudTier,
+    IReadOnlyList<Core.Media.TranscodeFormat> TranscodingFormats);
 
 public sealed class ServerInfoService(
     ICapabilityService capabilities,
     ICloudLinkState cloudLink,
     IOptionsMonitor<ServerOptions> options,
-    IOptionsMonitor<Setup.SetupOptions> setup)
+    IOptionsMonitor<Setup.SetupOptions> setup,
+    Core.Media.FfmpegLocator ffmpeg,
+    Core.Media.Transcoder transcoder)
 {
     public const int ApiVersion = 1;
 
@@ -52,5 +56,6 @@ public sealed class ServerInfoService(
         options.CurrentValue.SourceUrl,
         setup.CurrentValue.Completed,
         Enum.GetValues<Capability>().Where(capabilities.IsEnabled).ToList(),
-        cloudLink.Tier);
+        cloudLink.Tier,
+        transcoder.Formats(ffmpeg.Current));
 }

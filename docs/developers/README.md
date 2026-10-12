@@ -98,7 +98,22 @@ signed `st` parameter, so they work where headers cannot be sent, such as an HTM
   does. Add `fileId` to pick a copy.
 - `download=true` sends the original as an attachment and requires the `DOWNLOAD` permission.
 
-Transcoding is not available yet; files are sent as stored.
+### Transcoding
+
+When ffmpeg is available, the server converts audio for playback on slow connections or devices that cannot play
+the original. `serverInfo.transcodingFormats` lists what it can produce (`OPUS`, `MP3`, `AAC`; empty without
+ffmpeg). Add parameters to a stream URL:
+
+| Parameter | Effect |
+|---|---|
+| `format=opus\|mp3\|aac` | Convert to that format (Opus in Ogg, MP3, AAC in ADTS). |
+| `maxBitRate=128` | Bit rate in kbit/s (clamped to the format's range). Alone, it converts to MP3 only if the original exceeds it. |
+| `timeOffset=93.5` | Start that many seconds in. |
+
+Converted audio is streamed as it is produced: there is no `Content-Length` or range support, so players seek by
+requesting the URL again with `timeOffset`. `X-Content-Duration` gives the remaining duration in seconds. Without
+ffmpeg, or when too many conversions are running, the answer is `503` with code `transcoding_unavailable`: fall back
+to the original.
 
 ## Audio analysis
 

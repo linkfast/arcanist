@@ -111,6 +111,8 @@ internal sealed class LocalStorage : ILibraryStorage
     }
 
     /// <summary>Maps a stored relative path back to a full path, refusing anything that escapes the root.</summary>
+    public string? TryGetLocalPath(StorageLocation location, string relativePath) => ResolveInside(location.Location, relativePath);
+
     internal string? ResolveInside(string root, string relativePath)
     {
         if (string.IsNullOrEmpty(relativePath) || Path.IsPathRooted(relativePath))

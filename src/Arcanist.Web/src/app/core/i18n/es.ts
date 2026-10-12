@@ -344,6 +344,7 @@ export const es: Dictionary = {
       'No hay una descarga de ffmpeg para este sistema; instálalo con el gestor de paquetes e indica su ruta.',
     ffmpeg_download_failed:
       'No se pudo descargar ffmpeg. Comprueba la conexión a internet y vuelve a intentarlo.',
+    transcoding_unavailable: 'No se puede convertir el audio ahora mismo.',
     ffmpeg_checksum_mismatch:
       'El ffmpeg descargado no coincidía con su suma de comprobación y se ha descartado.',
   },

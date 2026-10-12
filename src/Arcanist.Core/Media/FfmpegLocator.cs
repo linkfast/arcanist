@@ -28,7 +28,8 @@ public enum FfmpegSource
     System,
 }
 
-public sealed record FfmpegInstallation(string Path, string Version, FfmpegSource Source);
+/// <param name="Encoders">Audio encoders this build has (e.g. libopus, libmp3lame, aac), which decide the transcoding formats.</param>
+public sealed record FfmpegInstallation(string Path, string Version, FfmpegSource Source, IReadOnlySet<string> Encoders);
 
 /// <summary>
 /// Finds ffmpeg, which Arcanist does not ship: a configured path, then one downloaded from the admin panel, then
@@ -36,6 +37,7 @@ public sealed record FfmpegInstallation(string Path, string Version, FfmpegSourc
 /// </summary>
 public sealed partial class FfmpegLocator(
     IOptionsMonitor<FfmpegOptions> options,
+    IOptionsMonitor<Setup.SetupOptions> setup,
     IArcanistDbContextFactory databases,
     SettingsStore settings,
     ArcanistPaths paths,
@@ -62,6 +64,9 @@ public sealed partial class FfmpegLocator(
     public async Task<FfmpegInstallation?> GetAsync(CancellationToken cancellationToken) =>
         (await ResolveAsync(cancellationToken)).Installation;
 
+    /// <summary>The last result without looking again; null until the first lookup (done at startup).</summary>
+    public FfmpegInstallation? Current => _resolution?.Installation;
+
     public async Task<Resolution> ResolveAsync(CancellationToken cancellationToken)
     {
         if (_resolution is { } cached)
@@ -76,7 +81,8 @@ public sealed partial class FfmpegLocator(
         try
         {
             var configured = options.CurrentValue.Path;
-            if (string.IsNullOrWhiteSpace(configured) && databases.IsConfigured)
+            // The database only has settings once setup has created (and migrated) it.
+            if (string.IsNullOrWhiteSpace(configured) && setup.CurrentValue.Completed && databases.IsConfigured)
                 configured = await settings.GetAsync<string?>(SettingKeys.FfmpegPath, null, cancellationToken);
 
             var candidates = new List<(string Path, FfmpegSource Source)>();
@@ -95,7 +101,7 @@ public sealed partial class FfmpegLocator(
             {
                 if (await ProbeAsync(path, cancellationToken) is not { } version)
                     continue;
-                found = new FfmpegInstallation(Path.GetFullPath(path), version, source);
+                found = new FfmpegInstallation(Path.GetFullPath(path), version, source, await EncodersAsync(path, cancellationToken));
                 configuredWorks = source == FfmpegSource.Configured;
                 break;
             }
@@ -113,16 +119,29 @@ public sealed partial class FfmpegLocator(
     }
 
     /// <summary>The version reported by <c>ffmpeg -version</c>, or null if <paramref name="path"/> is not a working ffmpeg.</summary>
-    public static async Task<string?> ProbeAsync(string path, CancellationToken cancellationToken)
-    {
-        if (!File.Exists(path))
-            return null;
+    public static async Task<string?> ProbeAsync(string path, CancellationToken cancellationToken) =>
+        File.Exists(path) && await RunAsync(path, "-version", cancellationToken) is { } output && VersionLine().Match(output) is { Success: true } match
+            ? match.Groups[1].Value
+            : null;
 
+    private static async Task<IReadOnlySet<string>> EncodersAsync(string path, CancellationToken cancellationToken)
+    {
+        // Lines look like " A....D libopus              libopus Opus"; the second column is the name.
+        var output = await RunAsync(path, "-encoders", cancellationToken) ?? "";
+        return output.Split('\n')
+            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Where(parts => parts.Length >= 2 && parts[0].StartsWith('A'))
+            .Select(parts => parts[1])
+            .ToHashSet();
+    }
+
+    private static async Task<string?> RunAsync(string path, string argument, CancellationToken cancellationToken)
+    {
         try
         {
             var start = new ProcessStartInfo(path)
             {
-                ArgumentList = { "-hide_banner", "-version" },
+                ArgumentList = { "-hide_banner", argument },
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -131,9 +150,10 @@ public sealed partial class FfmpegLocator(
             using var process = Process.Start(start)!;
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(15));
-            var output = await process.StandardOutput.ReadToEndAsync(timeout.Token);
+            var output = process.StandardOutput.ReadToEndAsync(timeout.Token);
+            await process.StandardError.ReadToEndAsync(timeout.Token);
             await process.WaitForExitAsync(timeout.Token);
-            return process.ExitCode == 0 && VersionLine().Match(output) is { Success: true } match ? match.Groups[1].Value : null;
+            return process.ExitCode == 0 ? await output : null;
         }
         catch (Exception e) when (e is System.ComponentModel.Win32Exception or IOException or OperationCanceledException or InvalidOperationException)
         {

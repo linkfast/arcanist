@@ -51,6 +51,12 @@ public interface ILibraryStorage
     /// <summary>Opens a file for reading. The stream is seekable, so it can serve HTTP range requests.</summary>
     Task<Stream> OpenReadAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The file's path on this machine when the storage is a local file system, so tools such as ffmpeg can open
+    /// (and seek in) it directly; null for remote storage, which is read through <see cref="OpenReadAsync"/>.
+    /// </summary>
+    string? TryGetLocalPath(StorageLocation location, string relativePath);
+
     /// <summary>True when <paramref name="inner"/> is <paramref name="outer"/> or lies inside it.</summary>
     bool Contains(string outer, string inner);
 }

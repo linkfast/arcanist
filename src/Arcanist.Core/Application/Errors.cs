@@ -40,6 +40,8 @@ public static class ErrorCodes
     public const string FfmpegDownloadFailed = "ffmpeg_download_failed";
     /// <summary>The downloaded ffmpeg did not match its published checksum and was discarded.</summary>
     public const string FfmpegChecksumMismatch = "ffmpeg_checksum_mismatch";
+    /// <summary>The requested conversion cannot be done now: no ffmpeg (or no encoder for the format), or too many running.</summary>
+    public const string TranscodingUnavailable = "transcoding_unavailable";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

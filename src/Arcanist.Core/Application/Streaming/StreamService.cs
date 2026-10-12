@@ -16,7 +16,9 @@ public sealed record StreamTarget(
     string FileName,
     long Size,
     DateTime ModifiedAt,
-    string ContentHash);
+    string ContentHash,
+    int? BitRate,
+    int DurationMs);
 
 public sealed class StreamService(AccessGuard guard, CatalogService catalog)
 {
@@ -45,6 +47,8 @@ public sealed class StreamService(AccessGuard guard, CatalogService catalog)
             file.RelativePath[(file.RelativePath.LastIndexOf('/') + 1)..],
             file.Size,
             file.ModifiedAt,
-            file.ContentHash);
+            file.ContentHash,
+            file.BitRate,
+            file.DurationMs);
     }
 }

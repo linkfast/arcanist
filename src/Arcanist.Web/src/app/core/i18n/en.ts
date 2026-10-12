@@ -339,6 +339,7 @@ export const en: Dictionary = {
       'There is no ffmpeg download for this system; install it with the package manager and enter its path.',
     ffmpeg_download_failed:
       'ffmpeg could not be downloaded. Check the internet connection and try again.',
+    transcoding_unavailable: 'The audio cannot be converted right now.',
     ffmpeg_checksum_mismatch: 'The downloaded ffmpeg did not match its checksum and was discarded.',
   },
 };

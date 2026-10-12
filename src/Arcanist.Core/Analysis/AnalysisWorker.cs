@@ -59,6 +59,7 @@ internal sealed class AnalysisWorker(
     {
         await Task.Yield();
         using var subscription = scans.Subscribe(this);
+        monitor.RunRequested += Wake;
 
         while (!stoppingToken.IsCancellationRequested)
         {

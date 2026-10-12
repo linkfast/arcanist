@@ -163,7 +163,7 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         var albumIds = tracks.Select(t => t.AlbumId).Distinct().ToList();
 
         var albums = await db.Albums.AsNoTracking().Where(a => albumIds.Contains(a.Id))
-            .Select(a => new { a.Id, a.Title, a.ArtworkId })
+            .Select(a => new { a.Id, a.Title, a.ArtworkId, a.Loudness, a.TruePeak })
             .ToDictionaryAsync(a => a.Id, cancellationToken);
 
         var credits = (await db.TrackArtists.AsNoTracking().Where(ta => ids.Contains(ta.TrackId))
@@ -176,8 +176,14 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                 .ToListAsync(cancellationToken))
             .ToLookup(g => g.TrackId, g => g.Name);
 
-        var files = (await VisibleFiles(access).AsNoTracking().Where(f => ids.Contains(f.TrackId)).ToListAsync(cancellationToken))
-            .ToLookup(f => f.TrackId);
+        var visibleFiles = await VisibleFiles(access).AsNoTracking().Where(f => ids.Contains(f.TrackId)).ToListAsync(cancellationToken);
+        var files = visibleFiles.ToLookup(f => f.TrackId);
+
+        var hashes = visibleFiles.Select(f => f.ContentHash).Distinct().ToList();
+        var analyses = await db.AudioAnalyses.AsNoTracking()
+            .Where(a => hashes.Contains(a.ContentHash) && a.State == AnalysisState.Analyzed)
+            .Select(a => new AnalysisSummary(a.ContentHash, a.Loudness, a.LoudnessRange, a.TruePeak, a.Bpm, a.BpmConfidence, a.KeyTonic, a.KeyMinor, a.KeyConfidence))
+            .ToDictionaryAsync(a => a.ContentHash, cancellationToken);
 
         // One token per response; it is not tied to a track.
         var streamToken = streamTokens.Create(access.UserId, guard.SessionId);
@@ -185,6 +191,8 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         return tracks.Select(t =>
         {
             var album = albums[t.AlbumId];
+            var copies = BestFirst(files[t.Id]).ToList();
+            var best = copies.Count > 0 ? analyses.GetValueOrDefault(copies[0].ContentHash) : null;
             return new Track(
                 t.Id,
                 t.Title,
@@ -196,14 +204,57 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                 t.ArtworkId ?? album.ArtworkId,
                 genres[t.Id].Order().ToList(),
                 t.AddedAt,
-                files[t.Id]
-                    .OrderByDescending(f => f.BitDepth ?? 0).ThenByDescending(f => f.SampleRate ?? 0).ThenByDescending(f => f.BitRate ?? 0)
+                // Below this, the strongest periodicity is too weak to call it a beat.
+                best is { Bpm: { } bpm, BpmConfidence: >= 0.1f } ? bpm : null,
+                best is { KeyTonic: { } tonic, KeyMinor: { } minor } ? MusicalKeys.Create(tonic, minor, best.KeyConfidence ?? 0) : null,
+                copies
                     .Select(f => new TrackFile(f.Id, f.Format, f.BitRate, f.SampleRate, f.BitDepth, f.Channels, f.Size, f.DurationMs,
-                        f.ReplayGainTrackGain, f.ReplayGainAlbumGain, StreamUrls.For(t.Id, streamToken, f.Id)))
+                        f.ReplayGainTrackGain, f.ReplayGainAlbumGain,
+                        LoudnessOf(analyses.GetValueOrDefault(f.ContentHash), album.Loudness, album.TruePeak),
+                        StreamUrls.For(t.Id, streamToken, f.Id)))
                     .ToList(),
                 StreamUrls.For(t.Id, streamToken));
         }).ToList();
     }
+
+    /// <summary>The overview of a copy's audio (the best one unless <paramref name="fileId"/> says otherwise).</summary>
+    public async Task<Waveform> WaveformAsync(Guid trackId, Guid? fileId, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var copies = await VisibleFiles(access).AsNoTracking()
+            .Where(f => f.TrackId == trackId && (fileId == null || f.Id == fileId))
+            .ToListAsync(cancellationToken);
+        var file = BestFirst(copies).FirstOrDefault() ?? throw new ArcanistException.NotFound();
+
+        var analysis = await db.AudioAnalyses.AsNoTracking()
+            .Where(a => a.ContentHash == file.ContentHash && a.Waveform != null)
+            .Select(a => new { a.Waveform, a.DurationMs })
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new ArcanistException.NotFound();
+
+        return new Waveform(trackId, file.Id, analysis.DurationMs, analysis.Waveform!.Select(b => (int)b).ToList());
+    }
+
+    /// <summary>Best quality first: the order of <see cref="Track.Files"/> and of playback.</summary>
+    private static IEnumerable<MediaFile> BestFirst(IEnumerable<MediaFile> files) =>
+        files.OrderByDescending(f => f.BitDepth ?? 0).ThenByDescending(f => f.SampleRate ?? 0).ThenByDescending(f => f.BitRate ?? 0);
+
+    private sealed record AnalysisSummary(
+        string ContentHash, double? Loudness, double? Range, double? TruePeak, float? Bpm, float? BpmConfidence, int? KeyTonic, bool? KeyMinor, float? KeyConfidence);
+
+    /// <summary>ReplayGain 2.0 reference level.</summary>
+    private const double ReferenceLoudness = -18;
+
+    private static Loudness? LoudnessOf(AnalysisSummary? analysis, double? albumLoudness, double? albumPeak) =>
+        analysis is { Loudness: { } integrated, TruePeak: { } peak }
+            ? new Loudness(
+                Math.Round(integrated, 2),
+                Math.Round(analysis.Range ?? 0, 2),
+                Math.Round(peak, 4),
+                Math.Round(ReferenceLoudness - integrated, 2),
+                albumLoudness is { } album ? Math.Round(ReferenceLoudness - album, 2) : null,
+                albumPeak is { } albumTruePeak ? Math.Round(albumTruePeak, 4) : null)
+            : null;
 
     private static Artist ToModel(ArtistEntity artist) => new(artist.Id, artist.Name, artist.SortName, artist.MusicBrainzId);
 

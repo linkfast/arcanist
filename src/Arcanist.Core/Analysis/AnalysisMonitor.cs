@@ -63,6 +63,12 @@ public sealed class AnalysisMonitor(TimeProvider time) : IObservable<AnalysisPro
         return Math.Round(_recent.Count / span, 1);
     }
 
+    /// <summary>Raised when something asks the worker to look for work now.</summary>
+    internal event Action? RunRequested;
+
+    /// <summary>Asks the background worker to look for work now instead of at its next check.</summary>
+    public void RequestRun() => RunRequested?.Invoke();
+
     internal int SubscriberCount => _observers.Count;
 
     public IDisposable Subscribe(IObserver<AnalysisProgress> observer)

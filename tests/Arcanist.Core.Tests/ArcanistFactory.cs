@@ -3,7 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Arcanist.Core.Analysis;
 using Arcanist.Core.Api.Rest;
+using Arcanist.Core.Application.Analysis;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
@@ -120,6 +122,22 @@ public sealed class ArcanistFactory(
                 throw new TimeoutException("Scans did not finish in time.");
             await Task.Delay(50);
         }
+    }
+
+    /// <summary>Waits until background analysis has nothing left to do (it must be enabled for this factory).</summary>
+    public async Task<AnalysisProgress> WaitForAnalysisAsync()
+    {
+        var monitor = Services.GetRequiredService<AnalysisMonitor>();
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        while (monitor.Current is not { Activity: AnalysisActivity.Idle, Pending: 0 })
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException($"Analysis did not finish: {monitor.Current}");
+            monitor.RequestRun();
+            await Task.Delay(100);
+        }
+
+        return monitor.Current;
     }
 
     /// <summary>Logs in and returns a client that sends the access token.</summary>

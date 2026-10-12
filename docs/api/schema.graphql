@@ -1,4 +1,6 @@
 type Query {
+  "Progress of the background audio analysis (loudness, fingerprints, waveforms, tempo and key). Requires MANAGE_LIBRARIES."
+  analysisProgress: AnalysisProgress!
   "Performers and album artists with music the user can play, by name. Pages of `first` items (default 50, at most 500) after the `after` cursor."
   artists(search: String, after: String, first: Int): ArtistPage!
   artist(id: ID!): Artist!
@@ -8,6 +10,8 @@ type Query {
   "Tracks the user can play, by title. With albumId, all of the album's tracks in disc and track order, without paging."
   tracks(search: String, albumId: ID, artistId: ID, after: String, first: Int): TrackPage!
   track(id: ID!): Track!
+  "Overview of a track's audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed."
+  trackWaveform(trackId: ID!, fileId: ID): Waveform!
   "Libraries the signed-in user can access."
   libraries: [Library!]!
   "A library by id. Libraries the user cannot access are reported as not found."
@@ -29,6 +33,29 @@ type Query {
   "A user by id. Requires the MANAGE_USERS permission."
   user(id: ID!): UserAccount!
 }
+
+type AnalysisProgress {
+  activity: AnalysisActivity!
+  enabled: Boolean!
+  pending: Int!
+  analyzed: Int!
+  needsFfmpeg: Int!
+  failed: Int!
+  filesPerMinute: Float!
+  lastAnalyzedAt: DateTime
+  error: String
+}
+
+enum AnalysisActivity {
+  DISABLED
+  UNAVAILABLE
+  IDLE
+  WAITING_FOR_SCAN
+  RUNNING
+}
+
+"The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
+scalar DateTime
 
 type ArtistPage {
   items: [Artist!]!
@@ -85,6 +112,8 @@ type Track {
   artworkId: ID
   genres: [String!]!
   addedAt: DateTime!
+  bpm: Float
+  key: MusicalKey
   files: [TrackFile!]!
   streamUrl: String!
 }
@@ -110,8 +139,18 @@ enum ArtistRole {
   PRODUCER
 }
 
-"The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
-scalar DateTime
+type MusicalKey {
+  tonic: Int!
+  mode: KeyMode!
+  notation: String!
+  camelot: String!
+  confidence: Float!
+}
+
+enum KeyMode {
+  MAJOR
+  MINOR
+}
 
 type TrackFile {
   id: ID!
@@ -124,7 +163,24 @@ type TrackFile {
   durationMs: Int!
   replayGainTrackGain: Float
   replayGainAlbumGain: Float
+  loudness: Loudness
   streamUrl: String!
+}
+
+type Loudness {
+  integrated: Float!
+  range: Float!
+  truePeak: Float!
+  trackGain: Float!
+  albumGain: Float
+  albumPeak: Float
+}
+
+type Waveform {
+  trackId: ID!
+  fileId: ID!
+  durationMs: Int!
+  peaks: [Int!]!
 }
 
 type Library {
@@ -263,6 +319,8 @@ type Session {
 }
 
 type Mutation {
+  "Turns the background audio analysis on or off. Requires MANAGE_SETTINGS."
+  setAnalysisEnabled(enabled: Boolean!): AnalysisProgress!
   "Requires MANAGE_LIBRARIES."
   createLibrary(input: CreateLibraryInput!): Library!
   "Requires MANAGE_LIBRARIES."
@@ -340,6 +398,8 @@ input ChangeMyPasswordInput {
 }
 
 type Subscription {
+  "Progress of the background audio analysis, at most once a second. Requires MANAGE_LIBRARIES."
+  analysisProgressChanged: AnalysisProgress!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobUpdated(libraryId: ID): ScanJob!
 }

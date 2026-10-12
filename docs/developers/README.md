@@ -100,6 +100,21 @@ signed `st` parameter, so they work where headers cannot be sent, such as an HTM
 
 Transcoding is not available yet; files are sent as stored.
 
+## Audio analysis
+
+Arcanist analyzes every track in the background after scanning it. Until a copy is analyzed, the fields below are
+null (and the waveform answers `not_found`); clients should cope with that.
+
+- **Loudness normalization:** each entry of `Track.files` has `loudness` with the EBU R128 measurements and
+  ReplayGain 2.0 gains for a −18 LUFS reference: `trackGain` (dB) for shuffled playback, `albumGain` for whole
+  albums (null until all of the album's tracks are analyzed), and the linear `truePeak` / `albumPeak` to avoid
+  clipping when applying positive gain. `replayGainTrackGain` and `replayGainAlbumGain` are the file's own tags, when
+  it has them.
+- **Tempo and key:** `Track.bpm` (null when there is no steady beat) and `Track.key` with the tonic, mode, usual
+  notation (`F#m`), Camelot code (`11A`) and a 0–1 confidence.
+- **Waveform:** `trackWaveform(trackId, fileId)` / `GET /rest/v1/tracks/{trackId}/waveform` returns 1000 peak values
+  (0–255) spread evenly over the duration, for seek bars. It is a separate call so track lists stay small.
+
 ## Artwork
 
 Albums and tracks have an `artworkId`. Images are public, so they work directly in `<img>`:

@@ -1271,6 +1271,58 @@
         }
       }
     },
+    "/rest/v1/analysis": {
+      "get": {
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Progress of the background audio analysis (loudness, fingerprints, waveforms, tempo and key). Poll it to follow progress. Requires MANAGE_LIBRARIES.",
+        "operationId": "AnalysisProgress",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisProgress"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/analysis/enabled": {
+      "put": {
+        "tags": [
+          "Analysis"
+        ],
+        "summary": "Turns the background audio analysis on or off. Requires MANAGE_SETTINGS.",
+        "operationId": "SetAnalysisEnabled",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAnalysisEnabledInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisProgress"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/artists": {
       "get": {
         "tags": [
@@ -1534,6 +1586,46 @@
           }
         }
       }
+    },
+    "/rest/v1/tracks/{trackId}/waveform": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Overview of a track\u0027s audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed.",
+        "operationId": "TrackWaveform",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fileId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Waveform"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1649,6 +1741,90 @@
           },
           "title": {
             "type": "string"
+          }
+        }
+      },
+      "AnalysisActivity": {
+        "enum": [
+          "DISABLED",
+          "UNAVAILABLE",
+          "IDLE",
+          "WAITING_FOR_SCAN",
+          "RUNNING"
+        ]
+      },
+      "AnalysisProgress": {
+        "required": [
+          "activity",
+          "enabled",
+          "pending",
+          "analyzed",
+          "needsFfmpeg",
+          "failed",
+          "filesPerMinute",
+          "lastAnalyzedAt",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/AnalysisActivity"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "pending": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analyzed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "needsFfmpeg": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesPerMinute": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lastAnalyzedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1894,6 +2070,12 @@
           }
         }
       },
+      "KeyMode": {
+        "enum": [
+          "MAJOR",
+          "MINOR"
+        ]
+      },
       "Library": {
         "required": [
           "id",
@@ -2012,6 +2194,106 @@
           "useCookie": {
             "type": "boolean",
             "default": false
+          }
+        }
+      },
+      "Loudness": {
+        "required": [
+          "integrated",
+          "range",
+          "truePeak",
+          "trackGain",
+          "albumGain",
+          "albumPeak"
+        ],
+        "type": "object",
+        "properties": {
+          "integrated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "range": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "truePeak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "trackGain": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "albumGain": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "albumPeak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "MusicalKey": {
+        "required": [
+          "tonic",
+          "mode",
+          "notation",
+          "camelot",
+          "confidence"
+        ],
+        "type": "object",
+        "properties": {
+          "tonic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/KeyMode"
+          },
+          "notation": {
+            "type": "string"
+          },
+          "camelot": {
+            "type": "string"
+          },
+          "confidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -2378,6 +2660,17 @@
           }
         }
       },
+      "SetAnalysisEnabledInput": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetupAdmin": {
         "required": [
           "userName",
@@ -2637,6 +2930,8 @@
           "artworkId",
           "genres",
           "addedAt",
+          "bpm",
+          "key",
           "files",
           "streamUrl"
         ],
@@ -2701,6 +2996,25 @@
             "type": "string",
             "format": "date-time"
           },
+          "bpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "key": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MusicalKey"
+              }
+            ]
+          },
           "files": {
             "type": "array",
             "items": {
@@ -2724,6 +3038,7 @@
           "durationMs",
           "replayGainTrackGain",
           "replayGainAlbumGain",
+          "loudness",
           "streamUrl"
         ],
         "type": "object",
@@ -2807,6 +3122,16 @@
               "string"
             ],
             "format": "double"
+          },
+          "loudness": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Loudness"
+              }
+            ]
           },
           "streamUrl": {
             "type": "string"
@@ -2964,6 +3289,44 @@
           "USER",
           "ADMIN"
         ]
+      },
+      "Waveform": {
+        "required": [
+          "trackId",
+          "fileId",
+          "durationMs",
+          "peaks"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "peaks": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -3003,6 +3366,9 @@
     },
     {
       "name": "Users"
+    },
+    {
+      "name": "Analysis"
     },
     {
       "name": "Catalog"

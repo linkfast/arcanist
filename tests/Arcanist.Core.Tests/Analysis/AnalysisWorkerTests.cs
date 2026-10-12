@@ -30,7 +30,7 @@ public sealed class AnalysisWorkerTests : IAsyncLifetime
 
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
         await _factory.WaitForScansAsync(await _factory.CreateAuthenticatedClientAsync());
-        var progress = await WaitForAnalysisAsync();
+        var progress = await _factory.WaitForAnalysisAsync();
 
         Assert.Equal(new { Pending = 0, Analyzed = 2, Failed = 0 }, new { progress.Pending, progress.Analyzed, progress.Failed });
 
@@ -78,21 +78,6 @@ public sealed class AnalysisWorkerTests : IAsyncLifetime
 
         Assert.Equal(loudness.Integrated, AlbumLoudness.Integrate([loudness.Histogram])!.Value, 1);
         Assert.Null(AlbumLoudness.Integrate([]));
-    }
-
-    private async Task<AnalysisProgress> WaitForAnalysisAsync()
-    {
-        var monitor = _factory.Services.GetRequiredService<AnalysisMonitor>();
-        var deadline = DateTime.UtcNow.AddSeconds(60);
-        while (monitor.Current is not { Activity: AnalysisActivity.Idle, Pending: 0 })
-        {
-            if (DateTime.UtcNow > deadline)
-                throw new TimeoutException($"Analysis did not finish: {monitor.Current}");
-            _factory.Services.GetRequiredService<AnalysisWorker>().Wake();
-            await Task.Delay(100, Cancel);
-        }
-
-        return monitor.Current;
     }
 
     public async ValueTask DisposeAsync()

@@ -61,6 +61,7 @@ public static class RestSetup
         rest.MapUserEndpoints();
         rest.MapLibraryEndpoints();
         rest.MapScanEndpoints();
+        rest.MapAnalysisEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();
         return app;

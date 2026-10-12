@@ -32,6 +32,11 @@ public static class CatalogEndpoints
         catalog.MapGet("/tracks/{id:guid}", (Guid id, CatalogService service, CancellationToken ct) => service.TrackAsync(id, ct))
             .WithName("Track");
 
+        catalog.MapGet("/tracks/{trackId:guid}/waveform", (Guid trackId, Guid? fileId, CatalogService service, CancellationToken ct) =>
+                service.WaveformAsync(trackId, fileId, ct))
+            .WithName("TrackWaveform")
+            .WithSummary("Overview of a track's audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed.");
+
         return rest;
     }
 }

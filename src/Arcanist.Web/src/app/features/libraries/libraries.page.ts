@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideFolderPlus,
+  lucideFolderTree,
   lucidePencil,
   lucidePlus,
   lucideRefreshCw,
@@ -46,6 +47,7 @@ import {
   UpdateLibraryMutation,
 } from '../../graphql/operations';
 import { DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
+import { OrganizeDialog } from './organize-dialog';
 import { CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
 type Library = LibrariesResult['libraries'][number];
@@ -79,6 +81,7 @@ interface LibraryForm {
     HlmEmptyImports,
     TranslatePipe,
     FolderPicker,
+    OrganizeDialog,
     DateTimePipe,
     RelativeTimePipe,
     CountPipe,
@@ -89,6 +92,7 @@ interface LibraryForm {
       lucidePencil,
       lucideTrash2,
       lucideFolderPlus,
+      lucideFolderTree,
       lucideRefreshCw,
       lucideX,
     }),
@@ -121,6 +125,13 @@ export class LibrariesPage implements OnInit {
     (await this.gql.query(ServerDirectoriesQuery, { path })).serverDirectories;
 
   protected readonly deleting = signal<Library | null>(null);
+  protected readonly organizing = signal<Library | null>(null);
+
+  protected async closeOrganize(): Promise<void> {
+    this.organizing.set(null);
+    // Its template or automatic organizing may have changed.
+    await this.load();
+  }
 
   async ngOnInit(): Promise<void> {
     await this.load();

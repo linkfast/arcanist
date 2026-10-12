@@ -1,0 +1,526 @@
+<header class="mb-6">
+  <h1 class="text-2xl font-semibold">{{ 'import.title' | t }}</h1>
+  <p class="text-sm text-muted-foreground">{{ 'import.subtitle' | t }}</p>
+</header>
+
+<div class="grid gap-6">
+  @if (auth.isAdmin()) {
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'import.folders.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'import.folders.help' | t }}</p>
+        <div hlmCardAction>
+          <button
+            hlmBtn
+            size="sm"
+            type="button"
+            class="gap-1"
+            [disabled]="targets().length === 0"
+            (click)="openCreate()"
+          >
+            <ng-icon name="lucidePlus" />
+            {{ 'import.folders.add' | t }}
+          </button>
+        </div>
+      </div>
+      <div hlmCardContent>
+        @if (folders(); as list) {
+          <ul class="grid gap-2">
+            @for (folder of list; track folder.id) {
+              <li class="flex items-start justify-between gap-3 rounded-lg border p-3">
+                <div class="grid min-w-0 gap-1 text-sm">
+                  <span class="truncate font-mono text-xs" [title]="folder.path">{{
+                    folder.path
+                  }}</span>
+                  <span class="text-muted-foreground">
+                    {{
+                      'import.folders.into' | t: { library: targetLabel(folder.librarySourceId) }
+                    }}
+                    · {{ 'import.policies.' + folder.duplicatePolicy | t }}
+                    @if (folder.convertTo) {
+                      · {{ 'import.folders.convertsTo' | t: { format: folder.convertTo } }}
+                    }
+                  </span>
+                  <span class="flex flex-wrap gap-1">
+                    @if (!folder.enabled) {
+                      <span hlmBadge variant="outline">{{ 'import.folders.paused' | t }}</span>
+                    }
+                    @if (!folder.available) {
+                      <span hlmBadge variant="destructive">{{
+                        'import.folders.unavailable' | t
+                      }}</span>
+                    }
+                  </span>
+                </div>
+                <div class="flex shrink-0 gap-1">
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    [attr.aria-label]="'common.edit' | t"
+                    (click)="openEdit(folder)"
+                  >
+                    <ng-icon name="lucidePencil" />
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    [attr.aria-label]="'common.delete' | t"
+                    (click)="deleting.set(folder)"
+                  >
+                    <ng-icon name="lucideTrash2" />
+                  </button>
+                </div>
+              </li>
+            } @empty {
+              <p class="text-sm text-muted-foreground">
+                {{ (targets().length ? 'import.folders.empty' : 'import.folders.noLibraries') | t }}
+              </p>
+            }
+          </ul>
+        } @else {
+          <div class="flex justify-center py-6"><hlm-spinner /></div>
+        }
+      </div>
+    </section>
+  }
+
+  <section hlmCard>
+    <div hlmCardHeader>
+      <h2 hlmCardTitle>{{ 'import.queue.title' | t }}</h2>
+      <p hlmCardDescription>
+        @if (summary()?.pending) {
+          {{ 'import.queue.pending' | t: { count: summary()!.pending } }}
+        } @else {
+          {{ 'import.queue.help' | t }}
+        }
+      </p>
+    </div>
+    <div hlmCardContent class="grid gap-4">
+      <div class="flex flex-wrap gap-1" role="tablist">
+        @for (option of statuses; track option) {
+          <button
+            hlmBtn
+            size="sm"
+            type="button"
+            role="tab"
+            [attr.aria-selected]="status() === option"
+            [variant]="status() === option ? 'default' : 'ghost'"
+            (click)="show(option)"
+          >
+            {{ 'import.status.' + option | t }}
+            @if (count(option)) {
+              <span hlmBadge variant="secondary" class="ml-1">{{ count(option) }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      @if (items(); as list) {
+        <ul class="grid gap-2">
+          @for (item of list; track item.id) {
+            <li class="grid gap-2 rounded-lg border p-3 text-sm">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="grid min-w-0 gap-0.5">
+                  <span class="truncate font-mono text-xs" [title]="item.path">{{
+                    item.path
+                  }}</span>
+                  @if (describe(item); as text) {
+                    <span class="truncate font-medium">{{ text }}</span>
+                  }
+                  <span class="text-xs text-muted-foreground">
+                    {{ quality(item) }}
+                    @if (item.details?.durationMs) {
+                      · {{ item.details!.durationMs | duration }}
+                    }
+                    · {{ item.size | bytes }} · {{ item.updatedAt | relativeTime }}
+                  </span>
+                </div>
+                @if (item.reason) {
+                  <span
+                    hlmBadge
+                    [variant]="item.status === 'FAILED' ? 'destructive' : 'secondary'"
+                    class="shrink-0"
+                    >{{ 'import.reasons.' + item.reason | t }}</span
+                  >
+                }
+              </div>
+
+              @if (item.status === 'IMPORTED') {
+                <p class="truncate text-xs text-muted-foreground" [title]="item.destinationPath">
+                  {{ 'import.queue.importedAs' | t: { path: item.destinationPath ?? '' } }}
+                </p>
+              } @else if (item.status === 'PENDING') {
+                <p class="flex items-center gap-2 text-xs text-muted-foreground">
+                  <hlm-spinner class="size-3" /> {{ 'import.queue.processing' | t }}
+                </p>
+              } @else {
+                <div class="flex flex-wrap gap-1">
+                  @switch (item.status) {
+                    @case ('NEEDS_REVIEW') {
+                      <button
+                        hlmBtn
+                        size="sm"
+                        type="button"
+                        [disabled]="busy() === item.id"
+                        (click)="openReview(item)"
+                      >
+                        {{ 'import.actions.review' | t }}
+                      </button>
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="busy() === item.id"
+                        (click)="accept(item)"
+                      >
+                        {{ 'import.actions.importAsIs' | t }}
+                      </button>
+                    }
+                    @case ('DUPLICATE') {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="busy() === item.id"
+                        (click)="accept(item)"
+                      >
+                        {{ 'import.actions.addVersion' | t }}
+                      </button>
+                    }
+                    @default {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="busy() === item.id"
+                        (click)="retry(item)"
+                      >
+                        {{ 'import.actions.retry' | t }}
+                      </button>
+                    }
+                  }
+                  @if (item.status !== 'IGNORED') {
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      [disabled]="busy() === item.id"
+                      (click)="ignore(item)"
+                    >
+                      {{ 'import.actions.ignore' | t }}
+                    </button>
+                  }
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    class="text-destructive"
+                    [disabled]="busy() === item.id"
+                    (click)="discard(item)"
+                  >
+                    {{ 'import.actions.discard' | t }}
+                  </button>
+                </div>
+              }
+            </li>
+          } @empty {
+            <div hlmEmpty class="rounded-lg border">
+              <div hlmEmptyHeader>
+                <p hlmEmptyTitle>{{ 'import.empty.' + status() | t }}</p>
+              </div>
+            </div>
+          }
+        </ul>
+      } @else {
+        <div class="flex justify-center py-6"><hlm-spinner /></div>
+      }
+    </div>
+  </section>
+</div>
+
+<!-- Drop folder -->
+<hlm-dialog [state]="form() ? 'open' : 'closed'" (closed)="form.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(32rem,calc(100vw-2rem))]">
+    @if (form(); as current) {
+      <form class="grid gap-4" (ngSubmit)="saveForm()">
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>
+            {{ (current.id ? 'import.folders.edit' : 'import.folders.add') | t }}
+          </h3>
+        </hlm-dialog-header>
+
+        <hlm-field>
+          <label hlmFieldLabel for="drop-path">{{ 'import.folders.path' | t }}</label>
+          <div class="flex gap-2">
+            <input
+              hlmInput
+              id="drop-path"
+              name="path"
+              class="min-w-0 flex-1 font-mono text-xs"
+              [ngModel]="current.path"
+              (ngModelChange)="updateForm({ path: $event })"
+              required
+            />
+            <button
+              hlmBtn
+              variant="outline"
+              size="icon"
+              type="button"
+              [attr.aria-label]="'folderPicker.title' | t"
+              (click)="picking.set(true)"
+            >
+              <ng-icon name="lucideFolderPlus" />
+            </button>
+          </div>
+          <p hlmFieldDescription>{{ 'import.folders.pathHelp' | t }}</p>
+        </hlm-field>
+
+        <hlm-field>
+          <label hlmFieldLabel>{{ 'import.folders.target' | t }}</label>
+          <hlm-native-select
+            [value]="current.librarySourceId"
+            (change)="updateForm({ librarySourceId: $any($event.target).value })"
+          >
+            @for (target of targets(); track target.id) {
+              <option hlmNativeSelectOption [value]="target.id">{{ target.label }}</option>
+            }
+          </hlm-native-select>
+          <p hlmFieldDescription>{{ 'import.folders.targetHelp' | t }}</p>
+        </hlm-field>
+
+        <hlm-field>
+          <label hlmFieldLabel>{{ 'import.folders.policy' | t }}</label>
+          <hlm-native-select
+            [value]="current.duplicatePolicy"
+            (change)="updateForm({ duplicatePolicy: $any($event.target).value })"
+          >
+            @for (policy of policies; track policy) {
+              <option hlmNativeSelectOption [value]="policy">
+                {{ 'import.policies.' + policy | t }}
+              </option>
+            }
+          </hlm-native-select>
+          <p hlmFieldDescription>{{ 'import.policyHelp.' + current.duplicatePolicy | t }}</p>
+        </hlm-field>
+
+        <hlm-field>
+          <label hlmFieldLabel>{{ 'import.folders.convert' | t }}</label>
+          <hlm-native-select
+            [value]="current.convertTo"
+            (change)="updateForm({ convertTo: $any($event.target).value })"
+          >
+            <option hlmNativeSelectOption value="">{{ 'import.folders.convertNone' | t }}</option>
+            @for (format of formats; track format) {
+              <option hlmNativeSelectOption [value]="format">{{ format }}</option>
+            }
+          </hlm-native-select>
+          <p hlmFieldDescription>
+            {{
+              (current.convertTo === 'FLAC'
+                ? 'import.folders.convertFlacHelp'
+                : 'import.folders.convertHelp'
+              ) | t
+            }}
+          </p>
+        </hlm-field>
+
+        @if (current.convertTo && current.convertTo !== 'FLAC') {
+          <hlm-field>
+            <label hlmFieldLabel for="drop-bitrate">{{ 'import.folders.bitRate' | t }}</label>
+            <input
+              hlmInput
+              id="drop-bitrate"
+              name="bitRate"
+              type="number"
+              min="32"
+              max="320"
+              class="w-32"
+              [placeholder]="'import.folders.bitRateDefault' | t"
+              [ngModel]="current.convertBitRate"
+              (ngModelChange)="updateForm({ convertBitRate: $event })"
+            />
+          </hlm-field>
+          <label class="flex items-start gap-2 text-sm">
+            <hlm-switch
+              class="mt-0.5"
+              [checked]="current.convertLossy"
+              (checkedChange)="updateForm({ convertLossy: $event })"
+            />
+            <span>
+              {{ 'import.folders.convertLossy' | t }}
+              <span class="block text-xs text-muted-foreground">{{
+                'import.folders.convertLossyHelp' | t
+              }}</span>
+            </span>
+          </label>
+        }
+
+        <label class="flex items-center gap-2 text-sm">
+          <hlm-switch
+            [checked]="current.enabled"
+            (checkedChange)="updateForm({ enabled: $event })"
+          />
+          {{ 'import.folders.enabled' | t }}
+        </label>
+
+        @if (formError()) {
+          <p class="text-sm text-destructive">{{ formError() }}</p>
+        }
+
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" (click)="form.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button
+            hlmBtn
+            type="submit"
+            [disabled]="busy() === 'form' || !current.path.trim() || !current.librarySourceId"
+          >
+            {{ 'common.save' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Folder picker -->
+<hlm-dialog [state]="picking() ? 'open' : 'closed'" (closed)="picking.set(false)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="w-[min(36rem,calc(100vw-2rem))] sm:max-w-xl"
+  >
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'folderPicker.title' | t }}</h3>
+    </hlm-dialog-header>
+    <app-folder-picker
+      [load]="loadDirectories"
+      (picked)="picked($event)"
+      (cancelled)="picking.set(false)"
+    />
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Review -->
+<hlm-dialog [state]="reviewing() ? 'open' : 'closed'" (closed)="reviewing.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(32rem,calc(100vw-2rem))]">
+    @if (reviewing(); as item) {
+      <form class="grid gap-4" (ngSubmit)="saveReview()">
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>{{ 'import.review.title' | t }}</h3>
+          <p hlmDialogDescription class="truncate font-mono text-xs">{{ item.path }}</p>
+        </hlm-dialog-header>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <hlm-field class="sm:col-span-2">
+            <label hlmFieldLabel for="tag-title">{{ 'import.review.titleField' | t }}</label>
+            <input hlmInput id="tag-title" name="title" [(ngModel)]="tags.title" required />
+          </hlm-field>
+          <hlm-field>
+            <label hlmFieldLabel for="tag-artist">{{ 'import.review.artist' | t }}</label>
+            <input hlmInput id="tag-artist" name="artist" [(ngModel)]="tags.artist" required />
+          </hlm-field>
+          <hlm-field>
+            <label hlmFieldLabel for="tag-album-artist">{{
+              'import.review.albumArtist' | t
+            }}</label>
+            <input
+              hlmInput
+              id="tag-album-artist"
+              name="albumArtist"
+              [(ngModel)]="tags.albumArtist"
+            />
+          </hlm-field>
+          <hlm-field class="sm:col-span-2">
+            <label hlmFieldLabel for="tag-album">{{ 'import.review.album' | t }}</label>
+            <input hlmInput id="tag-album" name="album" [(ngModel)]="tags.album" required />
+          </hlm-field>
+          <hlm-field>
+            <label hlmFieldLabel for="tag-track">{{ 'import.review.track' | t }}</label>
+            <input
+              hlmInput
+              id="tag-track"
+              name="track"
+              type="number"
+              min="1"
+              [(ngModel)]="tags.trackNumber"
+            />
+          </hlm-field>
+          <hlm-field>
+            <label hlmFieldLabel for="tag-disc">{{ 'import.review.disc' | t }}</label>
+            <input
+              hlmInput
+              id="tag-disc"
+              name="disc"
+              type="number"
+              min="1"
+              [(ngModel)]="tags.discNumber"
+            />
+          </hlm-field>
+          <hlm-field>
+            <label hlmFieldLabel for="tag-year">{{ 'import.review.year' | t }}</label>
+            <input
+              hlmInput
+              id="tag-year"
+              name="year"
+              type="number"
+              min="1"
+              max="9999"
+              [(ngModel)]="tags.year"
+            />
+          </hlm-field>
+          <hlm-field>
+            <label hlmFieldLabel for="tag-genre">{{ 'import.review.genre' | t }}</label>
+            <input hlmInput id="tag-genre" name="genre" [(ngModel)]="tags.genre" />
+          </hlm-field>
+        </div>
+        <p class="text-xs text-muted-foreground">{{ 'import.review.help' | t }}</p>
+
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" (click)="reviewing.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button
+            hlmBtn
+            type="submit"
+            [disabled]="
+              busy() === item.id ||
+              !tags.title.trim() ||
+              !tags.album.trim() ||
+              !(tags.artist.trim() || tags.albumArtist.trim())
+            "
+          >
+            {{ 'import.review.import' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Delete drop folder -->
+<hlm-alert-dialog [state]="deleting() ? 'open' : 'closed'" (closed)="deleting.set(null)">
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    <hlm-alert-dialog-header>
+      <h3 hlmAlertDialogTitle>{{ 'import.folders.deleteTitle' | t }}</h3>
+      <p hlmAlertDialogDescription>{{ 'import.folders.deleteHelp' | t }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel type="button" (click)="deleting.set(null)">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button hlmAlertDialogAction type="button" (click)="confirmDelete()">
+        {{ 'common.delete' | t }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

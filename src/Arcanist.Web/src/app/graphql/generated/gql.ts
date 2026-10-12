@@ -17,7 +17,7 @@ type Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": typeof types.ScanJobFieldsFragmentDoc,
     "\n  query ServerInfo {\n    serverInfo {\n      name\n      version\n      apiVersion\n      sourceUrl\n    }\n  }\n": typeof types.ServerInfoDocument,
     "\n  query Overview {\n    libraries {\n      id\n    }\n    artists(first: 1) {\n      totalCount\n    }\n    albums(first: 1) {\n      totalCount\n    }\n    tracks(first: 1) {\n      totalCount\n    }\n  }\n": typeof types.OverviewDocument,
-    "\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": typeof types.LibrariesDocument,
+    "\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n": typeof types.LibrariesDocument,
     "\n  mutation CreateLibrary($input: CreateLibraryInput!) {\n    createLibrary(input: $input) {\n      id\n    }\n  }\n": typeof types.CreateLibraryDocument,
     "\n  mutation UpdateLibrary($id: ID!, $input: UpdateLibraryInput!) {\n    updateLibrary(id: $id, input: $input) {\n      id\n    }\n  }\n": typeof types.UpdateLibraryDocument,
     "\n  mutation DeleteLibrary($id: ID!) {\n    deleteLibrary(id: $id)\n  }\n": typeof types.DeleteLibraryDocument,
@@ -54,12 +54,29 @@ type Documents = {
     "\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.OnlineServicesDocument,
     "\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.SetOnlineServicesDocument,
     "\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.SetAcoustIdKeyDocument,
+    "\n  fragment OrganizeRunFields on OrganizeRun {\n    id\n    libraryId\n    kind\n    status\n    template\n    startedAt\n    finishedAt\n    undoneAt\n    total\n    moved\n    failed\n    errorCode\n  }\n": typeof types.OrganizeRunFieldsFragmentDoc,
+    "\n  query OrganizePreview($libraryId: ID!, $template: String) {\n    organizePreview(libraryId: $libraryId, template: $template) {\n      template\n      filesToMove\n      filesInPlace\n      otherFilesToMove\n      unavailableSourceIds\n      moves {\n        sourceId\n        from\n        to\n      }\n    }\n  }\n": typeof types.OrganizePreviewDocument,
+    "\n  query OrganizeRuns($libraryId: ID!) {\n    organizeRuns(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n": typeof types.OrganizeRunsDocument,
+    "\n  mutation UpdateLibraryOrganization($libraryId: ID!, $input: UpdateLibraryOrganizationInput!) {\n    updateLibraryOrganization(libraryId: $libraryId, input: $input) {\n      id\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n": typeof types.UpdateLibraryOrganizationDocument,
+    "\n  mutation OrganizeLibrary($libraryId: ID!) {\n    organizeLibrary(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n": typeof types.OrganizeLibraryDocument,
+    "\n  mutation UndoOrganizeRun($id: ID!) {\n    undoOrganizeRun(id: $id) {\n      ...OrganizeRunFields\n    }\n  }\n": typeof types.UndoOrganizeRunDocument,
+    "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n": typeof types.DropFolderFieldsFragmentDoc,
+    "\n  query DropFolders {\n    dropFolders {\n      ...DropFolderFields\n    }\n  }\n": typeof types.DropFoldersDocument,
+    "\n  mutation CreateDropFolder($input: DropFolderInput!) {\n    createDropFolder(input: $input) {\n      ...DropFolderFields\n    }\n  }\n": typeof types.CreateDropFolderDocument,
+    "\n  mutation UpdateDropFolder($id: ID!, $input: DropFolderInput!) {\n    updateDropFolder(id: $id, input: $input) {\n      ...DropFolderFields\n    }\n  }\n": typeof types.UpdateDropFolderDocument,
+    "\n  mutation DeleteDropFolder($id: ID!) {\n    deleteDropFolder(id: $id)\n  }\n": typeof types.DeleteDropFolderDocument,
+    "\n  fragment ImportItemFields on ImportItem {\n    id\n    dropFolderId\n    path\n    size\n    status\n    reason\n    destinationPath\n    trackId\n    createdAt\n    updatedAt\n    details {\n      title\n      artist\n      album\n      albumArtist\n      year\n      trackNumber\n      discNumber\n      genre\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      durationMs\n    }\n  }\n": typeof types.ImportItemFieldsFragmentDoc,
+    "\n  query ImportQueue($status: ImportStatus) {\n    importSummary {\n      pending\n      needsReview\n      duplicate\n      failed\n      ignored\n      imported\n    }\n    importItems(status: $status, first: 200) {\n      ...ImportItemFields\n    }\n  }\n": typeof types.ImportQueueDocument,
+    "\n  mutation AcceptImportItem($id: ID!, $tags: ImportTagsInput) {\n    acceptImportItem(id: $id, tags: $tags) {\n      ...ImportItemFields\n    }\n  }\n": typeof types.AcceptImportItemDocument,
+    "\n  mutation RetryImportItem($id: ID!) {\n    retryImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n": typeof types.RetryImportItemDocument,
+    "\n  mutation IgnoreImportItem($id: ID!) {\n    ignoreImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n": typeof types.IgnoreImportItemDocument,
+    "\n  mutation DiscardImportItem($id: ID!) {\n    discardImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n": typeof types.DiscardImportItemDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
     "\n  query ServerInfo {\n    serverInfo {\n      name\n      version\n      apiVersion\n      sourceUrl\n    }\n  }\n": types.ServerInfoDocument,
     "\n  query Overview {\n    libraries {\n      id\n    }\n    artists(first: 1) {\n      totalCount\n    }\n    albums(first: 1) {\n      totalCount\n    }\n    tracks(first: 1) {\n      totalCount\n    }\n  }\n": types.OverviewDocument,
-    "\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": types.LibrariesDocument,
+    "\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n": types.LibrariesDocument,
     "\n  mutation CreateLibrary($input: CreateLibraryInput!) {\n    createLibrary(input: $input) {\n      id\n    }\n  }\n": types.CreateLibraryDocument,
     "\n  mutation UpdateLibrary($id: ID!, $input: UpdateLibraryInput!) {\n    updateLibrary(id: $id, input: $input) {\n      id\n    }\n  }\n": types.UpdateLibraryDocument,
     "\n  mutation DeleteLibrary($id: ID!) {\n    deleteLibrary(id: $id)\n  }\n": types.DeleteLibraryDocument,
@@ -96,6 +113,23 @@ const documents: Documents = {
     "\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n": types.OnlineServicesDocument,
     "\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": types.SetOnlineServicesDocument,
     "\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": types.SetAcoustIdKeyDocument,
+    "\n  fragment OrganizeRunFields on OrganizeRun {\n    id\n    libraryId\n    kind\n    status\n    template\n    startedAt\n    finishedAt\n    undoneAt\n    total\n    moved\n    failed\n    errorCode\n  }\n": types.OrganizeRunFieldsFragmentDoc,
+    "\n  query OrganizePreview($libraryId: ID!, $template: String) {\n    organizePreview(libraryId: $libraryId, template: $template) {\n      template\n      filesToMove\n      filesInPlace\n      otherFilesToMove\n      unavailableSourceIds\n      moves {\n        sourceId\n        from\n        to\n      }\n    }\n  }\n": types.OrganizePreviewDocument,
+    "\n  query OrganizeRuns($libraryId: ID!) {\n    organizeRuns(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n": types.OrganizeRunsDocument,
+    "\n  mutation UpdateLibraryOrganization($libraryId: ID!, $input: UpdateLibraryOrganizationInput!) {\n    updateLibraryOrganization(libraryId: $libraryId, input: $input) {\n      id\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n": types.UpdateLibraryOrganizationDocument,
+    "\n  mutation OrganizeLibrary($libraryId: ID!) {\n    organizeLibrary(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n": types.OrganizeLibraryDocument,
+    "\n  mutation UndoOrganizeRun($id: ID!) {\n    undoOrganizeRun(id: $id) {\n      ...OrganizeRunFields\n    }\n  }\n": types.UndoOrganizeRunDocument,
+    "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n": types.DropFolderFieldsFragmentDoc,
+    "\n  query DropFolders {\n    dropFolders {\n      ...DropFolderFields\n    }\n  }\n": types.DropFoldersDocument,
+    "\n  mutation CreateDropFolder($input: DropFolderInput!) {\n    createDropFolder(input: $input) {\n      ...DropFolderFields\n    }\n  }\n": types.CreateDropFolderDocument,
+    "\n  mutation UpdateDropFolder($id: ID!, $input: DropFolderInput!) {\n    updateDropFolder(id: $id, input: $input) {\n      ...DropFolderFields\n    }\n  }\n": types.UpdateDropFolderDocument,
+    "\n  mutation DeleteDropFolder($id: ID!) {\n    deleteDropFolder(id: $id)\n  }\n": types.DeleteDropFolderDocument,
+    "\n  fragment ImportItemFields on ImportItem {\n    id\n    dropFolderId\n    path\n    size\n    status\n    reason\n    destinationPath\n    trackId\n    createdAt\n    updatedAt\n    details {\n      title\n      artist\n      album\n      albumArtist\n      year\n      trackNumber\n      discNumber\n      genre\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      durationMs\n    }\n  }\n": types.ImportItemFieldsFragmentDoc,
+    "\n  query ImportQueue($status: ImportStatus) {\n    importSummary {\n      pending\n      needsReview\n      duplicate\n      failed\n      ignored\n      imported\n    }\n    importItems(status: $status, first: 200) {\n      ...ImportItemFields\n    }\n  }\n": types.ImportQueueDocument,
+    "\n  mutation AcceptImportItem($id: ID!, $tags: ImportTagsInput) {\n    acceptImportItem(id: $id, tags: $tags) {\n      ...ImportItemFields\n    }\n  }\n": types.AcceptImportItemDocument,
+    "\n  mutation RetryImportItem($id: ID!) {\n    retryImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n": types.RetryImportItemDocument,
+    "\n  mutation IgnoreImportItem($id: ID!) {\n    ignoreImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n": types.IgnoreImportItemDocument,
+    "\n  mutation DiscardImportItem($id: ID!) {\n    discardImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n": types.DiscardImportItemDocument,
 };
 
 /**
@@ -127,7 +161,7 @@ export function graphql(source: "\n  query Overview {\n    libraries {\n      id
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n"): (typeof documents)["\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n"];
+export function graphql(source: "\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n"): (typeof documents)["\n  query Libraries {\n    libraries {\n      id\n      name\n      visibleToAll\n      scanIntervalHours\n      createdAt\n      lastScanAt\n      sources {\n        id\n        kind\n        location\n      }\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -272,6 +306,74 @@ export function graphql(source: "\n  mutation SetOnlineServices($input: SetOnlin
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {\n    setAcoustIdKey(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment OrganizeRunFields on OrganizeRun {\n    id\n    libraryId\n    kind\n    status\n    template\n    startedAt\n    finishedAt\n    undoneAt\n    total\n    moved\n    failed\n    errorCode\n  }\n"): (typeof documents)["\n  fragment OrganizeRunFields on OrganizeRun {\n    id\n    libraryId\n    kind\n    status\n    template\n    startedAt\n    finishedAt\n    undoneAt\n    total\n    moved\n    failed\n    errorCode\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query OrganizePreview($libraryId: ID!, $template: String) {\n    organizePreview(libraryId: $libraryId, template: $template) {\n      template\n      filesToMove\n      filesInPlace\n      otherFilesToMove\n      unavailableSourceIds\n      moves {\n        sourceId\n        from\n        to\n      }\n    }\n  }\n"): (typeof documents)["\n  query OrganizePreview($libraryId: ID!, $template: String) {\n    organizePreview(libraryId: $libraryId, template: $template) {\n      template\n      filesToMove\n      filesInPlace\n      otherFilesToMove\n      unavailableSourceIds\n      moves {\n        sourceId\n        from\n        to\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query OrganizeRuns($libraryId: ID!) {\n    organizeRuns(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n"): (typeof documents)["\n  query OrganizeRuns($libraryId: ID!) {\n    organizeRuns(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UpdateLibraryOrganization($libraryId: ID!, $input: UpdateLibraryOrganizationInput!) {\n    updateLibraryOrganization(libraryId: $libraryId, input: $input) {\n      id\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation UpdateLibraryOrganization($libraryId: ID!, $input: UpdateLibraryOrganizationInput!) {\n    updateLibraryOrganization(libraryId: $libraryId, input: $input) {\n      id\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation OrganizeLibrary($libraryId: ID!) {\n    organizeLibrary(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n"): (typeof documents)["\n  mutation OrganizeLibrary($libraryId: ID!) {\n    organizeLibrary(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UndoOrganizeRun($id: ID!) {\n    undoOrganizeRun(id: $id) {\n      ...OrganizeRunFields\n    }\n  }\n"): (typeof documents)["\n  mutation UndoOrganizeRun($id: ID!) {\n    undoOrganizeRun(id: $id) {\n      ...OrganizeRunFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n"): (typeof documents)["\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DropFolders {\n    dropFolders {\n      ...DropFolderFields\n    }\n  }\n"): (typeof documents)["\n  query DropFolders {\n    dropFolders {\n      ...DropFolderFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateDropFolder($input: DropFolderInput!) {\n    createDropFolder(input: $input) {\n      ...DropFolderFields\n    }\n  }\n"): (typeof documents)["\n  mutation CreateDropFolder($input: DropFolderInput!) {\n    createDropFolder(input: $input) {\n      ...DropFolderFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UpdateDropFolder($id: ID!, $input: DropFolderInput!) {\n    updateDropFolder(id: $id, input: $input) {\n      ...DropFolderFields\n    }\n  }\n"): (typeof documents)["\n  mutation UpdateDropFolder($id: ID!, $input: DropFolderInput!) {\n    updateDropFolder(id: $id, input: $input) {\n      ...DropFolderFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteDropFolder($id: ID!) {\n    deleteDropFolder(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteDropFolder($id: ID!) {\n    deleteDropFolder(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment ImportItemFields on ImportItem {\n    id\n    dropFolderId\n    path\n    size\n    status\n    reason\n    destinationPath\n    trackId\n    createdAt\n    updatedAt\n    details {\n      title\n      artist\n      album\n      albumArtist\n      year\n      trackNumber\n      discNumber\n      genre\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      durationMs\n    }\n  }\n"): (typeof documents)["\n  fragment ImportItemFields on ImportItem {\n    id\n    dropFolderId\n    path\n    size\n    status\n    reason\n    destinationPath\n    trackId\n    createdAt\n    updatedAt\n    details {\n      title\n      artist\n      album\n      albumArtist\n      year\n      trackNumber\n      discNumber\n      genre\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      durationMs\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query ImportQueue($status: ImportStatus) {\n    importSummary {\n      pending\n      needsReview\n      duplicate\n      failed\n      ignored\n      imported\n    }\n    importItems(status: $status, first: 200) {\n      ...ImportItemFields\n    }\n  }\n"): (typeof documents)["\n  query ImportQueue($status: ImportStatus) {\n    importSummary {\n      pending\n      needsReview\n      duplicate\n      failed\n      ignored\n      imported\n    }\n    importItems(status: $status, first: 200) {\n      ...ImportItemFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AcceptImportItem($id: ID!, $tags: ImportTagsInput) {\n    acceptImportItem(id: $id, tags: $tags) {\n      ...ImportItemFields\n    }\n  }\n"): (typeof documents)["\n  mutation AcceptImportItem($id: ID!, $tags: ImportTagsInput) {\n    acceptImportItem(id: $id, tags: $tags) {\n      ...ImportItemFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RetryImportItem($id: ID!) {\n    retryImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n"): (typeof documents)["\n  mutation RetryImportItem($id: ID!) {\n    retryImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation IgnoreImportItem($id: ID!) {\n    ignoreImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n"): (typeof documents)["\n  mutation IgnoreImportItem($id: ID!) {\n    ignoreImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DiscardImportItem($id: ID!) {\n    discardImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n"): (typeof documents)["\n  mutation DiscardImportItem($id: ID!) {\n    discardImportItem(id: $id) {\n      ...ImportItemFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

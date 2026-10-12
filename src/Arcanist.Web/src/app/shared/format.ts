@@ -1,5 +1,20 @@
-import { Pipe, PipeTransform, inject } from '@angular/core';
+import { Pipe, PipeTransform, inject, signal } from '@angular/core';
 import { I18n } from '../core/i18n/i18n';
+
+/**
+ * The current time, ticking every few seconds. Relative times read it so their views refresh as time passes:
+ * without zone.js, nothing else would re-run them.
+ */
+const clock = signal(Date.now());
+let ticking = false;
+
+function now(): number {
+  if (!ticking && typeof window !== 'undefined') {
+    ticking = true;
+    setInterval(() => clock.set(Date.now()), 10_000);
+  }
+  return clock();
+}
 
 /** Date and time in the user's language: `{{ value | dateTime }}`. Empty for null. */
 @Pipe({ name: 'dateTime', pure: false })
@@ -22,7 +37,7 @@ export class RelativeTimePipe implements PipeTransform {
 
   transform(value: string | null | undefined): string {
     if (!value) return '';
-    const seconds = (new Date(value).getTime() - Date.now()) / 1000;
+    const seconds = (new Date(value).getTime() - Math.max(now(), Date.now())) / 1000;
     const format = new Intl.RelativeTimeFormat(this.i18n.language(), { numeric: 'auto' });
     const units: [Intl.RelativeTimeFormatUnit, number][] = [
       ['year', 31536000],

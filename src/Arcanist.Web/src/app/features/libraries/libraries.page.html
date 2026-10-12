@@ -201,6 +201,20 @@
             }
           }
           @if (canManage()) {
+            <button
+              hlmBtn
+              variant="ghost"
+              size="sm"
+              type="button"
+              class="gap-1"
+              (click)="organizing.set(library)"
+            >
+              <ng-icon name="lucideFolderTree" />
+              {{ 'organize.open' | t }}
+              @if (library.organization?.autoOrganize) {
+                <span hlmBadge variant="secondary">{{ 'organize.autoBadge' | t }}</span>
+              }
+            </button>
             @if (auth.isAdmin()) {
               <button
                 hlmBtn
@@ -332,6 +346,18 @@
           </button>
         </hlm-dialog-footer>
       </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Organize -->
+<hlm-dialog [state]="organizing() ? 'open' : 'closed'" (closed)="closeOrganize()">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[90vh] w-[min(40rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    @if (organizing(); as library) {
+      <app-organize-dialog [library]="library" (closed)="closeOrganize()" />
     }
   </hlm-dialog-content>
 </hlm-dialog>

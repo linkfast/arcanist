@@ -5,6 +5,7 @@ import {
   lucideCopy,
   lucideExternalLink,
   lucideHouse,
+  lucideInbox,
   lucideLibrary,
   lucideLogOut,
   lucideSettings,
@@ -32,6 +33,7 @@ import { LanguageSelect } from '../shared/language-select';
     provideIcons({
       lucideCopy,
       lucideHouse,
+      lucideInbox,
       lucideLibrary,
       lucideUsers,
       lucideUserCog,
@@ -113,6 +115,12 @@ export class Shell {
         path: '/duplicates',
         label: 'nav.duplicates',
         icon: 'lucideCopy',
+        visible: this.auth.can('MANAGE_LIBRARIES'),
+      },
+      {
+        path: '/import',
+        label: 'nav.import',
+        icon: 'lucideInbox',
         visible: this.auth.can('MANAGE_LIBRARIES'),
       },
       {

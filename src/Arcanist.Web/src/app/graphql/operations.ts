@@ -68,6 +68,12 @@ export const LibrariesQuery = graphql(`
         kind
         location
       }
+      organization {
+        template
+        isDefaultTemplate
+        autoOrganize
+        autoOrganizeSince
+      }
     }
   }
 `);
@@ -426,6 +432,202 @@ export const SetAcoustIdKeyMutation = graphql(`
   mutation SetAcoustIdKey($input: SetAcoustIdKeyInput!) {
     setAcoustIdKey(input: $input) {
       ...OnlineServicesFields
+    }
+  }
+`);
+
+export const OrganizeRunFields = graphql(`
+  fragment OrganizeRunFields on OrganizeRun {
+    id
+    libraryId
+    kind
+    status
+    template
+    startedAt
+    finishedAt
+    undoneAt
+    total
+    moved
+    failed
+    errorCode
+  }
+`);
+
+export const OrganizePreviewQuery = graphql(`
+  query OrganizePreview($libraryId: ID!, $template: String) {
+    organizePreview(libraryId: $libraryId, template: $template) {
+      template
+      filesToMove
+      filesInPlace
+      otherFilesToMove
+      unavailableSourceIds
+      moves {
+        sourceId
+        from
+        to
+      }
+    }
+  }
+`);
+
+export const OrganizeRunsQuery = graphql(`
+  query OrganizeRuns($libraryId: ID!) {
+    organizeRuns(libraryId: $libraryId) {
+      ...OrganizeRunFields
+    }
+  }
+`);
+
+export const UpdateLibraryOrganizationMutation = graphql(`
+  mutation UpdateLibraryOrganization($libraryId: ID!, $input: UpdateLibraryOrganizationInput!) {
+    updateLibraryOrganization(libraryId: $libraryId, input: $input) {
+      id
+      organization {
+        template
+        isDefaultTemplate
+        autoOrganize
+        autoOrganizeSince
+      }
+    }
+  }
+`);
+
+export const OrganizeLibraryMutation = graphql(`
+  mutation OrganizeLibrary($libraryId: ID!) {
+    organizeLibrary(libraryId: $libraryId) {
+      ...OrganizeRunFields
+    }
+  }
+`);
+
+export const UndoOrganizeRunMutation = graphql(`
+  mutation UndoOrganizeRun($id: ID!) {
+    undoOrganizeRun(id: $id) {
+      ...OrganizeRunFields
+    }
+  }
+`);
+
+export const DropFolderFields = graphql(`
+  fragment DropFolderFields on DropFolder {
+    id
+    path
+    libraryId
+    librarySourceId
+    enabled
+    duplicatePolicy
+    convertTo
+    convertBitRate
+    convertLossy
+    createdAt
+    available
+  }
+`);
+
+export const DropFoldersQuery = graphql(`
+  query DropFolders {
+    dropFolders {
+      ...DropFolderFields
+    }
+  }
+`);
+
+export const CreateDropFolderMutation = graphql(`
+  mutation CreateDropFolder($input: DropFolderInput!) {
+    createDropFolder(input: $input) {
+      ...DropFolderFields
+    }
+  }
+`);
+
+export const UpdateDropFolderMutation = graphql(`
+  mutation UpdateDropFolder($id: ID!, $input: DropFolderInput!) {
+    updateDropFolder(id: $id, input: $input) {
+      ...DropFolderFields
+    }
+  }
+`);
+
+export const DeleteDropFolderMutation = graphql(`
+  mutation DeleteDropFolder($id: ID!) {
+    deleteDropFolder(id: $id)
+  }
+`);
+
+export const ImportItemFields = graphql(`
+  fragment ImportItemFields on ImportItem {
+    id
+    dropFolderId
+    path
+    size
+    status
+    reason
+    destinationPath
+    trackId
+    createdAt
+    updatedAt
+    details {
+      title
+      artist
+      album
+      albumArtist
+      year
+      trackNumber
+      discNumber
+      genre
+      format
+      bitRate
+      sampleRate
+      bitDepth
+      durationMs
+    }
+  }
+`);
+
+export const ImportQueueQuery = graphql(`
+  query ImportQueue($status: ImportStatus) {
+    importSummary {
+      pending
+      needsReview
+      duplicate
+      failed
+      ignored
+      imported
+    }
+    importItems(status: $status, first: 200) {
+      ...ImportItemFields
+    }
+  }
+`);
+
+export const AcceptImportItemMutation = graphql(`
+  mutation AcceptImportItem($id: ID!, $tags: ImportTagsInput) {
+    acceptImportItem(id: $id, tags: $tags) {
+      ...ImportItemFields
+    }
+  }
+`);
+
+export const RetryImportItemMutation = graphql(`
+  mutation RetryImportItem($id: ID!) {
+    retryImportItem(id: $id) {
+      ...ImportItemFields
+    }
+  }
+`);
+
+export const IgnoreImportItemMutation = graphql(`
+  mutation IgnoreImportItem($id: ID!) {
+    ignoreImportItem(id: $id) {
+      ...ImportItemFields
+    }
+  }
+`);
+
+export const DiscardImportItemMutation = graphql(`
+  mutation DiscardImportItem($id: ID!) {
+    discardImportItem(id: $id) {
+      ...ImportItemFields
     }
   }
 `);

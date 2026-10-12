@@ -77,8 +77,9 @@ pub extern "C" fn arcanist_audio_version() -> u32 {
     ANALYZER_VERSION
 }
 
-/// Decodes and analyzes a whole stream. `extension` (may be null) helps detect the format. On return, `out`
-/// holds the analysis as JSON, or `{"error": "..."}`.
+/// Decodes and analyzes a stream: all of it, or from `start_ms` to `end_ms` when `end_ms` is not 0 (a track of a
+/// cue sheet). `extension` (may be null) helps detect the format. On return, `out` holds the analysis as JSON, or
+/// `{"error": "..."}`.
 ///
 /// # Safety
 /// `source` must be valid for the duration of the call; `extension` null or a NUL-terminated string; `out`
@@ -88,9 +89,11 @@ pub unsafe extern "C" fn arcanist_audio_analyze(
     source: *const ArcanistSource,
     extension: *const c_char,
     flags: u32,
+    start_ms: u64,
+    end_ms: u64,
     out: *mut *mut c_char,
 ) -> i32 {
-    if source.is_null() || out.is_null() {
+    if source.is_null() || out.is_null() || (end_ms != 0 && end_ms <= start_ms) {
         return STATUS_ARGUMENT;
     }
     let (source, extension) = unsafe {
@@ -100,7 +103,8 @@ pub unsafe extern "C" fn arcanist_audio_analyze(
     let reader = CallbackReader { context: source.context, read: source.read, seek: source.seek };
     let length = (source.length >= 0).then_some(source.length as u64);
 
-    let result = catch_unwind(AssertUnwindSafe(|| analyze(ReaderSource::new(reader, length), extension.as_deref(), flags)));
+    let range = (end_ms != 0).then_some((start_ms, end_ms));
+    let result = catch_unwind(AssertUnwindSafe(|| analyze(ReaderSource::new(reader, length), extension.as_deref(), flags, range)));
     let (status, json) = match result {
         Ok(Ok(analysis)) => (STATUS_OK, to_json(&analysis)),
         Ok(Err(DecodeFailure::Unsupported(message))) => (STATUS_UNSUPPORTED, error_json(&message)),

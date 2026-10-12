@@ -21,7 +21,9 @@ pub enum DecodeFailure {
 /// Corrupt packets are skipped, as players do, unless the stream is mostly corrupt.
 const MAX_DECODE_ERRORS: u32 = 50;
 
-pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, flags: u32) -> Result<Analysis, DecodeFailure> {
+/// Decodes and analyzes the stream, or only the part from `range.0` to `range.1` milliseconds (a track of a cue
+/// sheet). Decoding is far cheaper than analyzing, so the part before the range is simply decoded and skipped.
+pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, flags: u32, range: Option<(u64, u64)>) -> Result<Analysis, DecodeFailure> {
     let stream = MediaSourceStream::new(Box::new(source), Default::default());
     let mut hint = Hint::new();
     if let Some(extension) = extension {
@@ -50,6 +52,8 @@ pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, fla
     let mut analyzer: Option<Analyzer> = None;
     let mut samples: Vec<f32> = Vec::new();
     let mut errors = 0;
+    // Frames decoded so far, to place each buffer relative to the range.
+    let mut position: u64 = 0;
 
     loop {
         let packet = match format.next_packet() {
@@ -87,7 +91,20 @@ pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, fla
         }
 
         buffer.copy_to_vec_interleaved(&mut samples);
-        analyzer.push(&samples).map_err(DecodeFailure::Invalid)?;
+        let frames = (samples.len() / channels as usize) as u64;
+        let (start, end) = match range {
+            Some((from_ms, to_ms)) => (from_ms * rate as u64 / 1000, to_ms * rate as u64 / 1000),
+            None => (0, u64::MAX),
+        };
+        let from = start.saturating_sub(position).min(frames);
+        let to = end.saturating_sub(position).min(frames);
+        if to > from {
+            analyzer.push(&samples[(from * channels as u64) as usize..(to * channels as u64) as usize]).map_err(DecodeFailure::Invalid)?;
+        }
+        position += frames;
+        if position >= end {
+            break;
+        }
     }
 
     analyzer

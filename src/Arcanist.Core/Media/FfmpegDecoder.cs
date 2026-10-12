@@ -14,7 +14,7 @@ public static class FfmpegDecoder
     private const int Channels = 2;
 
     /// <summary>Synchronous and CPU-bound, like <see cref="AudioAnalyzer.Analyze"/>.</summary>
-    public static AnalysisOutcome Analyze(string ffmpeg, Stream input, CancellationToken cancellationToken)
+    public static AnalysisOutcome Analyze(string ffmpeg, Stream input, CancellationToken cancellationToken, int? startMs = null, int? endMs = null)
     {
         using var pcm = AudioAnalyzer.BeginPcm(SampleRate, Channels);
         if (pcm is null)
@@ -23,15 +23,23 @@ public static class FfmpegDecoder
         var start = new ProcessStartInfo(ffmpeg)
         {
             // First audio stream only (files may embed cover art as a video stream), downmixed and resampled to
-            // one fixed format the analyzer is created for.
-            ArgumentList = { "-hide_banner", "-loglevel", "error", "-i", "pipe:0", "-map", "0:a:0", "-vn",
-                "-f", "f32le", "-ac", $"{Channels}", "-ar", $"{SampleRate}", "pipe:1" },
+            // one fixed format the analyzer is created for; for a cue track, only its part of the file.
+            ArgumentList = { "-hide_banner", "-loglevel", "error", "-i", "pipe:0" },
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+
+        if (endMs is { } end)
+        {
+            foreach (var argument in new[] { "-ss", Seconds(startMs ?? 0), "-t", Seconds(end - (startMs ?? 0)) })
+                start.ArgumentList.Add(argument);
+        }
+
+        foreach (var argument in new[] { "-map", "0:a:0", "-vn", "-f", "f32le", "-ac", $"{Channels}", "-ar", $"{SampleRate}", "pipe:1" })
+            start.ArgumentList.Add(argument);
 
         using var process = Process.Start(start)!;
         using var kill = cancellationToken.Register(() =>
@@ -95,6 +103,9 @@ public static class FfmpegDecoder
 
         return pcm.Finish();
     }
+
+    private static string Seconds(int milliseconds) =>
+        (milliseconds / 1000.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
     private static string? FirstLine(string text) =>
         text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();

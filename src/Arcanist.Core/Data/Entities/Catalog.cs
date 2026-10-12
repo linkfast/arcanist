@@ -150,6 +150,16 @@ public sealed class MediaFile : Entity
     /// <summary>Path inside the source, '/'-separated and exactly as stored on disk (not Unicode-normalized).</summary>
     public required string RelativePath { get; set; }
 
+    /// <summary>
+    /// 0 for a whole file. For an album stored as one file with a cue sheet, the cue track this row is: each track
+    /// is a row of its own, playing from <see cref="StartMs"/> to <see cref="EndMs"/> of the file.
+    /// </summary>
+    public int CueTrack { get; set; }
+
+    public int? StartMs { get; set; }
+
+    public int? EndMs { get; set; }
+
     public long Size { get; set; }
 
     public DateTime ModifiedAt { get; set; }

@@ -14,7 +14,10 @@ public sealed record ScannedFile(
     DateTime ModifiedAt,
     string ContentHash,
     AudioMetadata Metadata,
-    StoredArtwork? Artwork);
+    StoredArtwork? Artwork,
+    int CueTrack = 0,
+    int? StartMs = null,
+    int? EndMs = null);
 
 public sealed record BatchResult(int Added, int Updated);
 
@@ -208,6 +211,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
                     TrackId = track.Id,
                     LibrarySourceId = file.SourceId,
                     RelativePath = file.RelativePath,
+                    CueTrack = file.CueTrack,
                     ContentHash = file.ContentHash,
                     AddedAt = now,
                 };
@@ -250,6 +254,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await RemoveObsoleteCueTracksAsync(files, cancellationToken);
         await FlushPendingUpdatesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         db.ChangeTracker.Clear();
@@ -281,10 +286,31 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         current.UpdatedAt = now;
     }
 
+    /// <summary>
+    /// A file read in this batch is described by exactly its rows here (all its cue tracks travel together): rows
+    /// left from an earlier cue sheet, or the whole-file row of a file that now has one, go away.
+    /// </summary>
+    private async Task RemoveObsoleteCueTracksAsync(IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
+    {
+        var current = files.Select(f => (f.SourceId, f.RelativePath, f.CueTrack)).ToHashSet();
+        var sources = files.Select(f => f.SourceId).Distinct().ToList();
+        var paths = files.Select(f => f.RelativePath).Distinct().ToList();
+
+        var rows = await db.MediaFiles.AsNoTracking()
+            .Where(f => sources.Contains(f.LibrarySourceId) && paths.Contains(f.RelativePath))
+            .Select(f => new { f.Id, f.LibrarySourceId, f.RelativePath, f.CueTrack })
+            .ToListAsync(cancellationToken);
+        var obsolete = rows.Where(r => !current.Contains((r.LibrarySourceId, r.RelativePath, r.CueTrack))).Select(r => r.Id).ToList();
+        if (obsolete.Count > 0)
+            await db.MediaFiles.Where(f => obsolete.Contains(f.Id)).ExecuteDeleteAsync(cancellationToken);
+    }
+
     private static void UpdateFile(MediaFile mediaFile, ScannedFile file, AudioMetadata meta, DateTime now)
     {
         mediaFile.Size = file.Size;
         mediaFile.ModifiedAt = file.ModifiedAt;
+        mediaFile.StartMs = file.StartMs;
+        mediaFile.EndMs = file.EndMs;
         mediaFile.ContentHash = file.ContentHash;
         mediaFile.Format = meta.Format;
         mediaFile.BitRate = meta.BitRate;

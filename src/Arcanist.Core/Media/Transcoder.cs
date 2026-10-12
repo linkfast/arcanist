@@ -12,10 +12,12 @@ public enum TranscodeFormat
     Mp3,
     /// <summary>AAC in ADTS: native on Apple devices.</summary>
     Aac,
+    /// <summary>FLAC: lossless, for players that want the original quality of a converted part (a cue track).</summary>
+    Flac,
 }
 
 /// <param name="Encoder">The ffmpeg encoder that must be available.</param>
-/// <param name="BitRate">Default bit rate, kbit/s.</param>
+/// <param name="BitRate">Default bit rate, kbit/s; 0 for lossless formats, which ignore it.</param>
 public sealed record TranscodeProfile(
     TranscodeFormat Format,
     string Encoder,
@@ -30,7 +32,10 @@ public sealed record TranscodeProfile(
         new(TranscodeFormat.Opus, "libopus", "ogg", "audio/ogg", 128, 32, 256),
         new(TranscodeFormat.Mp3, "libmp3lame", "mp3", "audio/mpeg", 192, 64, 320),
         new(TranscodeFormat.Aac, "aac", "adts", "audio/aac", 160, 48, 320),
+        new(TranscodeFormat.Flac, "flac", "flac", "audio/flac", 0, 0, 0),
     ];
+
+    public bool IsLossless => BitRate == 0;
 
     public static TranscodeProfile For(TranscodeFormat format) => All.Single(p => p.Format == format);
 
@@ -66,7 +71,8 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
         TranscodeProfile profile,
         int bitRate,
         double offsetSeconds,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        double? durationSeconds = null)
     {
         var ffmpeg = await locator.GetAsync(cancellationToken);
         if (ffmpeg is null || !ffmpeg.Encoders.Contains(profile.Encoder))
@@ -102,7 +108,21 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
 
             arguments.Add("-i");
             arguments.Add(localPath ?? "pipe:0");
-            foreach (var argument in new[] { "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-ac", "2", "-c:a", profile.Encoder, "-b:a", $"{bitRate}k", "-f", profile.Container, "pipe:1" })
+            if (durationSeconds is { } duration)
+            {
+                arguments.Add("-t");
+                arguments.Add(duration.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            foreach (var argument in new[] { "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-ac", "2", "-c:a", profile.Encoder })
+                arguments.Add(argument);
+            if (!profile.IsLossless)
+            {
+                arguments.Add("-b:a");
+                arguments.Add($"{bitRate}k");
+            }
+
+            foreach (var argument in new[] { "-f", profile.Container, "pipe:1" })
                 arguments.Add(argument);
 
             var process = Process.Start(start)!;

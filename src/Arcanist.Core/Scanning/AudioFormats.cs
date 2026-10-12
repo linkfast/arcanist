@@ -28,6 +28,12 @@ public static class AudioFormats
 
     public static bool IsLyrics(string path) => path.EndsWith(".lrc", StringComparison.OrdinalIgnoreCase);
 
+    public static bool IsCueSheet(string path) => path.EndsWith(".cue", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Formats that keep all of the original audio.</summary>
+    public static bool IsLossless(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() is ".flac" or ".wav" or ".aif" or ".aiff" or ".ape" or ".wv" or ".tta" or ".dsf" or ".dff";
+
     /// <summary>The path without its extension, to pair a file with its sidecars.</summary>
     public static string WithoutExtension(string path)
     {

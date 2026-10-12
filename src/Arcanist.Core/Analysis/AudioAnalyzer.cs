@@ -69,8 +69,11 @@ public static class AudioAnalyzer
     /// <summary>Version of the analysis algorithms; stored results from another version are recomputed.</summary>
     public static int Version => IsAvailable ? (int)NativeAudio.Version() : 0;
 
-    /// <summary>Analyzes an encoded, seekable stream (as opened from library storage).</summary>
-    public static unsafe AnalysisOutcome Analyze(Stream stream, string? extension, AnalysisParts parts = AnalysisParts.All)
+    /// <summary>
+    /// Analyzes an encoded, seekable stream (as opened from library storage): all of it, or the part from
+    /// <paramref name="startMs"/> to <paramref name="endMs"/> (a track of a cue sheet).
+    /// </summary>
+    public static unsafe AnalysisOutcome Analyze(Stream stream, string? extension, AnalysisParts parts = AnalysisParts.All, int? startMs = null, int? endMs = null)
     {
         if (!IsAvailable)
             return AnalysisOutcome.Unavailable;
@@ -85,7 +88,8 @@ public static class AudioAnalyzer
                 Seek = &NativeAudio.SeekCallback,
                 Length = stream.CanSeek ? stream.Length : -1,
             };
-            var status = NativeAudio.Analyze(&source, extension?.TrimStart('.'), (uint)parts, out var json);
+            var (start, end) = endMs is { } until ? ((ulong)Math.Max(0, startMs ?? 0), (ulong)until) : (0UL, 0UL);
+            var status = NativeAudio.Analyze(&source, extension?.TrimStart('.'), (uint)parts, start, end, out var json);
             return Outcome(status, NativeAudio.TakeString(json));
         }
         finally

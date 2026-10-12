@@ -3,6 +3,7 @@ using Arcanist.Core.Application.Artwork;
 using Arcanist.Core.Application.Streaming;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Media;
+using Arcanist.Core.Scanning;
 using Arcanist.Core.Storage;
 using Microsoft.Net.Http.Headers;
 
@@ -66,9 +67,13 @@ public static class MediaEndpoints
 
         // A bit-rate cap the original already meets needs no conversion.
         var fits = requested is null && offset == 0 && maxBitRate is { } cap && target.BitRate is { } bitRate && bitRate <= cap;
-        if (download != true && (requested is not null || maxBitRate is not null || offset > 0) && !fits)
+        // A cue track is part of a file: it can only be sent converted, losslessly unless the file is lossy.
+        var segment = target.StartMs is not null;
+        if (download != true && (requested is not null || maxBitRate is not null || offset > 0 || segment) && !fits)
         {
-            var profile = TranscodeProfile.For(requested ?? TranscodeFormat.Mp3);
+            var profile = TranscodeProfile.For(requested ?? (segment && maxBitRate is null && AudioFormats.IsLossless(target.RelativePath)
+                ? TranscodeFormat.Flac
+                : TranscodeFormat.Mp3));
             var remaining = Math.Max(0, target.DurationMs / 1000.0 - offset);
             if (HttpMethods.IsHead(context.Request.Method))
             {
@@ -81,9 +86,10 @@ public static class MediaEndpoints
                 storage.TryGetLocalPath(target.Location, target.RelativePath),
                 () => storage.OpenReadAsync(target.Location, target.RelativePath, cancellationToken),
                 profile,
-                profile.Clamp(maxBitRate),
-                offset,
-                cancellationToken);
+                profile.Clamp(maxBitRate ?? (segment ? 320 : null)),
+                (target.StartMs ?? 0) / 1000.0 + offset,
+                cancellationToken,
+                segment ? remaining : null);
 
             return session is null
                 ? Problems.Create(StatusCodes.Status503ServiceUnavailable, Application.ErrorCodes.TranscodingUnavailable)

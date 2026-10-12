@@ -101,12 +101,12 @@ signed `st` parameter, so they work where headers cannot be sent, such as an HTM
 ### Transcoding
 
 When ffmpeg is available, the server converts audio for playback on slow connections or devices that cannot play
-the original. `serverInfo.transcodingFormats` lists what it can produce (`OPUS`, `MP3`, `AAC`; empty without
-ffmpeg). Add parameters to a stream URL:
+the original. `serverInfo.transcodingFormats` lists what it can produce (`OPUS`, `MP3`, `AAC`, `FLAC`; empty
+without ffmpeg). Add parameters to a stream URL:
 
 | Parameter | Effect |
 |---|---|
-| `format=opus\|mp3\|aac` | Convert to that format (Opus in Ogg, MP3, AAC in ADTS). |
+| `format=opus\|mp3\|aac\|flac` | Convert to that format (Opus in Ogg, MP3, AAC in ADTS, lossless FLAC). |
 | `maxBitRate=128` | Bit rate in kbit/s (clamped to the format's range). Alone, it converts to MP3 only if the original exceeds it. |
 | `timeOffset=93.5` | Start that many seconds in. |
 
@@ -114,6 +114,9 @@ Converted audio is streamed as it is produced: there is no `Content-Length` or r
 requesting the URL again with `timeOffset`. `X-Content-Duration` gives the remaining duration in seconds. Without
 ffmpeg, or when too many conversions are running, the answer is `503` with code `transcoding_unavailable`: fall back
 to the original.
+
+Tracks of albums stored as one file with a cue sheet are parts of that file, so they are always sent converted (as
+FLAC when the file is lossless, otherwise as MP3, unless `format` says otherwise) and need ffmpeg on the server.
 
 ## Audio analysis
 

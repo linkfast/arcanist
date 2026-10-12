@@ -394,7 +394,13 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<int>("CueTrack")
+                        .HasColumnType("integer");
+
                     b.Property<int>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("EndMs")
                         .HasColumnType("integer");
 
                     b.Property<string>("Format")
@@ -436,6 +442,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("StartMs")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("TrackId")
                         .HasColumnType("uuid");
 
@@ -448,7 +457,7 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.HasIndex("TrackId");
 
-                    b.HasIndex("LibrarySourceId", "RelativePath")
+                    b.HasIndex("LibrarySourceId", "RelativePath", "CueTrack")
                         .IsUnique();
 
                     b.ToTable("MediaFiles");

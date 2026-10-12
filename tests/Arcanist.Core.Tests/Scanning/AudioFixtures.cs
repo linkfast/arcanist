@@ -105,6 +105,14 @@ public static class AudioFixtures
         return Wav(pcm, sampleRate, channels: 2);
     }
 
+    /// <summary>Joins WAVs made by <see cref="Music"/> (same format) into one, like a whole album ripped to one file.</summary>
+    public static byte[] Concatenate(params byte[][] wavs)
+    {
+        // Music() writes a plain 44-byte header followed by the samples.
+        var samples = wavs.SelectMany(w => w.Skip(44)).ToArray();
+        return Wav(System.Runtime.InteropServices.MemoryMarshal.Cast<byte, short>(samples).ToArray(), 44100, channels: 2);
+    }
+
     private static byte[] Wav(short[] pcm, int sampleRate, short channels)
     {
         var dataSize = pcm.Length * 2;

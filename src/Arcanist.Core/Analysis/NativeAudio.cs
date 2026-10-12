@@ -31,7 +31,7 @@ internal static unsafe partial class NativeAudio
     public static partial uint Version();
 
     [LibraryImport(Library, EntryPoint = "arcanist_audio_analyze", StringMarshalling = StringMarshalling.Utf8)]
-    public static partial int Analyze(Source* source, string? extension, uint flags, out nint json);
+    public static partial int Analyze(Source* source, string? extension, uint flags, ulong startMs, ulong endMs, out nint json);
 
     [LibraryImport(Library, EntryPoint = "arcanist_audio_analyzer_new")]
     public static partial nint AnalyzerNew(uint rate, uint channels, uint flags);

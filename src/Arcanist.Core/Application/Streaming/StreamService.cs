@@ -18,7 +18,9 @@ public sealed record StreamTarget(
     DateTime ModifiedAt,
     string ContentHash,
     int? BitRate,
-    int DurationMs);
+    int DurationMs,
+    int? StartMs,
+    int? EndMs);
 
 public sealed class StreamService(AccessGuard guard, CatalogService catalog)
 {
@@ -49,6 +51,8 @@ public sealed class StreamService(AccessGuard guard, CatalogService catalog)
             file.ModifiedAt,
             file.ContentHash,
             file.BitRate,
-            file.DurationMs);
+            file.DurationMs,
+            file.StartMs,
+            file.EndMs);
     }
 }

@@ -9,7 +9,7 @@ fn main() {
         let length = file.metadata().ok().map(|m| m.len());
         let extension = std::path::Path::new(&path).extension().and_then(|e| e.to_str()).map(str::to_owned);
         let started = Instant::now();
-        let result = arcanist_audio::analyze(arcanist_audio::ReaderSource::new(file, length), extension.as_deref(), std::env::var("FLAGS").ok().and_then(|f| f.parse().ok()).unwrap_or(arcanist_audio::FLAG_ALL));
+        let result = arcanist_audio::analyze(arcanist_audio::ReaderSource::new(file, length), extension.as_deref(), std::env::var("FLAGS").ok().and_then(|f| f.parse().ok()).unwrap_or(arcanist_audio::FLAG_ALL), None);
         let elapsed = started.elapsed();
         match result {
             Ok(mut analysis) => {

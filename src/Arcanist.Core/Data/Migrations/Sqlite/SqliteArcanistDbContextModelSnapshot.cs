@@ -389,7 +389,13 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("CueTrack")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("EndMs")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Format")
@@ -431,6 +437,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("StartMs")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("TrackId")
                         .HasColumnType("TEXT");
 
@@ -443,7 +452,7 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("TrackId");
 
-                    b.HasIndex("LibrarySourceId", "RelativePath")
+                    b.HasIndex("LibrarySourceId", "RelativePath", "CueTrack")
                         .IsUnique();
 
                     b.ToTable("MediaFiles");

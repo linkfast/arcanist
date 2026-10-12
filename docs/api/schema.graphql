@@ -396,6 +396,7 @@ enum TranscodeFormat {
   OPUS
   MP_3
   AAC
+  FLAC
 }
 
 type UserAccount {

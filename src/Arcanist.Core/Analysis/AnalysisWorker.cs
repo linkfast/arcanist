@@ -141,7 +141,8 @@ internal sealed class AnalysisWorker(
         return TimeSpan.Zero;
     }
 
-    private sealed record WorkItem(string ContentHash, string RelativePath, StorageLocation Location);
+    /// <param name="StartMs">With <paramref name="EndMs"/>, the part of the file that is this audio (a cue track).</param>
+    private sealed record WorkItem(string ContentHash, string RelativePath, StorageLocation Location, int? StartMs, int? EndMs);
 
     private async Task<List<WorkItem>> PendingAsync(ArcanistDbContext db, int size, bool withFfmpeg, CancellationToken cancellationToken)
     {
@@ -151,7 +152,7 @@ internal sealed class AnalysisWorker(
         // Oldest files first (UUIDv7 ids). Copies of the same audio are rare, so a few extra rows cover them.
         var candidates = await Pending(db, version, withFfmpeg)
             .OrderBy(f => f.Id)
-            .Select(f => new { f.ContentHash, f.RelativePath, f.LibrarySource })
+            .Select(f => new { f.ContentHash, f.RelativePath, f.LibrarySource, f.StartMs, f.EndMs })
             .Take(size * 4)
             .ToListAsync(cancellationToken);
 
@@ -159,7 +160,7 @@ internal sealed class AnalysisWorker(
             .Where(c => !_unreadable.TryGetValue(c.ContentHash, out var until) || until < now)
             .DistinctBy(c => c.ContentHash)
             .Take(size)
-            .Select(c => new WorkItem(c.ContentHash, c.RelativePath, StorageLocation.From(c.LibrarySource)))
+            .Select(c => new WorkItem(c.ContentHash, c.RelativePath, StorageLocation.From(c.LibrarySource), c.StartMs, c.EndMs))
             .ToList();
     }
 
@@ -193,11 +194,11 @@ internal sealed class AnalysisWorker(
 
     private AnalysisOutcome? Analyze(WorkItem item, string? ffmpegPath, CancellationToken cancellationToken)
     {
-        var outcome = WithFile(item, stream => AudioAnalyzer.Analyze(stream, Path.GetExtension(item.RelativePath)), cancellationToken);
+        var outcome = WithFile(item, stream => AudioAnalyzer.Analyze(stream, Path.GetExtension(item.RelativePath), startMs: item.StartMs, endMs: item.EndMs), cancellationToken);
 
         // Formats the built-in decoder does not read go through ffmpeg when there is one.
         if (outcome?.Status == AnalyzerStatus.Unsupported && ffmpegPath is not null)
-            outcome = WithFile(item, stream => FfmpegDecoder.Analyze(ffmpegPath, stream, cancellationToken), cancellationToken);
+            outcome = WithFile(item, stream => FfmpegDecoder.Analyze(ffmpegPath, stream, cancellationToken, item.StartMs, item.EndMs), cancellationToken);
 
         if (outcome?.Status == AnalyzerStatus.Invalid)
             logger.LogInformation("Could not analyze {Path}: {Error}", item.RelativePath, outcome.Error);

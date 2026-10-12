@@ -186,7 +186,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             file.Property(f => f.RelativePath).HasMaxLength(PathLength);
             file.Property(f => f.ContentHash).HasMaxLength(64);
             file.Property(f => f.Format).HasMaxLength(64);
-            file.HasIndex(f => new { f.LibrarySourceId, f.RelativePath }).IsUnique();
+            file.HasIndex(f => new { f.LibrarySourceId, f.RelativePath, f.CueTrack }).IsUnique();
             file.HasIndex(f => f.ContentHash);
             file.HasIndex(f => f.TrackId);
         });

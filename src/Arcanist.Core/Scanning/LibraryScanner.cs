@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Channels;
 using Arcanist.Core.Application;
 using ScanEvents = Arcanist.Core.Application.Scanning.ScanEvents;
@@ -112,18 +114,22 @@ public sealed class LibraryScanner(
         }
 
         await using var db = databases.CreateDbContext();
-        var known = await db.MediaFiles.AsNoTracking()
-            .Where(f => f.LibrarySourceId == source.Id)
-            .Select(f => new KnownFile(f.Id, f.RelativePath, f.Size, f.ModifiedAt, f.MissingSince, f.ScannedAt))
-            .ToDictionaryAsync(f => f.RelativePath, StringComparer.Ordinal, cancellationToken);
+        // Several rows per path when a cue sheet splits the file into tracks.
+        var known = (await db.MediaFiles.AsNoTracking()
+                .Where(f => f.LibrarySourceId == source.Id)
+                .Select(f => new KnownFile(f.Id, f.RelativePath, f.CueTrack, f.Size, f.ModifiedAt, f.MissingSince, f.ScannedAt))
+                .ToListAsync(cancellationToken))
+            .GroupBy(f => f.RelativePath, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        var toRead = new List<(StorageEntry Entry, Guid? ExistingId)>();
+        var toRead = new List<(StorageEntry Entry, List<KnownFile>? Known)>();
         var reappeared = new List<Guid>();
         var folderArtwork = new Dictionary<string, (int Rank, string Path)>(StringComparer.Ordinal);
         // Sidecar lyrics by the path of their audio without extension ("Album/01 Song.lrc" goes with "Album/01 Song.flac").
         var sidecars = new Dictionary<string, StorageEntry>(StringComparer.Ordinal);
-        var unchanged = new List<(StorageEntry Entry, KnownFile Known)>();
+        var cueFiles = new List<StorageEntry>();
+        var unchanged = new List<(StorageEntry Entry, List<KnownFile> Known)>();
 
         try
         {
@@ -143,24 +149,30 @@ public sealed class LibraryScanner(
                     continue;
                 }
 
+                if (AudioFormats.IsCueSheet(entry.RelativePath))
+                {
+                    cueFiles.Add(entry);
+                    continue;
+                }
+
                 if (!AudioFormats.IsAudio(entry.RelativePath))
                     continue;
 
                 seen.Add(entry.RelativePath);
                 counter.Found(1);
 
+                // Every row of a path describes the same physical file.
                 if (known.TryGetValue(entry.RelativePath, out var existing)
                     && job.Kind == ScanKind.Incremental
-                    && existing.Size == entry.Size
-                    && (existing.ModifiedAt - entry.ModifiedAt).Duration() <= ModifiedTolerance)
+                    && existing[0].Size == entry.Size
+                    && (existing[0].ModifiedAt - entry.ModifiedAt).Duration() <= ModifiedTolerance)
                 {
-                    if (existing.MissingSince is not null)
-                        reappeared.Add(existing.Id);
+                    reappeared.AddRange(existing.Where(f => f.MissingSince is not null).Select(f => f.Id));
                     unchanged.Add((entry, existing));
                     continue;
                 }
 
-                toRead.Add((entry, existing?.Id));
+                toRead.Add((entry, existing));
             }
         }
         catch (IOException e)
@@ -177,24 +189,30 @@ public sealed class LibraryScanner(
             return;
         }
 
-        // Lyrics added or edited next to an unchanged song: read the song again to pick them up.
+        var cues = await PairCueSheetsAsync(location, storage, cueFiles, seen, cancellationToken);
+
+        // Sidecars added, edited or removed next to an unchanged file: read it again to pick the change up.
         foreach (var (entry, existing) in unchanged)
         {
-            if (sidecars.TryGetValue(AudioFormats.WithoutExtension(entry.RelativePath), out var lyrics) && lyrics.ModifiedAt > existing.ScannedAt)
-                toRead.Add((entry, existing.Id));
+            var scannedAt = existing.Min(f => f.ScannedAt);
+            var lyricsChanged = sidecars.TryGetValue(AudioFormats.WithoutExtension(entry.RelativePath), out var lyrics) && lyrics.ModifiedAt > scannedAt;
+            var hadCue = existing.Any(f => f.CueTrack > 0);
+            var cueChanged = cues.TryGetValue(entry.RelativePath, out var cue) ? !hadCue || cue.Entry.ModifiedAt > scannedAt : hadCue;
+            if (lyricsChanged || cueChanged)
+                toRead.Add((entry, existing));
         }
 
         job.FilesSeen += seen.Count;
         counter.ToRead(toRead.Count);
         counter.Phase(ScanPhase.Reading);
 
-        await ReadAndWriteAsync(job, source, location, storage, toRead, folderArtwork, sidecars, writer, counter, cancellationToken);
+        await ReadAndWriteAsync(job, source, location, storage, toRead, folderArtwork, sidecars, cues, writer, counter, cancellationToken);
 
         var now = Now();
         foreach (var chunk in reappeared.Chunk(UpdateChunk))
             await db.MediaFiles.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, (DateTime?)null), cancellationToken);
 
-        var vanished = known.Values.Where(f => f.MissingSince is null && !seen.Contains(f.RelativePath)).Select(f => f.Id).ToList();
+        var vanished = known.Values.SelectMany(f => f).Where(f => f.MissingSince is null && !seen.Contains(f.RelativePath)).Select(f => f.Id).ToList();
         foreach (var chunk in vanished.Chunk(UpdateChunk))
             await db.MediaFiles.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, now), cancellationToken);
         job.FilesMissing += vanished.Count;
@@ -205,15 +223,17 @@ public sealed class LibraryScanner(
         LibrarySource source,
         StorageLocation location,
         ILibraryStorage storage,
-        List<(StorageEntry Entry, Guid? ExistingId)> toRead,
+        List<(StorageEntry Entry, List<KnownFile>? Known)> toRead,
         Dictionary<string, (int Rank, string Path)> folderArtwork,
         Dictionary<string, StorageEntry> sidecars,
+        Dictionary<string, (CueSheet Sheet, StorageEntry Entry)> cues,
         CatalogWriter writer,
         ScanProgressTracker.Counter counter,
         CancellationToken cancellationToken)
     {
         var batchSize = Math.Max(1, options.Value.BatchSize);
-        var channel = Channel.CreateBounded<ScannedFile>(batchSize * 2);
+        // One item per file read: one entry, or one per track of a cue sheet, which stay together in a batch.
+        var channel = Channel.CreateBounded<IReadOnlyList<ScannedFile>>(batchSize * 2);
         var folderImages = new ConcurrentDictionary<string, Lazy<Task<StoredArtwork?>>>(StringComparer.Ordinal);
         var errors = 0;
 
@@ -229,7 +249,7 @@ public sealed class LibraryScanner(
                     new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, options.Value.Parallelism), CancellationToken = readToken },
                     async (item, ct) =>
                     {
-                        var scanned = await ReadFileAsync(source, location, storage, item.Entry, item.ExistingId, folderArtwork, folderImages, sidecars, ct);
+                        var scanned = await ReadFileAsync(source, location, storage, item.Entry, item.Known, folderArtwork, folderImages, sidecars, cues, ct);
                         if (scanned is null)
                         {
                             Interlocked.Increment(ref errors);
@@ -247,11 +267,13 @@ public sealed class LibraryScanner(
         }, readToken);
 
         var batch = new List<ScannedFile>(batchSize);
+        var filesInBatch = 0;
         try
         {
-            await foreach (var file in channel.Reader.ReadAllAsync(cancellationToken))
+            await foreach (var group in channel.Reader.ReadAllAsync(cancellationToken))
             {
-                batch.Add(file);
+                batch.AddRange(group);
+                filesInBatch++;
                 if (batch.Count >= batchSize)
                     await FlushAsync();
             }
@@ -275,21 +297,23 @@ public sealed class LibraryScanner(
             var result = await writer.ApplyAsync(batch, cancellationToken);
             job.FilesAdded += result.Added;
             job.FilesUpdated += result.Updated;
-            counter.Read(batch.Count);
+            counter.Read(filesInBatch);
             batch.Clear();
+            filesInBatch = 0;
             events.Publish(job);
         }
     }
 
-    private async Task<ScannedFile?> ReadFileAsync(
+    private async Task<IReadOnlyList<ScannedFile>?> ReadFileAsync(
         LibrarySource source,
         StorageLocation location,
         ILibraryStorage storage,
         StorageEntry entry,
-        Guid? existingId,
+        List<KnownFile>? known,
         Dictionary<string, (int Rank, string Path)> folderArtwork,
         ConcurrentDictionary<string, Lazy<Task<StoredArtwork?>>> folderImages,
         Dictionary<string, StorageEntry> sidecars,
+        Dictionary<string, (CueSheet Sheet, StorageEntry Entry)> cues,
         CancellationToken cancellationToken)
     {
         try
@@ -312,8 +336,18 @@ public sealed class LibraryScanner(
                     () => ReadFolderImageAsync(location, storage, path, cancellationToken))).Value;
             }
 
-            return new ScannedFile(source.Id, existingId, entry.RelativePath, entry.Size, entry.ModifiedAt, hash,
-                metadata with { EmbeddedPicture = null }, artwork);
+            metadata = metadata with { EmbeddedPicture = null };
+            Guid? Existing(int cueTrack) => known?.FirstOrDefault(f => f.CueTrack == cueTrack)?.Id;
+
+            if (cues.TryGetValue(entry.RelativePath, out var cue))
+            {
+                return CueTracks(cue.Sheet, metadata, hash)
+                    .Select(t => new ScannedFile(source.Id, Existing(t.Number), entry.RelativePath, entry.Size, entry.ModifiedAt, t.Hash,
+                        t.Metadata, artwork, t.Number, t.StartMs, t.EndMs))
+                    .ToList();
+            }
+
+            return [new ScannedFile(source.Id, Existing(0), entry.RelativePath, entry.Size, entry.ModifiedAt, hash, metadata, artwork)];
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -321,6 +355,94 @@ public sealed class LibraryScanner(
             return null;
         }
     }
+
+    /// <summary>
+    /// The tracks of an album stored as one file: the file's own tags for what the cue sheet does not say, a
+    /// content hash per track derived from the file's, and each track running until the next one starts.
+    /// </summary>
+    private static IEnumerable<(int Number, int StartMs, int EndMs, string Hash, AudioMetadata Metadata)> CueTracks(
+        CueSheet sheet, AudioMetadata file, string fileHash)
+    {
+        var tracks = sheet.Files[0].Tracks.OrderBy(t => t.StartMs).ToList();
+        for (var i = 0; i < tracks.Count; i++)
+        {
+            var track = tracks[i];
+            var end = i + 1 < tracks.Count ? tracks[i + 1].StartMs : file.DurationMs;
+            if (end <= track.StartMs)
+                continue;
+
+            var performer = track.Performer ?? sheet.Performer;
+            yield return (track.Number, track.StartMs, end,
+                Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes($"{fileHash}:{track.StartMs}-{end}"))),
+                file with
+                {
+                    Title = track.Title ?? $"Track {track.Number}",
+                    Artists = performer is null ? file.Artists : TagReader.Split(performer),
+                    FeaturedArtists = [],
+                    Album = sheet.Title ?? file.Album,
+                    AlbumArtist = sheet.Performer ?? file.AlbumArtist,
+                    TrackNumber = track.Number,
+                    DiscNumber = sheet.DiscNumber ?? file.DiscNumber,
+                    Year = sheet.Year ?? file.Year,
+                    Genres = sheet.Genre is { } genre ? [genre] : file.Genres,
+                    DurationMs = end - track.StartMs,
+                    // What the file's tags say about one recording, its gain or its words is about the whole album here.
+                    RecordingMbid = null,
+                    ReplayGainTrackGain = null,
+                    ReplayGainTrackPeak = null,
+                    Lyrics = null,
+                    SyncedLyrics = null,
+                    LyricsSource = null,
+                });
+        }
+    }
+
+    /// <summary>
+    /// Pairs each cue sheet with the one audio file it describes in its folder: the FILE it names (rippers often
+    /// name a .wav that was later compressed to .flac, so the extension is ignored), or the file with the cue
+    /// sheet's own name. Cue sheets that name several files describe files that are scanned on their own.
+    /// </summary>
+    private async Task<Dictionary<string, (CueSheet Sheet, StorageEntry Entry)>> PairCueSheetsAsync(
+        StorageLocation location, ILibraryStorage storage, List<StorageEntry> cueFiles, HashSet<string> audio, CancellationToken cancellationToken)
+    {
+        var pairs = new Dictionary<string, (CueSheet, StorageEntry)>(StringComparer.Ordinal);
+        if (cueFiles.Count == 0)
+            return pairs;
+
+        var byFolderAndName = audio
+            .GroupBy(path => (AudioFormats.Folder(path), Path.GetFileNameWithoutExtension(path).ToLowerInvariant()))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        foreach (var entry in cueFiles.Where(c => c.Size <= MaxCueBytes))
+        {
+            CueSheet? sheet;
+            try
+            {
+                await using var stream = await storage.OpenReadAsync(location, entry.RelativePath, cancellationToken);
+                using var buffer = new MemoryStream();
+                await stream.CopyToAsync(buffer, cancellationToken);
+                sheet = CueSheet.Parse(buffer.ToArray());
+            }
+            catch (IOException e)
+            {
+                logger.LogDebug(e, "Could not read {Path}", entry.RelativePath);
+                continue;
+            }
+
+            if (sheet is not { Files: [{ Tracks.Count: > 1 } file] })
+                continue;
+
+            var folder = AudioFormats.Folder(entry.RelativePath);
+            var named = Path.GetFileNameWithoutExtension(file.Name.Replace('\\', '/').Split('/')[^1]).ToLowerInvariant();
+            var own = Path.GetFileNameWithoutExtension(entry.RelativePath).ToLowerInvariant();
+            if (byFolderAndName.TryGetValue((folder, named), out var path) || byFolderAndName.TryGetValue((folder, own), out path))
+                pairs.TryAdd(path, (sheet, entry));
+        }
+
+        return pairs;
+    }
+
+    private const long MaxCueBytes = 256 * 1024;
 
     private async Task<StoredArtwork?> ReadFolderImageAsync(StorageLocation location, ILibraryStorage storage, string path, CancellationToken cancellationToken)
     {
@@ -370,5 +492,5 @@ public sealed class LibraryScanner(
 
     private const long MaxLyricsBytes = 256 * 1024;
 
-    private sealed record KnownFile(Guid Id, string RelativePath, long Size, DateTime ModifiedAt, DateTime? MissingSince, DateTime ScannedAt);
+    private sealed record KnownFile(Guid Id, string RelativePath, int CueTrack, long Size, DateTime ModifiedAt, DateTime? MissingSince, DateTime ScannedAt);
 }

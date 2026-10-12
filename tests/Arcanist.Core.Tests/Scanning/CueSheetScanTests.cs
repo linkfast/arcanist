@@ -113,6 +113,28 @@ public sealed class CueSheetScanTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Cue_tracks_of_a_flac_file_play_from_their_start()
+    {
+        // Seeking into FLAC gives ffmpeg's FLAC encoder a tiny first frame, which it used to refuse.
+        var ffmpeg = TestFfmpeg.Require();
+        await StartAsync(ffmpeg);
+        var wav = Path.Combine(_music, "One File.wav");
+        TestFfmpeg.Encode(wav, Path.Combine(_music, "One File.flac"));
+        File.Delete(wav);
+        var library = (await _admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))![0];
+        await _admin.PostAsJsonAsync($"/rest/v1/libraries/{library.GetProperty("id").GetString()}/scans", new StartScanInput(Full: false), Cancel);
+        await _factory.WaitForScansAsync(_admin);
+
+        var page = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks?search=middle", ArcanistFactory.Json, Cancel);
+        var response = await _admin.GetAsync($"/rest/v1/stream/{page.GetProperty("items")[0].GetProperty("id").GetString()}", Cancel);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsByteArrayAsync(Cancel);
+        Assert.Equal("fLaC"u8.ToArray(), body[..4]);
+        Assert.True(body.Length > 100_000, $"{body.Length} bytes");
+    }
+
+    [Fact]
     public async Task Removing_the_cue_sheet_turns_the_file_back_into_one_track()
     {
         await StartAsync();

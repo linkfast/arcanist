@@ -214,7 +214,7 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                 genres[t.Id].Order().ToList(),
                 t.AddedAt,
                 // Below this, the strongest periodicity is too weak to call it a beat.
-                best is { Bpm: { } bpm, BpmConfidence: >= 0.1f } ? bpm : null,
+                best is { Bpm: { } bpm, BpmConfidence: >= 0.1f } ? Math.Round(bpm, 1) : null,
                 best is { KeyTonic: { } tonic, KeyMinor: { } minor } ? MusicalKeys.Create(tonic, minor, best.KeyConfidence ?? 0) : null,
                 withLyrics.Contains(t.Id),
                 copies

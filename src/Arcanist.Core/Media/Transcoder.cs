@@ -121,6 +121,13 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
                 arguments.Add("-b:a");
                 arguments.Add($"{bitRate}k");
             }
+            else
+            {
+                // The FLAC encoder takes its block size from the first frame, which is tiny after seeking into a
+                // FLAC file, and then refuses to start ("invalid block size"). 4096 is the usual size.
+                arguments.Add("-frame_size");
+                arguments.Add("4096");
+            }
 
             foreach (var argument in new[] { "-f", profile.Container, "pipe:1" })
                 arguments.Add(argument);

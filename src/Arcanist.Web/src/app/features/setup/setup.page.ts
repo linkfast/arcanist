@@ -111,6 +111,15 @@ export class SetupPage implements OnInit {
     'coverArtArchive',
     'lyrics',
   ] as const;
+
+  /** Names of the online services turned on, for the review step. */
+  protected enabledOnlineServices(): string {
+    return this.onlineServiceKeys
+      .filter((key) => this.onlineServices[key])
+      .map((key) => this.i18n.t(`setup.privacy.services.${key}.name`))
+      .join(', ');
+  }
+
   /** What the server finds by itself, shown when the step opens. */
   protected readonly ffmpegDetected = signal<SetupFfmpegCheck | null>(null);
   /** Result of checking the path the user typed. */

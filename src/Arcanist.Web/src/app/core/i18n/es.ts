@@ -143,6 +143,7 @@ export const es: Dictionary = {
       noLibraries: 'Ninguna por ahora',
       statistics: 'Estadísticas anónimas',
       ffmpegLater: 'Más tarde, desde Ajustes',
+      noOnlineServices: 'Ninguno',
       afterwards:
         'Al terminar, Arcanist empezará a analizar tu música. Puedes seguir el progreso en Bibliotecas.',
     },

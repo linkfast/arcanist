@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
+      # The runners have Rust: the native audio library's own tests, then the server build compiles it.
+      - run: cargo test --release --locked --manifest-path native/arcanist-audio/Cargo.toml
       # Docker is available on these runners, so the PostgreSQL tests run instead of being skipped.
       - run: dotnet test --project tests/Arcanist.Core.Tests
 

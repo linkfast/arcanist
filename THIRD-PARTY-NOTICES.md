@@ -41,6 +41,20 @@ GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr
 | Lucide icons (`@ng-icons/lucide`) | ISC |
 | tslib | 0BSD |
 
+## Native audio library (`native/arcanist-audio`, shipped with the server)
+
+| Component | License |
+|---|---|
+| Symphonia (`symphonia` and its `symphonia-*` format and codec crates) | MPL-2.0 |
+| ebur128 | MIT |
+| rusty-chromaprint (a Rust port of Chromaprint), rubato, realfft | MIT |
+| RustFFT, num-complex, num-traits, num-integer, primal-check, strength_reduce, transpose | MIT OR Apache-2.0 |
+| serde, serde_json, itoa, zmij, smallvec, bitflags, log, lazy_static, regex-lite, extended, dasp_frame, dasp_sample | MIT OR Apache-2.0 / MIT |
+| memchr | Unlicense OR MIT |
+| bytemuck | Zlib OR Apache-2.0 OR MIT |
+
+Symphonia's source code is available at https://github.com/pdeljanov/Symphonia, as the MPL-2.0 requires.
+
 ## Windows app (`src/Arcanist.Tray`)
 
 | Component | License |

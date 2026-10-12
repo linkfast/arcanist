@@ -3,7 +3,8 @@
 #
 #   packaging/linux/pack.sh [version] [--skip-panel]
 #
-# Each one has the server (no .NET install needed), the admin panel, the systemd unit and the license.
+# Each one has the server (no .NET install needed), the audio analysis library, the admin panel, the systemd unit
+# and the license.
 set -eu
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
@@ -19,7 +20,10 @@ for arch in x64 arm64; do
     name="arcanist-$version-linux-$arch"
     dir="$out/$name"
     rm -rf "$dir"
-    dotnet publish src/Arcanist.Core -c Release -r "linux-$arch" --self-contained -p:Version="$version" -o "$dir"
+    # Audio analysis library (needs Rust and cargo-zigbuild, see packaging/native/build.sh).
+    [ -f "artifacts/native/linux-$arch/libarcanist_audio.so" ] || sh packaging/native/build.sh "linux-$arch"
+    dotnet publish src/Arcanist.Core -c Release -r "linux-$arch" --self-contained -p:Version="$version" \
+        -p:SkipNativeAudioBuild=true -o "$dir"
     # Debug symbols, mostly native ones from SkiaSharp, would double the download.
     find "$dir" -name '*.pdb' -delete
     mkdir -p "$dir/wwwroot"

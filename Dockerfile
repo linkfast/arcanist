@@ -17,6 +17,16 @@ RUN npm ci
 COPY src/Arcanist.Web/ ./
 RUN npm run build
 
+# Audio analysis library, cross-compiled for the target architecture.
+FROM --platform=$BUILDPLATFORM rust:1.98-bookworm AS native
+ARG TARGETARCH
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --break-system-packages cargo-zigbuild ziglang
+WORKDIR /src
+COPY packaging/native/build.sh packaging/native/
+COPY native/arcanist-audio/ native/arcanist-audio/
+RUN sh packaging/native/build.sh "linux-$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "$TARGETARCH")"
+
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS server
 ARG TARGETARCH
 # Release version (the workflow passes it); defaults to the one in Directory.Build.props.
@@ -28,8 +38,9 @@ COPY src/Arcanist.Core/Arcanist.Core.csproj src/Arcanist.Core/
 RUN echo "linux-$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "$TARGETARCH")" > /rid \
     && dotnet restore src/Arcanist.Core/Arcanist.Core.csproj -r "$(cat /rid)"
 COPY src/Arcanist.Core/ src/Arcanist.Core/
+COPY --from=native /src/artifacts/native/ artifacts/native/
 RUN dotnet publish src/Arcanist.Core/Arcanist.Core.csproj -c Release -o /app --no-restore \
-    -r "$(cat /rid)" --self-contained false -p:UseAppHost=false ${VERSION:+-p:Version=$VERSION}
+    -r "$(cat /rid)" --self-contained false -p:UseAppHost=false -p:SkipNativeAudioBuild=true ${VERSION:+-p:Version=$VERSION}
 RUN mkdir /data
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

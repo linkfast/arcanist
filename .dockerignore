@@ -7,3 +7,5 @@
 .git
 .vs
 .idea
+**/target
+artifacts

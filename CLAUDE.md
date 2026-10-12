@@ -280,7 +280,12 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 
 Aún sin decidir. No asumir una opción sin consultar al usuario, y documentar aquí la elección cuando se tome:
 
-- DSP de análisis de audio en C# o en una crate Rust compartida. Se decide en la F3.
 - Firma de código del instalador de Windows (Authenticode). Sin firma, SmartScreen avisa al instalar; `vpk pack` acepta los parámetros de firma cuando haya certificado.
 
-Decididas: el instalador es Velopack. El repositorio es `github.com/linkfast/arcanist`: es el `RepositoryUrl` de `Directory.Build.props` y el valor por defecto de `serverInfo.sourceUrl`.
+Decididas en la F3:
+- **Análisis de audio en una crate Rust** (`native/arcanist-audio`): Symphonia (MPL-2.0) decodifica; `ebur128`, `rusty-chromaprint` y `rustfft` calculan loudness, huella y BPM/tonalidad. Se expone con una C ABI a .NET. ffmpeg solo hace falta para los formatos que Symphonia no lee (Opus, WMA, APE, DSD…) y para transcodificar.
+- **ffmpeg no se empaqueta:** se detecta en el sistema o en la ruta configurada (también desde el asistente), y el panel ofrece descargarlo si falta.
+- **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
+- **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
+
+Decididas antes: el instalador es Velopack. El repositorio es `github.com/linkfast/arcanist`: es el `RepositoryUrl` de `Directory.Build.props` y el valor por defecto de `serverInfo.sourceUrl`.

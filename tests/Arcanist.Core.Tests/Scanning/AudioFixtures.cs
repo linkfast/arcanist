@@ -28,6 +28,15 @@ public static class AudioFixtures
         return path;
     }
 
+    /// <summary>Writes <see cref="Music"/> to a file and tags it.</summary>
+    public static string WriteMusic(string path, FixtureTags tags, double bpm = 120, double seconds = 15, int chordSeed = 0)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, Music(bpm, seconds, chordSeed));
+        Tag(path, tags);
+        return path;
+    }
+
     /// <summary>Rewrites the tags of an existing file, leaving its audio untouched.</summary>
     public static void Tag(string path, FixtureTags tags)
     {
@@ -60,6 +69,55 @@ public static class AudioFixtures
         bitmap.Erase(new SKColor((byte)(seed * 40), (byte)(seed * 80), (byte)(seed * 120)));
         using var image = SKImage.FromBitmap(bitmap);
         return image.Encode(SKEncodedImageFormat.Png, 100).ToArray();
+    }
+
+    /// <summary>
+    /// Music-like stereo WAV for analysis tests: a sustained triad (<paramref name="chordSeed"/> picks it, so
+    /// different seeds sound different) under noise bursts on every beat at <paramref name="bpm"/>.
+    /// </summary>
+    public static byte[] Music(double bpm, double seconds, int chordSeed = 0, int sampleRate = 44100)
+    {
+        var frames = (int)(seconds * sampleRate);
+        var root = 220.0 * Math.Pow(2, chordSeed % 12 / 12.0);
+        double[] chord = [root, root * Math.Pow(2, 4 / 12.0), root * Math.Pow(2, 7 / 12.0)];
+        var beat = (int)(60.0 / bpm * sampleRate);
+        var random = new Random(chordSeed);
+
+        var pcm = new short[frames * 2];
+        for (var i = 0; i < frames; i++)
+        {
+            var t = (double)i / sampleRate;
+            var tone = chord.Sum(f => Math.Sin(2 * Math.PI * f * t)) / chord.Length * 0.3;
+            var offset = i % beat;
+            var click = offset < 600 ? (random.NextDouble() - 0.5) * (1 - offset / 600.0) * 1.2 : 0;
+            pcm[2 * i] = pcm[2 * i + 1] = (short)(Math.Clamp(tone + click, -1, 1) * 32000);
+        }
+
+        return Wav(pcm, sampleRate, channels: 2);
+    }
+
+    private static byte[] Wav(short[] pcm, int sampleRate, short channels)
+    {
+        var dataSize = pcm.Length * 2;
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.ASCII);
+        writer.Write("RIFF"u8);
+        writer.Write(36 + dataSize);
+        writer.Write("WAVE"u8);
+        writer.Write("fmt "u8);
+        writer.Write(16);
+        writer.Write((short)1);
+        writer.Write(channels);
+        writer.Write(sampleRate);
+        writer.Write(sampleRate * channels * 2);
+        writer.Write((short)(channels * 2));
+        writer.Write((short)16);
+        writer.Write("data"u8);
+        writer.Write(dataSize);
+        foreach (var sample in pcm)
+            writer.Write(sample);
+        writer.Flush();
+        return stream.ToArray();
     }
 
     private static byte[] Wav(int seed)

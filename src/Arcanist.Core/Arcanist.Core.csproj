@@ -7,6 +7,8 @@
     <!-- The executable users and service managers see: arcanist(.exe). -->
     <AssemblyName>arcanist</AssemblyName>
     <RootNamespace>Arcanist.Core</RootNamespace>
+    <!-- Function pointers and spans over native memory in Analysis/NativeAudio.cs. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -48,6 +50,44 @@
     <ItemGroup>
       <AdminPanelFile Include="$(AdminPanelDirectory)dist/arcanist-web/browser/**/*" />
       <ResolvedFileToPublish Include="@(AdminPanelFile)" RelativePath="wwwroot/admin/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Native audio analysis (native/arcanist-audio, Rust), shipped next to the server as arcanist_audio.dll,
+    libarcanist_audio.so or libarcanist_audio.dylib. Builds for this machine's platform run `cargo build` when
+    Rust is installed (incrementally); builds for other platforms use the library that packaging/native built
+    into artifacts/native/<rid>/. Without either, the server runs without audio analysis.
+  -->
+  <PropertyGroup>
+    <NativeAudioCrate>$(MSBuildThisFileDirectory)../../native/arcanist-audio/</NativeAudioCrate>
+    <NativeAudioRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</NativeAudioRid>
+    <NativeAudioRid Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</NativeAudioRid>
+    <NativeAudioDir>$(MSBuildThisFileDirectory)../../artifacts/native/$(NativeAudioRid)/</NativeAudioDir>
+    <NativeAudioFile Condition="$(NativeAudioRid.StartsWith('win'))">arcanist_audio.dll</NativeAudioFile>
+    <NativeAudioFile Condition="$(NativeAudioRid.StartsWith('osx'))">libarcanist_audio.dylib</NativeAudioFile>
+    <NativeAudioFile Condition="'$(NativeAudioFile)' == ''">libarcanist_audio.so</NativeAudioFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <NativeAudioSource Include="$(NativeAudioCrate)src/**/*.rs;$(NativeAudioCrate)Cargo.toml;$(NativeAudioCrate)Cargo.lock" />
+  </ItemGroup>
+
+  <Target Name="BuildNativeAudio"
+          Condition="'$(NativeAudioRid)' == '$(NETCoreSdkRuntimeIdentifier)' And '$(SkipNativeAudioBuild)' != 'true'"
+          Inputs="@(NativeAudioSource)" Outputs="$(NativeAudioDir)$(NativeAudioFile)">
+    <Exec Command="cargo --version" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="CargoExitCode" />
+    </Exec>
+    <Warning Condition="'$(CargoExitCode)' != '0' And !Exists('$(NativeAudioDir)$(NativeAudioFile)')"
+             Text="Rust (cargo) is not installed, so the native audio library was not built: audio analysis will be unavailable." />
+    <Exec Condition="'$(CargoExitCode)' == '0'" Command="cargo build --release --manifest-path &quot;$(NativeAudioCrate)Cargo.toml&quot;" />
+    <Copy Condition="'$(CargoExitCode)' == '0'" SourceFiles="$(NativeAudioCrate)target/release/$(NativeAudioFile)" DestinationFolder="$(NativeAudioDir)" />
+  </Target>
+
+  <Target Name="IncludeNativeAudio" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildNativeAudio">
+    <ItemGroup Condition="Exists('$(NativeAudioDir)$(NativeAudioFile)')">
+      <None Include="$(NativeAudioDir)$(NativeAudioFile)" Link="$(NativeAudioFile)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
 

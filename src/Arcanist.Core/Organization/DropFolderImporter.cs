@@ -281,7 +281,7 @@ public sealed class DropFolderImporter(
     {
         var folder = Path.Combine(paths.Cache, "import");
         Directory.CreateDirectory(folder);
-        var output = Path.Combine(folder, Guid.NewGuid().ToString("N") + Transcoder.FileFormat(profile.Format).Extension);
+        var output = Path.Combine(folder, Guid.NewGuid().ToString("N") + Transcoder.FileFormat(profile.Format ?? TranscodeFormat.Flac).Extension);
 
         var result = await transcoder.ConvertAsync(localPath, output, profile, profile.Clamp(bitRate), cancellationToken);
         if (!result.Succeeded)

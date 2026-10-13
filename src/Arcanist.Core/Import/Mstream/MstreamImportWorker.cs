@@ -59,6 +59,9 @@ internal sealed class MstreamImportWorker(
     /// <returns>Whether an import was finished.</returns>
     private async Task<bool> RunNextAsync(CancellationToken cancellationToken)
     {
+        // Before setup there is no database yet.
+        if (!databases.IsConfigured)
+            return false;
         await using var db = databases.CreateDbContext();
         var import = await db.MstreamImports
             .Where(i => i.Status == MstreamImportStatus.Waiting || i.Status == MstreamImportStatus.Running)

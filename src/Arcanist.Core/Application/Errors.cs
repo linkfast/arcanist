@@ -81,6 +81,14 @@ public static class ErrorCodes
     public const string MstreamUnreachable = "mstream_unreachable";
     /// <summary>Reading an mStream server's users and libraries needs an administrator whose admin API is not locked.</summary>
     public const string MstreamAdminRequired = "mstream_admin_required";
+    /// <summary>The DLNA extension is off.</summary>
+    public const string DlnaDisabled = "dlna_disabled";
+    /// <summary>The renderer did not answer: switched off or gone from the network.</summary>
+    public const string RendererUnreachable = "renderer_unreachable";
+    /// <summary>The renderer refused the request.</summary>
+    public const string RendererFailed = "renderer_failed";
+    /// <summary>Arcanist has no queue on that renderer.</summary>
+    public const string NothingQueued = "nothing_queued";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

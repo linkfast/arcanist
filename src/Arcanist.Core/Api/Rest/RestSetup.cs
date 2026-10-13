@@ -73,6 +73,7 @@ public static class RestSetup
         rest.MapExtensionEndpoints();
         rest.MapAppPasswordEndpoints();
         rest.MapMstreamImportEndpoints();
+        rest.MapDlnaEndpoints();
         rest.MapOnlineEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();

@@ -24,6 +24,12 @@ type Query {
   mix(id: String!): MixTracks!
   "Everything an artist page shows: top tracks, albums, albums the artist appears on, related artists and the artist's mix."
   artistOverview(id: ID!): ArtistOverview!
+  "The DLNA media server: whether it is on, what it publishes and the addresses devices find. Administrators only."
+  dlna: DlnaStatus!
+  "Devices on the local network Arcanist can play to (DLNA renderers); empty while DLNA is off."
+  dlnaRenderers: [DlnaRenderer!]!
+  "What a renderer is doing: its state, position, volume and Arcanist's queue on it."
+  dlnaRenderer(id: String!): DlnaRendererState!
   "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
   duplicateCandidates(status: DuplicateStatus, first: Int): [DuplicatePair!]!
   "Built-in and installed extensions, with what happened to them at startup. Administrators only."
@@ -346,6 +352,55 @@ type ArtistOverview {
   mix: Mix!
   playCount: Int!
   artworkId: ID
+}
+
+type DlnaStatus {
+  enabled: Boolean!
+  name: String!
+  friendlyName: String
+  libraryIds: [ID!]!
+  sections: [DlnaSection!]!
+  addresses: [String!]!
+  convertsFormats: Boolean!
+}
+
+enum DlnaSection {
+  ARTISTS
+  ALBUMS
+  GENRES
+  DECADES
+  FOLDERS
+  PLAYLISTS
+  RECENTLY_ADDED
+  MIXES
+}
+
+type DlnaRenderer {
+  id: String!
+  name: String!
+  manufacturer: String
+  model: String
+  address: String!
+  manual: Boolean!
+}
+
+type DlnaRendererState {
+  renderer: DlnaRenderer!
+  state: DlnaTransportState!
+  track: Track
+  positionMs: Int!
+  durationMs: Int!
+  volume: Int
+  queue: [ID!]!
+  queueIndex: Int!
+}
+
+enum DlnaTransportState {
+  STOPPED
+  PLAYING
+  PAUSED
+  TRANSITIONING
+  NO_MEDIA
 }
 
 type DuplicatePair {
@@ -909,6 +964,16 @@ type Mutation {
   createAppPassword(name: String!): CreatedAppPassword!
   "Revokes one of the user's app passwords."
   deleteAppPassword(id: ID!): Boolean!
+  "Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication."
+  setDlnaSettings(input: DlnaSettingsInput!): DlnaStatus!
+  "Adds a renderer by the URL of its UPnP description, for networks where it is not found by itself. Administrators only."
+  addDlnaRenderer(url: String!): DlnaRenderer!
+  "Plays tracks on a renderer, in the best format it plays (lossless first). The plays count for the caller."
+  playOnDlnaRenderer(input: PlayOnDlnaRendererInput!): DlnaRendererState!
+  "Plays, pauses, stops, skips or seeks on a renderer."
+  controlDlnaRenderer(input: ControlDlnaRendererInput!): DlnaRendererState!
+  "Sets a renderer's volume, 0–100."
+  setDlnaRendererVolume(rendererId: String!, volume: Int!): DlnaRendererState!
   "Merges an open pair into keepTrackId, one of its two tracks, and returns it. Requires MANAGE_LIBRARIES."
   mergeDuplicate(id: ID!, keepTrackId: ID!): Track!
   "Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES."
@@ -1017,6 +1082,33 @@ type Mutation {
 type CreatedAppPassword {
   appPassword: AppPassword!
   secret: String!
+}
+
+input DlnaSettingsInput {
+  friendlyName: String
+  libraryIds: [ID!]!
+  sections: [DlnaSection!]!
+}
+
+input PlayOnDlnaRendererInput {
+  rendererId: String!
+  trackIds: [ID!]!
+  startIndex: Int
+}
+
+input ControlDlnaRendererInput {
+  rendererId: String!
+  action: DlnaRendererAction!
+  positionMs: Int
+}
+
+enum DlnaRendererAction {
+  PLAY
+  PAUSE
+  STOP
+  NEXT
+  PREVIOUS
+  SEEK
 }
 
 input CreateLibraryInput {

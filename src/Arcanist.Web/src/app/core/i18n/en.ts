@@ -750,6 +750,10 @@ export const en: Dictionary = {
     mstream_unreachable: 'The mStream server does not answer, or not as mStream does.',
     mstream_admin_required:
       'An mStream administrator account is needed, with its admin API unlocked.',
+    dlna_disabled: 'DLNA is off.',
+    renderer_unreachable: 'The device does not answer: it may be off or gone from the network.',
+    renderer_failed: 'The device refused the request.',
+    nothing_queued: 'Arcanist has nothing queued on that device.',
     ffmpeg_checksum_mismatch: 'The downloaded ffmpeg did not match its checksum and was discarded.',
   },
 };

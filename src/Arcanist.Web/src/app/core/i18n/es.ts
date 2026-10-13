@@ -755,6 +755,10 @@ export const es: Dictionary = {
     mstream_unreachable: 'El servidor de mStream no responde, o no responde como mStream.',
     mstream_admin_required:
       'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
+    dlna_disabled: 'DLNA está desactivado.',
+    renderer_unreachable: 'El dispositivo no responde: puede estar apagado o fuera de la red.',
+    renderer_failed: 'El dispositivo rechazó la orden.',
+    nothing_queued: 'Arcanist no tiene nada en cola en ese dispositivo.',
     ffmpeg_checksum_mismatch:
       'El ffmpeg descargado no coincidía con su suma de comprobación y se ha descartado.',
   },

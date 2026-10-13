@@ -16,17 +16,26 @@ public enum TranscodeFormat
     Flac,
 }
 
+/// <param name="Format">Its format for clients; null for <see cref="Lpcm"/>, which only DLNA devices get.</param>
 /// <param name="Encoder">The ffmpeg encoder that must be available.</param>
 /// <param name="BitRate">Default bit rate, kbit/s; 0 for lossless formats, which ignore it.</param>
+/// <param name="SampleRate">Hz to resample to, when the format needs a fixed rate.</param>
 public sealed record TranscodeProfile(
-    TranscodeFormat Format,
+    TranscodeFormat? Format,
     string Encoder,
     string Container,
     string ContentType,
     int BitRate,
     int MinBitRate,
-    int MaxBitRate)
+    int MaxBitRate,
+    int? SampleRate = null)
 {
+    /// <summary>
+    /// Uncompressed 16-bit stereo at 44.1 kHz, big-endian (DLNA's LPCM): the lossless format every DLNA renderer
+    /// plays, for those that take no FLAC.
+    /// </summary>
+    public static readonly TranscodeProfile Lpcm = new(null, "pcm_s16be", "s16be", "audio/L16;rate=44100;channels=2", 0, 0, 0, 44100);
+
     public static readonly IReadOnlyList<TranscodeProfile> All =
     [
         new(TranscodeFormat.Opus, "libopus", "ogg", "audio/ogg", 128, 32, 256),
@@ -59,7 +68,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
 
     /// <summary>Formats the available ffmpeg can produce (empty without ffmpeg).</summary>
     public IReadOnlyList<TranscodeFormat> Formats(FfmpegInstallation? ffmpeg) =>
-        ffmpeg is null ? [] : TranscodeProfile.All.Where(p => ffmpeg.Encoders.Contains(p.Encoder)).Select(p => p.Format).ToList();
+        ffmpeg is null ? [] : TranscodeProfile.All.Where(p => ffmpeg.Encoders.Contains(p.Encoder)).Select(p => p.Format!.Value).ToList();
 
     /// <summary>
     /// Starts converting. <paramref name="localPath"/> lets ffmpeg open and seek the file directly; otherwise the
@@ -116,12 +125,18 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
 
             foreach (var argument in new[] { "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-ac", "2", "-c:a", profile.Encoder })
                 arguments.Add(argument);
+            if (profile.SampleRate is { } rate)
+            {
+                arguments.Add("-ar");
+                arguments.Add(rate.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
             if (!profile.IsLossless)
             {
                 arguments.Add("-b:a");
                 arguments.Add($"{bitRate}k");
             }
-            else
+            else if (profile.Format == TranscodeFormat.Flac)
             {
                 // The FLAC encoder takes its block size from the first frame, which is tiny after seeking into a
                 // FLAC file, and then refuses to start ("invalid block size"). 4096 is the usual size.
@@ -223,7 +238,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
             }
 
             start.ArgumentList.Add("-f");
-            start.ArgumentList.Add(FileFormat(profile.Format).Container);
+            start.ArgumentList.Add(FileFormat(profile.Format ?? TranscodeFormat.Flac).Container);
             start.ArgumentList.Add(outputPath);
 
             using var process = Process.Start(start)!;

@@ -29,4 +29,10 @@ public static class SettingKeys
 
     /// <summary>The administrator's own AcoustID application key, used instead of the project's.</summary>
     public const string AcoustIdKey = "online.acoustIdKey";
+
+    /// <summary>DLNA: the device's name, the libraries it publishes and the sections of its tree.</summary>
+    public const string Dlna = "dlna.settings";
+
+    /// <summary>The DLNA device's UUID, created once so devices keep recognizing the server.</summary>
+    public const string DlnaDeviceId = "dlna.deviceId";
 }

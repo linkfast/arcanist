@@ -3584,6 +3584,245 @@
         }
       }
     },
+    "/rest/v1/dlna": {
+      "get": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "The DLNA media server: whether it is on, what it publishes and the addresses devices find. Administrators only.",
+        "operationId": "Dlna",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna/settings": {
+      "put": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication.",
+        "operationId": "SetDlnaSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DlnaSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna/renderers": {
+      "get": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Devices on the local network Arcanist can play to (DLNA renderers); empty while DLNA is off.",
+        "operationId": "DlnaRenderers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DlnaRenderer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Adds a renderer by the URL of its UPnP description, for networks where it is not found by itself. Administrators only.",
+        "operationId": "AddDlnaRenderer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDlnaRendererInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaRenderer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna/renderers/{id}": {
+      "get": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "What a renderer is doing: its state, position, volume and Arcanist\u0027s queue on it.",
+        "operationId": "DlnaRenderer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaRendererState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna/play": {
+      "post": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Plays tracks on a renderer, in the best format it plays (lossless first). The plays count for the caller.",
+        "operationId": "PlayOnDlnaRenderer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlayOnDlnaRendererInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaRendererState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna/control": {
+      "post": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Plays, pauses, stops, skips or seeks on a renderer.",
+        "operationId": "ControlDlnaRenderer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ControlDlnaRendererInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaRendererState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna/renderers/{id}/volume": {
+      "put": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Sets a renderer\u0027s volume, 0\u2013100.",
+        "operationId": "SetDlnaRendererVolume",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDlnaRendererVolumeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaRendererState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -4019,6 +4258,17 @@
                 "$ref": "#/components/schemas/ImportTagsInput"
               }
             ]
+          }
+        }
+      },
+      "AddDlnaRendererInput": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
           }
         }
       },
@@ -4523,6 +4773,31 @@
           "PAID"
         ]
       },
+      "ControlDlnaRendererInput": {
+        "required": [
+          "rendererId",
+          "action",
+          "positionMs"
+        ],
+        "type": "object",
+        "properties": {
+          "rendererId": {
+            "type": "string"
+          },
+          "action": {
+            "$ref": "#/components/schemas/DlnaRendererAction"
+          },
+          "positionMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "CopyPlaylistInput": {
         "required": [
           "name"
@@ -4714,6 +4989,222 @@
             ]
           }
         }
+      },
+      "DlnaRenderer": {
+        "required": [
+          "id",
+          "name",
+          "manufacturer",
+          "model",
+          "address",
+          "manual"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "address": {
+            "type": "string"
+          },
+          "manual": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DlnaRendererAction": {
+        "enum": [
+          "PLAY",
+          "PAUSE",
+          "STOP",
+          "NEXT",
+          "PREVIOUS",
+          "SEEK"
+        ]
+      },
+      "DlnaRendererState": {
+        "required": [
+          "renderer",
+          "state",
+          "track",
+          "positionMs",
+          "durationMs",
+          "volume",
+          "queue",
+          "queueIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "renderer": {
+            "$ref": "#/components/schemas/DlnaRenderer"
+          },
+          "state": {
+            "$ref": "#/components/schemas/DlnaTransportState"
+          },
+          "track": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Track"
+              }
+            ]
+          },
+          "positionMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "volume": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "queue": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "queueIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DlnaSection": {
+        "enum": [
+          "ARTISTS",
+          "ALBUMS",
+          "GENRES",
+          "DECADES",
+          "FOLDERS",
+          "PLAYLISTS",
+          "RECENTLY_ADDED",
+          "MIXES"
+        ]
+      },
+      "DlnaSettingsInput": {
+        "required": [
+          "friendlyName",
+          "libraryIds",
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "friendlyName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "libraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DlnaSection"
+            }
+          }
+        }
+      },
+      "DlnaStatus": {
+        "required": [
+          "enabled",
+          "name",
+          "friendlyName",
+          "libraryIds",
+          "sections",
+          "addresses",
+          "convertsFormats"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "friendlyName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "libraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DlnaSection"
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "convertsFormats": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DlnaTransportState": {
+        "enum": [
+          "STOPPED",
+          "PLAYING",
+          "PAUSED",
+          "TRANSITIONING",
+          "NO_MEDIA"
+        ]
       },
       "DropFolder": {
         "required": [
@@ -7058,6 +7549,35 @@
           "VIEWER"
         ]
       },
+      "PlayOnDlnaRendererInput": {
+        "required": [
+          "rendererId",
+          "trackIds",
+          "startIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "rendererId": {
+            "type": "string"
+          },
+          "trackIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "startIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "RatedTrack": {
         "required": [
           "track",
@@ -7636,6 +8156,22 @@
         "properties": {
           "enabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "SetDlnaRendererVolumeInput": {
+        "required": [
+          "volume"
+        ],
+        "type": "object",
+        "properties": {
+          "volume": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -8727,6 +9263,9 @@
     },
     {
       "name": "Account"
+    },
+    {
+      "name": "DLNA"
     },
     {
       "name": "Online services"

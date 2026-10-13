@@ -115,9 +115,12 @@ public sealed class ListeningService(
     /// Records that the user listened to a track. Whether it counts as a play is decided here, so every player
     /// counts the same way: at least 30 seconds, and half the track or four minutes.
     /// </summary>
-    public async Task<RecordedPlay> RecordPlayAsync(RecordPlayInput input, CancellationToken cancellationToken)
+    public Task<RecordedPlay> RecordPlayAsync(RecordPlayInput input, CancellationToken cancellationToken) =>
+        RecordPlayAsync(guard.Authenticated(), input, cancellationToken);
+
+    /// <summary>Records a play for a user outside a request of theirs (a renderer playing their queue).</summary>
+    internal async Task<RecordedPlay> RecordPlayAsync(UserAccess access, RecordPlayInput input, CancellationToken cancellationToken)
     {
-        var access = guard.Authenticated();
         var now = Now();
         var playedAt = input.PlayedAt?.ToUniversalTime() ?? now;
 

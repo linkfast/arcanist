@@ -43,6 +43,8 @@ public sealed class ArcanistFactory(
         builder.UseSetting(DataDirectory.ConfigurationKey, DataPath);
         // Background analysis would compete with the assertions of unrelated tests; its own tests turn it on.
         builder.UseSetting("Arcanist:Analysis:Enabled", "false");
+        // No UDP multicast from tests: DLNA discovery is tested through its messages.
+        builder.UseSetting("Arcanist:Dlna:Ssdp", "false");
 
         foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
             builder.UseSetting(key, value);

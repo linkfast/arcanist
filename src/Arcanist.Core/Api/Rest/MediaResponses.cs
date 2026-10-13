@@ -15,8 +15,15 @@ public static class MediaResponses
     /// <param name="requested">Format to convert to; the original when null (unless a cap or offset needs conversion).</param>
     /// <param name="maxBitRate">kbit/s; converts to MP3 only when the original exceeds it.</param>
     /// <param name="timeOffset">Seconds to start at; converts.</param>
-    public static async Task<IResult> StreamAsync(
+    public static Task<IResult> StreamAsync(
         HttpContext context, Guid trackId, Guid? fileId, bool download, TranscodeFormat? requested, int? maxBitRate, double? timeOffset,
+        CancellationToken cancellationToken) =>
+        StreamWithProfileAsync(context, trackId, fileId, download, requested is { } format ? TranscodeProfile.For(format) : null, maxBitRate,
+            timeOffset, cancellationToken);
+
+    /// <param name="requested">Profile to convert with (DLNA also uses <see cref="TranscodeProfile.Lpcm"/>).</param>
+    public static async Task<IResult> StreamWithProfileAsync(
+        HttpContext context, Guid trackId, Guid? fileId, bool download, TranscodeProfile? requested, int? maxBitRate, double? timeOffset,
         CancellationToken cancellationToken)
     {
         var streams = context.RequestServices.GetRequiredService<StreamService>();
@@ -33,9 +40,9 @@ public static class MediaResponses
         var segment = target.StartMs is not null;
         if (!download && (requested is not null || maxBitRate is not null || offset > 0 || segment) && !fits)
         {
-            var profile = TranscodeProfile.For(requested ?? (segment && maxBitRate is null && AudioFormats.IsLossless(target.RelativePath)
+            var profile = requested ?? TranscodeProfile.For(segment && maxBitRate is null && AudioFormats.IsLossless(target.RelativePath)
                 ? TranscodeFormat.Flac
-                : TranscodeFormat.Mp3));
+                : TranscodeFormat.Mp3);
             var remaining = Math.Max(0, target.DurationMs / 1000.0 - offset);
             if (HttpMethods.IsHead(context.Request.Method))
             {

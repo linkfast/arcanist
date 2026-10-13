@@ -160,13 +160,20 @@ internal static partial class SubsonicMethods
         return call.Ok();
     }
 
-    /// <summary>Rates a song 1–5, or clears its rating with 0. Album and artist ratings are not stored.</summary>
+    /// <summary>
+    /// Rates a song 1–5, or clears its rating with 0. With single-star ratings any rating stars it. Album and artist
+    /// ratings are not stored.
+    /// </summary>
     private static async Task<IResult> SetRatingAsync(SubsonicCall call)
     {
         var id = call.Parameters.RequiredId("id");
         var rating = call.Parameters.Int("rating") ?? throw SubsonicException.Missing("rating");
         if (rating is < 0 or > 5)
             throw SubsonicException.Invalid("rating");
+
+        // With single-star ratings, any rating stars the song: apps only know of five stars.
+        if (rating > 0 && call.Service<RatingSettings>().Current == Data.Entities.RatingMode.Star)
+            rating = 5;
 
         var scope = await new SubsonicLibrary(call).ScopeAsync(null);
         if (await scope.Tracks.AnyAsync(t => t.Id == id, call.Cancellation))

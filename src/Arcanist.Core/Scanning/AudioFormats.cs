@@ -41,6 +41,9 @@ public static class AudioFormats
         return dot > path.LastIndexOf('/') ? path[..dot] : path;
     }
 
+    /// <summary>The extensions the scanner reads, with their dot.</summary>
+    public static IReadOnlyCollection<string> Extensions => MimeTypes.Keys;
+
     public static bool IsAudio(string path) => MimeTypes.ContainsKey(Path.GetExtension(path));
 
     public static string MimeType(string path) =>

@@ -76,13 +76,30 @@ public sealed class AppPasswordService(
     }
 
     /// <summary>The user whose app password this is (sent as a password: Subsonic <c>p</c>, mStream login).</summary>
-    public Task<Guid?> VerifyPasswordAsync(string userName, string password, CancellationToken cancellationToken) =>
-        VerifyAsync(userName, secret => FixedTimeEquals(secret, password), cancellationToken);
+    public async Task<Guid?> VerifyPasswordAsync(string userName, string password, CancellationToken cancellationToken) =>
+        (await VerifyAsync(userName, secret => FixedTimeEquals(secret, password), cancellationToken))?.UserId;
+
+    /// <summary>
+    /// The app password a user name and password match, for apps that get a token of their own at sign-in (mStream):
+    /// the token names the app password, so revoking it signs the app out.
+    /// </summary>
+    public async Task<(Guid UserId, Guid PasswordId)?> SignInAsync(string userName, string password, CancellationToken cancellationToken) =>
+        await VerifyAsync(userName, secret => FixedTimeEquals(secret, password), cancellationToken) is { } match ? (match.UserId, match.Id) : null;
+
+    /// <summary>The user of an app password, while it exists.</summary>
+    public async Task<Guid?> UserOfAsync(Guid passwordId, CancellationToken cancellationToken)
+    {
+        var password = await db.AppPasswords.SingleOrDefaultAsync(p => p.Id == passwordId, cancellationToken);
+        if (password is null)
+            return null;
+        await TouchAsync(password, cancellationToken);
+        return password.UserId;
+    }
 
     /// <summary>The user whose app password gives this Subsonic token: <c>md5(password + salt)</c>, hex.</summary>
-    public Task<Guid?> VerifyTokenAsync(string userName, string token, string salt, CancellationToken cancellationToken) =>
-        VerifyAsync(userName, secret => FixedTimeEquals(Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(secret + salt))), token.ToLowerInvariant()),
-            cancellationToken);
+    public async Task<Guid?> VerifyTokenAsync(string userName, string token, string salt, CancellationToken cancellationToken) =>
+        (await VerifyAsync(userName, secret => FixedTimeEquals(Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(secret + salt))), token.ToLowerInvariant()),
+            cancellationToken))?.UserId;
 
     /// <summary>The user of an app password sent as an OpenSubsonic API key.</summary>
     public async Task<Guid?> VerifyApiKeyAsync(string apiKey, CancellationToken cancellationToken)
@@ -95,7 +112,7 @@ public sealed class AppPasswordService(
         return password.UserId;
     }
 
-    private async Task<Guid?> VerifyAsync(string userName, Func<string, bool> matches, CancellationToken cancellationToken)
+    private async Task<AppPasswordEntity?> VerifyAsync(string userName, Func<string, bool> matches, CancellationToken cancellationToken)
     {
         var normalized = TextNormalizer.Normalize(userName ?? "");
         var key = "app:" + normalized;
@@ -121,7 +138,7 @@ public sealed class AppPasswordService(
 
             throttle.RecordSuccess(key);
             await TouchAsync(password, cancellationToken);
-            return password.UserId;
+            return password;
         }
 
         throttle.RecordFailure(key);

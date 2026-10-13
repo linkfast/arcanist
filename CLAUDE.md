@@ -187,7 +187,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **Datos:** EF Core 10 con dos contextos, `SqliteArcanistDbContext` y `PostgresArcanistDbContext`, que heredan de `ArcanistDbContext`.
   - Cada contexto tiene sus migraciones en `Data/Migrations/{Sqlite,Postgres}`. Toda migración se genera **para ambos**.
   - Antes de la primera versión publicada las migraciones se fusionaron en una `Initial`, y se volverán a fusionar justo antes de publicarla (la F3 añadió varias). **Una vez publicada, nunca reescribir ni fusionar migraciones.** Evitar operaciones que en SQLite obligan a reconstruir la tabla (renombrar o borrar columnas) salvo que sea imprescindible.
-  - Claves `Guid.CreateVersion7()`, fechas como `DateTime` UTC, sin SQL específico de un proveedor.
+  - Claves `Guid.CreateVersion7()`, fechas como `DateTime` UTC, sin SQL específico de un proveedor. **Única excepción: la búsqueda** (`Data/Search/FullTextSearch.cs`), ver "Búsqueda".
   - El usuario elige SQLite o PostgreSQL en el asistente.
   - **Nunca** colocar el `.db` de SQLite en SMB/NFS.
 - **Catálogo:**
@@ -234,7 +234,11 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **Visibilidad:** una pista es visible si tiene algún archivo presente (`MissingSince == null`) en una biblioteca accesible. Álbumes y artistas son visibles a través de esas pistas. Lo invisible responde 404.
   - `Track.files` lista solo las copias accesibles, de mejor a peor calidad.
   - **Paginación keyset** (`Keyset`) por clave normalizada + id, con cursor opaco (`after`/`nextCursor`) y `totalCount`. Probada en ambos proveedores. `tracks(albumId)` devuelve el álbum entero en orden de disco y pista, sin paginar.
-  - La búsqueda usa `Contains` sobre las columnas `Normalized*`. `TextNormalizer` quita acentos y pliega letras como æ/ø/ß/ł ("agaetis" encuentra "Ágætis"). **Cambiar sus reglas tras publicar exige una migración que recalcule los valores guardados.**
+  - `TextNormalizer` quita acentos y pliega letras como æ/ø/ß/ł ("agaetis" encuentra "Ágætis"). **Cambiar sus reglas tras publicar exige una migración que recalcule los valores guardados** (las columnas `Normalized*` y `SearchText`).
+- **Búsqueda (implementado):** `Data/Search/` y `Application/Search/`.
+  - Artistas, álbumes, pistas y playlists guardan `SearchText`: palabras normalizadas (una pista lleva título, artistas y álbum). `CatalogWriter` lo pone a null en cada pista que escribe y `SearchIndexer` lo recalcula tras cada lote del escáner (también el de sus álbumes); `SearchIndexBackfill` lo completa al arrancar; `PlaylistService` lo escribe directamente.
+  - **Índice nativo de cada proveedor, fuera del modelo de EF:** FTS5 de contenido externo con triggers en SQLite y una columna `SearchVector` (`tsvector` generada, configuración `simple`) con índice GIN en PostgreSQL. `FullTextSearch.EnsureAsync` los crea tras migrar y, en SQLite, los rehace si faltan triggers (una migración que reconstruya la tabla los perdería).
+  - Cada palabra debe aparecer como inicio de palabra (`"sig"*` / `sig:*`); los términos se normalizan y solo quedan letras y dígitos, así que nunca son sintaxis. `FullTextSearch.Match` devuelve un `IQueryable<SearchHit>` (id y puntuación) para componer con los filtros de visibilidad. `search(query)` busca de todo a la vez; el parámetro `search` de `artists`/`albums`/`tracks` usa el mismo índice.
 - **Streaming y carátulas (implementado):** `Api/Rest/MediaEndpoints.cs`, `Application/Streaming/` y `Application/Artwork/`. Solo REST.
   - `GET|HEAD /rest/v1/stream/{trackId}`: elige la mejor copia accesible (o `fileId`). Admite `Range` (206), `ETag` = `ContentHash` y `Cache-Control: private`. Con `download=true` envía el original como adjunto y exige `DOWNLOAD`.
   - **Autenticación del streaming:** `Bearer`, o `?st=` de `Track.streamUrl`/`TrackFile.streamUrl`. `StreamTokens` es un HMAC con clave propia en `<datos>/keys/`, ligado a usuario y sesión y válido 6 h. Revocar la sesión lo invalida. El log de peticiones no incluye la query string, así que el token no queda registrado.

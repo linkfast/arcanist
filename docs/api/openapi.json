@@ -843,6 +843,49 @@
         }
       }
     },
+    "/rest/v1/search": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Artists, albums, tracks and playlists matching every word of the query (as word starts, ignoring accents and case), best first. first is per kind: 10 by default, at most 50.",
+        "operationId": "Search",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResults"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/stream/{trackId}": {
       "get": {
         "tags": [
@@ -6005,6 +6048,41 @@
           "FAILED"
         ]
       },
+      "SearchResults": {
+        "required": [
+          "artists",
+          "albums",
+          "tracks",
+          "playlists"
+        ],
+        "type": "object",
+        "properties": {
+          "artists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artist"
+            }
+          },
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            }
+          },
+          "playlists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Playlist"
+            }
+          }
+        }
+      },
       "ServerDirectory": {
         "required": [
           "name",
@@ -7251,6 +7329,9 @@
       "name": "Playlists"
     },
     {
+      "name": "Catalog"
+    },
+    {
       "name": "Media"
     },
     {
@@ -7273,9 +7354,6 @@
     },
     {
       "name": "Online services"
-    },
-    {
-      "name": "Catalog"
     }
   ]
 }

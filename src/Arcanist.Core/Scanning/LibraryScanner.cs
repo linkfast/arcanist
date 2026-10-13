@@ -6,6 +6,7 @@ using Arcanist.Core.Application;
 using ScanEvents = Arcanist.Core.Application.Scanning.ScanEvents;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Data.Search;
 using Arcanist.Core.Organization;
 using Arcanist.Core.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -314,6 +315,9 @@ public sealed class LibraryScanner(
                 return;
 
             var result = await writer.ApplyAsync(batch, cancellationToken);
+            // Searchable as soon as written, not only once the whole scan is done.
+            await using (var indexDb = databases.CreateDbContext())
+                await SearchIndexer.RefreshAsync(indexDb, cancellationToken);
             job.FilesAdded += result.Added;
             job.FilesUpdated += result.Updated;
             counter.Read(filesInBatch);

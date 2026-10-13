@@ -56,6 +56,8 @@ public sealed class DatabaseInitializer(ArcanistPaths paths, ILoggerFactory logg
             // Persistent per database file: readers no longer block the scanner's writes.
             await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
         }
+
+        await Search.FullTextSearch.EnsureAsync(db, cancellationToken);
     }
 }
 

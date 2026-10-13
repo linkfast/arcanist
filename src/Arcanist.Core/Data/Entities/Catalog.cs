@@ -16,6 +16,11 @@ public sealed class Artist : Entity
     public string? SortName { get; set; }
 
     public Guid? MusicBrainzId { get; set; }
+
+    /// <summary>
+    /// Normalized words the full-text index searches (see <c>SearchIndexer</c>); null while it has to be (re)computed.
+    /// </summary>
+    public string? SearchText { get; set; }
 }
 
 public sealed class Album : Entity
@@ -23,6 +28,11 @@ public sealed class Album : Entity
     public required string Title { get; set; }
 
     public required string NormalizedTitle { get; set; }
+
+    /// <summary>
+    /// Normalized words the full-text index searches (see <c>SearchIndexer</c>); null while it has to be (re)computed.
+    /// </summary>
+    public string? SearchText { get; set; }
 
     public Guid AlbumArtistId { get; set; }
 
@@ -61,6 +71,11 @@ public sealed class Track : Entity
     public required string Title { get; set; }
 
     public required string NormalizedTitle { get; set; }
+
+    /// <summary>
+    /// Normalized words the full-text index searches (see <c>SearchIndexer</c>); null while it has to be (re)computed.
+    /// </summary>
+    public string? SearchText { get; set; }
 
     public Guid AlbumId { get; set; }
 

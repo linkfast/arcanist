@@ -1,6 +1,7 @@
 using Keyset = Arcanist.Core.Application.Catalog.Keyset;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Data.Search;
 using Microsoft.EntityFrameworkCore;
 
 namespace Arcanist.Core.Tests.Data;
@@ -132,6 +133,61 @@ public abstract class DatabaseProviderTests
 
         Assert.Equal(8, seen.Count);
         Assert.Equal(8, seen.Distinct().Count());
+    }
+
+    [Fact]
+    public async Task Full_text_search_matches_word_starts_and_follows_changes()
+    {
+        var ids = await SeedAsync();
+        var cancel = TestContext.Current.CancellationToken;
+
+        await using (var db = await OpenAsync())
+        {
+            await FullTextSearch.EnsureAsync(db, cancel);
+            // Running it again finds everything in place.
+            await FullTextSearch.EnsureAsync(db, cancel);
+            await SearchIndexer.RefreshAsync(db, cancel);
+        }
+
+        async Task<List<Guid>> FindAsync(SearchKind kind, string query)
+        {
+            await using var db = await OpenAsync();
+            return await FullTextSearch.Match(db, kind, query)!.OrderByDescending(h => h.Score).Select(h => h.Id).ToListAsync(cancel);
+        }
+
+        // A track is found by its title, artists and album; accents and case never matter.
+        Assert.Equal([ids.TrackId], await FindAsync(SearchKind.Tracks, "SVEFN"));
+        Assert.Equal([ids.TrackId], await FindAsync(SearchKind.Tracks, "sigur agaet"));
+        Assert.Equal([ids.TrackId], await FindAsync(SearchKind.Tracks, "guest"));
+        Assert.Empty(await FindAsync(SearchKind.Tracks, "sigur nothing"));
+        Assert.Single(await FindAsync(SearchKind.Albums, "ágætis rós"));
+        Assert.Single(await FindAsync(SearchKind.Artists, "Ros"));
+        await using (var db = await OpenAsync())
+            Assert.Null(FullTextSearch.Match(db, SearchKind.Tracks, "  ¿?!  "));
+
+        // Quotes and operators in a query are words, never syntax.
+        Assert.Empty(await FindAsync(SearchKind.Tracks, "\"sigur\" OR NEAR(* -"));
+
+        // Changes reach the index through the database.
+        await using (var db = await OpenAsync())
+        {
+            await db.Tracks.Where(t => t.Id == ids.TrackId).ExecuteUpdateAsync(s => s.SetProperty(t => t.SearchText, (string?)null), cancel);
+            await db.Tracks.Where(t => t.Id == ids.TrackId).ExecuteUpdateAsync(s => s.SetProperty(t => t.Title, "Starálfur"), cancel);
+            await SearchIndexer.RefreshAsync(db, cancel);
+        }
+
+        Assert.Empty(await FindAsync(SearchKind.Tracks, "svefn"));
+        Assert.Equal([ids.TrackId], await FindAsync(SearchKind.Tracks, "staralfur"));
+
+        await using (var db = await OpenAsync())
+        {
+            await db.MediaFiles.ExecuteDeleteAsync(cancel);
+            await db.TrackArtists.ExecuteDeleteAsync(cancel);
+            await db.TrackGenres.ExecuteDeleteAsync(cancel);
+            await db.Tracks.ExecuteDeleteAsync(cancel);
+        }
+
+        Assert.Empty(await FindAsync(SearchKind.Tracks, "staralfur"));
     }
 
     private async Task<SeedIds> SeedAsync()

@@ -15,6 +15,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     private const int PathLength = 4096;
     private const int EnumLength = 32;
     private const int TemplateLength = 1024;
+    public const int SearchTextLength = 2000;
 
     public DbSet<User> Users => Set<User>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
@@ -168,6 +169,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             playlist.Property(p => p.Name).HasMaxLength(NameLength);
             playlist.Property(p => p.NormalizedName).HasMaxLength(NameLength);
             playlist.Property(p => p.Description).HasMaxLength(2000);
+            playlist.Property(p => p.SearchText).HasMaxLength(SearchTextLength);
             playlist.HasIndex(p => p.OwnerId);
             playlist.HasIndex(p => p.NormalizedName);
         });
@@ -243,6 +245,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             artist.Property(a => a.NormalizedName).HasMaxLength(NameLength);
             artist.Property(a => a.SortName).HasMaxLength(NameLength);
             artist.HasIndex(a => a.NormalizedName);
+            artist.Property(x => x.SearchText).HasMaxLength(SearchTextLength);
             artist.HasIndex(a => a.MusicBrainzId).IsUnique();
         });
 
@@ -253,6 +256,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             album.HasOne(a => a.AlbumArtist).WithMany().OnDelete(DeleteBehavior.Restrict);
             album.HasOne(a => a.Artwork).WithMany().OnDelete(DeleteBehavior.SetNull);
             album.HasIndex(a => new { a.AlbumArtistId, a.NormalizedTitle });
+            album.Property(x => x.SearchText).HasMaxLength(SearchTextLength);
             album.HasIndex(a => a.MusicBrainzReleaseId);
         });
 
@@ -270,6 +274,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             track.HasOne(t => t.Recording).WithMany(r => r.Tracks).OnDelete(DeleteBehavior.Restrict);
             track.HasOne(t => t.Artwork).WithMany().OnDelete(DeleteBehavior.SetNull);
             track.HasIndex(t => t.NormalizedTitle);
+            track.Property(x => x.SearchText).HasMaxLength(SearchTextLength);
             track.HasIndex(t => new { t.AlbumId, t.DiscNumber, t.TrackNumber });
         });
 

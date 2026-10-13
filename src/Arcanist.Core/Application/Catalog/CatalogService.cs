@@ -1,6 +1,7 @@
 using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Data.Search;
 using Microsoft.EntityFrameworkCore;
 using AlbumEntity = Arcanist.Core.Data.Entities.Album;
 using ArtistEntity = Arcanist.Core.Data.Entities.Artist;
@@ -20,18 +21,7 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
 
     public async Task<ArtistPage> ArtistsAsync(string? search, string? after, int? first, CancellationToken cancellationToken)
     {
-        var visible = VisibleTracks(guard.Authenticated());
-        var visibleAlbums = db.Albums.Where(a => visible.Any(t => t.AlbumId == a.Id));
-
-        // Performers and album artists; composers and other credits only appear on tracks.
-        var artists = db.Artists.Where(a =>
-            visibleAlbums.Any(al => al.AlbumArtistId == a.Id)
-            || db.TrackArtists.Any(ta => ta.ArtistId == a.Id
-                                         && (ta.Role == ArtistRole.Primary || ta.Role == ArtistRole.Featured)
-                                         && visible.Any(t => t.Id == ta.TrackId)));
-
-        if (Search(search) is { } term)
-            artists = artists.Where(a => a.NormalizedName.Contains(term));
+        var artists = Matching(VisibleArtists(guard.Authenticated()), SearchKind.Artists, search);
 
         var (page, next, total) = await Keyset.PageAsync(artists, a => a.NormalizedName, after, first, cancellationToken);
         return new ArtistPage(page.Select(ToModel).ToList(), next, total);
@@ -62,8 +52,7 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                                                                               && (ta.Role == ArtistRole.Primary || ta.Role == ArtistRole.Featured))));
         }
 
-        if (Search(search) is { } term)
-            albums = albums.Where(a => a.NormalizedTitle.Contains(term));
+        albums = Matching(albums, SearchKind.Albums, search);
 
         var (page, next, total) = await Keyset.PageAsync(albums, a => a.NormalizedTitle, after, first, cancellationToken);
         return new AlbumPage(await ToModelsAsync(page, visible, cancellationToken), next, total);
@@ -90,8 +79,7 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         if (artistId is { } artist)
             tracks = tracks.Where(t => t.Artists.Any(ta => ta.ArtistId == artist));
 
-        if (Search(search) is { } term)
-            tracks = tracks.Where(t => t.NormalizedTitle.Contains(term));
+        tracks = Matching(tracks, SearchKind.Tracks, search);
 
         if (albumId is { } album)
         {
@@ -120,6 +108,28 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         var visible = VisibleTracks(access);
         var albums = await db.Albums.AsNoTracking().Where(a => ids.Contains(a.Id) && visible.Any(t => t.AlbumId == a.Id)).ToListAsync(cancellationToken);
         return (await ToModelsAsync(albums, visible, cancellationToken)).ToDictionary(a => a.Id);
+    }
+
+    /// <summary>
+    /// Artists <paramref name="access"/> can see: performers and album artists of visible tracks. Composers and
+    /// other credits only appear on tracks.
+    /// </summary>
+    internal IQueryable<ArtistEntity> VisibleArtists(UserAccess access)
+    {
+        var visible = VisibleTracks(access);
+        var visibleAlbums = db.Albums.Where(a => visible.Any(t => t.AlbumId == a.Id));
+        return db.Artists.Where(a =>
+            visibleAlbums.Any(al => al.AlbumArtistId == a.Id)
+            || db.TrackArtists.Any(ta => ta.ArtistId == a.Id
+                                         && (ta.Role == ArtistRole.Primary || ta.Role == ArtistRole.Featured)
+                                         && visible.Any(t => t.Id == ta.TrackId)));
+    }
+
+    /// <summary>Albums <paramref name="access"/> can see: those with a visible track.</summary>
+    internal IQueryable<AlbumEntity> VisibleAlbums(UserAccess access)
+    {
+        var visible = VisibleTracks(access);
+        return db.Albums.Where(a => visible.Any(t => t.AlbumId == a.Id));
     }
 
     /// <summary>Tracks <paramref name="access"/> can play, for queries built elsewhere.</summary>
@@ -311,10 +321,20 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                 albumPeak is { } albumTruePeak ? Math.Round(albumTruePeak, 4) : null)
             : null;
 
-    private static Artist ToModel(ArtistEntity artist) => new(artist.Id, artist.Name, artist.SortName, artist.MusicBrainzId);
+    internal static Artist ToModel(ArtistEntity artist) => new(artist.Id, artist.Name, artist.SortName, artist.MusicBrainzId);
 
-    private static string? Search(string? search) =>
-        string.IsNullOrWhiteSpace(search) ? null : TextNormalizer.Normalize(search);
+    /// <summary>
+    /// Rows matching a search (every word, as a word prefix, in the name, its artists or its album); null without
+    /// one. A search with no words at all matches nothing.
+    /// </summary>
+    private IQueryable<T> Matching<T>(IQueryable<T> rows, SearchKind kind, string? search) where T : Entity
+    {
+        if (string.IsNullOrWhiteSpace(search))
+            return rows;
+
+        var hits = FullTextSearch.Match(db, kind, search);
+        return hits is null ? rows.Where(_ => false) : rows.Where(r => hits.Any(h => h.Id == r.Id));
+    }
 }
 
 public static class StreamUrls

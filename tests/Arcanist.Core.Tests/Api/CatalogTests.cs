@@ -49,6 +49,31 @@ public sealed class CatalogTests : IAsyncLifetime
         _guest = await _factory.CreateAuthenticatedClientAsync("guest");
     }
 
+    [Fact]
+    public async Task One_search_finds_artists_albums_tracks_and_playlists_the_user_can_see()
+    {
+        await _guest.PostAsJsonAsync("/rest/v1/playlists", new { name = "Sigur Rós favourites", isPublic = false }, ArcanistFactory.Json, Cancel);
+
+        var results = await _guest.GetFromJsonAsync<JsonElement>("/rest/v1/search?query=sigur", ArcanistFactory.Json, Cancel);
+        Assert.Equal(["Sigur Rós"], results.GetProperty("artists").EnumerateArray().Select(a => a.GetProperty("name").GetString()));
+        Assert.Equal(["Ágætis byrjun"], results.GetProperty("albums").EnumerateArray().Select(a => a.GetProperty("title").GetString()));
+        Assert.Equal(3, results.GetProperty("tracks").GetArrayLength());
+        Assert.Equal(["Sigur Rós favourites"], results.GetProperty("playlists").EnumerateArray().Select(p => p.GetProperty("name").GetString()));
+
+        // Words combine across title, artist and album, and match word starts.
+        var combined = await _guest.GetFromJsonAsync<JsonElement>("/rest/v1/search?query=ros%20staral", ArcanistFactory.Json, Cancel);
+        Assert.Equal(["Starálfur"], combined.GetProperty("tracks").EnumerateArray().Select(t => t.GetProperty("title").GetString()));
+
+        // Nothing from libraries the user cannot access, nor other users' private playlists.
+        var hidden = await _guest.GetFromJsonAsync<JsonElement>("/rest/v1/search?query=hidden", ArcanistFactory.Json, Cancel);
+        Assert.Equal(0, hidden.GetProperty("tracks").GetArrayLength());
+        var admin = await _admin.GraphQLAsync("{ search(query: \"favourites\") { playlists { name } tracks { title } } }");
+        Assert.Equal(0, admin.GetProperty("data").GetProperty("search").GetProperty("playlists").GetArrayLength());
+
+        var empty = await _guest.GetFromJsonAsync<JsonElement>("/rest/v1/search?query=%3F%3F", ArcanistFactory.Json, Cancel);
+        Assert.Equal(0, empty.GetProperty("artists").GetArrayLength());
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _factory.DisposeAsync();

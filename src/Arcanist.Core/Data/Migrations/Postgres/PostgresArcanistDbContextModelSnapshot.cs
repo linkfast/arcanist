@@ -47,6 +47,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -86,6 +90,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("SortName")
                         .HasMaxLength(512)
@@ -773,6 +781,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -956,6 +968,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<Guid>("RecordingId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("Title")
                         .IsRequired()

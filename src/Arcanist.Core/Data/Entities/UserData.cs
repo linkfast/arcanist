@@ -86,6 +86,9 @@ public sealed class Playlist : Entity
 
     public string? Description { get; set; }
 
+    /// <summary>Normalized words the full-text index searches: the name and description.</summary>
+    public string? SearchText { get; set; }
+
     /// <summary>Every user of the server can see it (and copy it); only its owner and collaborators change it.</summary>
     public bool IsPublic { get; set; }
 

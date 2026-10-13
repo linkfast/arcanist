@@ -3,6 +3,7 @@ using Arcanist.Core.Application.Catalog;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Data.Search;
 using Microsoft.EntityFrameworkCore;
 using PlaylistEntity = Arcanist.Core.Data.Entities.Playlist;
 using PlaylistEntryEntity = Arcanist.Core.Data.Entities.PlaylistEntry;
@@ -89,6 +90,7 @@ public sealed class PlaylistService(ArcanistDbContext db, AccessGuard guard, Cat
             Name = name,
             NormalizedName = TextNormalizer.Normalize(name),
             Description = Clean(input.Description),
+            SearchText = FullTextSearch.Text(name, input.Description),
             IsPublic = input.IsPublic,
             CreatedAt = now,
             UpdatedAt = now,
@@ -113,6 +115,7 @@ public sealed class PlaylistService(ArcanistDbContext db, AccessGuard guard, Cat
         playlist.Name = name;
         playlist.NormalizedName = TextNormalizer.Normalize(name);
         playlist.Description = Clean(input.Description);
+        playlist.SearchText = FullTextSearch.Text(name, input.Description);
         playlist.IsPublic = input.IsPublic;
         playlist.UpdatedAt = Now();
         await db.SaveChangesAsync(cancellationToken);
@@ -237,6 +240,13 @@ public sealed class PlaylistService(ArcanistDbContext db, AccessGuard guard, Cat
         for (var i = 0; i < entries.Count; i++)
             entries[i].Position = i;
     }
+
+    /// <summary>Playlists <paramref name="access"/> can see, for queries built elsewhere.</summary>
+    internal IQueryable<PlaylistEntity> VisibleQuery(UserAccess access) => Visible(access);
+
+    /// <summary>Turns playlist rows <paramref name="access"/> can see into contract playlists, in the same order.</summary>
+    internal Task<IReadOnlyList<Playlist>> ModelsAsync(UserAccess access, IReadOnlyList<PlaylistEntity> playlists, CancellationToken cancellationToken) =>
+        ToModelsAsync(access, playlists, cancellationToken);
 
     private IQueryable<PlaylistEntity> Visible(UserAccess access) =>
         db.Playlists.Where(p => p.OwnerId == access.UserId || p.IsPublic || p.Collaborators.Any(c => c.UserId == access.UserId));

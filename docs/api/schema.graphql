@@ -56,6 +56,8 @@ type Query {
   scanJobs(libraryId: ID, limit: Int): [ScanJob!]!
   "A scan by id, including live progress while it runs. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJob(id: ID!): ScanJob!
+  "Artists, albums, tracks and playlists matching every word of the query (as word starts, ignoring accents and case), best first. first is per kind: 10 by default, at most 50."
+  search(query: String!, first: Int): SearchResults!
   "Public description of the server. Does not require authentication."
   serverInfo: ServerInfo!
   "The signed-in user."
@@ -679,6 +681,13 @@ enum ScanPhase {
   DISCOVERING
   READING
   CLEANING_UP
+}
+
+type SearchResults {
+  artists: [Artist!]!
+  albums: [Album!]!
+  tracks: [Track!]!
+  playlists: [Playlist!]!
 }
 
 type ServerInfo {

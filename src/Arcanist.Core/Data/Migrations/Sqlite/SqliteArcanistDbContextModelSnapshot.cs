@@ -42,6 +42,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -80,6 +84,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SortName")
@@ -768,6 +776,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -950,6 +962,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("RecordingId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")

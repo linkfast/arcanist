@@ -199,6 +199,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             track.TrackNumber = meta.TrackNumber;
             track.DurationMs = meta.DurationMs;
             track.UpdatedAt = now;
+            track.SearchText = null;
             if (meta.RecordingMbid is { } recordingMbid && _mbidByRecording.GetValueOrDefault(track.RecordingId) != recordingMbid)
                 track.RecordingId = ResolveRecording(recordingMbid);
 

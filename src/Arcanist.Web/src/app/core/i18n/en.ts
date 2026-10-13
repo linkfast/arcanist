@@ -23,6 +23,7 @@ export const en: Dictionary = {
     close: 'Close',
   },
   nav: {
+    dlna: 'DLNA',
     extensions: 'Extensions',
     mstream: 'Import from mStream',
     overview: 'Home',
@@ -633,6 +634,69 @@ export const en: Dictionary = {
       extensionTrust:
         'An extension runs inside the server with all its rights: it can read and change any data and file the server can reach. Only install extensions from people you trust.',
       confirm: 'Install',
+    },
+  },
+  dlna: {
+    title: 'DLNA',
+    subtitle:
+      'TVs, consoles, Kodi or VLC on your local network browse and play your music, and Arcanist can play to DLNA speakers and TVs.',
+    saved: 'DLNA settings saved',
+    server: {
+      title: 'DLNA server',
+      description:
+        'DLNA has no sign-in: any device on the local network sees what you publish here. It is never offered outside the local network.',
+      enabled: 'On',
+      noNetwork: 'No local network was found on this server.',
+      noFfmpeg:
+        'Without ffmpeg only the original files are sent: some devices will not play some formats.',
+      name: 'Name devices show',
+    },
+    libraries: {
+      title: 'Published libraries',
+      description: 'Only these libraries appear on devices of the network.',
+      none: 'There are no libraries.',
+    },
+    sections: {
+      title: 'Menu folders',
+      description: 'What devices see when they open Arcanist, in this order.',
+      up: 'Move up',
+      down: 'Move down',
+      names: {
+        ARTISTS: 'Artists',
+        ALBUMS: 'Albums',
+        GENRES: 'Genres',
+        DECADES: 'Decades',
+        FOLDERS: 'Folders',
+        PLAYLISTS: 'Public playlists',
+        RECENTLY_ADDED: 'Recently added',
+        MIXES: 'Genre and decade mixes',
+      },
+    },
+    renderers: {
+      title: 'Play to',
+      description:
+        'Speakers and TVs on the network that play what Arcanist sends them, in the best format they take (lossless first).',
+      off: 'Switch DLNA on to find devices.',
+      none: 'None found yet.',
+      refresh: 'Refresh',
+      addUrl: 'Add by the URL of its description',
+      volume: 'Volume',
+      playAlbum: 'Play an album',
+      search: 'Search',
+    },
+    states: {
+      STOPPED: 'Stopped',
+      PLAYING: 'Playing',
+      PAUSED: 'Paused',
+      TRANSITIONING: 'Loading',
+      NO_MEDIA: 'Nothing loaded',
+    },
+    actions: {
+      PLAY: 'Play',
+      PAUSE: 'Pause',
+      STOP: 'Stop',
+      NEXT: 'Next',
+      PREVIOUS: 'Previous',
     },
   },
   mstream: {

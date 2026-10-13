@@ -68,6 +68,11 @@ export const routes: Routes = [
           import('./features/extensions/extensions.page').then((m) => m.ExtensionsPage),
       },
       {
+        path: 'dlna',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/dlna/dlna.page').then((m) => m.DlnaPage),
+      },
+      {
         path: 'mstream',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/mstream/mstream.page').then((m) => m.MstreamPage),

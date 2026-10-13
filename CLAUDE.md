@@ -4,14 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento) y 6 (reproductores, extensiones, Subsonic, mStream e importador) completas. Pendiente:
+Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador) y 7 (DLNA) completas. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
 - De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`). La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
 - De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (necesita la clave del proyecto).
+- De la F7: probar DLNA con dispositivos reales (televisores Samsung/LG, Kodi, VLC, BubbleUPnP, altavoces) y con varias interfaces de red.
 - De la F6: probar Subsonic y mStream con apps reales (Symfonium, DSub, Feishin, Amperfy, mStream Music) y el importador con una instalación real de mStream 5 y 6 (también el hash PBKDF2: no hay vector de prueba publicado).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-En curso: Fase 7 (DLNA). Hecho el backend (`Dlna/`, `Extensions/Dlna/`, `Application/Dlna/`: servidor DLNA con SSDP propio, árbol configurable, formatos lossless primero con LPCM, y "reproducir en" con cola en el servidor). Falta la sección DLNA del panel (ajustes, bibliotecas, secciones ordenables, renderers con controles), la guía en `docs/developers` y documentar aquí la arquitectura. Decidido con el usuario: servidor + "reproducir en", solo bibliotecas marcadas, árbol personalizable desde el panel, lossless si el dispositivo lo admite y si no ffmpeg; las bibliotecas en la nube (F10) se servirán por DLNA a través de `ILibraryStorage`. La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Siguiente: Fase 8, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -171,6 +172,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **Prefijos que pueden reclamar las extensiones** (`ExtensionHost.ClaimablePrefixes`):
     - La de mStream: `/api/**`, `/media/**`, `/album-art/**` y `/transcode/**`. `/shared/**` queda reservado (enlaces compartidos de mStream, sin implementar).
     - La de Subsonic: `/rest/{método}[.view]`, nunca `/rest/v1`.
+  - La extensión DLNA vive en `/ext/dlna/**` (descripción, control SOAP, eventos, audio y carátulas).
 - **Una lógica, dos APIs (implementado):**
   - Los resolvers GraphQL (`Api/GraphQL/`) y los endpoints Minimal API (`Api/Rest/`) son capas finas sobre los servicios de `Application/`.
   - La autorización vive **solo** en esos servicios: cada operación empieza con `AccessGuard` (`Authenticated()`, `Permission(...)`, `Admin()`, `RecentAuthentication()`), y lo mismo aplicará al filtrado por biblioteca.
@@ -323,6 +325,14 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - `analyzeMstream*` muestra lo que hay; `importMstream` (admin con step-up) crea las bibliotecas elegidas y los usuarios (admins siguen admins; los demás reciben `DOWNLOAD` y las bibliotecas de sus vpaths) y guarda un `MstreamImport`.
   - Contraseñas: desde carpeta, `PasswordHash = mstream$<sal>$<hash>` y `ArcanistPasswordHasher` lo verifica (PBKDF2-SHA512, 15000, 32 bytes, la sal base64 como texto) y pide rehash; desde servidor, `mstream-server$<import>` y `MstreamServerSignIn` (`IExternalSignIn` en `AuthService`) consulta a ese servidor en el primer login y trae entonces los datos del usuario.
   - `MstreamImportWorker` aplica los datos de una importación desde carpeta cuando terminan los escaneos de sus bibliotecas. `MstreamImporter` casa los archivos por ruta (exacta, o sin mayúsculas ni forma Unicode) y es idempotente: no duplica playlists por nombre, las valoraciones solo rellenan huecos y las reproducciones se quedan con el máximo (en `TrackPlayStats`, sin historial).
+- **DLNA (implementado):** `Dlna/`, `Extensions/Dlna/` y `Application/Dlna/`, extensión integrada `dlna`.
+  - **SSDP propio** (`SsdpService`; RSSDP está abandonado): mientras la extensión está activa, escucha en UDP 1900 (con `ReuseAddress`; si otro programa lo tiene, solo anuncia y busca) y envía desde cada IPv4 local. Anuncia el `MediaServer:1` cada 15 min, responde a `M-SEARCH`, se despide al apagarse y busca renderers cada 2 min. Se rehace si cambian las interfaces. `Arcanist:Dlna:Ssdp=false` lo apaga (los tests lo hacen) y `Arcanist:Dlna:Port` fija el puerto HTTP anunciado (por defecto, el primer `http://` del servidor).
+  - **Sin inicio de sesión:** todo `/ext/dlna/**` responde solo a direcciones locales (`LocalNetwork`: privadas, link-local y loopback) y las peticiones actúan como un usuario sintético (`DlnaAccess`) que ve solo las bibliotecas publicadas. Nada se publica hasta que un admin lo elige.
+  - **Ajustes** (`dlna.settings`, admin con step-up): nombre, bibliotecas y secciones del árbol en orden (`DlnaSection`, guardadas por nombre). El UDN (`dlna.deviceId`) se crea una vez.
+  - **ContentDirectory** (`DlnaLibrary`, `Didl`): ids que dicen lo que son (`album/<id>`, `folder/<fuente>/<ruta base64url>`…); un ítem es `<contenedor>|<pista>`. Paginado, BrowseMetadata, fallo 701 para lo que no existe y `SystemUpdateID` que cambia con cada escaneo publicado. Las carpetas salen del catálogo, nunca del disco. Sin búsqueda ni eventos (las suscripciones se aceptan y no se envía nada).
+  - **Formatos** (`DlnaFormats`): cada ítem ofrece primero el original, luego FLAC y LPCM (`TranscodeProfile.Lpcm`, 16 bits a 44,1 kHz, interno: no está en `TranscodeFormat`) si es sin pérdida, y MP3. Los originales admiten Range (`DLNA.ORG_OP=01`); las conversiones, `TimeSeekRange.dlna.org` (`OP=10`). Todo pasa por `MediaResponses`, así que también servirá las bibliotecas en la nube (F10).
+  - **"Reproducir en"** (`RendererRegistry`, `RendererControl`, `RendererSessions`): renderers por SSDP o añadidos por URL; el formato se elige con su `GetProtocolInfo`. Cada renderer tiene una cola en memoria; se le da la siguiente pista con `SetNextAVTransportURI` cuando la admite y un bucle de 1 s detecta el final, avanza y registra la reproducción para el usuario (`ListeningService.RecordPlayAsync(UserAccess, …)`). Los renderers piden el audio con `/ext/dlna/play/<token>/…`, una concesión de Data Protection de 7 días para esa pista y ese usuario.
+  - Panel: página DLNA (activar, nombre, bibliotecas, secciones ordenables, renderers con controles y "reproducir un álbum"). Guía en `docs/developers/README.md`.
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.
@@ -367,7 +377,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **F4:** carpetas de entrada y organización (completada): plantillas de rutas, organizar con vista previa y deshacer, organización automática de lo nuevo, carpetas de entrada con política de duplicados, conversión opcional y cola de revisión en el panel. Pendiente: sugerencias de AcoustID para lo que no se puede identificar.
 - **F5:** experiencia de usuario (completada): valoraciones con modo de servidor (cinco estrellas o una), reproducciones informadas por los reproductores con historial y estadísticas (también del servidor en el panel), playlists públicas y colaborativas, búsqueda de texto completo por proveedor, e inicio, mixes y páginas de artista como API para los reproductores.
 - **F6:** ecosistema (completada): reproductores web instalables desde zip o URL, SDK de extensiones con carga aislada, contraseñas de aplicación, Subsonic/OpenSubsonic y mStream como extensiones integradas, e importador de mStream desde su carpeta o su servidor (también desde el asistente).
-- **F7:** DLNA.
+- **F7:** DLNA (completada): servidor DLNA/UPnP con SSDP propio, solo en la red local y solo con las bibliotecas publicadas, árbol configurable desde el panel, formatos sin pérdida primero (original, FLAC, LPCM) y MP3 con ffmpeg, y "reproducir en" renderers con cola en el servidor.
 - **F8:** red P2P iroh (crate Rust `arcanist-p2p` con C ABI para .NET y uniffi para móviles) y su sección en el admin.
 - **F9:** migrador SQLite → PostgreSQL con UI.
 - **F10:** integración con Ultimate Cloud.
@@ -383,6 +393,12 @@ Decididas en la F3:
 - **ffmpeg no se empaqueta:** se detecta en el sistema o en la ruta configurada (también desde el asistente), y el panel ofrece descargarlo si falta.
 - **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
 - **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
+
+Decididas en la F7 (con el usuario):
+- **Servidor DLNA y "reproducir en".**
+- **Solo las bibliotecas que el admin publica**, sin inicio de sesión y solo en la red local.
+- **Árbol personalizable desde la sección DLNA del panel**; las bibliotecas en la nube (F10) se servirán igual, a través de `ILibraryStorage`.
+- **Sin pérdida si el dispositivo lo admite; si no, ffmpeg.**
 
 Decididas en la F6 (con el usuario):
 - **Extensiones oficiales integradas y de terceros desde zip**, con aviso de confianza total, step-up y reinicio.

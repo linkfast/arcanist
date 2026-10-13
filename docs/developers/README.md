@@ -243,6 +243,24 @@ routes fall back to their entry page; API paths and the prefixes `/api`, `/media
 `/shared` and `/ext` are reserved and never reach them. Administrators install players from the admin panel: see
 [Packaging a web player](frontends.md).
 
+## Playing to DLNA devices
+
+When an administrator switches DLNA on, players can send music to speakers and TVs on the server's local network:
+
+- `dlnaRenderers` lists the renderers found (an administrator can add one by its description URL with
+  `addDlnaRenderer`).
+- `playOnDlnaRenderer(input: { rendererId, trackIds, startIndex })` replaces what the renderer plays with a queue of
+  tracks the user can see. Arcanist picks the best format each renderer says it plays (the lossless original, then
+  FLAC, LPCM and MP3), gives it the next track ahead for gapless playback when it can, and records the plays for that
+  user as they end.
+- `dlnaRenderer(id)` tells what it is doing (state, position, volume, the queue and the current track); poll it every
+  second or two while showing it.
+- `controlDlnaRenderer(input: { rendererId, action, positionMs })` plays, pauses, stops, skips (`NEXT`,
+  `PREVIOUS`) or seeks, and `setDlnaRendererVolume(rendererId, volume)` sets the volume (0–100).
+
+Errors: `dlna_disabled`, `renderer_unreachable` (switched off or gone), `renderer_failed` (it refused) and
+`nothing_queued` (skipping without an Arcanist queue on it).
+
 ## Subsonic and mStream apps
 
 Arcanist also speaks the Subsonic API (1.16.1 with OpenSubsonic extensions, at `/rest/{method}[.view]`) and the

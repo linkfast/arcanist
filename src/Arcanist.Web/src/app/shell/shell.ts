@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideCast,
   lucideChartColumn,
   lucideCopy,
   lucideExternalLink,
@@ -34,6 +35,7 @@ import { LanguageSelect } from '../shared/language-select';
   ],
   providers: [
     provideIcons({
+      lucideCast,
       lucideChartColumn,
       lucideCopy,
       lucideHouse,
@@ -153,6 +155,7 @@ export class Shell {
         icon: 'lucidePuzzle',
         visible: this.auth.isAdmin(),
       },
+      { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
       {
         path: '/mstream',
         label: 'nav.mstream',

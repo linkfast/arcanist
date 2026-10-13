@@ -23,6 +23,7 @@ export const es: Dictionary = {
     close: 'Cerrar',
   },
   nav: {
+    dlna: 'DLNA',
     extensions: 'Extensiones',
     mstream: 'Importar de mStream',
     overview: 'Inicio',
@@ -637,6 +638,69 @@ export const es: Dictionary = {
       extensionTrust:
         'Una extensión se ejecuta dentro del servidor con todos sus permisos: puede leer y cambiar cualquier dato y archivo al que el servidor tenga acceso. Instala solo extensiones de quien confíes.',
       confirm: 'Instalar',
+    },
+  },
+  dlna: {
+    title: 'DLNA',
+    subtitle:
+      'Televisores, consolas, Kodi o VLC de tu red local navegan y reproducen tu música, y Arcanist puede reproducir en altavoces y televisores DLNA.',
+    saved: 'Ajustes de DLNA guardados',
+    server: {
+      title: 'Servidor DLNA',
+      description:
+        'DLNA no tiene inicio de sesión: cualquier dispositivo de la red local ve lo que publiques aquí. Nunca se ofrece fuera de la red local.',
+      enabled: 'Activado',
+      noNetwork: 'No se encontró ninguna red local en este servidor.',
+      noFfmpeg:
+        'Sin ffmpeg solo se envían los archivos originales: algunos dispositivos no reproducirán ciertos formatos.',
+      name: 'Nombre que ven los dispositivos',
+    },
+    libraries: {
+      title: 'Bibliotecas publicadas',
+      description: 'Solo estas bibliotecas aparecen en los dispositivos de la red.',
+      none: 'No hay bibliotecas.',
+    },
+    sections: {
+      title: 'Carpetas del menú',
+      description: 'Lo que ven los dispositivos al entrar en Arcanist, en este orden.',
+      up: 'Subir',
+      down: 'Bajar',
+      names: {
+        ARTISTS: 'Artistas',
+        ALBUMS: 'Álbumes',
+        GENRES: 'Géneros',
+        DECADES: 'Décadas',
+        FOLDERS: 'Carpetas',
+        PLAYLISTS: 'Playlists públicas',
+        RECENTLY_ADDED: 'Añadido recientemente',
+        MIXES: 'Mixes por género y década',
+      },
+    },
+    renderers: {
+      title: 'Reproducir en',
+      description:
+        'Altavoces y televisores de la red que reproducen lo que Arcanist les envía, en el mejor formato que admitan (sin pérdida primero).',
+      off: 'Activa DLNA para encontrar dispositivos.',
+      none: 'No se ha encontrado ninguno todavía.',
+      refresh: 'Actualizar',
+      addUrl: 'Añadir por la URL de su descripción',
+      volume: 'Volumen',
+      playAlbum: 'Reproducir un álbum',
+      search: 'Buscar',
+    },
+    states: {
+      STOPPED: 'Detenido',
+      PLAYING: 'Reproduciendo',
+      PAUSED: 'En pausa',
+      TRANSITIONING: 'Cargando',
+      NO_MEDIA: 'Sin nada',
+    },
+    actions: {
+      PLAY: 'Reproducir',
+      PAUSE: 'Pausa',
+      STOP: 'Detener',
+      NEXT: 'Siguiente',
+      PREVIOUS: 'Anterior',
     },
   },
   mstream: {

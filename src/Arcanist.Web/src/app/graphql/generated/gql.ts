@@ -97,6 +97,19 @@ type Documents = {
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.ImportMstreamDocument,
+    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    addresses\n    convertsFormats\n  }\n": typeof types.DlnaStatusFieldsFragmentDoc,
+    "\n  query Dlna {\n    dlna {\n      ...DlnaStatusFields\n    }\n    libraries {\n      id\n      name\n    }\n  }\n": typeof types.DlnaDocument,
+    "\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n": typeof types.SetDlnaSettingsDocument,
+    "\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n": typeof types.DlnaRendererFieldsFragmentDoc,
+    "\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n": typeof types.DlnaRenderersDocument,
+    "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": typeof types.DlnaRendererStateFieldsFragmentDoc,
+    "\n  query DlnaRenderer($id: String!) {\n    dlnaRenderer(id: $id) {\n      ...DlnaRendererStateFields\n    }\n  }\n": typeof types.DlnaRendererDocument,
+    "\n  mutation AddDlnaRenderer($url: String!) {\n    addDlnaRenderer(url: $url) {\n      ...DlnaRendererFields\n    }\n  }\n": typeof types.AddDlnaRendererDocument,
+    "\n  mutation PlayOnDlnaRenderer($input: PlayOnDlnaRendererInput!) {\n    playOnDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n": typeof types.PlayOnDlnaRendererDocument,
+    "\n  mutation ControlDlnaRenderer($input: ControlDlnaRendererInput!) {\n    controlDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n": typeof types.ControlDlnaRendererDocument,
+    "\n  mutation SetDlnaRendererVolume($rendererId: String!, $volume: Int!) {\n    setDlnaRendererVolume(rendererId: $rendererId, volume: $volume) {\n      ...DlnaRendererStateFields\n    }\n  }\n": typeof types.SetDlnaRendererVolumeDocument,
+    "\n  query DlnaAlbumSearch($search: String!) {\n    albums(search: $search, first: 8) {\n      items {\n        id\n        title\n        artist {\n          name\n        }\n      }\n    }\n  }\n": typeof types.DlnaAlbumSearchDocument,
+    "\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n": typeof types.DlnaAlbumTracksDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -182,6 +195,19 @@ const documents: Documents = {
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.ImportMstreamDocument,
+    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    addresses\n    convertsFormats\n  }\n": types.DlnaStatusFieldsFragmentDoc,
+    "\n  query Dlna {\n    dlna {\n      ...DlnaStatusFields\n    }\n    libraries {\n      id\n      name\n    }\n  }\n": types.DlnaDocument,
+    "\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n": types.SetDlnaSettingsDocument,
+    "\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n": types.DlnaRendererFieldsFragmentDoc,
+    "\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n": types.DlnaRenderersDocument,
+    "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": types.DlnaRendererStateFieldsFragmentDoc,
+    "\n  query DlnaRenderer($id: String!) {\n    dlnaRenderer(id: $id) {\n      ...DlnaRendererStateFields\n    }\n  }\n": types.DlnaRendererDocument,
+    "\n  mutation AddDlnaRenderer($url: String!) {\n    addDlnaRenderer(url: $url) {\n      ...DlnaRendererFields\n    }\n  }\n": types.AddDlnaRendererDocument,
+    "\n  mutation PlayOnDlnaRenderer($input: PlayOnDlnaRendererInput!) {\n    playOnDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n": types.PlayOnDlnaRendererDocument,
+    "\n  mutation ControlDlnaRenderer($input: ControlDlnaRendererInput!) {\n    controlDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n": types.ControlDlnaRendererDocument,
+    "\n  mutation SetDlnaRendererVolume($rendererId: String!, $volume: Int!) {\n    setDlnaRendererVolume(rendererId: $rendererId, volume: $volume) {\n      ...DlnaRendererStateFields\n    }\n  }\n": types.SetDlnaRendererVolumeDocument,
+    "\n  query DlnaAlbumSearch($search: String!) {\n    albums(search: $search, first: 8) {\n      items {\n        id\n        title\n        artist {\n          name\n        }\n      }\n    }\n  }\n": types.DlnaAlbumSearchDocument,
+    "\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n": types.DlnaAlbumTracksDocument,
 };
 
 /**
@@ -530,6 +556,58 @@ export function graphql(source: "\n  mutation AnalyzeMstreamServer($input: Mstre
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    addresses\n    convertsFormats\n  }\n"): (typeof documents)["\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    addresses\n    convertsFormats\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Dlna {\n    dlna {\n      ...DlnaStatusFields\n    }\n    libraries {\n      id\n      name\n    }\n  }\n"): (typeof documents)["\n  query Dlna {\n    dlna {\n      ...DlnaStatusFields\n    }\n    libraries {\n      id\n      name\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n"): (typeof documents)["\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n"): (typeof documents)["\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n"): (typeof documents)["\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DlnaRenderer($id: String!) {\n    dlnaRenderer(id: $id) {\n      ...DlnaRendererStateFields\n    }\n  }\n"): (typeof documents)["\n  query DlnaRenderer($id: String!) {\n    dlnaRenderer(id: $id) {\n      ...DlnaRendererStateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AddDlnaRenderer($url: String!) {\n    addDlnaRenderer(url: $url) {\n      ...DlnaRendererFields\n    }\n  }\n"): (typeof documents)["\n  mutation AddDlnaRenderer($url: String!) {\n    addDlnaRenderer(url: $url) {\n      ...DlnaRendererFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation PlayOnDlnaRenderer($input: PlayOnDlnaRendererInput!) {\n    playOnDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n"): (typeof documents)["\n  mutation PlayOnDlnaRenderer($input: PlayOnDlnaRendererInput!) {\n    playOnDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ControlDlnaRenderer($input: ControlDlnaRendererInput!) {\n    controlDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n"): (typeof documents)["\n  mutation ControlDlnaRenderer($input: ControlDlnaRendererInput!) {\n    controlDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetDlnaRendererVolume($rendererId: String!, $volume: Int!) {\n    setDlnaRendererVolume(rendererId: $rendererId, volume: $volume) {\n      ...DlnaRendererStateFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetDlnaRendererVolume($rendererId: String!, $volume: Int!) {\n    setDlnaRendererVolume(rendererId: $rendererId, volume: $volume) {\n      ...DlnaRendererStateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DlnaAlbumSearch($search: String!) {\n    albums(search: $search, first: 8) {\n      items {\n        id\n        title\n        artist {\n          name\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  query DlnaAlbumSearch($search: String!) {\n    albums(search: $search, first: 8) {\n      items {\n        id\n        title\n        artist {\n          name\n        }\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n"): (typeof documents)["\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

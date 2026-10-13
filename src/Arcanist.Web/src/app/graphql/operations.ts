@@ -951,3 +951,144 @@ export const ImportMstreamMutation = graphql(`
     }
   }
 `);
+
+export const DlnaStatusFields = graphql(`
+  fragment DlnaStatusFields on DlnaStatus {
+    enabled
+    name
+    friendlyName
+    libraryIds
+    sections
+    addresses
+    convertsFormats
+  }
+`);
+
+export const DlnaQuery = graphql(`
+  query Dlna {
+    dlna {
+      ...DlnaStatusFields
+    }
+    libraries {
+      id
+      name
+    }
+  }
+`);
+
+export const SetDlnaSettingsMutation = graphql(`
+  mutation SetDlnaSettings($input: DlnaSettingsInput!) {
+    setDlnaSettings(input: $input) {
+      ...DlnaStatusFields
+    }
+  }
+`);
+
+export const DlnaRendererFields = graphql(`
+  fragment DlnaRendererFields on DlnaRenderer {
+    id
+    name
+    manufacturer
+    model
+    address
+    manual
+  }
+`);
+
+export const DlnaRenderersQuery = graphql(`
+  query DlnaRenderers {
+    dlnaRenderers {
+      ...DlnaRendererFields
+    }
+  }
+`);
+
+export const DlnaRendererStateFields = graphql(`
+  fragment DlnaRendererStateFields on DlnaRendererState {
+    renderer {
+      ...DlnaRendererFields
+    }
+    state
+    positionMs
+    durationMs
+    volume
+    queue
+    queueIndex
+    track {
+      id
+      title
+      artworkId
+      album {
+        title
+      }
+      artists {
+        name
+        role
+      }
+    }
+  }
+`);
+
+export const DlnaRendererQuery = graphql(`
+  query DlnaRenderer($id: String!) {
+    dlnaRenderer(id: $id) {
+      ...DlnaRendererStateFields
+    }
+  }
+`);
+
+export const AddDlnaRendererMutation = graphql(`
+  mutation AddDlnaRenderer($url: String!) {
+    addDlnaRenderer(url: $url) {
+      ...DlnaRendererFields
+    }
+  }
+`);
+
+export const PlayOnDlnaRendererMutation = graphql(`
+  mutation PlayOnDlnaRenderer($input: PlayOnDlnaRendererInput!) {
+    playOnDlnaRenderer(input: $input) {
+      ...DlnaRendererStateFields
+    }
+  }
+`);
+
+export const ControlDlnaRendererMutation = graphql(`
+  mutation ControlDlnaRenderer($input: ControlDlnaRendererInput!) {
+    controlDlnaRenderer(input: $input) {
+      ...DlnaRendererStateFields
+    }
+  }
+`);
+
+export const SetDlnaRendererVolumeMutation = graphql(`
+  mutation SetDlnaRendererVolume($rendererId: String!, $volume: Int!) {
+    setDlnaRendererVolume(rendererId: $rendererId, volume: $volume) {
+      ...DlnaRendererStateFields
+    }
+  }
+`);
+
+export const DlnaAlbumSearchQuery = graphql(`
+  query DlnaAlbumSearch($search: String!) {
+    albums(search: $search, first: 8) {
+      items {
+        id
+        title
+        artist {
+          name
+        }
+      }
+    }
+  }
+`);
+
+export const DlnaAlbumTracksQuery = graphql(`
+  query DlnaAlbumTracks($albumId: ID!) {
+    tracks(albumId: $albumId) {
+      items {
+        id
+      }
+    }
+  }
+`);

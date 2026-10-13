@@ -52,6 +52,8 @@ public static class ErrorCodes
     public const string WriteFailed = "write_failed";
     /// <summary>The library is already being organized, or a run is being undone.</summary>
     public const string OrganizeRunning = "organize_running";
+    /// <summary>A playlist holds at most 10,000 tracks.</summary>
+    public const string PlaylistFull = "playlist_full";
     /// <summary>Only finished runs can be undone, and only once.</summary>
     public const string NotUndoable = "not_undoable";
 }

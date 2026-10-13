@@ -44,6 +44,14 @@ type Query {
   importItems(status: ImportStatus, dropFolderId: ID, first: Int): [ImportItem!]!
   "How many files of the drop folders are in each state. Requires MANAGE_LIBRARIES."
   importSummary: ImportSummary!
+  "The user's playlists, those they collaborate on and public ones, most recently changed first."
+  playlists: [Playlist!]!
+  "A playlist by id. Playlists the user cannot see are reported as not found."
+  playlist(id: ID!): Playlist!
+  "A playlist's tracks in order, page by page (100 by default, at most 1000)."
+  playlistEntries(playlistId: ID!, after: String, first: Int): PlaylistEntryPage!
+  "The server's other active users, to invite as playlist collaborators."
+  shareableUsers: [UserReference!]!
   "Most recent scans first, of one library or of all libraries the user can see. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobs(libraryId: ID, limit: Int): [ScanJob!]!
   "A scan by id, including live progress while it runs. Requires RUN_SCANS or MANAGE_LIBRARIES."
@@ -590,6 +598,46 @@ type ImportSummary {
   imported: Int!
 }
 
+type Playlist {
+  id: ID!
+  name: String!
+  description: String
+  isPublic: Boolean!
+  owner: UserReference!
+  role: PlaylistRole!
+  collaborators: [UserReference!]!
+  trackCount: Int!
+  durationMs: Long!
+  artworkIds: [ID!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type UserReference {
+  id: ID!
+  name: String!
+}
+
+enum PlaylistRole {
+  OWNER
+  COLLABORATOR
+  VIEWER
+}
+
+type PlaylistEntryPage {
+  items: [PlaylistEntry!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type PlaylistEntry {
+  id: ID!
+  position: Int!
+  track: Track!
+  addedAt: DateTime!
+  addedBy: UserReference
+}
+
 type ScanJob {
   id: ID!
   libraryId: ID!
@@ -755,6 +803,21 @@ type Mutation {
   ignoreImportItem(id: ID!): ImportItem!
   "Moves a file to its drop folder's trash, from which it is deleted after a while. Requires MANAGE_LIBRARIES."
   discardImportItem(id: ID!): ImportItem!
+  createPlaylist(input: CreatePlaylistInput!): Playlist!
+  "Renames, describes and shares a playlist. Owner only."
+  updatePlaylist(id: ID!, input: UpdatePlaylistInput!): Playlist!
+  "Owner only."
+  deletePlaylist(id: ID!): Boolean!
+  "Makes a private playlist of the user's own with the tracks of one they can see."
+  copyPlaylist(id: ID!, name: String): Playlist!
+  "Adds tracks at the end or at a position. Owner and collaborators."
+  addPlaylistTracks(playlistId: ID!, input: AddPlaylistTracksInput!): Playlist!
+  "Removes entries. Owner and collaborators."
+  removePlaylistEntries(playlistId: ID!, entryIds: [ID!]!): Playlist!
+  "Moves entries together to a position, keeping their order. Owner and collaborators."
+  movePlaylistEntries(playlistId: ID!, input: MovePlaylistEntriesInput!): Playlist!
+  "Replaces the users who can add, remove and reorder the playlist's tracks. Owner only."
+  setPlaylistCollaborators(playlistId: ID!, userIds: [ID!]!): Playlist!
   "Queues a scan, or returns the one already queued or running for the library. A full scan re-reads every file. Requires RUN_SCANS."
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
@@ -845,6 +908,29 @@ input ImportTagsInput {
   trackNumber: Int
   discNumber: Int
   genre: String
+}
+
+input CreatePlaylistInput {
+  name: String!
+  description: String
+  isPublic: Boolean!
+  trackIds: [ID!]
+}
+
+input UpdatePlaylistInput {
+  name: String!
+  description: String
+  isPublic: Boolean!
+}
+
+input AddPlaylistTracksInput {
+  trackIds: [ID!]!
+  position: Int
+}
+
+input MovePlaylistEntriesInput {
+  entryIds: [ID!]!
+  position: Int!
 }
 
 input CreateUserInput {

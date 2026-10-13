@@ -66,6 +66,7 @@ public static class RestSetup
         rest.MapDuplicateEndpoints();
         rest.MapOrganizationEndpoints();
         rest.MapListeningEndpoints();
+        rest.MapPlaylistEndpoints();
         rest.MapOnlineEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();

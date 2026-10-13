@@ -558,6 +558,7 @@ export const en: Dictionary = {
     template_title_required: 'The last part of the template must include {title}.',
     write_failed: 'The files could not be moved.',
     organize_running: 'The library is already being organized.',
+    playlist_full: 'A playlist holds at most 10,000 tracks.',
     not_undoable: 'That can no longer be undone.',
     ffmpeg_checksum_mismatch: 'The downloaded ffmpeg did not match its checksum and was discarded.',
   },

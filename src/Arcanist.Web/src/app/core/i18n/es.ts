@@ -560,6 +560,7 @@ export const es: Dictionary = {
     template_title_required: 'La última parte de la plantilla debe incluir {title}.',
     write_failed: 'No se pudieron mover los archivos.',
     organize_running: 'La biblioteca ya se está organizando.',
+    playlist_full: 'Una playlist admite como mucho 10.000 canciones.',
     not_undoable: 'Eso ya no se puede deshacer.',
     ffmpeg_checksum_mismatch:
       'El ffmpeg descargado no coincidía con su suma de comprobación y se ha descartado.',

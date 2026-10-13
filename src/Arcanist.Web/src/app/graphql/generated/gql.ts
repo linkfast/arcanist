@@ -76,6 +76,27 @@ type Documents = {
     "\n  mutation SetRatingMode($mode: RatingMode!) {\n    setRatingMode(mode: $mode)\n  }\n": typeof types.SetRatingModeDocument,
     "\n  fragment StatsTrackFields on Track {\n    id\n    title\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n  }\n": typeof types.StatsTrackFieldsFragmentDoc,
     "\n  query ServerStats($period: StatsPeriod!, $timeZone: String) {\n    serverStats(period: $period, timeZone: $timeZone) {\n      library {\n        artists\n        albums\n        tracks\n        files\n        durationMs\n        sizeBytes\n        formats {\n          format\n          files\n          sizeBytes\n        }\n      }\n      listening {\n        period\n        from\n        plays\n        listenedMs\n        distinctTracks\n        bucket\n        timeline {\n          start\n          plays\n          listenedMs\n        }\n        topTracks {\n          plays\n          track {\n            ...StatsTrackFields\n          }\n        }\n        topArtists {\n          plays\n          artist {\n            id\n            name\n          }\n        }\n        topAlbums {\n          plays\n          album {\n            id\n            title\n            artworkId\n            artist {\n              id\n              name\n            }\n          }\n        }\n      }\n      users {\n        userId\n        userName\n        displayName\n        plays\n        listenedMs\n        lastPlayedAt\n      }\n    }\n  }\n": typeof types.ServerStatsDocument,
+    "\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n": typeof types.AppPasswordFieldsFragmentDoc,
+    "\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n": typeof types.AppPasswordsDocument,
+    "\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n": typeof types.CreateAppPasswordDocument,
+    "\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n": typeof types.DeleteAppPasswordDocument,
+    "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n": typeof types.FrontendFieldsFragmentDoc,
+    "\n  query Frontends {\n    frontends {\n      ...FrontendFields\n    }\n  }\n": typeof types.FrontendsDocument,
+    "\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n": typeof types.InstallFrontendFromUrlDocument,
+    "\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n": typeof types.SetDefaultFrontendDocument,
+    "\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n": typeof types.UninstallFrontendDocument,
+    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
+    "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": typeof types.ExtensionsDocument,
+    "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
+    "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.SetExtensionEnabledDocument,
+    "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": typeof types.UninstallExtensionDocument,
+    "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": typeof types.MstreamImportJobFieldsFragmentDoc,
+    "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": typeof types.MstreamAnalysisFieldsFragmentDoc,
+    "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.MstreamImportsDocument,
+    "\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n": typeof types.MstreamLibrarySourcesDocument,
+    "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamFolderDocument,
+    "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamServerDocument,
+    "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.ImportMstreamDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -140,6 +161,27 @@ const documents: Documents = {
     "\n  mutation SetRatingMode($mode: RatingMode!) {\n    setRatingMode(mode: $mode)\n  }\n": types.SetRatingModeDocument,
     "\n  fragment StatsTrackFields on Track {\n    id\n    title\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n  }\n": types.StatsTrackFieldsFragmentDoc,
     "\n  query ServerStats($period: StatsPeriod!, $timeZone: String) {\n    serverStats(period: $period, timeZone: $timeZone) {\n      library {\n        artists\n        albums\n        tracks\n        files\n        durationMs\n        sizeBytes\n        formats {\n          format\n          files\n          sizeBytes\n        }\n      }\n      listening {\n        period\n        from\n        plays\n        listenedMs\n        distinctTracks\n        bucket\n        timeline {\n          start\n          plays\n          listenedMs\n        }\n        topTracks {\n          plays\n          track {\n            ...StatsTrackFields\n          }\n        }\n        topArtists {\n          plays\n          artist {\n            id\n            name\n          }\n        }\n        topAlbums {\n          plays\n          album {\n            id\n            title\n            artworkId\n            artist {\n              id\n              name\n            }\n          }\n        }\n      }\n      users {\n        userId\n        userName\n        displayName\n        plays\n        listenedMs\n        lastPlayedAt\n      }\n    }\n  }\n": types.ServerStatsDocument,
+    "\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n": types.AppPasswordFieldsFragmentDoc,
+    "\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n": types.AppPasswordsDocument,
+    "\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n": types.CreateAppPasswordDocument,
+    "\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n": types.DeleteAppPasswordDocument,
+    "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n": types.FrontendFieldsFragmentDoc,
+    "\n  query Frontends {\n    frontends {\n      ...FrontendFields\n    }\n  }\n": types.FrontendsDocument,
+    "\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n": types.InstallFrontendFromUrlDocument,
+    "\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n": types.SetDefaultFrontendDocument,
+    "\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n": types.UninstallFrontendDocument,
+    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n": types.ExtensionFieldsFragmentDoc,
+    "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": types.ExtensionsDocument,
+    "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
+    "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": types.SetExtensionEnabledDocument,
+    "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": types.UninstallExtensionDocument,
+    "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": types.MstreamImportJobFieldsFragmentDoc,
+    "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": types.MstreamAnalysisFieldsFragmentDoc,
+    "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": types.MstreamImportsDocument,
+    "\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n": types.MstreamLibrarySourcesDocument,
+    "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamFolderDocument,
+    "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamServerDocument,
+    "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.ImportMstreamDocument,
 };
 
 /**
@@ -404,6 +446,90 @@ export function graphql(source: "\n  fragment StatsTrackFields on Track {\n    i
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query ServerStats($period: StatsPeriod!, $timeZone: String) {\n    serverStats(period: $period, timeZone: $timeZone) {\n      library {\n        artists\n        albums\n        tracks\n        files\n        durationMs\n        sizeBytes\n        formats {\n          format\n          files\n          sizeBytes\n        }\n      }\n      listening {\n        period\n        from\n        plays\n        listenedMs\n        distinctTracks\n        bucket\n        timeline {\n          start\n          plays\n          listenedMs\n        }\n        topTracks {\n          plays\n          track {\n            ...StatsTrackFields\n          }\n        }\n        topArtists {\n          plays\n          artist {\n            id\n            name\n          }\n        }\n        topAlbums {\n          plays\n          album {\n            id\n            title\n            artworkId\n            artist {\n              id\n              name\n            }\n          }\n        }\n      }\n      users {\n        userId\n        userName\n        displayName\n        plays\n        listenedMs\n        lastPlayedAt\n      }\n    }\n  }\n"): (typeof documents)["\n  query ServerStats($period: StatsPeriod!, $timeZone: String) {\n    serverStats(period: $period, timeZone: $timeZone) {\n      library {\n        artists\n        albums\n        tracks\n        files\n        durationMs\n        sizeBytes\n        formats {\n          format\n          files\n          sizeBytes\n        }\n      }\n      listening {\n        period\n        from\n        plays\n        listenedMs\n        distinctTracks\n        bucket\n        timeline {\n          start\n          plays\n          listenedMs\n        }\n        topTracks {\n          plays\n          track {\n            ...StatsTrackFields\n          }\n        }\n        topArtists {\n          plays\n          artist {\n            id\n            name\n          }\n        }\n        topAlbums {\n          plays\n          album {\n            id\n            title\n            artworkId\n            artist {\n              id\n              name\n            }\n          }\n        }\n      }\n      users {\n        userId\n        userName\n        displayName\n        plays\n        listenedMs\n        lastPlayedAt\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n"): (typeof documents)["\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n"): (typeof documents)["\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n"): (typeof documents)["\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Frontends {\n    frontends {\n      ...FrontendFields\n    }\n  }\n"): (typeof documents)["\n  query Frontends {\n    frontends {\n      ...FrontendFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n"): (typeof documents)["\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n"): (typeof documents)["\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n"): (typeof documents)["\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n"): (typeof documents)["\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n"): (typeof documents)["\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n"): (typeof documents)["\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n"): (typeof documents)["\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n"): (typeof documents)["\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n"): (typeof documents)["\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n"): (typeof documents)["\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

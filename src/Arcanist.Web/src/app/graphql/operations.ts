@@ -737,3 +737,217 @@ export const ServerStatsQuery = graphql(`
     }
   }
 `);
+
+export const AppPasswordFields = graphql(`
+  fragment AppPasswordFields on AppPassword {
+    id
+    name
+    createdAt
+    lastUsedAt
+  }
+`);
+
+export const AppPasswordsQuery = graphql(`
+  query AppPasswords {
+    appPasswords {
+      ...AppPasswordFields
+    }
+  }
+`);
+
+export const CreateAppPasswordMutation = graphql(`
+  mutation CreateAppPassword($name: String!) {
+    createAppPassword(name: $name) {
+      secret
+      appPassword {
+        ...AppPasswordFields
+      }
+    }
+  }
+`);
+
+export const DeleteAppPasswordMutation = graphql(`
+  mutation DeleteAppPassword($id: ID!) {
+    deleteAppPassword(id: $id)
+  }
+`);
+
+export const FrontendFields = graphql(`
+  fragment FrontendFields on Frontend {
+    id
+    name
+    version
+    description
+    author
+    license
+    homepage
+    builtIn
+    isDefault
+    path
+    installedAt
+  }
+`);
+
+export const FrontendsQuery = graphql(`
+  query Frontends {
+    frontends {
+      ...FrontendFields
+    }
+  }
+`);
+
+export const InstallFrontendFromUrlMutation = graphql(`
+  mutation InstallFrontendFromUrl($url: String!) {
+    installFrontendFromUrl(url: $url) {
+      ...FrontendFields
+    }
+  }
+`);
+
+export const SetDefaultFrontendMutation = graphql(`
+  mutation SetDefaultFrontend($id: String!) {
+    setDefaultFrontend(id: $id) {
+      ...FrontendFields
+    }
+  }
+`);
+
+export const UninstallFrontendMutation = graphql(`
+  mutation UninstallFrontend($id: String!) {
+    uninstallFrontend(id: $id)
+  }
+`);
+
+export const ExtensionFields = graphql(`
+  fragment ExtensionFields on Extension {
+    id
+    name
+    version
+    description
+    author
+    license
+    homepage
+    builtIn
+    enabled
+    status
+    errorCode
+    restartRequired
+    routes
+    basePath
+  }
+`);
+
+export const ExtensionsQuery = graphql(`
+  query Extensions {
+    extensions {
+      ...ExtensionFields
+    }
+  }
+`);
+
+export const InstallExtensionFromUrlMutation = graphql(`
+  mutation InstallExtensionFromUrl($url: String!) {
+    installExtensionFromUrl(url: $url) {
+      ...ExtensionFields
+    }
+  }
+`);
+
+export const SetExtensionEnabledMutation = graphql(`
+  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {
+    setExtensionEnabled(id: $id, enabled: $enabled) {
+      ...ExtensionFields
+    }
+  }
+`);
+
+export const UninstallExtensionMutation = graphql(`
+  mutation UninstallExtension($id: String!) {
+    uninstallExtension(id: $id)
+  }
+`);
+
+export const MstreamImportJobFields = graphql(`
+  fragment MstreamImportJobFields on MstreamImportJob {
+    id
+    kind
+    source
+    status
+    createdAt
+    finishedAt
+    librariesCreated
+    usersCreated
+    playlists
+    ratings
+    plays
+    unmatched
+    errorCode
+  }
+`);
+
+export const MstreamAnalysisFields = graphql(`
+  fragment MstreamAnalysisFields on MstreamAnalysis {
+    version
+    libraries {
+      vpath
+      root
+      rootExists
+      sourceId
+    }
+    users {
+      userName
+      isAdmin
+      vpaths
+      exists
+      canSignIn
+    }
+    playlists
+    ratedTracks
+    playedTracks
+  }
+`);
+
+export const MstreamImportsQuery = graphql(`
+  query MstreamImports {
+    mstreamImports {
+      ...MstreamImportJobFields
+    }
+  }
+`);
+
+export const MstreamLibrarySourcesQuery = graphql(`
+  query MstreamLibrarySources {
+    libraries {
+      id
+      name
+      sources {
+        id
+        location
+      }
+    }
+  }
+`);
+
+export const AnalyzeMstreamFolderMutation = graphql(`
+  mutation AnalyzeMstreamFolder($folder: String!) {
+    analyzeMstreamFolder(folder: $folder) {
+      ...MstreamAnalysisFields
+    }
+  }
+`);
+
+export const AnalyzeMstreamServerMutation = graphql(`
+  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {
+    analyzeMstreamServer(input: $input) {
+      ...MstreamAnalysisFields
+    }
+  }
+`);
+
+export const ImportMstreamMutation = graphql(`
+  mutation ImportMstream($input: ImportMstreamInput!) {
+    importMstream(input: $input) {
+      ...MstreamImportJobFields
+    }
+  }
+`);

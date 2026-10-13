@@ -466,6 +466,19 @@
               </button>
             </dd>
           </dl>
+          <label class="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
+            <span>
+              {{ 'setup.review.mstream' | t }}
+              <span class="block text-xs text-muted-foreground">{{
+                'setup.review.mstreamHelp' | t
+              }}</span>
+            </span>
+            <hlm-switch
+              [checked]="importMstream"
+              (checkedChange)="importMstream = $event"
+              [aria-label]="'setup.review.mstream' | t"
+            />
+          </label>
           <p class="text-sm text-muted-foreground">{{ 'setup.review.afterwards' | t }}</p>
         }
       }

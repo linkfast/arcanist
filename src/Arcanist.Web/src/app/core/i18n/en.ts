@@ -2,6 +2,9 @@ import type { Dictionary } from './i18n';
 
 export const en: Dictionary = {
   common: {
+    copy: 'Copy',
+    copied: 'Copied',
+    done: 'Done',
     userName: 'User name',
     displayName: 'Display name',
     password: 'Password',
@@ -20,6 +23,8 @@ export const en: Dictionary = {
     close: 'Close',
   },
   nav: {
+    extensions: 'Extensions',
+    mstream: 'Import from mStream',
     overview: 'Home',
     libraries: 'Libraries',
     users: 'Users',
@@ -148,6 +153,9 @@ export const en: Dictionary = {
       },
     },
     review: {
+      mstream: 'Import from mStream afterwards',
+      mstreamHelp:
+        'Libraries, users with their passwords, playlists, ratings and plays from an mStream installation.',
       database: 'Database',
       admin: 'Administrator',
       libraries: 'Libraries',
@@ -370,6 +378,21 @@ export const en: Dictionary = {
     VIEW_ALL_STATS: "See every user's statistics.",
   },
   account: {
+    appPasswords: {
+      title: 'App passwords',
+      description:
+        'For Subsonic apps (Symfonium, DSub, Feishin…) and mStream apps. Each app uses its own, and your password never leaves here.',
+      name: 'Name',
+      namePlaceholder: 'For example: Symfonium on my phone',
+      create: 'Create',
+      created: 'Copy the password now: it will not be shown again.',
+      howTo:
+        'In the app, use {server} as the server, {user} as the user name and this password. OpenSubsonic apps also accept it as an API key.',
+      createdAt: 'created',
+      neverUsed: 'never used',
+      revoke: 'Revoke',
+      none: 'You have not created any yet.',
+    },
     title: 'My account',
     changePassword: 'Change password',
     changePasswordHelp: 'Your sessions on other devices will be signed out.',
@@ -568,6 +591,107 @@ export const en: Dictionary = {
     playsCount: '{count} plays',
     hours: '{hours} h',
   },
+  extensions: {
+    descriptions: {
+      mstream: 'The mStream API, for the mStream apps.',
+      subsonic:
+        'The Subsonic and OpenSubsonic API, for apps such as Symfonium, DSub, Feishin or Amperfy.',
+    },
+    title: 'Extensions',
+    subtitle: 'Web players and server extensions.',
+    builtIn: 'Built in',
+    uninstall: 'Uninstall',
+    players: {
+      title: 'Web players',
+      description:
+        'The default one is served at the root of the server; all of them are also at /players/<id>/.',
+      default: 'Default',
+      makeDefault: 'Make default',
+      none: 'No players are installed.',
+      installed: 'Player installed',
+    },
+    list: {
+      title: 'Extensions',
+      description:
+        'They add APIs and features to the server, such as support for Subsonic and mStream apps. Apps connect with an app password.',
+      enabled: 'On',
+      failed: 'Failed',
+      restartRequired: 'Restart needed',
+      restartRequiredHelp: 'The change applies when the server restarts.',
+      routes: 'Routes',
+      installed: 'Extension installed: switch it on and restart the server to use it.',
+    },
+    install: {
+      title: 'Install',
+      zip: 'Upload a .zip',
+      or: 'or',
+      urlPlaceholder: 'https://… (URL of a .zip)',
+      fromUrl: 'Install from URL',
+      confirmTitle: 'Do you trust this package?',
+      playerTrust:
+        'A web player runs with the session of whoever opens it, on the same site as this panel: it can do anything that person can do. Only install players from people you trust.',
+      extensionTrust:
+        'An extension runs inside the server with all its rights: it can read and change any data and file the server can reach. Only install extensions from people you trust.',
+      confirm: 'Install',
+    },
+  },
+  mstream: {
+    title: 'Import from mStream',
+    subtitle:
+      'Brings the libraries, the users (with their passwords) and their playlists, ratings and plays from an mStream installation. mStream is not changed.',
+    browse: 'Browse',
+    analyze: 'Read',
+    import: 'Import',
+    started: 'Import started',
+    version: 'mStream {version}.',
+    source: {
+      title: 'Source',
+      folder: 'A folder on this server',
+      folderHelp:
+        'mStream’s installation folder or its configuration file. Everything is read, passwords included.',
+      server: 'An mStream server',
+      serverHelp:
+        'Through its API, with an administrator account. Each user brings their data the first time they sign in here with their mStream password.',
+      folderLabel: 'Folder or configuration file',
+      url: 'Server address',
+      adminUser: 'mStream administrator',
+      passwordHelp: 'The password is only used now; it is not kept.',
+    },
+    libraries: {
+      title: 'Libraries',
+      help: 'Choose what each mStream library becomes. Its files are found by their path inside the chosen folder.',
+      notHere: 'Not on this server',
+      skip: 'Do not import',
+      new: 'New library',
+      name: 'Name',
+      path: 'Folder',
+    },
+    users: {
+      title: 'Users',
+      helpFolder:
+        'New users keep their mStream password, see the mStream libraries they had and may download. Users that already exist here get their data and nothing else changes.',
+      helpServer:
+        'New users sign in with their mStream password (checked with that server the first time), and then their playlists, ratings and plays arrive.',
+      exists: 'Already here',
+      noPassword: 'No password: an administrator must set one',
+      none: 'mStream has no users.',
+      data: '{playlists} playlists, {rated} rated and {played} played songs.',
+      import: 'Import the users and their data',
+    },
+    history: {
+      title: 'Imports',
+      report:
+        '{libraries} libraries and {users} users created · {playlists} playlists, {ratings} ratings and {plays} played songs · {unmatched} not found',
+      waiting: 'Waiting for the libraries’ scans to finish.',
+      server: 'Each user’s data arrives when they first sign in.',
+    },
+    status: {
+      WAITING: 'Waiting',
+      RUNNING: 'Running',
+      COMPLETED: 'Completed',
+      FAILED: 'Failed',
+    },
+  },
   errors: {
     unexpected: 'Something went wrong. Please try again.',
     network: 'Cannot reach the server.',
@@ -618,12 +742,14 @@ export const en: Dictionary = {
     extension_failed: 'The extension could not be loaded; check the server log.',
     route_not_allowed: 'The extension uses routes that are not its own.',
     route_conflict: 'Another enabled extension already uses those routes.',
-    set_by_environment: 'That setting comes from the environment (variables or configuration files) and cannot be changed from the panel.',
+    set_by_environment:
+      'That setting comes from the environment (variables or configuration files) and cannot be changed from the panel.',
     too_many: 'You reached the maximum allowed.',
     playlist_full: 'A playlist holds at most 10,000 tracks.',
     not_undoable: 'That can no longer be undone.',
     mstream_unreachable: 'The mStream server does not answer, or not as mStream does.',
-    mstream_admin_required: 'An mStream administrator account is needed, with its admin API unlocked.',
+    mstream_admin_required:
+      'An mStream administrator account is needed, with its admin API unlocked.',
     ffmpeg_checksum_mismatch: 'The downloaded ffmpeg did not match its checksum and was discarded.',
   },
 };

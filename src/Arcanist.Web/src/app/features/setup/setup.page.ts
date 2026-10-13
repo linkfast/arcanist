@@ -107,6 +107,8 @@ export class SetupPage implements OnInit {
     { name: '', folders: [], visibleToAll: true },
   ]);
   protected shareStatistics: 'yes' | 'no' | null = null;
+  /** Opens the mStream import once the server is set up. */
+  protected importMstream = false;
   protected ffmpegPath = '';
   protected ratingMode: RatingMode = 'STARS';
   /** Off until the user turns each on: they contact other servers. */
@@ -292,7 +294,7 @@ export class SetupPage implements OnInit {
 
       await this.setup.loadStatus();
       await this.auth.login(this.userName.trim(), this.password);
-      await this.router.navigateByUrl('/libraries');
+      await this.router.navigateByUrl(this.importMstream ? '/mstream' : '/libraries');
     } catch (error) {
       const apiError = ApiError.from(error);
       this.fieldErrors.set(apiError.fields);

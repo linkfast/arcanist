@@ -40,6 +40,12 @@ public sealed record ExtensionContext(string Id, string DataDirectory, IConfigur
 /// it in code.
 /// </summary>
 /// <param name="Id">Lowercase letters, digits and dashes.</param>
+/// <param name="Name">Shown in the admin panel.</param>
+/// <param name="Version">Shown in the admin panel.</param>
+/// <param name="Description">What it does, shown in the admin panel.</param>
+/// <param name="Author">Who made it.</param>
+/// <param name="License">Its license, which must be compatible with the AGPL-3.0-or-later.</param>
+/// <param name="Homepage">Where to learn more about it.</param>
 /// <param name="MinApiVersion">Oldest Arcanist API major version it works with.</param>
 /// <param name="Assembly">The file, relative to the package root, with the <see cref="IArcanistExtension"/> implementation.</param>
 /// <param name="Routes">Prefixes it claims besides <c>/ext/&lt;id&gt;</c>, among those Arcanist keeps for compatibility

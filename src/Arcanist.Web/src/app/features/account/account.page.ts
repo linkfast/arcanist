@@ -11,11 +11,15 @@ import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
+  AppPasswordFieldsFragment as AppPassword,
   MySessionsQuery as SessionsResult,
   ServerInfoQuery as ServerInfoResult,
 } from '../../graphql/generated/graphql';
 import {
+  AppPasswordsQuery,
   ChangeMyPasswordMutation,
+  CreateAppPasswordMutation,
+  DeleteAppPasswordMutation,
   MySessionsQuery,
   RevokeMySessionMutation,
   ServerInfoQuery,
@@ -148,6 +152,94 @@ type Session = SessionsResult['mySessions'][number];
 
       <section hlmCard>
         <div hlmCardHeader>
+          <h2 hlmCardTitle>{{ 'account.appPasswords.title' | t }}</h2>
+          <p hlmCardDescription>{{ 'account.appPasswords.description' | t }}</p>
+        </div>
+        <div hlmCardContent class="grid gap-4">
+          @if (created(); as secret) {
+            <div class="grid gap-2 rounded-md border border-primary/40 bg-primary/5 p-3 text-sm">
+              <p class="font-medium">{{ 'account.appPasswords.created' | t }}</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <code class="rounded bg-muted px-2 py-1 font-mono text-base">{{ secret }}</code>
+                <button hlmBtn variant="outline" size="sm" type="button" (click)="copy(secret)">
+                  {{ 'common.copy' | t }}
+                </button>
+              </div>
+              <p class="text-xs text-muted-foreground">
+                {{
+                  'account.appPasswords.howTo'
+                    | t: { server: origin, user: auth.user()?.userName ?? '' }
+                }}
+              </p>
+              <button
+                hlmBtn
+                variant="ghost"
+                size="sm"
+                type="button"
+                class="justify-self-start"
+                (click)="created.set(null)"
+              >
+                {{ 'common.done' | t }}
+              </button>
+            </div>
+          }
+          <form class="flex flex-wrap items-end gap-2" (ngSubmit)="createAppPassword()">
+            <hlm-field class="min-w-48 flex-1">
+              <label hlmFieldLabel for="appName">{{ 'account.appPasswords.name' | t }}</label>
+              <input
+                hlmInput
+                id="appName"
+                name="appName"
+                maxlength="100"
+                [placeholder]="'account.appPasswords.namePlaceholder' | t"
+                [(ngModel)]="appName"
+              />
+            </hlm-field>
+            <button hlmBtn type="submit" [disabled]="busy() || !appName.trim()">
+              {{ 'account.appPasswords.create' | t }}
+            </button>
+          </form>
+          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+            @for (password of appPasswords(); track password.id) {
+              <li class="flex min-w-0 items-center justify-between gap-3 rounded-md border p-3">
+                <div class="min-w-0 text-sm">
+                  <p class="truncate font-medium">{{ password.name }}</p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ 'account.appPasswords.createdAt' | t }}
+                    <span [title]="password.createdAt | dateTime">{{
+                      password.createdAt | relativeTime
+                    }}</span>
+                    ·
+                    @if (password.lastUsedAt) {
+                      {{ 'account.lastSeen' | t }}
+                      <span [title]="password.lastUsedAt | dateTime">{{
+                        password.lastUsedAt | relativeTime
+                      }}</span>
+                    } @else {
+                      {{ 'account.appPasswords.neverUsed' | t }}
+                    }
+                  </p>
+                </div>
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="deleteAppPassword(password)"
+                >
+                  {{ 'account.appPasswords.revoke' | t }}
+                </button>
+              </li>
+            } @empty {
+              <li class="text-sm text-muted-foreground">{{ 'account.appPasswords.none' | t }}</li>
+            }
+          </ul>
+        </div>
+      </section>
+
+      <section hlmCard>
+        <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'account.about' | t }}</h2>
         </div>
         <div hlmCardContent class="grid gap-1 text-sm">
@@ -179,17 +271,59 @@ export class AccountPage implements OnInit {
   protected readonly busy = signal(false);
   protected readonly passwordError = signal<string | null>(null);
 
+  protected readonly appPasswords = signal<AppPassword[]>([]);
+  /** The secret of the app password just created: shown only now. */
+  protected readonly created = signal<string | null>(null);
+  protected readonly origin = window.location.origin;
+  protected appName = '';
+
   protected currentPassword = '';
   protected newPassword = '';
   protected confirmation = '';
 
   async ngOnInit(): Promise<void> {
-    const [sessions, server] = await Promise.all([
+    const [sessions, server, passwords] = await Promise.all([
       this.gql.query(MySessionsQuery),
       this.gql.query(ServerInfoQuery),
+      this.gql.query(AppPasswordsQuery),
     ]);
     this.sessions.set(sessions.mySessions);
     this.server.set(server.serverInfo);
+    this.appPasswords.set(passwords.appPasswords);
+  }
+
+  protected async createAppPassword(): Promise<void> {
+    this.busy.set(true);
+    try {
+      const result = await this.gql.mutate(CreateAppPasswordMutation, {
+        name: this.appName.trim(),
+      });
+      this.appPasswords.update((passwords) => [result.createAppPassword.appPassword, ...passwords]);
+      this.created.set(result.createAppPassword.secret);
+      this.appName = '';
+    } catch (error) {
+      const apiError = ApiError.from(error);
+      toast.error(this.i18n.error(Object.values(apiError.fields)[0]?.[0] ?? apiError.code));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async deleteAppPassword(password: AppPassword): Promise<void> {
+    this.busy.set(true);
+    try {
+      await this.gql.mutate(DeleteAppPasswordMutation, { id: password.id });
+      this.appPasswords.update((passwords) => passwords.filter((p) => p.id !== password.id));
+    } catch (error) {
+      toast.error(this.i18n.error(ApiError.from(error).code));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async copy(text: string): Promise<void> {
+    await navigator.clipboard.writeText(text);
+    toast.success(this.i18n.t('common.copied'));
   }
 
   protected async changePassword(): Promise<void> {

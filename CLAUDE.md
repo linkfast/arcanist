@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización) y 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento) completas. Pendiente:
+Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento) y 6 (reproductores, extensiones, Subsonic, mStream e importador) completas. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
 - De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`). La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
 - De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (necesita la clave del proyecto).
+- De la F6: probar Subsonic y mStream con apps reales (Symfonium, DSub, Feishin, Amperfy, mStream Music) y el importador con una instalación real de mStream 5 y 6 (también el hash PBKDF2: no hay vector de prueba publicado).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-Siguiente: Fase 6, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Siguiente: Fase 7, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -24,10 +25,11 @@ Directory.Build.props         metadatos comunes (licencia AGPL-3.0-or-later, cop
 global.json                   SDK 10.0.100, rollForward latestFeature (la máquina tiene SDKs 8, 9 y 10)
 mise.toml                     fija Node 24.15.0 para todo el repo
 src/Arcanist.Core/            servidor ASP.NET Core, net10.0; el ejecutable se llama `arcanist`
+src/Arcanist.Extensibility/  SDK de extensiones (IArcanistExtension, manifiesto)
 src/Arcanist.Web/             panel de administración: Angular 22 + Tailwind v4 + spartan-ng (paquete npm `arcanist-web`)
 src/Arcanist.Tray/            app de bandeja para Windows (Avalonia 12 + Velopack), net10.0-windows
 native/arcanist-audio/        crate Rust de análisis de audio (Symphonia), con C ABI para .NET
-tests/                        Arcanist.Core.Tests y Arcanist.Tray.Tests
+tests/                        Arcanist.Core.Tests, Arcanist.Tray.Tests y Arcanist.TestExtension (extensión de prueba)
 packaging/                    instalador de Windows, tarballs y unidad systemd de Linux, paquete Synology (spksrc)
 .github/workflows/            ci.yml y release.yml
 ```
@@ -51,6 +53,7 @@ dotnet test --project tests/Arcanist.Core.Tests -- --filter-class "*DataDirector
 dotnet test --project tests/Arcanist.Tray.Tests  # tests del tray (solo Windows)
 ```
 
+- **Si el servidor de desarrollo está corriendo**, bloquea `bin/Debug/arcanist.exe`: compilar y probar con `--artifacts-path artifacts/test-build` (dentro del repo, para que `ApiContractTests` encuentre la raíz) y crear migraciones con `--configuration Release`. No parar el servidor del usuario.
 - Los tests usan **xUnit v3 sobre Microsoft Testing Platform**, activado en `global.json` (`"test": { "runner": "Microsoft.Testing.Platform" }`). Por eso no hay `Microsoft.NET.Test.Sdk` ni `xunit.runner.visualstudio`, y los filtros van después de `--` con la sintaxis de MTP, no con `--filter` de VSTest.
 - `xunit.runner.json` amplía a 30 s la espera de xUnit al cerrar el proceso de tests (por defecto 10 s). Con la máquina muy cargada, el cierre normal superaba los 10 s y xUnit fallaba con "Foreground threads were left running" aunque todos los tests pasaran; se investigó y no había hilos de Arcanist vivos. Una fuga real sigue fallando, porque nunca termina.
 - Los tests de integración usan `ArcanistFactory` (`WebApplicationFactory<Program>`), que arranca el servidor con un directorio de datos temporal y el entorno `Testing`.
@@ -162,12 +165,12 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - `/rest/v1/**`: la API OpenAPI, equivalente a GraphQL salvo las suscripciones. Contrato en `/rest/v1/openapi.json` y documentación Scalar en `/rest/docs`.
   - `/admin/**`: este panel, compilado con `--base-href /admin/`.
   - `/health`.
-  - `/`: el frontend de reproducción activo (Ultimate Web Player por defecto, o uno de terceros instalado desde el admin).
-  - `/players/{id}/**`: los demás frontends instalados.
+  - `/`: el frontend de reproducción predeterminado (Ultimate Web Player, o uno instalado desde el admin).
+  - `/players/{id}/**`: todos los frontends (también el predeterminado).
   - `/ext/{id}/**`: extensiones.
-  - **Rutas reservadas:**
-    - Para la extensión de compatibilidad con mStream: `/api/**`, `/media/**`, `/album-art/**`, `/transcode/**` y `/shared/**`.
-    - Para la extensión Subsonic: `/rest/{método}[.view]`.
+  - **Prefijos que pueden reclamar las extensiones** (`ExtensionHost.ClaimablePrefixes`):
+    - La de mStream: `/api/**`, `/media/**`, `/album-art/**` y `/transcode/**`. `/shared/**` queda reservado (enlaces compartidos de mStream, sin implementar).
+    - La de Subsonic: `/rest/{método}[.view]`, nunca `/rest/v1`.
 - **Una lógica, dos APIs (implementado):**
   - Los resolvers GraphQL (`Api/GraphQL/`) y los endpoints Minimal API (`Api/Rest/`) son capas finas sobre los servicios de `Application/`.
   - La autorización vive **solo** en esos servicios: cada operación empieza con `AccessGuard` (`Authenticated()`, `Permission(...)`, `Admin()`, `RecentAuthentication()`), y lo mismo aplicará al filtrado por biblioteca.
@@ -290,13 +293,36 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **Estadísticas** (`StatsService`): por semana, mes, año o siempre, con días y meses en la zona horaria que pida el cliente (IANA; los cálculos de días se hacen en memoria). Las de otros usuarios y las del servidor (`serverStats`, con totales de la biblioteca) exigen `VIEW_ALL_STATS`.
   - **Playlists:** de su dueño; públicas (todos las ven y copian) y con colaboradores (añaden, quitan y reordenan). Las entradas tienen posiciones contiguas; las pistas que un usuario no puede ver siguen en la playlist pero no se le muestran. Máximo 10.000 entradas. `shareableUsers` lista los usuarios para invitar.
   - **Descubrimiento:** `home` (secciones por `HomeSectionKind`; el cliente pone los títulos), `mixes`/`mix(id)` y `artistOverview`. Los mixes (`artist:`, `genre:`, `decade:`, `favorites`, `discovery`, `track:` como radio) se generan al pedirlos con una semilla por usuario, mix y día: son estables todo el día. Excluyen lo valorado con 1–2 y lo que el usuario salta, no repiten más de tres pistas de un álbum, y se ordenan por tempo y tonalidad compatible (rueda Camelot) cuando hay análisis. Los artistas relacionados salen de géneros y álbumes compartidos, sin servicios externos.
-- **Hosting de frontends (implementado):** `Hosting/FrontendHost.cs`.
+- **Hosting de frontends (implementado):** `Hosting/FrontendHost.cs` y `Hosting/FrontendCatalog.cs`.
   - `/admin/**` sirve `Arcanist:Frontends:AdminRoot` (por defecto `wwwroot/admin`, el build de Angular).
-  - `/` sirve `PlayerRoot` (por defecto `wwwroot/player`); si no existe, una página provisional con enlace al admin y aviso AGPL.
+  - Los frontends instalados viven en `<datos>/frontends/<id>/` con su manifiesto `arcanist-frontend.json`; el empaquetado de serie (`PlayerRoot`, por defecto `wwwroot/player`) tiene el id `player`. El predeterminado (ajuste `frontends.default`) se sirve en `/`, y todos en `/players/<id>/`; a la página de entrada se le inyecta `<base href>` con su punto de montaje. Sin ninguno, `/` muestra una página provisional con enlace al admin y aviso AGPL.
+  - Se instalan desde un zip o una URL (`Packages/PackageArchive.cs`: sin zip-slip, 250 MB comprimidos, 1 GB y 20.000 archivos), con aviso de confianza en el panel y step-up. Guía pública en `docs/developers/frontends.md`.
   - Los fallbacks devuelven el archivo si existe y, si no, `index.html` (rutas del cliente). Los recursos con hash en el nombre se marcan `immutable`.
   - Los prefijos de API y reservados (`/rest`, `/graphql`, `/api`, `/media`, `/players`, `/ext`…) responden 404 JSON y **nunca HTML**.
   - Fallbacks y catch-alls solo atienden GET/HEAD: un catch-all con todos los métodos le quitaba peticiones POST sin cuerpo a los endpoints reales.
   - No usar `UseStaticFiles` para los frontends: no actúa cuando el enrutado ya eligió un endpoint (el fallback).
+- **Extensiones (implementado):** SDK en `src/Arcanist.Extensibility`; servidor en `Extensions/` y `Application/Extensions/`.
+  - Una extensión implementa `IArcanistExtension` (`ConfigureServices` y `MapEndpoints`) y se describe en `arcanist-extension.json`. Las instaladas viven en `<datos>/extensions/<id>/` y se cargan al arrancar, si están activadas, en su propio `AssemblyLoadContext` (el SDK, el servidor y el framework se comparten; los ensamblados se leen a memoria).
+  - Sus rutas deben estar bajo `/ext/<id>` o un prefijo reclamado; si no, la extensión queda `FAILED` (`route_not_allowed`). Dos extensiones activas no pueden reclamar el mismo prefijo (`route_conflict`).
+  - Activación en `arcanist.json` (`Arcanist:Extensions:<id>:Enabled`): apagar se aplica al momento (un filtro responde 404); encender una instalada requiere reiniciar. Si la clave viene del entorno, el panel no la cambia (`set_by_environment`).
+  - Las integradas (`BuiltInExtensions.All`, `IBuiltInExtension`) usan el mismo SDK, se cargan siempre y empiezan desactivadas. Las que verifican credenciales propias llaman a `ExtensionAuthentication.SignInAsync`, que deja la petición como ese usuario (sin sesión: nada que necesite step-up funciona ahí).
+  - Guía pública en `docs/developers/extensions.md`; `tests/Arcanist.TestExtension` es la extensión de los tests.
+- **Contraseñas de aplicación (implementado):** `Application/Users/AppPasswordService.cs`. Las apps de Subsonic y mStream nunca usan la contraseña del usuario: cada usuario crea una por app (con step-up), que se muestra una vez (`xxxx-xxxx-xxxx-xxxx`) y se guarda cifrada con Data Protection (para recalcular el token `md5(contraseña + sal)` de Subsonic) junto a su SHA-256 (para buscarla como clave de API). Los fallos se limitan con `LoginThrottle` (claves `app:`), sin afectar al inicio de sesión principal.
+- **Subsonic (implementado):** `Extensions/Subsonic/`, extensión integrada `subsonic`.
+  - API 1.16.1 con OpenSubsonic (`apiKeyAuthentication`, `formPost`, `songLyrics` v1, `transcodeOffset`, `topSongsByArtistId`) en `/rest/{método}[.view]`, GET y POST de formulario, en XML, JSON o JSONP. Los errores van con HTTP 200 y el código de Subsonic. CORS abierto.
+  - `SubsonicNode` escribe el mismo árbol en XML o JSON con las reglas de Subsonic (atributos como propiedades, listas siempre como arrays). Es una capa sobre los servicios de `Application/`: la visibilidad es la de Arcanist.
+  - Ids: los Guid como texto; las carpetas de música son `Library.Number`, un entero que nunca cambia ni se repite (`libraries.lastNumber` guarda el último usado).
+  - Navegación por etiquetas y por carpetas simuladas (artista → álbum → canciones); listas y `search3` (vacía = todo) paginan en orden estable. El streaming reutiliza `Api/Rest/MediaResponses.cs`; sin ffmpeg envía el original.
+  - Solo se pueden marcar pistas: estrellas y valoraciones de álbumes y artistas se aceptan pero no se guardan. Con el modo de una estrella, cualquier valoración la marca. `getPlayQueue`/`savePlayQueue`, podcasts, radios, compartidos y vídeos responden vacío.
+- **mStream (implementado):** `Extensions/Mstream/`, extensión integrada `mstream`, escrita a partir de la descripción de su API (no de su código).
+  - Login con contraseña de aplicación (JSON o formulario); el token (Data Protection) nombra esa contraseña y vale hasta que se borra. Se lee del cuerpo, de `?token=`, de `x-access-token` o de la cookie.
+  - Cada carpeta de una biblioteca visible es un vpath (el nombre de la biblioteca, con `-2`, `-3`… para las demás carpetas); una pista de CUE es `<archivo>@<n>`. El explorador de archivos sale del catálogo, nunca del disco.
+  - Rutas de `db/*`, `file-explorer`, `playlist/*` (por nombre; los ids de entrada salen del Guid), `/media`, `/album-art`, `/transcode`, `lyrics` y `scrobble-by-filepath`. Valoraciones de 0 a 10 (el doble de las estrellas). Sin enlaces compartidos, subidas ni zips.
+- **Importador de mStream (implementado):** `Import/Mstream/` y `Application/Import/`.
+  - Lee una instalación local (`MstreamFolder`: mStream 5 con usuarios y carpetas en la configuración y datos en LokiJS; mStream 6 todo en SQLite, leído de una copia) o un servidor por su API con una cuenta de administrador (`MstreamServerClient`).
+  - `analyzeMstream*` muestra lo que hay; `importMstream` (admin con step-up) crea las bibliotecas elegidas y los usuarios (admins siguen admins; los demás reciben `DOWNLOAD` y las bibliotecas de sus vpaths) y guarda un `MstreamImport`.
+  - Contraseñas: desde carpeta, `PasswordHash = mstream$<sal>$<hash>` y `ArcanistPasswordHasher` lo verifica (PBKDF2-SHA512, 15000, 32 bytes, la sal base64 como texto) y pide rehash; desde servidor, `mstream-server$<import>` y `MstreamServerSignIn` (`IExternalSignIn` en `AuthService`) consulta a ese servidor en el primer login y trae entonces los datos del usuario.
+  - `MstreamImportWorker` aplica los datos de una importación desde carpeta cuando terminan los escaneos de sus bibliotecas. `MstreamImporter` casa los archivos por ruta (exacta, o sin mayúsculas ni forma Unicode) y es idempotente: no duplica playlists por nombre, las valoraciones solo rellenan huecos y las reproducciones se quedan con el máximo (en `TrackPlayStats`, sin historial).
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.
@@ -340,7 +366,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **F3:** escáner avanzado y ffmpeg (completada): crate de análisis en Rust, transcodificación, waveform, BPM y tonalidad, EBU R128, duplicados por huella, AcoustID/MusicBrainz/Cover Art Archive/LRCLib opcionales, letras y hojas CUE. Las carátulas solo vienen del Cover Art Archive: iTunes y Deezer se descartaron por sus términos de uso.
 - **F4:** carpetas de entrada y organización (completada): plantillas de rutas, organizar con vista previa y deshacer, organización automática de lo nuevo, carpetas de entrada con política de duplicados, conversión opcional y cola de revisión en el panel. Pendiente: sugerencias de AcoustID para lo que no se puede identificar.
 - **F5:** experiencia de usuario (completada): valoraciones con modo de servidor (cinco estrellas o una), reproducciones informadas por los reproductores con historial y estadísticas (también del servidor en el panel), playlists públicas y colaborativas, búsqueda de texto completo por proveedor, e inicio, mixes y páginas de artista como API para los reproductores.
-- **F6:** gestor de frontends, SDK de extensiones, compatibilidad e importador de mStream, Subsonic.
+- **F6:** ecosistema (completada): reproductores web instalables desde zip o URL, SDK de extensiones con carga aislada, contraseñas de aplicación, Subsonic/OpenSubsonic y mStream como extensiones integradas, e importador de mStream desde su carpeta o su servidor (también desde el asistente).
 - **F7:** DLNA.
 - **F8:** red P2P iroh (crate Rust `arcanist-p2p` con C ABI para .NET y uniffi para móviles) y su sección en el admin.
 - **F9:** migrador SQLite → PostgreSQL con UI.
@@ -357,6 +383,13 @@ Decididas en la F3:
 - **ffmpeg no se empaqueta:** se detecta en el sistema o en la ruta configurada (también desde el asistente), y el panel ofrece descargarlo si falta.
 - **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
 - **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
+
+Decididas en la F6 (con el usuario):
+- **Extensiones oficiales integradas y de terceros desde zip**, con aviso de confianza total, step-up y reinicio.
+- **Subsonic y mStream con contraseñas de aplicación**, nunca con la contraseña principal.
+- **Importador de mStream desde su carpeta y desde su servidor.**
+- **Reproductores web desde zip o URL**, con validación del manifiesto, aviso de confianza y step-up.
+- Sin consultar (revisable): los tokens de mStream no se migran (no caducan y su secreto es un texto plano); las apps vuelven a iniciar sesión con una contraseña de aplicación.
 
 Decididas en la F5 (con el usuario):
 - **Valoraciones según el modo del servidor**, elegido en el asistente y cambiable en Ajustes: de una a cinco estrellas, o una estrella. Una estrella equivale a cinco estrellas en ambos sentidos.

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import {
+  adminGuard,
   authGuard,
   permissionGuard,
   setupCompletedGuard,
@@ -59,6 +60,17 @@ export const routes: Routes = [
         canActivate: [permissionGuard('MANAGE_SETTINGS')],
         loadComponent: () =>
           import('./features/settings/settings.page').then((m) => m.SettingsPage),
+      },
+      {
+        path: 'extensions',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/extensions/extensions.page').then((m) => m.ExtensionsPage),
+      },
+      {
+        path: 'mstream',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/mstream/mstream.page').then((m) => m.MstreamPage),
       },
       {
         path: 'account',

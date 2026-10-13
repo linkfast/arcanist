@@ -2,6 +2,9 @@ import type { Dictionary } from './i18n';
 
 export const es: Dictionary = {
   common: {
+    copy: 'Copiar',
+    copied: 'Copiado',
+    done: 'Hecho',
     userName: 'Usuario',
     displayName: 'Nombre visible',
     password: 'Contraseña',
@@ -20,6 +23,8 @@ export const es: Dictionary = {
     close: 'Cerrar',
   },
   nav: {
+    extensions: 'Extensiones',
+    mstream: 'Importar de mStream',
     overview: 'Inicio',
     libraries: 'Bibliotecas',
     users: 'Usuarios',
@@ -153,6 +158,9 @@ export const es: Dictionary = {
       },
     },
     review: {
+      mstream: 'Importar desde mStream al terminar',
+      mstreamHelp:
+        'Bibliotecas, usuarios con sus contraseñas, playlists, valoraciones y reproducciones de una instalación de mStream.',
       database: 'Base de datos',
       admin: 'Administrador',
       libraries: 'Bibliotecas',
@@ -373,6 +381,21 @@ export const es: Dictionary = {
     VIEW_ALL_STATS: 'Ver las estadísticas de todos los usuarios.',
   },
   account: {
+    appPasswords: {
+      title: 'Contraseñas de aplicación',
+      description:
+        'Para apps de Subsonic (Symfonium, DSub, Feishin…) y de mStream. Cada app usa la suya y tu contraseña nunca sale de aquí.',
+      name: 'Nombre',
+      namePlaceholder: 'Por ejemplo: Symfonium en el móvil',
+      create: 'Crear',
+      created: 'Copia la contraseña ahora: no se volverá a mostrar.',
+      howTo:
+        'En la app, usa {server} como servidor, {user} como usuario y esta contraseña. Las apps de OpenSubsonic también la aceptan como clave de API.',
+      createdAt: 'creada',
+      neverUsed: 'sin usar',
+      revoke: 'Revocar',
+      none: 'Aún no has creado ninguna.',
+    },
     title: 'Mi cuenta',
     changePassword: 'Cambiar contraseña',
     changePasswordHelp: 'Se cerrarán tus sesiones en otros dispositivos.',
@@ -572,6 +595,107 @@ export const es: Dictionary = {
     playsCount: '{count} rep.',
     hours: '{hours} h',
   },
+  extensions: {
+    descriptions: {
+      mstream: 'La API de mStream, para las apps de mStream.',
+      subsonic:
+        'La API de Subsonic y OpenSubsonic, para apps como Symfonium, DSub, Feishin o Amperfy.',
+    },
+    title: 'Extensiones',
+    subtitle: 'Reproductores web y extensiones del servidor.',
+    builtIn: 'Integrado',
+    uninstall: 'Desinstalar',
+    players: {
+      title: 'Reproductores web',
+      description:
+        'El predeterminado se sirve en la raíz del servidor; todos están además en /players/<id>/.',
+      default: 'Predeterminado',
+      makeDefault: 'Hacer predeterminado',
+      none: 'No hay reproductores instalados.',
+      installed: 'Reproductor instalado',
+    },
+    list: {
+      title: 'Extensiones',
+      description:
+        'Añaden APIs y funciones al servidor, como la compatibilidad con apps de Subsonic y de mStream. Las apps se conectan con una contraseña de aplicación.',
+      enabled: 'Activada',
+      failed: 'Con errores',
+      restartRequired: 'Requiere reiniciar',
+      restartRequiredHelp: 'El cambio se aplicará al reiniciar el servidor.',
+      routes: 'Rutas',
+      installed: 'Extensión instalada: actívala y reinicia el servidor para usarla.',
+    },
+    install: {
+      title: 'Instalar',
+      zip: 'Subir un .zip',
+      or: 'o',
+      urlPlaceholder: 'https://… (URL de un .zip)',
+      fromUrl: 'Instalar desde URL',
+      confirmTitle: '¿Confías en este paquete?',
+      playerTrust:
+        'Un reproductor web se ejecuta con la sesión de quien lo abre, en el mismo sitio que este panel: puede hacer todo lo que esa persona puede hacer. Instala solo reproductores de quien confíes.',
+      extensionTrust:
+        'Una extensión se ejecuta dentro del servidor con todos sus permisos: puede leer y cambiar cualquier dato y archivo al que el servidor tenga acceso. Instala solo extensiones de quien confíes.',
+      confirm: 'Instalar',
+    },
+  },
+  mstream: {
+    title: 'Importar desde mStream',
+    subtitle:
+      'Trae las bibliotecas, los usuarios (con sus contraseñas) y sus playlists, valoraciones y reproducciones de una instalación de mStream. mStream no se modifica.',
+    browse: 'Examinar',
+    analyze: 'Leer',
+    import: 'Importar',
+    started: 'Importación iniciada',
+    version: 'mStream {version}.',
+    source: {
+      title: 'Origen',
+      folder: 'Una carpeta de este servidor',
+      folderHelp:
+        'La carpeta de instalación de mStream o su archivo de configuración. Se lee todo, contraseñas incluidas.',
+      server: 'Un servidor mStream',
+      serverHelp:
+        'Por su API, con una cuenta de administrador. Cada usuario trae sus datos la primera vez que inicia sesión aquí con su contraseña de mStream.',
+      folderLabel: 'Carpeta o archivo de configuración',
+      url: 'Dirección del servidor',
+      adminUser: 'Administrador de mStream',
+      passwordHelp: 'La contraseña solo se usa ahora; no se guarda.',
+    },
+    libraries: {
+      title: 'Bibliotecas',
+      help: 'Elige qué será cada biblioteca de mStream. Sus archivos se buscan por su ruta dentro de la carpeta elegida.',
+      notHere: 'No está en este servidor',
+      skip: 'No importar',
+      new: 'Nueva biblioteca',
+      name: 'Nombre',
+      path: 'Carpeta',
+    },
+    users: {
+      title: 'Usuarios',
+      helpFolder:
+        'Los usuarios nuevos conservan su contraseña de mStream, ven las bibliotecas de mStream que tenían y pueden descargar. Los que ya existen aquí reciben sus datos sin otros cambios.',
+      helpServer:
+        'Los usuarios nuevos inician sesión con su contraseña de mStream (se comprueba con ese servidor la primera vez) y entonces llegan sus playlists, valoraciones y reproducciones.',
+      exists: 'Ya existe',
+      noPassword: 'Sin contraseña: un administrador deberá asignarle una',
+      none: 'mStream no tiene usuarios.',
+      data: '{playlists} playlists, {rated} canciones valoradas y {played} reproducidas.',
+      import: 'Importar los usuarios y sus datos',
+    },
+    history: {
+      title: 'Importaciones',
+      report:
+        '{libraries} bibliotecas y {users} usuarios creados · {playlists} playlists, {ratings} valoraciones y {plays} canciones reproducidas · {unmatched} sin encontrar',
+      waiting: 'Esperando a que terminen los escaneos de las bibliotecas.',
+      server: 'Los datos de cada usuario llegan cuando inicia sesión por primera vez.',
+    },
+    status: {
+      WAITING: 'En espera',
+      RUNNING: 'En curso',
+      COMPLETED: 'Completada',
+      FAILED: 'Fallida',
+    },
+  },
   errors: {
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',
     network: 'No se puede contactar con el servidor.',
@@ -623,12 +747,14 @@ export const es: Dictionary = {
     extension_failed: 'La extensión no se pudo cargar; revisa el registro del servidor.',
     route_not_allowed: 'La extensión usa rutas que no le corresponden.',
     route_conflict: 'Otra extensión activa ya usa esas rutas.',
-    set_by_environment: 'Ese ajuste viene del entorno (variables o archivos de configuración) y no se puede cambiar desde el panel.',
+    set_by_environment:
+      'Ese ajuste viene del entorno (variables o archivos de configuración) y no se puede cambiar desde el panel.',
     too_many: 'Has llegado al máximo permitido.',
     playlist_full: 'Una playlist admite como mucho 10.000 canciones.',
     not_undoable: 'Eso ya no se puede deshacer.',
     mstream_unreachable: 'El servidor de mStream no responde, o no responde como mStream.',
-    mstream_admin_required: 'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
+    mstream_admin_required:
+      'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
     ffmpeg_checksum_mismatch:
       'El ffmpeg descargado no coincidía con su suma de comprobación y se ha descartado.',
   },

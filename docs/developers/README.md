@@ -237,14 +237,23 @@ instead, e.g. `GET /rest/v1/scans/{id}`.
 
 ## Web players served by Arcanist
 
-Arcanist serves the active web player at `/`, on the same origin as the APIs, so it needs no CORS setup and can use
-the cookie-based refresh described above. Its client-side routes fall back to its `index.html`; API paths and the
-prefixes `/api`, `/media`, `/album-art`, `/transcode`, `/shared`, `/ext` and `/players` are reserved and never
-reach it. Installing alternative players from the admin panel is planned; until then a player can be placed in the
-folder configured as `Arcanist:Frontends:PlayerRoot` (default `wwwroot/player` next to the server).
+Arcanist serves the default web player at `/` and every installed player at `/players/<id>/`, on the same origin as
+the APIs, so players need no CORS setup and can use the cookie-based refresh described above. Their client-side
+routes fall back to their entry page; API paths and the prefixes `/api`, `/media`, `/album-art`, `/transcode`,
+`/shared` and `/ext` are reserved and never reach them. Administrators install players from the admin panel: see
+[Packaging a web player](frontends.md).
+
+## Subsonic and mStream apps
+
+Arcanist also speaks the Subsonic API (1.16.1 with OpenSubsonic extensions, at `/rest/{method}[.view]`) and the
+mStream API (at `/api/v1/…`, `/media`, `/album-art` and `/transcode`), through built-in extensions an administrator
+switches on. Those apps never use the user's password: users create an **app password** in their account
+(`createAppPassword`) and enter it in the app, as the password, as a Subsonic token (`t`/`s`) or as an OpenSubsonic
+API key. New clients should use the native APIs above instead.
 
 ## Licensing
 
 Arcanist is AGPL-3.0-or-later. The project's intent is that clients which only talk to the server over these APIs
 are separate programs that may use any license (Ultimate Web Player and Ultimate Desktop are built that way). Code
-that runs inside the server, such as future server extensions, must be AGPL-compatible. This is not legal advice.
+that runs inside the server, such as [server extensions](extensions.md), must be AGPL-compatible. This is not legal
+advice.

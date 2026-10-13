@@ -46,6 +46,8 @@ type Query {
   serverStats(period: StatsPeriod!, timeZone: String): ServerStats!
   "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS."
   ffmpeg: FfmpegStatus!
+  "The latest imports from mStream, newest first. Administrators only."
+  mstreamImports: [MstreamImportJob!]!
   "Which online services are on (MusicBrainz, AcoustID, Cover Art Archive, LRCLib) and what each has done. Requires MANAGE_SETTINGS."
   onlineServices: OnlineServicesStatus!
   "What organizing the library would move, with the given template or the library's own. Requires MANAGE_LIBRARIES."
@@ -576,6 +578,34 @@ enum FfmpegDownloadState {
   FAILED
 }
 
+type MstreamImportJob {
+  id: ID!
+  kind: MstreamImportKind!
+  source: String!
+  status: MstreamImportStatus!
+  createdAt: DateTime!
+  finishedAt: DateTime
+  librariesCreated: Int!
+  usersCreated: Int!
+  playlists: Int!
+  ratings: Int!
+  plays: Int!
+  unmatched: Int!
+  errorCode: String
+}
+
+enum MstreamImportKind {
+  FOLDER
+  SERVER
+}
+
+enum MstreamImportStatus {
+  WAITING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
 type OnlineServicesStatus {
   settings: OnlineServicesSettings!
   hasAcoustIdKey: Boolean!
@@ -919,6 +949,12 @@ type Mutation {
   setFfmpegPath(path: String): FfmpegStatus!
   "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password."
   installFfmpeg: FfmpegStatus!
+  "Reads an mStream installation on this server (its folder or configuration file) without changing it: its libraries, users and their data. Administrators only."
+  analyzeMstreamFolder(folder: String!): MstreamAnalysis!
+  "Reads the libraries and users of an mStream server through its API, signing in with one of its administrators. Administrators only."
+  analyzeMstreamServer(input: MstreamServerInput!): MstreamAnalysis!
+  "Imports from mStream: the chosen libraries, its users (who keep their passwords) and their playlists, ratings and play counts, which arrive once the new libraries are scanned (or, from a server, when each user first signs in). Needs a recent authentication."
+  importMstream(input: ImportMstreamInput!): MstreamImportJob!
   "Turns online services on or off. They send only fingerprints, identifiers and artist, album and track names. Requires MANAGE_SETTINGS."
   setOnlineServices(input: SetOnlineServicesInput!): OnlineServicesStatus!
   "Uses your own AcoustID application key instead of the project's; null or empty goes back to the project's. Requires MANAGE_SETTINGS."
@@ -1016,6 +1052,50 @@ input RecordPlayInput {
   playedMs: Int!
   playedAt: DateTime
   client: String
+}
+
+type MstreamAnalysis {
+  version: Int
+  libraries: [MstreamLibraryInfo!]!
+  users: [MstreamUserInfo!]!
+  playlists: Int!
+  ratedTracks: Int!
+  playedTracks: Int!
+}
+
+type MstreamLibraryInfo {
+  vpath: String!
+  root: String!
+  rootExists: Boolean!
+  sourceId: ID
+}
+
+type MstreamUserInfo {
+  userName: String!
+  isAdmin: Boolean!
+  vpaths: [String!]!
+  exists: Boolean!
+  canSignIn: Boolean!
+}
+
+input MstreamServerInput {
+  url: String!
+  userName: String!
+  password: String!
+}
+
+input ImportMstreamInput {
+  folder: String
+  server: MstreamServerInput
+  libraries: [MstreamLibraryChoice!]!
+  importUsers: Boolean!
+}
+
+input MstreamLibraryChoice {
+  vpath: String!
+  sourceId: ID
+  newLibraryName: String
+  newLibraryPath: String
 }
 
 input SetOnlineServicesInput {

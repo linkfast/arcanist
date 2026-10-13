@@ -627,6 +627,8 @@ export const es: Dictionary = {
     too_many: 'Has llegado al máximo permitido.',
     playlist_full: 'Una playlist admite como mucho 10.000 canciones.',
     not_undoable: 'Eso ya no se puede deshacer.',
+    mstream_unreachable: 'El servidor de mStream no responde, o no responde como mStream.',
+    mstream_admin_required: 'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
     ffmpeg_checksum_mismatch:
       'El ffmpeg descargado no coincidía con su suma de comprobación y se ha descartado.',
   },

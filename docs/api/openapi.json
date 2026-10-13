@@ -3469,6 +3469,121 @@
         }
       }
     },
+    "/rest/v1/mstream/imports": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "The latest imports from mStream, newest first. Administrators only.",
+        "operationId": "MstreamImports",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MstreamImportJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Imports from mStream: the chosen libraries, its users (who keep their passwords) and their playlists, ratings and play counts, which arrive once the new libraries are scanned (or, from a server, when each user first signs in). Needs a recent authentication.",
+        "operationId": "ImportMstream",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMstreamInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/mstream/analyze-folder": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Reads an mStream installation on this server (its folder or configuration file) without changing it: its libraries, users and their data. Administrators only.",
+        "operationId": "AnalyzeMstreamFolder",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeMstreamFolderInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamAnalysis"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/mstream/analyze-server": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Reads the libraries and users of an mStream server through its API, signing in with one of its administrators. Administrators only.",
+        "operationId": "AnalyzeMstreamServer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MstreamServerInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamAnalysis"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -4147,6 +4262,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "AnalyzeMstreamFolderInput": {
+        "required": [
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string"
           }
         }
       },
@@ -5332,6 +5458,42 @@
           }
         }
       },
+      "ImportMstreamInput": {
+        "required": [
+          "folder",
+          "server",
+          "libraries",
+          "importUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "server": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MstreamServerInput"
+              }
+            ]
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MstreamLibraryChoice"
+            }
+          },
+          "importUsers": {
+            "type": "boolean"
+          }
+        }
+      },
       "ImportReason": {
         "enum": [
           "MISSING_TAGS",
@@ -6031,6 +6193,285 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "MstreamAnalysis": {
+        "required": [
+          "version",
+          "libraries",
+          "users",
+          "playlists",
+          "ratedTracks",
+          "playedTracks"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MstreamLibraryInfo"
+            }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MstreamUserInfo"
+            }
+          },
+          "playlists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ratedTracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playedTracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "MstreamImportJob": {
+        "required": [
+          "id",
+          "kind",
+          "source",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "librariesCreated",
+          "usersCreated",
+          "playlists",
+          "ratings",
+          "plays",
+          "unmatched",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MstreamImportKind"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MstreamImportStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "librariesCreated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "usersCreated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playlists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ratings": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unmatched": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MstreamImportKind": {
+        "enum": [
+          "FOLDER",
+          "SERVER"
+        ]
+      },
+      "MstreamImportStatus": {
+        "enum": [
+          "WAITING",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED"
+        ]
+      },
+      "MstreamLibraryChoice": {
+        "required": [
+          "vpath",
+          "sourceId",
+          "newLibraryName",
+          "newLibraryPath"
+        ],
+        "type": "object",
+        "properties": {
+          "vpath": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "newLibraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "newLibraryPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MstreamLibraryInfo": {
+        "required": [
+          "vpath",
+          "root",
+          "rootExists",
+          "sourceId"
+        ],
+        "type": "object",
+        "properties": {
+          "vpath": {
+            "type": "string"
+          },
+          "root": {
+            "type": "string"
+          },
+          "rootExists": {
+            "type": "boolean"
+          },
+          "sourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "MstreamServerInput": {
+        "required": [
+          "url",
+          "userName",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "MstreamUserInfo": {
+        "required": [
+          "userName",
+          "isAdmin",
+          "vpaths",
+          "exists",
+          "canSignIn"
+        ],
+        "type": "object",
+        "properties": {
+          "userName": {
+            "type": "string"
+          },
+          "isAdmin": {
+            "type": "boolean"
+          },
+          "vpaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exists": {
+            "type": "boolean"
+          },
+          "canSignIn": {
+            "type": "boolean"
           }
         }
       },

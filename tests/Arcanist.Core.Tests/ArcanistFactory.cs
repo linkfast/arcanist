@@ -179,8 +179,8 @@ public sealed class ArcanistFactory(
     }
 
     /// <summary>Logs in and returns a client that sends the access token.</summary>
-    public async Task<HttpClient> CreateAuthenticatedClientAsync(string userName = AdminUserName) =>
-        CreateClient((await LoginAsync(userName)).AccessToken);
+    public async Task<HttpClient> CreateAuthenticatedClientAsync(string userName = AdminUserName, string password = Password) =>
+        CreateClient((await LoginAsync(userName, password)).AccessToken);
 
     public override async ValueTask DisposeAsync()
     {

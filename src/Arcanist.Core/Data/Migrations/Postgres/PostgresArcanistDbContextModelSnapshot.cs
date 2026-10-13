@@ -634,6 +634,72 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("MediaFiles");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("LibrariesCreated")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Playlists")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Ratings")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("Unmatched")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserMap")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UsersCreated")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("VpathMap")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("MstreamImports");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OnlineLookup", b =>
                 {
                     b.Property<Guid>("Id")

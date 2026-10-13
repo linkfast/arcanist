@@ -42,6 +42,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<OrganizeRun> OrganizeRuns => Set<OrganizeRun>();
     public DbSet<OrganizeMove> OrganizeMoves => Set<OrganizeMove>();
     public DbSet<AppPassword> AppPasswords => Set<AppPassword>();
+    public DbSet<MstreamImport> MstreamImports => Set<MstreamImport>();
     public DbSet<TrackRating> TrackRatings => Set<TrackRating>();
     public DbSet<PlayEvent> PlayEvents => Set<PlayEvent>();
     public DbSet<TrackPlayStats> TrackPlayStats => Set<TrackPlayStats>();
@@ -145,6 +146,15 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             password.Property(p => p.SecretHash).HasMaxLength(64);
             password.HasIndex(p => p.SecretHash).IsUnique();
             password.HasIndex(p => p.UserId);
+        });
+
+        modelBuilder.Entity<MstreamImport>(import =>
+        {
+            import.Property(i => i.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            import.Property(i => i.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            import.Property(i => i.Source).HasMaxLength(PathLength);
+            import.Property(i => i.ErrorCode).HasMaxLength(64);
+            import.HasIndex(i => i.Status);
         });
 
         modelBuilder.Entity<TrackRating>(rating =>

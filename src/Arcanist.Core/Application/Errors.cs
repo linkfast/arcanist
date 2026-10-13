@@ -77,6 +77,10 @@ public static class ErrorCodes
     public const string PlaylistFull = "playlist_full";
     /// <summary>Only finished runs can be undone, and only once.</summary>
     public const string NotUndoable = "not_undoable";
+    /// <summary>The mStream server did not answer, or not as mStream does.</summary>
+    public const string MstreamUnreachable = "mstream_unreachable";
+    /// <summary>Reading an mStream server's users and libraries needs an administrator whose admin API is not locked.</summary>
+    public const string MstreamAdminRequired = "mstream_admin_required";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

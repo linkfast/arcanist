@@ -26,9 +26,19 @@ public abstract record AuthResult
     public sealed record Failure(string Code, TimeSpan? RetryAfter = null) : AuthResult;
 }
 
+/// <summary>
+/// Checks a password somewhere else when the stored hash says so (users imported from an mStream server, whose
+/// hashes could not be read). A match is then replaced by Arcanist's own hash.
+/// </summary>
+public interface IExternalSignIn
+{
+    Task<bool> VerifyAsync(User user, string password, CancellationToken cancellationToken);
+}
+
 public sealed class AuthService(
     ArcanistDbContext db,
     IPasswordHasher<User> passwordHasher,
+    IEnumerable<IExternalSignIn> externalSignIns,
     TokenService tokens,
     LoginThrottle throttle,
     UserAccessCache accessCache,
@@ -57,6 +67,12 @@ public sealed class AuthService(
         }
 
         var verification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        foreach (var external in externalSignIns)
+        {
+            if (verification == PasswordVerificationResult.Failed && await external.VerifyAsync(user, password, cancellationToken))
+                verification = PasswordVerificationResult.SuccessRehashNeeded;
+        }
+
         if (verification == PasswordVerificationResult.Failed)
         {
             throttle.RecordFailure(normalized);

@@ -23,6 +23,7 @@ public sealed class ServerOptions
 /// <param name="ApiVersion">Major version of the GraphQL and REST contracts. Incremented only on breaking changes.</param>
 /// <param name="Capabilities">Ultimate Cloud features currently enabled; local features are always available.</param>
 /// <param name="TranscodingFormats">Formats the stream endpoint can convert to (none without ffmpeg).</param>
+/// <param name="RatingMode">How users rate tracks here: show five stars, or a single star.</param>
 public sealed record ServerInfo(
     string Name,
     string Version,
@@ -31,7 +32,8 @@ public sealed record ServerInfo(
     bool SetupCompleted,
     IReadOnlyList<Capability> Capabilities,
     CloudTier CloudTier,
-    IReadOnlyList<Core.Media.TranscodeFormat> TranscodingFormats);
+    IReadOnlyList<Core.Media.TranscodeFormat> TranscodingFormats,
+    Data.Entities.RatingMode RatingMode);
 
 public sealed class ServerInfoService(
     ICapabilityService capabilities,
@@ -39,7 +41,8 @@ public sealed class ServerInfoService(
     IOptionsMonitor<ServerOptions> options,
     IOptionsMonitor<Setup.SetupOptions> setup,
     Core.Media.FfmpegLocator ffmpeg,
-    Core.Media.Transcoder transcoder)
+    Core.Media.Transcoder transcoder,
+    Listening.RatingSettings ratings)
 {
     public const int ApiVersion = 1;
 
@@ -57,5 +60,6 @@ public sealed class ServerInfoService(
         setup.CurrentValue.Completed,
         Enum.GetValues<Capability>().Where(capabilities.IsEnabled).ToList(),
         cloudLink.Tier,
-        transcoder.Formats(ffmpeg.Current));
+        transcoder.Formats(ffmpeg.Current),
+        ratings.Current);
 }

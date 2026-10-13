@@ -13,7 +13,7 @@ namespace Arcanist.Core.Application.Catalog;
 /// files is present in a library the caller can access, and albums and artists are visible through such tracks.
 /// Lists use keyset pagination, which stays fast and stable while scans add music.
 /// </summary>
-public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, StreamTokens streamTokens)
+public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, StreamTokens streamTokens, Listening.RatingSettings ratings)
 {
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 500;
@@ -114,6 +114,25 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         return (await ToModelsAsync(tracks, access, cancellationToken)).ToDictionary(t => t.Id);
     }
 
+    /// <summary>The albums with these ids that <paramref name="access"/> can see, by id.</summary>
+    internal async Task<Dictionary<Guid, Album>> VisibleAlbumsAsync(UserAccess access, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        var visible = VisibleTracks(access);
+        var albums = await db.Albums.AsNoTracking().Where(a => ids.Contains(a.Id) && visible.Any(t => t.AlbumId == a.Id)).ToListAsync(cancellationToken);
+        return (await ToModelsAsync(albums, visible, cancellationToken)).ToDictionary(a => a.Id);
+    }
+
+    /// <summary>Tracks <paramref name="access"/> can play, for queries built elsewhere.</summary>
+    internal IQueryable<TrackEntity> Visible(UserAccess access) => VisibleTracks(access);
+
+    /// <summary>Turns track rows <paramref name="access"/> can see into contract tracks, in the same order.</summary>
+    internal Task<IReadOnlyList<Track>> ToModelsAsync(IReadOnlyList<TrackEntity> tracks, CancellationToken cancellationToken) =>
+        ToModelsAsync(tracks, guard.Authenticated(), cancellationToken);
+
+    /// <summary>Turns album rows <paramref name="access"/> can see into contract albums, in the same order.</summary>
+    internal Task<IReadOnlyList<Album>> ToModelsAsync(IReadOnlyList<AlbumEntity> albums, UserAccess access, CancellationToken cancellationToken) =>
+        ToModelsAsync(albums, VisibleTracks(access), cancellationToken);
+
     public async Task<Track> TrackAsync(Guid id, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
@@ -194,6 +213,13 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
             .Select(a => new AnalysisSummary(a.ContentHash, a.Loudness, a.LoudnessRange, a.TruePeak, a.Bpm, a.BpmConfidence, a.KeyTonic, a.KeyMinor, a.KeyConfidence))
             .ToDictionaryAsync(a => a.ContentHash, cancellationToken);
 
+        var userRatings = await db.TrackRatings.AsNoTracking().Where(r => r.UserId == access.UserId && ids.Contains(r.TrackId))
+            .ToDictionaryAsync(r => r.TrackId, r => r.Rating, cancellationToken);
+        var userPlays = await db.TrackPlayStats.AsNoTracking().Where(p => p.UserId == access.UserId && ids.Contains(p.TrackId))
+            .ToDictionaryAsync(p => p.TrackId, cancellationToken);
+        // In single-star mode lower ratings are kept (switching back shows them again) but not reported.
+        var singleStar = ratings.Current == RatingMode.Star;
+
         // One token per response; it is not tied to a track.
         var streamToken = streamTokens.Create(access.UserId, guard.SessionId);
 
@@ -223,7 +249,11 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                         LoudnessOf(analyses.GetValueOrDefault(f.ContentHash), album.Loudness, album.TruePeak),
                         StreamUrls.For(t.Id, streamToken, f.Id)))
                     .ToList(),
-                StreamUrls.For(t.Id, streamToken));
+                StreamUrls.For(t.Id, streamToken),
+                userRatings.TryGetValue(t.Id, out var rating) && (!singleStar || rating == 5) ? rating : null,
+                rating == 5,
+                userPlays.TryGetValue(t.Id, out var plays) ? plays.PlayCount : 0,
+                plays?.LastPlayedAt);
         }).ToList();
     }
 

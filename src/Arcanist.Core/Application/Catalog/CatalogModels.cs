@@ -87,6 +87,10 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// <param name="Files">Copies of the track in libraries the user can access, best quality first.</param>
 /// <param name="StreamUrl">Plays the best copy. Relative to the server; it carries a token valid for a few hours for
 /// the current session, so it works where headers cannot be sent (e.g. an HTML audio element).</param>
+/// <param name="Rating">The user's rating, 1–5; null when unrated. With the single-star rating mode only 5 (starred)
+/// is reported.</param>
+/// <param name="Starred">The user starred it (rated it 5).</param>
+/// <param name="PlayCount">How many times the user played it.</param>
 public sealed record Track(
     Guid Id,
     string Title,
@@ -102,7 +106,11 @@ public sealed record Track(
     MusicalKey? Key,
     bool HasLyrics,
     IReadOnlyList<TrackFile> Files,
-    string StreamUrl);
+    string StreamUrl,
+    int? Rating,
+    bool Starred,
+    int PlayCount,
+    DateTime? LastPlayedAt);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);

@@ -37,6 +37,7 @@ public sealed record SetupLibrary(string? Name, IReadOnlyList<string>? Folders, 
 /// <summary>Everything the wizard collects, submitted at once so setup never ends half-done.</summary>
 /// <param name="FfmpegPath">ffmpeg to use; null to find it automatically (or download it later from the panel).</param>
 /// <param name="OnlineServices">Online services to turn on; none when null.</param>
+/// <param name="RatingMode">How users rate tracks; five stars when null. Can be changed later in the settings.</param>
 public sealed record SetupRequest(
     SetupDatabase? Database,
     SetupAdmin? Admin,
@@ -44,7 +45,8 @@ public sealed record SetupRequest(
     bool? ShareAnonymousStatistics,
     string? Language,
     string? FfmpegPath = null,
-    Application.Online.OnlineServicesSettings? OnlineServices = null);
+    Application.Online.OnlineServicesSettings? OnlineServices = null,
+    RatingMode? RatingMode = null);
 
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
@@ -71,6 +73,7 @@ public sealed class SetupService(
     LibraryRules libraryRules,
     ScanCoordinator scans,
     FfmpegLocator ffmpeg,
+    Application.Listening.RatingSettings ratings,
     ILogger<SetupService> logger)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -189,8 +192,10 @@ public sealed class SetupService(
             await settingsWriter.SetAsync(new Dictionary<string, object?> { [SetupOptions.CompletedKey] = true }, cancellationToken);
             setupCode.Discard();
 
-            // The chosen ffmpeg is in the database now.
+            // The chosen ffmpeg and rating mode are in the database now.
             await ffmpeg.RefreshAsync(cancellationToken);
+            ratings.Reset();
+            await ratings.GetAsync(cancellationToken);
 
             // The wizard's last step shows this first scan in progress.
             foreach (var libraryId in libraryIds)
@@ -252,6 +257,8 @@ public sealed class SetupService(
 
         if (request.OnlineServices is { } online)
             db.Settings.Add(new Setting { Key = SettingKeys.OnlineServices, Value = JsonSerializer.Serialize(online, JsonSerializerOptions.Web) });
+
+        db.Settings.Add(new Setting { Key = SettingKeys.RatingMode, Value = JsonSerializer.Serialize(request.RatingMode ?? RatingMode.Stars, JsonSerializerOptions.Web) });
 
         return libraryIds;
     }

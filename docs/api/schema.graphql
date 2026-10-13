@@ -22,6 +22,14 @@ type Query {
   library(id: ID!): Library!
   "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only."
   serverDirectories(path: String): ServerDirectoryListing!
+  "The user's tracks rated at least minRating (5 for starred ones), most recently rated first. With the single-star rating mode, only starred tracks."
+  ratedTracks(minRating: Int, after: String, first: Int): RatedTrackPage!
+  "The user's counted plays, newest first."
+  playHistory(after: String, first: Int): PlayHistoryPage!
+  "Listening over a period: the user's own, or another user's with VIEW_ALL_STATS. timeZone is an IANA id (UTC by default) for days and months."
+  listeningStats(period: StatsPeriod!, timeZone: String, userId: ID): ListeningStats!
+  "What the libraries hold and how the server is listened to, per user. Requires VIEW_ALL_STATS."
+  serverStats(period: StatsPeriod!, timeZone: String): ServerStats!
   "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS."
   ffmpeg: FfmpegStatus!
   "Which online services are on (MusicBrainz, AcoustID, Cover Art Archive, LRCLib) and what each has done. Requires MANAGE_SETTINGS."
@@ -135,6 +143,10 @@ type Track {
   hasLyrics: Boolean!
   files: [TrackFile!]!
   streamUrl: String!
+  rating: Int
+  starred: Boolean!
+  playCount: Int!
+  lastPlayedAt: DateTime
 }
 
 type AlbumReference {
@@ -274,6 +286,110 @@ type ServerDirectory {
   name: String!
   path: String!
   isHidden: Boolean!
+}
+
+type RatedTrackPage {
+  items: [RatedTrack!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type RatedTrack {
+  track: Track!
+  rating: Int!
+  ratedAt: DateTime!
+}
+
+type PlayHistoryPage {
+  items: [PlayHistoryItem!]!
+  nextCursor: String
+}
+
+type PlayHistoryItem {
+  id: ID!
+  track: Track!
+  playedAt: DateTime!
+  playedMs: Int!
+}
+
+type ListeningStats {
+  period: StatsPeriod!
+  from: DateTime
+  plays: Int!
+  listenedMs: Long!
+  distinctTracks: Int!
+  bucket: StatsBucket!
+  timeline: [ListeningBucket!]!
+  topTracks: [TrackPlays!]!
+  topArtists: [ArtistPlays!]!
+  topAlbums: [AlbumPlays!]!
+}
+
+enum StatsPeriod {
+  WEEK
+  MONTH
+  YEAR
+  ALL
+}
+
+enum StatsBucket {
+  DAY
+  MONTH
+}
+
+type ListeningBucket {
+  start: DateOnly!
+  plays: Int!
+  listenedMs: Long!
+}
+
+"The `Date` scalar type represents a year, month and day in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard. Format is `yyyy-MM-dd`"
+scalar DateOnly
+
+type TrackPlays {
+  track: Track!
+  plays: Int!
+}
+
+type ArtistPlays {
+  artist: ArtistReference!
+  plays: Int!
+}
+
+type AlbumPlays {
+  album: Album!
+  plays: Int!
+}
+
+type ServerStats {
+  library: LibraryTotals!
+  listening: ListeningStats!
+  users: [UserListening!]!
+}
+
+type LibraryTotals {
+  artists: Int!
+  albums: Int!
+  tracks: Int!
+  files: Int!
+  durationMs: Long!
+  sizeBytes: Long!
+  formats: [FormatTotals!]!
+}
+
+type FormatTotals {
+  format: String!
+  files: Int!
+  sizeBytes: Long!
+}
+
+type UserListening {
+  userId: ID!
+  userName: String!
+  displayName: String
+  plays: Int!
+  listenedMs: Long!
+  lastPlayedAt: DateTime
 }
 
 type FfmpegStatus {
@@ -526,6 +642,7 @@ type ServerInfo {
   capabilities: [Capability!]!
   cloudTier: CloudTier!
   transcodingFormats: [TranscodeFormat!]!
+  ratingMode: RatingMode!
 }
 
 enum Capability {
@@ -539,6 +656,11 @@ enum CloudTier {
   NONE
   FREE
   PAID
+}
+
+enum RatingMode {
+  STARS
+  STAR
 }
 
 type UserAccount {
@@ -597,6 +719,14 @@ type Mutation {
   createServerDirectory(input: CreateServerDirectoryInput!): ServerDirectory!
   "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES."
   removeLibrarySource(id: ID!): Library!
+  "Rates a track 1–5 for the user, or clears the rating with null. With the single-star rating mode only 5 is accepted."
+  rateTrack(trackId: ID!, rating: Int): Track!
+  "Stars a track for the user (rates it 5) or unstars it (clears a 5). Works with both rating modes."
+  starTrack(trackId: ID!, starred: Boolean!): Track!
+  "Reports that the user listened to a track. The server decides whether it counts as a play (30 seconds, and half the track or four minutes) or a skip."
+  recordPlay(input: RecordPlayInput!): RecordedPlay!
+  "Chooses how users rate tracks: STARS (one to five) or STAR (a single star, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS."
+  setRatingMode(mode: RatingMode!): RatingMode!
   "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password."
   setFfmpegPath(path: String): FfmpegStatus!
   "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password."
@@ -665,6 +795,19 @@ input UpdateLibraryInput {
 input CreateServerDirectoryInput {
   parent: String!
   name: String!
+}
+
+type RecordedPlay {
+  id: ID!
+  counted: Boolean!
+  skipped: Boolean!
+}
+
+input RecordPlayInput {
+  trackId: ID!
+  playedMs: Int!
+  playedAt: DateTime
+  client: String
 }
 
 input SetOnlineServicesInput {

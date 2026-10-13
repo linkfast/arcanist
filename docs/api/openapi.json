@@ -493,6 +493,332 @@
         }
       }
     },
+    "/rest/v1/tracks/{trackId}/rating": {
+      "put": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Rates a track 1\u20135 for the user, or clears the rating with null. With the single-star rating mode only 5 is accepted.",
+        "operationId": "RateTrack",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateTrackInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/{trackId}/star": {
+      "put": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Stars a track for the user (rates it 5) or unstars it (clears a 5). Works with both rating modes.",
+        "operationId": "StarTrack",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarTrackInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/rated-tracks": {
+      "get": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "The user\u0027s tracks rated at least minRating (5 for starred ones), most recently rated first. With the single-star rating mode, only starred tracks.",
+        "operationId": "RatedTracks",
+        "parameters": [
+          {
+            "name": "minRating",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatedTrackPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/plays": {
+      "post": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Reports that the user listened to a track. The server decides whether it counts as a play (30 seconds, and half the track or four minutes) or a skip.",
+        "operationId": "RecordPlay",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPlayInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordedPlay"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/plays": {
+      "get": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "The user\u0027s counted plays, newest first.",
+        "operationId": "PlayHistory",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayHistoryPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/stats/listening": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Listening over a \u0060period\u0060 (WEEK, MONTH, YEAR, ALL): the user\u0027s own, or another user\u0027s with VIEW_ALL_STATS. timeZone is an IANA id (UTC by default) for days and months.",
+        "operationId": "ListeningStats",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timeZone",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListeningStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/stats/server": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "What the libraries hold and how the server is listened to over a \u0060period\u0060 (WEEK, MONTH, YEAR, ALL), per user. Requires VIEW_ALL_STATS.",
+        "operationId": "ServerStats",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timeZone",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/settings/rating-mode": {
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Chooses how users rate tracks: STARS (one to five) or STAR (a single star, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS.",
+        "operationId": "SetRatingMode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRatingModeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingMode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/stream/{trackId}": {
       "get": {
         "tags": [
@@ -2710,6 +3036,26 @@
           }
         }
       },
+      "AlbumPlays": {
+        "required": [
+          "album",
+          "plays"
+        ],
+        "type": "object",
+        "properties": {
+          "album": {
+            "$ref": "#/components/schemas/Album"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "AlbumReference": {
         "required": [
           "id",
@@ -2882,6 +3228,26 @@
             ]
           },
           "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ArtistPlays": {
+        "required": [
+          "artist",
+          "plays"
+        ],
+        "type": "object",
+        "properties": {
+          "artist": {
+            "$ref": "#/components/schemas/ArtistReference"
+          },
+          "plays": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -3349,6 +3715,35 @@
           },
           "download": {
             "$ref": "#/components/schemas/FfmpegDownloadProgress"
+          }
+        }
+      },
+      "FormatTotals": {
+        "required": [
+          "format",
+          "files",
+          "sizeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -3842,6 +4237,182 @@
           "LOCAL"
         ]
       },
+      "LibraryTotals": {
+        "required": [
+          "artists",
+          "albums",
+          "tracks",
+          "files",
+          "durationMs",
+          "sizeBytes",
+          "formats"
+        ],
+        "type": "object",
+        "properties": {
+          "artists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "albums": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormatTotals"
+            }
+          }
+        }
+      },
+      "ListeningBucket": {
+        "required": [
+          "start",
+          "plays",
+          "listenedMs"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "listenedMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ListeningStats": {
+        "required": [
+          "period",
+          "from",
+          "plays",
+          "listenedMs",
+          "distinctTracks",
+          "bucket",
+          "timeline",
+          "topTracks",
+          "topArtists",
+          "topAlbums"
+        ],
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/StatsPeriod"
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "listenedMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "distinctTracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bucket": {
+            "$ref": "#/components/schemas/StatsBucket"
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListeningBucket"
+            }
+          },
+          "topTracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackPlays"
+            }
+          },
+          "topArtists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtistPlays"
+            }
+          },
+          "topAlbums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AlbumPlays"
+            }
+          }
+        }
+      },
       "LoginRequest": {
         "required": [
           "userName",
@@ -4322,6 +4893,136 @@
           }
         }
       },
+      "PlayHistoryItem": {
+        "required": [
+          "id",
+          "track",
+          "playedAt",
+          "playedMs"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "track": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "playedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "playedMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PlayHistoryPage": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlayHistoryItem"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RatedTrack": {
+        "required": [
+          "track",
+          "rating",
+          "ratedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "rating": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ratedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RatedTrackPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RatedTrack"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RateTrackInput": {
+        "required": [
+          "rating"
+        ],
+        "type": "object",
+        "properties": {
+          "rating": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RatingMode": {
+        "enum": [
+          "STARS",
+          "STAR",
+          null
+        ]
+      },
       "ReauthenticateRequest": {
         "required": [
           "password"
@@ -4329,6 +5030,62 @@
         "type": "object",
         "properties": {
           "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RecordedPlay": {
+        "required": [
+          "id",
+          "counted",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "counted": {
+            "type": "boolean"
+          },
+          "skipped": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RecordPlayInput": {
+        "required": [
+          "trackId",
+          "playedMs",
+          "playedAt",
+          "client"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "playedMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "client": {
             "type": [
               "null",
               "string"
@@ -4586,7 +5343,8 @@
           "setupCompleted",
           "capabilities",
           "cloudTier",
-          "transcodingFormats"
+          "transcodingFormats",
+          "ratingMode"
         ],
         "type": "object",
         "properties": {
@@ -4626,6 +5384,31 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TranscodeFormat"
+            }
+          },
+          "ratingMode": {
+            "$ref": "#/components/schemas/RatingMode"
+          }
+        }
+      },
+      "ServerStats": {
+        "required": [
+          "library",
+          "listening",
+          "users"
+        ],
+        "type": "object",
+        "properties": {
+          "library": {
+            "$ref": "#/components/schemas/LibraryTotals"
+          },
+          "listening": {
+            "$ref": "#/components/schemas/ListeningStats"
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserListening"
             }
           }
         }
@@ -4741,6 +5524,17 @@
           },
           "lyrics": {
             "type": "boolean"
+          }
+        }
+      },
+      "SetRatingModeInput": {
+        "required": [
+          "mode"
+        ],
+        "type": "object",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/RatingMode"
           }
         }
       },
@@ -4957,6 +5751,16 @@
                 "$ref": "#/components/schemas/OnlineServicesSettings"
               }
             ]
+          },
+          "ratingMode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RatingMode"
+              }
+            ]
           }
         }
       },
@@ -4998,6 +5802,17 @@
           }
         }
       },
+      "StarTrackInput": {
+        "required": [
+          "starred"
+        ],
+        "type": "object",
+        "properties": {
+          "starred": {
+            "type": "boolean"
+          }
+        }
+      },
       "StartScanInput": {
         "type": "object",
         "properties": {
@@ -5006,6 +5821,20 @@
             "default": false
           }
         }
+      },
+      "StatsBucket": {
+        "enum": [
+          "DAY",
+          "MONTH"
+        ]
+      },
+      "StatsPeriod": {
+        "enum": [
+          "WEEK",
+          "MONTH",
+          "YEAR",
+          "ALL"
+        ]
       },
       "Stream": {
         "type": "string",
@@ -5059,7 +5888,11 @@
           "key",
           "hasLyrics",
           "files",
-          "streamUrl"
+          "streamUrl",
+          "rating",
+          "starred",
+          "playCount",
+          "lastPlayedAt"
         ],
         "type": "object",
         "properties": {
@@ -5152,6 +5985,33 @@
           },
           "streamUrl": {
             "type": "string"
+          },
+          "rating": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "starred": {
+            "type": "boolean"
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastPlayedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -5334,6 +6194,26 @@
           }
         }
       },
+      "TrackPlays": {
+        "required": [
+          "track",
+          "plays"
+        ],
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "TranscodeFormat": {
         "enum": [
           "OPUS",
@@ -5476,6 +6356,55 @@
           }
         }
       },
+      "UserListening": {
+        "required": [
+          "userId",
+          "userName",
+          "displayName",
+          "plays",
+          "listenedMs",
+          "lastPlayedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "listenedMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "lastPlayedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "UserRole": {
         "enum": [
           "USER",
@@ -5552,6 +6481,15 @@
     },
     {
       "name": "Organization"
+    },
+    {
+      "name": "Listening"
+    },
+    {
+      "name": "Statistics"
+    },
+    {
+      "name": "Settings"
     },
     {
       "name": "Media"

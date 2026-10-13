@@ -40,6 +40,12 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<ImportItem> ImportItems => Set<ImportItem>();
     public DbSet<OrganizeRun> OrganizeRuns => Set<OrganizeRun>();
     public DbSet<OrganizeMove> OrganizeMoves => Set<OrganizeMove>();
+    public DbSet<TrackRating> TrackRatings => Set<TrackRating>();
+    public DbSet<PlayEvent> PlayEvents => Set<PlayEvent>();
+    public DbSet<TrackPlayStats> TrackPlayStats => Set<TrackPlayStats>();
+    public DbSet<Playlist> Playlists => Set<Playlist>();
+    public DbSet<PlaylistEntry> PlaylistEntries => Set<PlaylistEntry>();
+    public DbSet<PlaylistCollaborator> PlaylistCollaborators => Set<PlaylistCollaborator>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -55,6 +61,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         ConfigureLibraries(modelBuilder);
         ConfigureCatalog(modelBuilder);
         ConfigureOrganization(modelBuilder);
+        ConfigureUserData(modelBuilder);
 
         // Keys come from Entity.Id (UUIDv7), never from the database.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -122,6 +129,63 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             job.Property(j => j.ErrorCode).HasMaxLength(64);
             job.HasIndex(j => new { j.LibraryId, j.RequestedAt });
             job.HasIndex(j => j.Status);
+        });
+    }
+
+    private static void ConfigureUserData(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<TrackRating>(rating =>
+        {
+            rating.HasKey(r => new { r.UserId, r.TrackId });
+            rating.HasOne(r => r.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            rating.HasOne(r => r.Track).WithMany().OnDelete(DeleteBehavior.Cascade);
+            rating.HasIndex(r => new { r.UserId, r.Rating, r.RatedAt });
+            rating.HasIndex(r => r.TrackId);
+        });
+
+        modelBuilder.Entity<PlayEvent>(play =>
+        {
+            play.HasOne(p => p.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            play.HasOne(p => p.Track).WithMany().OnDelete(DeleteBehavior.SetNull);
+            play.Property(p => p.Client).HasMaxLength(NameLength);
+            play.HasIndex(p => new { p.UserId, p.PlayedAt });
+            play.HasIndex(p => p.PlayedAt);
+            play.HasIndex(p => p.TrackId);
+        });
+
+        modelBuilder.Entity<TrackPlayStats>(stats =>
+        {
+            stats.HasKey(s => new { s.UserId, s.TrackId });
+            stats.HasOne(s => s.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            stats.HasOne(s => s.Track).WithMany().OnDelete(DeleteBehavior.Cascade);
+            stats.HasIndex(s => new { s.UserId, s.LastPlayedAt });
+            stats.HasIndex(s => s.TrackId);
+        });
+
+        modelBuilder.Entity<Playlist>(playlist =>
+        {
+            playlist.HasOne(p => p.Owner).WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            playlist.Property(p => p.Name).HasMaxLength(NameLength);
+            playlist.Property(p => p.NormalizedName).HasMaxLength(NameLength);
+            playlist.Property(p => p.Description).HasMaxLength(2000);
+            playlist.HasIndex(p => p.OwnerId);
+            playlist.HasIndex(p => p.NormalizedName);
+        });
+
+        modelBuilder.Entity<PlaylistEntry>(entry =>
+        {
+            entry.HasOne(e => e.Playlist).WithMany(p => p.Entries).OnDelete(DeleteBehavior.Cascade);
+            entry.HasOne(e => e.Track).WithMany().OnDelete(DeleteBehavior.Cascade);
+            entry.HasIndex(e => new { e.PlaylistId, e.Position });
+            entry.HasIndex(e => e.TrackId);
+        });
+
+        modelBuilder.Entity<PlaylistCollaborator>(collaborator =>
+        {
+            collaborator.HasKey(c => new { c.PlaylistId, c.UserId });
+            collaborator.HasOne(c => c.Playlist).WithMany(p => p.Collaborators).OnDelete(DeleteBehavior.Cascade);
+            collaborator.HasOne(c => c.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            collaborator.HasIndex(c => c.UserId);
         });
     }
 

@@ -707,6 +707,131 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("OrganizeRuns");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.PlayEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Client")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<bool>("Counted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("PlayedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PlayedMs")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Skipped")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayedAt");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "PlayedAt");
+
+                    b.ToTable("PlayEvents");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.Playlist", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("Playlists");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.PlaylistCollaborator", b =>
+                {
+                    b.Property<Guid>("PlaylistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("PlaylistId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PlaylistCollaborators");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.PlaylistEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AddedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlaylistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("PlaylistId", "Position");
+
+                    b.ToTable("PlaylistEntries");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Recording", b =>
                 {
                     b.Property<Guid>("Id")
@@ -891,6 +1016,55 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.HasIndex("GenreId");
 
                     b.ToTable("TrackGenres");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackPlayStats", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastPlayedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PlayCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SkipCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "TrackId");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "LastPlayedAt");
+
+                    b.ToTable("TrackPlayStats");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackRating", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "TrackId");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "Rating", "RatedAt");
+
+                    b.ToTable("TrackRatings");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.User", b =>
@@ -1117,6 +1291,73 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Library");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.PlayEvent", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Track");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.Playlist", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.PlaylistCollaborator", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Playlist", "Playlist")
+                        .WithMany("Collaborators")
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Playlist");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.PlaylistEntry", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Playlist", "Playlist")
+                        .WithMany("Entries")
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Playlist");
+
+                    b.Navigation("Track");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.ScanJob", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.Library", "Library")
@@ -1192,6 +1433,44 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackPlayStats", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Track");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackRating", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Track");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.UserSession", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.User", "User")
@@ -1218,6 +1497,13 @@ namespace Arcanist.Core.Data.Migrations.Postgres
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeRun", b =>
                 {
                     b.Navigation("Moves");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.Playlist", b =>
+                {
+                    b.Navigation("Collaborators");
+
+                    b.Navigation("Entries");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Recording", b =>

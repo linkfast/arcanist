@@ -179,7 +179,7 @@ public static class TrackMerger
 
         await using var transaction = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
 
-        // User data attached to tracks (plays, ratings, playlists) must move here too once it exists.
+        await MoveUserDataAsync(db, keep, remove, cancellationToken);
         await db.MediaFiles.Where(f => f.TrackId == remove)
             .ExecuteUpdateAsync(s => s.SetProperty(f => f.TrackId, keep).SetProperty(f => f.TrackLocked, true), cancellationToken);
         await db.DuplicateCandidates.Where(c => c.Status == DuplicateStatus.Open && (c.TrackAId == remove || c.TrackBId == remove))
@@ -190,5 +190,54 @@ public static class TrackMerger
 
         if (transaction is not null)
             await transaction.CommitAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Moves what users did with <paramref name="remove"/> to <paramref name="keep"/>: playlist entries and plays
+    /// move; ratings and play counts combine (the best rating, the sum of plays) where a user has both.
+    /// </summary>
+    private static async Task MoveUserDataAsync(ArcanistDbContext db, Guid keep, Guid remove, CancellationToken cancellationToken)
+    {
+        await db.PlaylistEntries.Where(e => e.TrackId == remove).ExecuteUpdateAsync(s => s.SetProperty(e => e.TrackId, keep), cancellationToken);
+        await db.PlayEvents.Where(p => p.TrackId == remove).ExecuteUpdateAsync(s => s.SetProperty(p => p.TrackId, keep), cancellationToken);
+
+        var ratings = await db.TrackRatings.Where(r => r.TrackId == remove || r.TrackId == keep).ToListAsync(cancellationToken);
+        foreach (var user in ratings.GroupBy(r => r.UserId))
+        {
+            var removed = user.FirstOrDefault(r => r.TrackId == remove);
+            if (removed is null)
+                continue;
+
+            db.TrackRatings.Remove(removed);
+            if (user.FirstOrDefault(r => r.TrackId == keep) is { } kept)
+                kept.Rating = Math.Max(kept.Rating, removed.Rating);
+            else
+                db.TrackRatings.Add(new TrackRating { UserId = removed.UserId, TrackId = keep, Rating = removed.Rating, RatedAt = removed.RatedAt });
+        }
+
+        var stats = await db.TrackPlayStats.Where(s => s.TrackId == remove || s.TrackId == keep).ToListAsync(cancellationToken);
+        foreach (var user in stats.GroupBy(s => s.UserId))
+        {
+            var removed = user.FirstOrDefault(s => s.TrackId == remove);
+            if (removed is null)
+                continue;
+
+            db.TrackPlayStats.Remove(removed);
+            if (user.FirstOrDefault(s => s.TrackId == keep) is { } kept)
+            {
+                kept.PlayCount += removed.PlayCount;
+                kept.SkipCount += removed.SkipCount;
+                kept.LastPlayedAt = new[] { kept.LastPlayedAt, removed.LastPlayedAt }.Max();
+            }
+            else
+            {
+                db.TrackPlayStats.Add(new TrackPlayStats
+                {
+                    UserId = removed.UserId, TrackId = keep, PlayCount = removed.PlayCount, SkipCount = removed.SkipCount, LastPlayedAt = removed.LastPlayedAt,
+                });
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

@@ -886,6 +886,114 @@
         }
       }
     },
+    "/rest/v1/home": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "The user\u0027s home page: recently played and added albums, mixes, most played, starred tracks, albums to rediscover or never played, and playlists. Empty sections are left out.",
+        "operationId": "Home",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Home"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/mixes": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "Mixes made for the user from their favorite artists, genres and decades, their favorites and music they never played. They change once a day.",
+        "operationId": "Mixes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Mix"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/mixes/{id}": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "A mix\u0027s tracks in play order. Besides the ids from mixes, any artist:\u003Cid\u003E, genre:\u003Cid\u003E, decade:\u003Cyear\u003E or track:\u003Cid\u003E (a radio started from a track) works, ids without dashes.",
+        "operationId": "Mix",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MixTracks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/artists/{id}/overview": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "Everything an artist page shows: top tracks, albums, albums the artist appears on, related artists and the artist\u0027s mix.",
+        "operationId": "ArtistOverview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtistOverview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/stream/{trackId}": {
       "get": {
         "tags": [
@@ -3711,6 +3819,66 @@
           }
         }
       },
+      "ArtistOverview": {
+        "required": [
+          "artist",
+          "topTracks",
+          "albums",
+          "appearsOn",
+          "relatedArtists",
+          "mix",
+          "playCount",
+          "artworkId"
+        ],
+        "type": "object",
+        "properties": {
+          "artist": {
+            "$ref": "#/components/schemas/Artist"
+          },
+          "topTracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            }
+          },
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "appearsOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "relatedArtists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artist"
+            }
+          },
+          "mix": {
+            "$ref": "#/components/schemas/Mix"
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "ArtistPage": {
         "required": [
           "items",
@@ -4297,6 +4465,71 @@
             "format": "int64"
           }
         }
+      },
+      "Home": {
+        "required": [
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HomeSection"
+            }
+          }
+        }
+      },
+      "HomeSection": {
+        "required": [
+          "kind",
+          "albums",
+          "mixes",
+          "tracks",
+          "playlists"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/HomeSectionKind"
+          },
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Album"
+            }
+          },
+          "mixes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Mix"
+            }
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            }
+          },
+          "playlists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Playlist"
+            }
+          }
+        }
+      },
+      "HomeSectionKind": {
+        "enum": [
+          "RECENTLY_PLAYED",
+          "MIXES",
+          "RECENTLY_ADDED",
+          "MOST_PLAYED",
+          "STARRED",
+          "REDISCOVER",
+          "NEVER_PLAYED",
+          "PLAYLISTS"
+        ]
       },
       "ImportFileDetails": {
         "required": [
@@ -5095,6 +5328,72 @@
           "keepTrackId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "Mix": {
+        "required": [
+          "id",
+          "kind",
+          "subject",
+          "subjectId",
+          "artworkIds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MixKind"
+          },
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "artworkIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "MixKind": {
+        "enum": [
+          "ARTIST",
+          "GENRE",
+          "DECADE",
+          "FAVORITES",
+          "DISCOVERY",
+          "TRACK"
+        ]
+      },
+      "MixTracks": {
+        "required": [
+          "mix",
+          "tracks"
+        ],
+        "type": "object",
+        "properties": {
+          "mix": {
+            "$ref": "#/components/schemas/Mix"
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Track"
+            }
           }
         }
       },
@@ -7330,6 +7629,9 @@
     },
     {
       "name": "Catalog"
+    },
+    {
+      "name": "Discovery"
     },
     {
       "name": "Media"

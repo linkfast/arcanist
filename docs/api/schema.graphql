@@ -14,6 +14,14 @@ type Query {
   trackLyrics(trackId: ID!): TrackLyrics!
   "Overview of a track's audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed."
   trackWaveform(trackId: ID!, fileId: ID): Waveform!
+  "The user's home page: recently played and added albums, mixes, most played, starred tracks, albums to rediscover or never played, and playlists. Empty sections are left out."
+  home: Home!
+  "Mixes made for the user from their favorite artists, genres and decades, their favorites and music they never played. They change once a day."
+  mixes: [Mix!]!
+  "A mix's tracks in play order. Besides the ids from mixes, any artist:<id>, genre:<id>, decade:<year> or track:<id> (a radio started from a track) works, ids without dashes."
+  mix(id: String!): MixTracks!
+  "Everything an artist page shows: top tracks, albums, albums the artist appears on, related artists and the artist's mix."
+  artistOverview(id: ID!): ArtistOverview!
   "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
   duplicateCandidates(status: DuplicateStatus, first: Int): [DuplicatePair!]!
   "Libraries the signed-in user can access."
@@ -241,6 +249,88 @@ type Waveform {
   fileId: ID!
   durationMs: Int!
   peaks: [Int!]!
+}
+
+type Home {
+  sections: [HomeSection!]!
+}
+
+type HomeSection {
+  kind: HomeSectionKind!
+  albums: [Album!]!
+  mixes: [Mix!]!
+  tracks: [Track!]!
+  playlists: [Playlist!]!
+}
+
+enum HomeSectionKind {
+  RECENTLY_PLAYED
+  MIXES
+  RECENTLY_ADDED
+  MOST_PLAYED
+  STARRED
+  REDISCOVER
+  NEVER_PLAYED
+  PLAYLISTS
+}
+
+type Mix {
+  id: String!
+  kind: MixKind!
+  subject: String
+  subjectId: ID
+  artworkIds: [ID!]!
+}
+
+enum MixKind {
+  ARTIST
+  GENRE
+  DECADE
+  FAVORITES
+  DISCOVERY
+  TRACK
+}
+
+type Playlist {
+  id: ID!
+  name: String!
+  description: String
+  isPublic: Boolean!
+  owner: UserReference!
+  role: PlaylistRole!
+  collaborators: [UserReference!]!
+  trackCount: Int!
+  durationMs: Long!
+  artworkIds: [ID!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type UserReference {
+  id: ID!
+  name: String!
+}
+
+enum PlaylistRole {
+  OWNER
+  COLLABORATOR
+  VIEWER
+}
+
+type MixTracks {
+  mix: Mix!
+  tracks: [Track!]!
+}
+
+type ArtistOverview {
+  artist: Artist!
+  topTracks: [Track!]!
+  albums: [Album!]!
+  appearsOn: [Album!]!
+  relatedArtists: [Artist!]!
+  mix: Mix!
+  playCount: Int!
+  artworkId: ID
 }
 
 type DuplicatePair {
@@ -598,32 +688,6 @@ type ImportSummary {
   failed: Int!
   ignored: Int!
   imported: Int!
-}
-
-type Playlist {
-  id: ID!
-  name: String!
-  description: String
-  isPublic: Boolean!
-  owner: UserReference!
-  role: PlaylistRole!
-  collaborators: [UserReference!]!
-  trackCount: Int!
-  durationMs: Long!
-  artworkIds: [ID!]!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type UserReference {
-  id: ID!
-  name: String!
-}
-
-enum PlaylistRole {
-  OWNER
-  COLLABORATOR
-  VIEWER
 }
 
 type PlaylistEntryPage {

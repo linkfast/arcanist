@@ -40,7 +40,15 @@ public sealed class ArtworkStore(ArcanistPaths paths)
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             File.WriteAllBytes(temporary, data);
-            File.Move(temporary, path, overwrite: true);
+            try
+            {
+                File.Move(temporary, path, overwrite: false);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException && File.Exists(path))
+            {
+                // Another scan thread stored the same image (same hash, same bytes) first.
+                File.Delete(temporary);
+            }
         }
 
         return new StoredArtwork(hash, mime, codec.Info.Width, codec.Info.Height);

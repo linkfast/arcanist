@@ -41,6 +41,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<ImportItem> ImportItems => Set<ImportItem>();
     public DbSet<OrganizeRun> OrganizeRuns => Set<OrganizeRun>();
     public DbSet<OrganizeMove> OrganizeMoves => Set<OrganizeMove>();
+    public DbSet<AppPassword> AppPasswords => Set<AppPassword>();
     public DbSet<TrackRating> TrackRatings => Set<TrackRating>();
     public DbSet<PlayEvent> PlayEvents => Set<PlayEvent>();
     public DbSet<TrackPlayStats> TrackPlayStats => Set<TrackPlayStats>();
@@ -135,6 +136,16 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
 
     private static void ConfigureUserData(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AppPassword>(password =>
+        {
+            password.HasOne(p => p.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            password.Property(p => p.Name).HasMaxLength(NameLength);
+            password.Property(p => p.EncryptedSecret).HasMaxLength(1000);
+            password.Property(p => p.SecretHash).HasMaxLength(64);
+            password.HasIndex(p => p.SecretHash).IsUnique();
+            password.HasIndex(p => p.UserId);
+        });
+
         modelBuilder.Entity<TrackRating>(rating =>
         {
             rating.HasKey(r => new { r.UserId, r.TrackId });

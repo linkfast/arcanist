@@ -106,6 +106,7 @@ builder.Services.AddScoped<SearchService>();
 builder.Services.AddScoped<DiscoveryService>();
 builder.Services.AddScoped<FrontendService>();
 builder.Services.AddScoped<ExtensionService>();
+builder.Services.AddScoped<AppPasswordService>();
 builder.Services.AddHttpClient(FrontendService.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddSingleton<RatingSettings>();
 builder.Services.AddHostedService<RatingSettingsWarmup>();

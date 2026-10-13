@@ -73,6 +73,45 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("Albums");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.AppPassword", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EncryptedSecret")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SecretHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AppPasswords");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Artist", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1201,6 +1240,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("AlbumArtist");
 
                     b.Navigation("Artwork");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.AppPassword", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DropFolder", b =>

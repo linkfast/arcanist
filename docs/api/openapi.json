@@ -3391,6 +3391,84 @@
         }
       }
     },
+    "/rest/v1/me/app-passwords": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "The user\u0027s app passwords, for Subsonic and mStream apps; their secrets are never shown again.",
+        "operationId": "AppPasswords",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppPassword"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Creates a password for one app (Subsonic, mStream) and returns its secret, only this once. Needs a recent authentication.",
+        "operationId": "CreateAppPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAppPasswordInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedAppPassword"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/app-passwords/{id}": {
+      "delete": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Revokes one of the user\u0027s app passwords.",
+        "operationId": "DeleteAppPassword",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -4072,6 +4150,35 @@
           }
         }
       },
+      "AppPassword": {
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "lastUsedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "Artist": {
         "required": [
           "id",
@@ -4301,6 +4408,32 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CreateAppPasswordInput": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "CreatedAppPassword": {
+        "required": [
+          "appPassword",
+          "secret"
+        ],
+        "type": "object",
+        "properties": {
+          "appPassword": {
+            "$ref": "#/components/schemas/AppPassword"
+          },
+          "secret": {
+            "type": "string"
           }
         }
       },
@@ -8150,6 +8283,9 @@
     },
     {
       "name": "Extensions"
+    },
+    {
+      "name": "Account"
     },
     {
       "name": "Online services"

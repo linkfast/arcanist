@@ -624,6 +624,7 @@ export const es: Dictionary = {
     route_not_allowed: 'La extensión usa rutas que no le corresponden.',
     route_conflict: 'Otra extensión activa ya usa esas rutas.',
     set_by_environment: 'Ese ajuste viene del entorno (variables o archivos de configuración) y no se puede cambiar desde el panel.',
+    too_many: 'Has llegado al máximo permitido.',
     playlist_full: 'Una playlist admite como mucho 10.000 canciones.',
     not_undoable: 'Eso ya no se puede deshacer.',
     ffmpeg_checksum_mismatch:

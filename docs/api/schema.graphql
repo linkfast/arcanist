@@ -1,6 +1,8 @@
 type Query {
   "Progress of the background audio analysis (loudness, fingerprints, waveforms, tempo and key). Requires MANAGE_LIBRARIES."
   analysisProgress: AnalysisProgress!
+  "The user's app passwords, for Subsonic and mStream apps; their secrets are never shown again."
+  appPasswords: [AppPassword!]!
   "Performers and album artists with music the user can play, by name. Pages of `first` items (default 50, at most 500) after the `after` cursor."
   artists(search: String, after: String, first: Int): ArtistPage!
   artist(id: ID!): Artist!
@@ -104,6 +106,13 @@ enum AnalysisActivity {
 
 "The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
 scalar DateTime
+
+type AppPassword {
+  id: ID!
+  name: String!
+  createdAt: DateTime!
+  lastUsedAt: DateTime
+}
 
 type ArtistPage {
   items: [Artist!]!
@@ -866,6 +875,10 @@ type Session {
 type Mutation {
   "Turns the background audio analysis on or off. Requires MANAGE_SETTINGS."
   setAnalysisEnabled(enabled: Boolean!): AnalysisProgress!
+  "Creates a password for one app (Subsonic, mStream) and returns its secret, only this once. Needs a recent authentication."
+  createAppPassword(name: String!): CreatedAppPassword!
+  "Revokes one of the user's app passwords."
+  deleteAppPassword(id: ID!): Boolean!
   "Merges an open pair into keepTrackId, one of its two tracks, and returns it. Requires MANAGE_LIBRARIES."
   mergeDuplicate(id: ID!, keepTrackId: ID!): Track!
   "Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES."
@@ -963,6 +976,11 @@ type Mutation {
   changeMyPassword(input: ChangeMyPasswordInput!): Boolean!
   "Signs out one of the signed-in user's devices."
   revokeMySession(id: ID!): Boolean!
+}
+
+type CreatedAppPassword {
+  appPassword: AppPassword!
+  secret: String!
 }
 
 input CreateLibraryInput {

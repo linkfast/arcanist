@@ -56,7 +56,8 @@ public sealed record AlbumPlays(Album Album, int Plays);
 /// <param name="From">Start of the period; null for all time.</param>
 /// <param name="Plays">Counted plays.</param>
 /// <param name="ListenedMs">Time listened, skips included.</param>
-/// <param name="Timeline">Plays per day (week and month) or per month (year and all time).</param>
+/// <param name="Timeline">Plays per day (week and month) or per month (year and all time), one entry for every day or
+/// month of the period, quiet ones included.</param>
 public sealed record ListeningStats(
     StatsPeriod Period,
     DateTime? From,

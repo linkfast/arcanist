@@ -335,6 +335,27 @@
           </div>
         }
 
+        @case ('ratings') {
+          <p class="text-sm">{{ 'setup.ratings.explanation' | t }}</p>
+          <hlm-radio-group class="grid gap-3" name="ratingMode" [(ngModel)]="ratingMode">
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="STARS" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <span class="grid gap-1">
+                <span class="font-medium">★★★★★ {{ 'setup.ratings.stars' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.ratings.starsHelp' | t }}</span>
+              </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="STAR" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <span class="grid gap-1">
+                <span class="font-medium">★ {{ 'setup.ratings.star' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.ratings.starHelp' | t }}</span>
+              </span>
+            </label>
+          </hlm-radio-group>
+          <p class="text-xs text-muted-foreground">{{ 'setup.ratings.later' | t }}</p>
+        }
+
         @case ('privacy') {
           <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
           <hlm-radio-group class="grid gap-3" name="statistics" [(ngModel)]="shareStatistics">
@@ -420,6 +441,13 @@
                     : ('setup.review.ffmpegLater' | t))
               }}</span>
               <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('media')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.ratings' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{ 'setup.ratings.' + (ratingMode === 'STARS' ? 'stars' : 'star') | t }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('ratings')">
                 {{ 'common.edit' | t }}
               </button>
             </dd>

@@ -73,7 +73,7 @@ export class BytesPipe implements PipeTransform {
   private readonly i18n = inject(I18n);
 
   transform(value: number | null | undefined): string {
-    const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'];
+    const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte'];
     let size = value ?? 0;
     let unit = 0;
     while (size >= 1000 && unit < units.length - 1) {

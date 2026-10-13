@@ -641,3 +641,99 @@ export const DiscardImportItemMutation = graphql(`
     }
   }
 `);
+
+export const RatingModeQuery = graphql(`
+  query RatingMode {
+    serverInfo {
+      ratingMode
+    }
+  }
+`);
+
+export const SetRatingModeMutation = graphql(`
+  mutation SetRatingMode($mode: RatingMode!) {
+    setRatingMode(mode: $mode)
+  }
+`);
+
+export const StatsTrackFields = graphql(`
+  fragment StatsTrackFields on Track {
+    id
+    title
+    album {
+      id
+      title
+    }
+    artists {
+      artistId
+      name
+      role
+    }
+  }
+`);
+
+export const ServerStatsQuery = graphql(`
+  query ServerStats($period: StatsPeriod!, $timeZone: String) {
+    serverStats(period: $period, timeZone: $timeZone) {
+      library {
+        artists
+        albums
+        tracks
+        files
+        durationMs
+        sizeBytes
+        formats {
+          format
+          files
+          sizeBytes
+        }
+      }
+      listening {
+        period
+        from
+        plays
+        listenedMs
+        distinctTracks
+        bucket
+        timeline {
+          start
+          plays
+          listenedMs
+        }
+        topTracks {
+          plays
+          track {
+            ...StatsTrackFields
+          }
+        }
+        topArtists {
+          plays
+          artist {
+            id
+            name
+          }
+        }
+        topAlbums {
+          plays
+          album {
+            id
+            title
+            artworkId
+            artist {
+              id
+              name
+            }
+          }
+        }
+      }
+      users {
+        userId
+        userName
+        displayName
+        plays
+        listenedMs
+        lastPlayedAt
+      }
+    }
+  }
+`);

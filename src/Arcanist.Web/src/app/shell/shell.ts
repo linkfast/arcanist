@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideChartColumn,
   lucideCopy,
   lucideExternalLink,
   lucideHouse,
@@ -31,6 +32,7 @@ import { LanguageSelect } from '../shared/language-select';
   ],
   providers: [
     provideIcons({
+      lucideChartColumn,
       lucideCopy,
       lucideHouse,
       lucideInbox,
@@ -122,6 +124,12 @@ export class Shell {
         label: 'nav.import',
         icon: 'lucideInbox',
         visible: this.auth.can('MANAGE_LIBRARIES'),
+      },
+      {
+        path: '/stats',
+        label: 'nav.stats',
+        icon: 'lucideChartColumn',
+        visible: this.auth.can('VIEW_ALL_STATS'),
       },
       {
         path: '/users',

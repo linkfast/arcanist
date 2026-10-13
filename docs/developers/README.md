@@ -86,6 +86,13 @@ Files move: administrators organize libraries into folders by template, and drop
 better copies that replace old ones). Track, album and artist ids survive all of that, so store ids, never file
 paths or file ids.
 
+## Searching
+
+`search(query, first)` / `GET /rest/v1/search?query=…` returns the best `artists`, `albums`, `tracks` and
+`playlists` at once (`first` per kind: 10 by default, at most 50), best match first. Every word must start a word of
+the name, its artists or its album (`ros staral` finds "Starálfur" by Sigur Rós); accents and case never matter. The
+`search` argument of `artists`, `albums` and `tracks` uses the same rules, keeping their alphabetical paging.
+
 ## Playing audio
 
 Each `Track` has a `streamUrl`, and each of its `files` has its own. They are relative to the server and carry a
@@ -143,6 +150,66 @@ null (and the waveform answers `not_found`); clients should cope with that.
 (otherwise it answers `not_found`). The result has the whole text in `plain`, time-synchronized `synced` lines
 (`timeMs`, `text`; each shown until the next) when known, `instrumental` for tracks without words, and `source`:
 `SIDECAR` (a `.lrc` file next to the audio), `EMBEDDED` (the file's tags) or `ONLINE`.
+
+## Ratings
+
+`serverInfo.ratingMode` says how this server rates tracks, and your interface should follow it:
+
+- `STARS`: one to five stars. `rateTrack(trackId, rating)` / `PUT /rest/v1/tracks/{trackId}/rating` with 1–5, or
+  null to clear it.
+- `STAR`: a single star. `starTrack(trackId, starred)` / `PUT /rest/v1/tracks/{trackId}/star`. `rateTrack` only
+  accepts 5 here.
+
+A starred track is a five-star track, so `starTrack` works in both modes and the administrator can switch modes
+without anyone losing their favorites. `Track.rating` (null when unrated; only 5 in `STAR` mode), `Track.starred`,
+`Track.playCount` and `Track.lastPlayedAt` are the signed-in user's. `ratedTracks(minRating)` /
+`GET /rest/v1/me/rated-tracks` lists their rated tracks, most recently rated first, with `after`/`nextCursor`
+paging; with `minRating: 5` it is the user's starred tracks.
+
+## Reporting plays
+
+Report each track the user listened to, when it ends or is skipped:
+
+```graphql
+mutation {
+  recordPlay(input: { trackId: "…", playedMs: 183000, playedAt: "2026-10-12T21:04:00Z", client: "My Player" }) {
+    counted
+    skipped
+  }
+}
+```
+
+`playedMs` is the time actually played (pauses excluded); `playedAt` is when playback started (now when omitted).
+The server decides what counts as a play, the same for every player: at least 30 seconds, and half the track or
+four minutes. Stopping within the first 30 seconds of a longer track is a skip, and the user's mixes avoid tracks
+they keep skipping. Plays up to 14 days old are accepted, so queue them while offline and send them later; sending
+the same report twice is harmless.
+
+`playHistory` / `GET /rest/v1/me/plays` lists the user's plays, newest first. `listeningStats(period, timeZone)` /
+`GET /rest/v1/stats/listening?period=WEEK` gives their plays, time listened, top tracks, artists and albums, and a
+timeline with one entry per day (week and month) or month (year and all time). Pass the user's IANA time zone so
+days start at their midnight.
+
+## Playlists
+
+`playlists` lists the user's own, those they collaborate on and public ones; `Playlist.role` says what they can do:
+`OWNER` (everything), `COLLABORATOR` (add, remove and reorder tracks) or `VIEWER` (listen and `copyPlaylist`).
+`playlistEntries(playlistId, after, first)` pages through the tracks in order. Entries, not tracks, are removed and
+moved (`removePlaylistEntries`, `movePlaylistEntries`), since a track can appear twice. Tracks from libraries the user
+cannot access stay in the playlist but are not listed for them. `artworkIds` has up to four covers for a collage.
+
+## Home page, mixes and artist pages
+
+- `home` / `GET /rest/v1/home` returns the user's sections in order. Each has a `kind` (title it in your own
+  language) and one list with items: `albums` (`RECENTLY_PLAYED`, `RECENTLY_ADDED`, `MOST_PLAYED`, `REDISCOVER`,
+  `NEVER_PLAYED`), `mixes` (`MIXES`), `tracks` (`STARRED`) or `playlists` (`PLAYLISTS`). Empty sections are left out.
+- `mixes` / `GET /rest/v1/mixes` lists mixes made for the user; `mix(id)` / `GET /rest/v1/mixes/{id}` returns one's
+  tracks in play order. A mix has a `kind` (`ARTIST`, `GENRE`, `DECADE`, `FAVORITES`, `DISCOVERY`, `TRACK`) and a
+  `subject` (the artist or genre name, or the decade) to build its title. Mixes stay the same all day and change the
+  next. Any `artist:<id>`, `genre:<id>`, `decade:<year>` or `track:<id>` (ids without dashes) is a valid mix id:
+  `track:<id>` is a radio that starts with that track.
+- `artistOverview(id)` / `GET /rest/v1/artists/{id}/overview` has what an artist page shows: top tracks, albums
+  (newest first), albums the artist appears on, related artists, the artist's mix and an `artworkId`.
 
 ## Artwork
 

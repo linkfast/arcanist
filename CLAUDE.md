@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea) y 4 (carpetas de entrada y organización) completas. Pendiente:
+Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización) y 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento) completas. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
 - De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`). La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
 - De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (necesita la clave del proyecto).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-Siguiente: Fase 5, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Siguiente: Fase 6, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -339,7 +339,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **F2:** distribución (completada): instalador Velopack con tray en Avalonia y servicio opcional, tarballs y systemd, Docker multi-arch en GHCR, paquete Synology y workflows de CI y release.
 - **F3:** escáner avanzado y ffmpeg (completada): crate de análisis en Rust, transcodificación, waveform, BPM y tonalidad, EBU R128, duplicados por huella, AcoustID/MusicBrainz/Cover Art Archive/LRCLib opcionales, letras y hojas CUE. Las carátulas solo vienen del Cover Art Archive: iTunes y Deezer se descartaron por sus términos de uso.
 - **F4:** carpetas de entrada y organización (completada): plantillas de rutas, organizar con vista previa y deshacer, organización automática de lo nuevo, carpetas de entrada con política de duplicados, conversión opcional y cola de revisión en el panel. Pendiente: sugerencias de AcoustID para lo que no se puede identificar.
-- **F5:** playlists, estadísticas y páginas tipo Spotify.
+- **F5:** experiencia de usuario (completada): valoraciones con modo de servidor (cinco estrellas o una), reproducciones informadas por los reproductores con historial y estadísticas (también del servidor en el panel), playlists públicas y colaborativas, búsqueda de texto completo por proveedor, e inicio, mixes y páginas de artista como API para los reproductores.
 - **F6:** gestor de frontends, SDK de extensiones, compatibilidad e importador de mStream, Subsonic.
 - **F7:** DLNA.
 - **F8:** red P2P iroh (crate Rust `arcanist-p2p` con C ABI para .NET y uniffi para móviles) y su sección en el admin.
@@ -357,6 +357,12 @@ Decididas en la F3:
 - **ffmpeg no se empaqueta:** se detecta en el sistema o en la ruta configurada (también desde el asistente), y el panel ofrece descargarlo si falta.
 - **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
 - **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
+
+Decididas en la F5 (con el usuario):
+- **Valoraciones según el modo del servidor**, elegido en el asistente y cambiable en Ajustes: de una a cinco estrellas, o una estrella. Una estrella equivale a cinco estrellas en ambos sentidos.
+- **Playlists privadas, públicas y colaborativas.**
+- **Búsqueda con el índice de texto completo de cada proveedor** (FTS5 y `tsvector`), como excepción documentada a la regla de no usar SQL específico.
+- **Inicio, mixes y páginas de artista son API para los reproductores**; el panel solo muestra las estadísticas del servidor.
 
 Decididas en la F4 (sin consultar, por ser las opciones conservadoras; revisables):
 - **Organizar nunca es automático sobre lo que ya existe:** activar la organización automática solo afecta a lo añadido después; el resto requiere "Organizar ahora" tras la vista previa, con step-up y registro para deshacer.

@@ -45,6 +45,9 @@ export interface SetupStatus {
   dataDirectory: string;
 }
 
+/** How users rate tracks: one to five stars, or a single star (kept as five). */
+export type RatingMode = 'STARS' | 'STAR';
+
 export interface SetupRequest {
   database: { provider: DatabaseProvider; connectionString: string | null } | null;
   admin: { userName: string; password: string; displayName: string | null };
@@ -53,6 +56,7 @@ export interface SetupRequest {
   language: string;
   ffmpegPath: string | null;
   onlineServices: OnlineServicesChoice;
+  ratingMode: RatingMode;
 }
 
 export interface OnlineServicesChoice {

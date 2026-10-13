@@ -155,6 +155,8 @@ public sealed class ListeningTests : IAsyncLifetime
         Assert.Equal(3, mine.GetProperty("topAlbums")[0].GetProperty("plays").GetInt32());
         Assert.Equal("DAY", mine.GetProperty("bucket").GetString());
         Assert.Equal(3, mine.GetProperty("timeline").EnumerateArray().Sum(b => b.GetProperty("plays").GetInt32()));
+        // Every day of the week, quiet ones included.
+        Assert.Equal(7, mine.GetProperty("timeline").GetArrayLength());
 
         // Others' statistics and the server's need VIEW_ALL_STATS.
         Assert.Equal(HttpStatusCode.Forbidden, (await listenerClient.GetAsync("/rest/v1/stats/server?period=month", Cancel)).StatusCode);

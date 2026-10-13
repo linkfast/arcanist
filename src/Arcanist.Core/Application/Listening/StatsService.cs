@@ -85,15 +85,26 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
         // Only what the timeline needs is read; grouping by local day happens here, where time zones are known.
         var rows = await plays.Select(p => new { p.PlayedAt, p.PlayedMs, p.Counted }).ToListAsync(cancellationToken);
         var bucket = period is StatsPeriod.Week or StatsPeriod.Month ? StatsBucket.Day : StatsBucket.Month;
-        var timeline = rows
-            .GroupBy(r =>
+        DateOnly BucketOf(DateTime utc)
+        {
+            var local = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(utc, zone));
+            return bucket == StatsBucket.Day ? local : new DateOnly(local.Year, local.Month, 1);
+        }
+
+        var buckets = rows.GroupBy(r => BucketOf(r.PlayedAt))
+            .ToDictionary(g => g.Key, g => new ListeningBucket(g.Key, g.Count(r => r.Counted), g.Sum(r => (long)r.PlayedMs)));
+
+        // Every day (or month) of the period, quiet ones included, so clients can chart it as it is.
+        var timeline = new List<ListeningBucket>();
+        if (from is not null || buckets.Count > 0)
+        {
+            var last = BucketOf(time.GetUtcNow().UtcDateTime);
+            for (var day = from is { } start ? BucketOf(start) : buckets.Keys.Min(); day <= last;
+                 day = bucket == StatsBucket.Day ? day.AddDays(1) : day.AddMonths(1))
             {
-                var local = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(r.PlayedAt, zone));
-                return bucket == StatsBucket.Day ? local : new DateOnly(local.Year, local.Month, 1);
-            })
-            .OrderBy(g => g.Key)
-            .Select(g => new ListeningBucket(g.Key, g.Count(r => r.Counted), g.Sum(r => (long)r.PlayedMs)))
-            .ToList();
+                timeline.Add(buckets.GetValueOrDefault(day) ?? new ListeningBucket(day, 0, 0));
+            }
+        }
 
         var counted = plays.Where(p => p.Counted && p.TrackId != null);
         var topTracks = await counted.GroupBy(p => p.TrackId!.Value)

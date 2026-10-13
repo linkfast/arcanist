@@ -45,6 +45,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/import/import.page').then((m) => m.ImportPage),
       },
       {
+        path: 'stats',
+        canActivate: [permissionGuard('VIEW_ALL_STATS')],
+        loadComponent: () => import('./features/stats/stats.page').then((m) => m.StatsPage),
+      },
+      {
         path: 'users',
         canActivate: [permissionGuard('MANAGE_USERS')],
         loadComponent: () => import('./features/users/users.page').then((m) => m.UsersPage),

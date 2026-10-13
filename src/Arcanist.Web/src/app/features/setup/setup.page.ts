@@ -18,6 +18,7 @@ import {
   ApiError,
   DatabaseProvider,
   OnlineServicesChoice,
+  RatingMode,
   SetupFfmpegCheck,
   SetupStatus,
 } from '../../core/api/rest';
@@ -27,7 +28,15 @@ import { SetupService } from '../../core/setup/setup.service';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 
 type Step =
-  'code' | 'welcome' | 'database' | 'admin' | 'libraries' | 'media' | 'privacy' | 'review';
+  | 'code'
+  | 'welcome'
+  | 'database'
+  | 'admin'
+  | 'libraries'
+  | 'media'
+  | 'ratings'
+  | 'privacy'
+  | 'review';
 
 interface DraftLibrary {
   name: string;
@@ -77,6 +86,7 @@ export class SetupPage implements OnInit {
       'admin',
       'libraries',
       'media',
+      'ratings',
       'privacy',
       'review',
     ];
@@ -98,6 +108,7 @@ export class SetupPage implements OnInit {
   ]);
   protected shareStatistics: 'yes' | 'no' | null = null;
   protected ffmpegPath = '';
+  protected ratingMode: RatingMode = 'STARS';
   /** Off until the user turns each on: they contact other servers. */
   protected readonly onlineServices: OnlineServicesChoice = {
     musicBrainz: false,
@@ -276,6 +287,7 @@ export class SetupPage implements OnInit {
         language: this.i18n.language(),
         ffmpegPath: this.ffmpegPath.trim() || null,
         onlineServices: { ...this.onlineServices },
+        ratingMode: this.ratingMode,
       });
 
       await this.setup.loadStatus();

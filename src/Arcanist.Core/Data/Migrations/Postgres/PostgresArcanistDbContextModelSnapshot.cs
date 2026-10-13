@@ -452,6 +452,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
                     b.Property<string>("OrganizeTemplate")
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
@@ -463,6 +466,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
 
                     b.ToTable("Libraries");
                 });

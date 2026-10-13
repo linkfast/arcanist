@@ -228,7 +228,7 @@ public sealed class SetupService(
         var libraryIds = new List<Guid>();
         for (var i = 0; i < libraries.Count; i++)
         {
-            var library = new Library { Name = libraries[i].Name!.Trim(), VisibleToAll = libraries[i].VisibleToAll };
+            var library = new Library { Number = i + 1, Name = libraries[i].Name!.Trim(), VisibleToAll = libraries[i].VisibleToAll };
             foreach (var folder in folders[i])
             {
                 library.Sources.Add(new LibrarySource

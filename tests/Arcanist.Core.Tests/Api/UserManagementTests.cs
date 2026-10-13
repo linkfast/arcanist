@@ -5,6 +5,7 @@ using Arcanist.Core.Api.Rest;
 using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 
@@ -277,7 +278,7 @@ public sealed class UserManagementTests : IAsyncLifetime
     private async Task<Guid> AddLibraryAsync(string name)
     {
         await using var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext();
-        var library = new Library { Name = name };
+        var library = new Library { Name = name, Number = (await db.Libraries.MaxAsync(l => (int?)l.Number, Cancel) ?? 0) + 1 };
         db.Libraries.Add(library);
         await db.SaveChangesAsync(Cancel);
         return library.Id;

@@ -447,6 +447,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Number")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("OrganizeTemplate")
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
@@ -458,6 +461,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
 
                     b.ToTable("Libraries");
                 });

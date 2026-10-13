@@ -62,6 +62,7 @@ public sealed class LibraryService(
 
         var library = new LibraryEntity
         {
+            Number = await NextNumberAsync(db, cancellationToken),
             Name = input.Name.Trim(),
             VisibleToAll = input.VisibleToAll,
             ScanIntervalHours = input.ScanIntervalHours,
@@ -117,6 +118,15 @@ public sealed class LibraryService(
         var library = await FindManageableAsync(actor, id, cancellationToken);
 
         await scans.CancelLibraryAsync(library.Id, cancellationToken);
+        if (library.Number > await LastNumberAsync(db, cancellationToken))
+        {
+            var setting = await db.Settings.SingleOrDefaultAsync(s => s.Key == SettingKeys.LastLibraryNumber, cancellationToken);
+            if (setting is null)
+                db.Settings.Add(new Setting { Key = SettingKeys.LastLibraryNumber, Value = library.Number.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+            else
+                setting.Value = library.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         db.Libraries.Remove(library);
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateAll();
@@ -231,6 +241,14 @@ public sealed class LibraryService(
         if (names.Any(n => TextNormalizer.Normalize(n) == normalized))
             errors.Add("name", ErrorCodes.Duplicate);
     }
+
+    /// <summary>The next <see cref="LibraryEntity.Number"/>: never reused, even after deleting the last library.</summary>
+    internal static async Task<int> NextNumberAsync(ArcanistDbContext db, CancellationToken cancellationToken) =>
+        Math.Max(await db.Libraries.MaxAsync(l => (int?)l.Number, cancellationToken) ?? 0, await LastNumberAsync(db, cancellationToken)) + 1;
+
+    private static async Task<int> LastNumberAsync(ArcanistDbContext db, CancellationToken cancellationToken) =>
+        await db.Settings.Where(s => s.Key == SettingKeys.LastLibraryNumber).Select(s => s.Value).FirstOrDefaultAsync(cancellationToken) is { } value
+            && int.TryParse(value, out var number) ? number : 0;
 
     private DateTime Now() => time.GetUtcNow().UtcDateTime;
 }

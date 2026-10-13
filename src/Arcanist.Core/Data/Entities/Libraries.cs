@@ -4,6 +4,11 @@ public sealed class Library : Entity
 {
     public required string Name { get; set; }
 
+    /// <summary>
+    /// A small number that never changes or repeats, for clients that need integer ids (Subsonic music folders).
+    /// </summary>
+    public int Number { get; set; }
+
     /// <summary>When set, every user can see the library without an explicit <see cref="LibraryAccess"/> row.</summary>
     public bool VisibleToAll { get; set; }
 

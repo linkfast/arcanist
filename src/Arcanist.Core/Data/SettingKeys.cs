@@ -21,6 +21,9 @@ public static class SettingKeys
     /// <summary>How users rate tracks (<c>RatingMode</c>): five stars, or a single star. Default five stars.</summary>
     public const string RatingMode = "ratings.mode";
 
+    /// <summary>Highest library number ever given, so numbers of deleted libraries are not reused.</summary>
+    public const string LastLibraryNumber = "libraries.lastNumber";
+
     /// <summary>Id of the installed frontend served at <c>/</c>; the bundled player when absent.</summary>
     public const string DefaultFrontend = "frontends.default";
 

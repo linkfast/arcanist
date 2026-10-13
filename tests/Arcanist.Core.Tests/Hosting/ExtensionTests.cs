@@ -56,7 +56,7 @@ public sealed class ExtensionTests
         Assert.Equal("ok", await client.GetStringAsync("/ext/hello/data", Cancel));
 
         var admin = await factory.CreateAuthenticatedClientAsync();
-        var listed = Assert.Single(await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel) ?? []);
+        var listed = Assert.Single(await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel) ?? [], e => e.GetProperty("id").GetString() == "hello");
         Assert.Equal(("RUNNING", true, false), (listed.GetProperty("status").GetString(), listed.GetProperty("enabled").GetBoolean(), listed.GetProperty("restartRequired").GetBoolean()));
 
         // Switching it off takes effect at once.
@@ -84,7 +84,7 @@ public sealed class ExtensionTests
         await using var factory = await StartedWithAsync(enabled: true, misbehave: true);
         var admin = await factory.CreateAuthenticatedClientAsync();
 
-        var listed = Assert.Single(await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel) ?? []);
+        var listed = Assert.Single(await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel) ?? [], e => e.GetProperty("id").GetString() == "hello");
         Assert.Equal(("FAILED", "route_not_allowed"), (listed.GetProperty("status").GetString(), listed.GetProperty("errorCode").GetString()));
         Assert.Equal(HttpStatusCode.NotFound, (await factory.CreateClient().GetAsync("/rest/v1/hijacked", Cancel)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await factory.CreateClient().GetAsync("/ext/hello/hello", Cancel)).StatusCode);
@@ -109,7 +109,9 @@ public sealed class ExtensionTests
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync("/rest/v1/extensions/hello", Cancel)).StatusCode);
-        Assert.Empty((await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel))!);
+        // Only the built-in ones are left.
+        Assert.All((await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel))!,
+            e => Assert.True(e.GetProperty("builtIn").GetBoolean()));
 
         await factory.CreateUserAsync("listener");
         var listener = await factory.CreateAuthenticatedClientAsync("listener");

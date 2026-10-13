@@ -107,6 +107,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         {
             library.Property(l => l.Name).HasMaxLength(NameLength);
             library.Property(l => l.OrganizeTemplate).HasMaxLength(TemplateLength);
+            library.HasIndex(l => l.Number).IsUnique();
         });
 
         modelBuilder.Entity<LibrarySource>(source =>

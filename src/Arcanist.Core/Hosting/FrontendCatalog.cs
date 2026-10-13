@@ -1,0 +1,231 @@
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using Arcanist.Core.Application;
+using Arcanist.Core.Application.Server;
+using Arcanist.Core.Data;
+using Arcanist.Core.Packages;
+using Arcanist.Core.Setup;
+using Microsoft.Extensions.Options;
+
+namespace Arcanist.Core.Hosting;
+
+/// <summary>
+/// What a frontend package declares in <c>arcanist-frontend.json</c> at its root. Part of the frontend packaging
+/// contract (see the developer guide).
+/// </summary>
+/// <param name="Id">Lowercase letters, digits and dashes; it is the frontend's path under <c>/players/</c>.</param>
+/// <param name="MinApiVersion">Oldest Arcanist API major version it works with.</param>
+/// <param name="Entry">The page loaded for every client-side route; <c>index.html</c> by default.</param>
+public sealed record FrontendManifest(
+    string Id,
+    string Name,
+    string Version,
+    string? Description = null,
+    string? Author = null,
+    string? License = null,
+    string? Homepage = null,
+    int MinApiVersion = 1,
+    string Entry = "index.html");
+
+/// <summary>An installed frontend: its manifest and where its files are.</summary>
+public sealed record InstalledFrontend(FrontendManifest Manifest, string Root, bool BuiltIn, DateTime InstalledAt);
+
+/// <summary>
+/// The web players this server can serve: the one bundled with the release (<c>wwwroot/player</c>) and those
+/// installed from the admin panel into <c>&lt;data&gt;/frontends/&lt;id&gt;</c>. One of them is the default, served at
+/// <c>/</c>; every one is also served at <c>/players/&lt;id&gt;/</c>. Frontends run on the same origin as the admin panel,
+/// so installing one means trusting it completely.
+/// </summary>
+public sealed partial class FrontendCatalog(
+    ArcanistPaths paths,
+    IOptions<FrontendOptions> options,
+    IWebHostEnvironment environment,
+    SettingsStore settings,
+    IArcanistDbContextFactory databases,
+    IOptionsMonitor<SetupOptions> setup)
+{
+    public const string ManifestFile = "arcanist-frontend.json";
+
+    private readonly SemaphoreSlim _changes = new(1, 1);
+    private volatile string? _defaultId;
+    private bool _defaultLoaded;
+
+    private string Staging => Path.Combine(paths.Frontends, ".staging");
+
+    /// <summary>The bundled player, when the release has one.</summary>
+    public InstalledFrontend? BuiltIn
+    {
+        get
+        {
+            var root = Path.GetFullPath(options.Value.PlayerRoot ?? Path.Combine("wwwroot", "player"), environment.ContentRootPath);
+            if (!File.Exists(Path.Combine(root, "index.html")))
+                return null;
+
+            var manifest = File.Exists(Path.Combine(root, ManifestFile))
+                ? TryRead(root) ?? new FrontendManifest("player", "Web player", "")
+                : new FrontendManifest("player", "Web player", "");
+            return new InstalledFrontend(manifest, root, BuiltIn: true, File.GetLastWriteTimeUtc(Path.Combine(root, "index.html")));
+        }
+    }
+
+    public IReadOnlyList<InstalledFrontend> List()
+    {
+        var installed = new List<InstalledFrontend>();
+        if (BuiltIn is { } builtIn)
+            installed.Add(builtIn);
+
+        if (Directory.Exists(paths.Frontends))
+        {
+            foreach (var folder in Directory.GetDirectories(paths.Frontends).Where(f => !Path.GetFileName(f).StartsWith('.')))
+            {
+                if (TryRead(folder) is { } manifest && manifest.Id == Path.GetFileName(folder) && installed.All(i => i.Manifest.Id != manifest.Id))
+                    installed.Add(new InstalledFrontend(manifest, folder, BuiltIn: false, Directory.GetLastWriteTimeUtc(folder)));
+            }
+        }
+
+        return installed;
+    }
+
+    public InstalledFrontend? Find(string id) => List().FirstOrDefault(f => f.Manifest.Id == id);
+
+    /// <summary>The frontend served at <c>/</c>: the chosen one if still installed, else the bundled one.</summary>
+    public async Task<InstalledFrontend?> DefaultAsync(CancellationToken cancellationToken)
+    {
+        if (!_defaultLoaded && setup.CurrentValue.Completed && databases.IsConfigured)
+        {
+            _defaultId = await settings.GetAsync<string?>(SettingKeys.DefaultFrontend, null, cancellationToken);
+            _defaultLoaded = true;
+        }
+
+        return (_defaultId is { } id ? Find(id) : null) ?? BuiltIn;
+    }
+
+    public async Task SetDefaultAsync(string id, CancellationToken cancellationToken)
+    {
+        if (Find(id) is null)
+            throw new ArcanistException.NotFound();
+        await settings.SetAsync<string?>(SettingKeys.DefaultFrontend, id, cancellationToken);
+        _defaultId = id;
+        _defaultLoaded = true;
+    }
+
+    /// <summary>Installs (or updates) the frontend in a .zip. It goes live at once, replacing the previous version.</summary>
+    public async Task<InstalledFrontend> InstallAsync(Stream archive, CancellationToken cancellationToken)
+    {
+        await _changes.WaitAsync(cancellationToken);
+        try
+        {
+            Directory.CreateDirectory(Staging);
+            var unpacked = await PackageArchive.ExtractAsync(archive, Staging, ManifestFile, cancellationToken);
+            try
+            {
+                var manifest = Validate(PackageArchive.ReadManifest<FrontendManifest>(unpacked, ManifestFile), unpacked);
+                if (BuiltIn?.Manifest.Id == manifest.Id)
+                    throw ArcanistException.Field("id", ErrorCodes.Duplicate);
+
+                // Swapped in by renames, so requests never see half a frontend.
+                var target = Path.Combine(paths.Frontends, manifest.Id);
+                var previous = target + ".old-" + Guid.NewGuid().ToString("N");
+                if (Directory.Exists(target))
+                    Directory.Move(target, previous);
+                Directory.Move(unpacked, target);
+                if (Directory.Exists(previous))
+                    Directory.Delete(previous, recursive: true);
+
+                IndexPages.Clear();
+                return Find(manifest.Id)!;
+            }
+            finally
+            {
+                if (Directory.Exists(Staging))
+                    Directory.Delete(Staging, recursive: true);
+            }
+        }
+        finally
+        {
+            _changes.Release();
+        }
+    }
+
+    public async Task UninstallAsync(string id, CancellationToken cancellationToken)
+    {
+        await _changes.WaitAsync(cancellationToken);
+        try
+        {
+            var frontend = Find(id);
+            if (frontend is null || frontend.BuiltIn)
+                throw new ArcanistException.NotFound();
+
+            // Loads which one is the default before it disappears from the list.
+            await DefaultAsync(cancellationToken);
+            Directory.Delete(frontend.Root, recursive: true);
+            IndexPages.Clear();
+            if (_defaultId == id)
+            {
+                await settings.SetAsync<string?>(SettingKeys.DefaultFrontend, null, cancellationToken);
+                _defaultId = null;
+            }
+        }
+        finally
+        {
+            _changes.Release();
+        }
+    }
+
+    private static FrontendManifest Validate(FrontendManifest manifest, string root)
+    {
+        var errors = new ValidationErrors();
+        if (!PackageArchive.IsValidId(manifest.Id) || manifest.Id is "admin" or "player")
+            errors.Add("id", ErrorCodes.InvalidFormat);
+        if (string.IsNullOrWhiteSpace(manifest.Name) || manifest.Name.Length > 128)
+            errors.Add("name", ErrorCodes.InvalidFormat);
+        if (string.IsNullOrWhiteSpace(manifest.Version) || manifest.Version.Length > 64)
+            errors.Add("version", ErrorCodes.InvalidFormat);
+        if (manifest.MinApiVersion > ServerInfoService.ApiVersion)
+            errors.Add("minApiVersion", ErrorCodes.ApiVersionUnsupported);
+        var entry = Path.GetFullPath(Path.Combine(root, manifest.Entry ?? "index.html"));
+        if (!entry.StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !File.Exists(entry))
+            errors.Add("entry", ErrorCodes.NotFound);
+        errors.ThrowIfAny();
+        return manifest with { Entry = manifest.Entry ?? "index.html" };
+    }
+
+    private static FrontendManifest? TryRead(string folder)
+    {
+        try
+        {
+            return File.Exists(Path.Combine(folder, ManifestFile)) ? PackageArchive.ReadManifest<FrontendManifest>(folder, ManifestFile) : null;
+        }
+        catch (ArcanistException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Entry pages with their base set to the mount point, cached per file version.</summary>
+    private static readonly ConcurrentDictionary<(string File, string Mount, DateTime Modified), string> IndexPages = new();
+
+    /// <summary>
+    /// The frontend's entry page with <c>&lt;base href&gt;</c> pointing at where it is served, so the same build works at
+    /// <c>/</c> and at <c>/players/&lt;id&gt;/</c> as long as it uses relative URLs.
+    /// </summary>
+    public static string EntryPage(InstalledFrontend frontend, string mount)
+    {
+        var file = Path.Combine(frontend.Root, frontend.Manifest.Entry);
+        return IndexPages.GetOrAdd((file, mount, File.GetLastWriteTimeUtc(file)), key =>
+        {
+            var html = File.ReadAllText(key.File);
+            var tag = $"""<base href="{System.Net.WebUtility.HtmlEncode(key.Mount)}">""";
+            if (BaseTag().IsMatch(html))
+                return BaseTag().Replace(html, tag, 1);
+            var head = HeadTag().Match(html);
+            return head.Success ? html.Insert(head.Index + head.Length, tag) : tag + html;
+        });
+    }
+
+    [GeneratedRegex(@"<base\s[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex BaseTag();
+
+    [GeneratedRegex(@"<head(\s[^>]*)?>", RegexOptions.IgnoreCase)]
+    private static partial Regex HeadTag();
+}

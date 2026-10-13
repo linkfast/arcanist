@@ -35,11 +35,14 @@ public static partial class FrontendHost
 
     /// <summary>Prefixes owned by APIs or kept for extensions (mStream compatibility, Subsonic, players, extensions).</summary>
     private static readonly string[] ReservedPrefixes =
-        ["/rest", "/graphql", "/health", "/api", "/media", "/album-art", "/transcode", "/shared", "/ext", "/players"];
+        ["/rest", "/graphql", "/health", "/api", "/media", "/album-art", "/transcode", "/shared", "/ext"];
+
+    public const string PlayersPath = "/players";
 
     public static IServiceCollection AddFrontends(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.Section));
+        services.AddSingleton<FrontendCatalog>();
         return services;
     }
 
@@ -47,7 +50,7 @@ public static partial class FrontendHost
     {
         var options = app.Services.GetRequiredService<IOptions<FrontendOptions>>().Value;
         var adminRoot = Resolve(options.AdminRoot, app.Environment, Path.Combine("wwwroot", "admin"));
-        var playerRoot = Resolve(options.PlayerRoot, app.Environment, Path.Combine("wwwroot", "player"));
+        var catalog = app.Services.GetRequiredService<FrontendCatalog>();
 
         // Only GET/HEAD: these routes exist so that browsers never get HTML for API paths, and other methods
         // must keep reaching (or failing on) the API endpoints.
@@ -65,9 +68,16 @@ public static partial class FrontendHost
             .WithMetadata(new HttpMethodMetadata(read))
             .ExcludeFromDescription();
 
-        app.MapFallback((HttpContext context) => playerRoot is null
-                ? Html(context, PlaceholderPage(context.RequestServices.GetRequiredService<ServerInfoService>().Get()))
-                : Serve(context, playerRoot, context.Request.Path.Value, ""))
+        // Every frontend, default or not, also lives under /players/<id>/ (the slash matters for relative URLs).
+        app.MapMethods(PlayersPath + "/{id}/{**path}", read, (HttpContext context, string id, string? path) =>
+                catalog.Find(id) is not { } frontend ? Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound)
+                : string.IsNullOrEmpty(path) && !context.Request.Path.Value!.EndsWith('/') ? Results.Redirect($"{PlayersPath}/{id}/")
+                : Serve(context, frontend, $"{PlayersPath}/{id}/", path))
+            .ExcludeFromDescription();
+
+        app.MapFallback(async (HttpContext context) => await catalog.DefaultAsync(context.RequestAborted) is { } frontend
+                ? Serve(context, frontend, "/", context.Request.Path.Value)
+                : Html(context, PlaceholderPage(context.RequestServices.GetRequiredService<ServerInfoService>().Get())))
             .WithMetadata(new HttpMethodMetadata(read))
             .ExcludeFromDescription();
 
@@ -78,6 +88,24 @@ public static partial class FrontendHost
     {
         var path = Path.GetFullPath(configured ?? fallback, environment.ContentRootPath);
         return File.Exists(Path.Combine(path, "index.html")) ? path : null;
+    }
+
+    /// <summary>Sends a file of an installed frontend, or its entry page (based at <paramref name="mount"/>) for client-side routes.</summary>
+    private static IResult Serve(HttpContext context, InstalledFrontend frontend, string mount, string? path)
+    {
+        var relative = (path ?? "").TrimStart('/');
+        if (relative.Length > 0 && relative != frontend.Manifest.Entry
+            && Files(frontend.Root).GetFileInfo(relative) is { Exists: true, IsDirectory: false, PhysicalPath: { } file })
+        {
+            context.Response.Headers.CacheControl = HashedAsset().IsMatch(file) ? "public, max-age=31536000, immutable" : "no-cache";
+            return Results.File(file, ContentTypes.TryGetContentType(file, out var type) ? type : "application/octet-stream",
+                lastModified: File.GetLastWriteTimeUtc(file), enableRangeProcessing: true);
+        }
+
+        if (Path.HasExtension(relative) && relative != frontend.Manifest.Entry)
+            return Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound);
+
+        return Html(context, FrontendCatalog.EntryPage(frontend, mount));
     }
 
     /// <summary>Sends a file of the frontend, or its index.html for client-side routes.</summary>

@@ -52,6 +52,17 @@ public static class ErrorCodes
     public const string WriteFailed = "write_failed";
     /// <summary>The library is already being organized, or a run is being undone.</summary>
     public const string OrganizeRunning = "organize_running";
+    /// <summary>The uploaded or downloaded file is not a valid package (not a zip, unsafe paths, too big once unpacked).</summary>
+    public const string PackageInvalid = "package_invalid";
+    public const string PackageTooLarge = "package_too_large";
+    /// <summary>The package has no manifest (arcanist-frontend.json or arcanist-extension.json) at its root.</summary>
+    public const string ManifestMissing = "manifest_missing";
+    /// <summary>The package's manifest is malformed or misses required fields.</summary>
+    public const string ManifestInvalid = "manifest_invalid";
+    /// <summary>The package needs a newer API than this server has.</summary>
+    public const string ApiVersionUnsupported = "api_version_unsupported";
+    /// <summary>Downloading from the given URL failed.</summary>
+    public const string DownloadFailed = "download_failed";
     /// <summary>A playlist holds at most 10,000 tracks.</summary>
     public const string PlaylistFull = "playlist_full";
     /// <summary>Only finished runs can be undone, and only once.</summary>

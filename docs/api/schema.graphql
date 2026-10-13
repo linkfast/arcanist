@@ -24,6 +24,8 @@ type Query {
   artistOverview(id: ID!): ArtistOverview!
   "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
   duplicateCandidates(status: DuplicateStatus, first: Int): [DuplicatePair!]!
+  "Installed web players; the default one is served at /. Administrators only."
+  frontends: [Frontend!]!
   "Libraries the signed-in user can access."
   libraries: [Library!]!
   "A library by id. Libraries the user cannot access are reported as not found."
@@ -346,6 +348,21 @@ enum DuplicateStatus {
   OPEN
   MERGED
   DISMISSED
+}
+
+type Frontend {
+  id: String!
+  name: String!
+  version: String!
+  description: String
+  author: String
+  license: String
+  homepage: String
+  minApiVersion: Int!
+  builtIn: Boolean!
+  isDefault: Boolean!
+  path: String!
+  installedAt: DateTime!
 }
 
 type Library {
@@ -828,6 +845,12 @@ type Mutation {
   mergeDuplicate(id: ID!, keepTrackId: ID!): Track!
   "Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES."
   dismissDuplicate(id: ID!): Boolean!
+  "Downloads a web player's .zip and installs it (or updates it). It runs with the user's session: install only what you trust. Administrators only, with a recent authentication. To upload a .zip, use POST /rest/v1/frontends."
+  installFrontendFromUrl(url: String!): Frontend!
+  "Serves this web player at /. Administrators only, with a recent authentication."
+  setDefaultFrontend(id: String!): Frontend!
+  "Removes an installed web player. Administrators only, with a recent authentication."
+  uninstallFrontend(id: String!): Boolean!
   "Requires MANAGE_LIBRARIES."
   createLibrary(input: CreateLibraryInput!): Library!
   "Requires MANAGE_LIBRARIES."

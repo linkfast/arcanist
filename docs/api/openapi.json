@@ -3087,6 +3087,153 @@
         }
       }
     },
+    "/rest/v1/frontends": {
+      "get": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "Installed web players; the default one is served at /. Administrators only.",
+        "operationId": "Frontends",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Frontend"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "Installs (or updates) the web player in an uploaded .zip with arcanist-frontend.json at its root (form field \u0060file\u0060). Administrators only, with a recent authentication.",
+        "operationId": "UploadFrontend",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Frontend"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/frontends/from-url": {
+      "post": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "Downloads a web player\u0027s .zip and installs it (or updates it). It runs with the user\u0027s session: install only what you trust. Administrators only, with a recent authentication.",
+        "operationId": "InstallFrontendFromUrl",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallFromUrlInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Frontend"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/frontends/default/{id}": {
+      "put": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "Serves this web player at /. Administrators only, with a recent authentication.",
+        "operationId": "SetDefaultFrontend",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Frontend"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/frontends/{id}": {
+      "delete": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "Removes an installed web player. Administrators only, with a recent authentication.",
+        "operationId": "UninstallFrontend",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -4466,6 +4613,79 @@
           }
         }
       },
+      "Frontend": {
+        "required": [
+          "id",
+          "name",
+          "version",
+          "description",
+          "author",
+          "license",
+          "homepage",
+          "minApiVersion",
+          "builtIn",
+          "isDefault",
+          "path",
+          "installedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "author": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "homepage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "minApiVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "builtIn": {
+            "type": "boolean"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          },
+          "installedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Home": {
         "required": [
           "sections"
@@ -4530,6 +4750,10 @@
           "NEVER_PLAYED",
           "PLAYLISTS"
         ]
+      },
+      "IFormFile": {
+        "type": "string",
+        "format": "binary"
       },
       "ImportFileDetails": {
         "required": [
@@ -4885,6 +5109,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "InstallFromUrlInput": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
           }
         }
       },
@@ -7653,6 +7888,9 @@
     },
     {
       "name": "Import"
+    },
+    {
+      "name": "Frontends"
     },
     {
       "name": "Online services"

@@ -614,6 +614,12 @@ export const es: Dictionary = {
     template_title_required: 'La última parte de la plantilla debe incluir {title}.',
     write_failed: 'No se pudieron mover los archivos.',
     organize_running: 'La biblioteca ya se está organizando.',
+    package_invalid: 'El archivo no es un paquete válido (un .zip seguro y no demasiado grande).',
+    package_too_large: 'El paquete es demasiado grande.',
+    manifest_missing: 'Al paquete le falta su manifiesto en la raíz.',
+    manifest_invalid: 'El manifiesto del paquete no es válido.',
+    api_version_unsupported: 'El paquete necesita una versión más reciente de Arcanist.',
+    download_failed: 'No se pudo descargar desde esa dirección.',
     playlist_full: 'Una playlist admite como mucho 10.000 canciones.',
     not_undoable: 'Eso ya no se puede deshacer.',
     ffmpeg_checksum_mismatch:

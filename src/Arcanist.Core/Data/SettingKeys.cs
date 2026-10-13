@@ -21,6 +21,9 @@ public static class SettingKeys
     /// <summary>How users rate tracks (<c>RatingMode</c>): five stars, or a single star. Default five stars.</summary>
     public const string RatingMode = "ratings.mode";
 
+    /// <summary>Id of the installed frontend served at <c>/</c>; the bundled player when absent.</summary>
+    public const string DefaultFrontend = "frontends.default";
+
     /// <summary>The administrator's own AcoustID application key, used instead of the project's.</summary>
     public const string AcoustIdKey = "online.acoustIdKey";
 }

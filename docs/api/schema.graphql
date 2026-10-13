@@ -24,6 +24,8 @@ type Query {
   artistOverview(id: ID!): ArtistOverview!
   "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
   duplicateCandidates(status: DuplicateStatus, first: Int): [DuplicatePair!]!
+  "Built-in and installed extensions, with what happened to them at startup. Administrators only."
+  extensions: [Extension!]!
   "Installed web players; the default one is served at /. Administrators only."
   frontends: [Frontend!]!
   "Libraries the signed-in user can access."
@@ -348,6 +350,29 @@ enum DuplicateStatus {
   OPEN
   MERGED
   DISMISSED
+}
+
+type Extension {
+  id: String!
+  name: String!
+  version: String!
+  description: String
+  author: String
+  license: String
+  homepage: String
+  builtIn: Boolean!
+  enabled: Boolean!
+  status: ExtensionStatus!
+  errorCode: String
+  restartRequired: Boolean!
+  routes: [String!]!
+  basePath: String!
+}
+
+enum ExtensionStatus {
+  NOT_LOADED
+  RUNNING
+  FAILED
 }
 
 type Frontend {
@@ -845,6 +870,12 @@ type Mutation {
   mergeDuplicate(id: ID!, keepTrackId: ID!): Track!
   "Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES."
   dismissDuplicate(id: ID!): Boolean!
+  "Downloads an extension's .zip and installs it (or updates it); it runs once enabled and the server restarts. Extensions run inside the server with full trust. Administrators only, with a recent authentication. To upload a .zip, use POST /rest/v1/extensions."
+  installExtensionFromUrl(url: String!): Extension!
+  "Switches an extension on or off. Built-in extensions and switching off apply at once; an installed one runs after a restart. Administrators only, with a recent authentication."
+  setExtensionEnabled(id: String!, enabled: Boolean!): Extension!
+  "Removes an installed extension (it stops at once and is gone after a restart). Administrators only, with a recent authentication."
+  uninstallExtension(id: String!): Boolean!
   "Downloads a web player's .zip and installs it (or updates it). It runs with the user's session: install only what you trust. Administrators only, with a recent authentication. To upload a .zip, use POST /rest/v1/frontends."
   installFrontendFromUrl(url: String!): Frontend!
   "Serves this web player at /. Administrators only, with a recent authentication."

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A third-party style extension the tests package and install, to exercise the real loading path. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Provided by the server at run time, as for any extension. -->
+    <ProjectReference Include="..\..\src\Arcanist.Extensibility\Arcanist.Extensibility.csproj" Private="false" />
+    <ProjectReference Include="..\..\src\Arcanist.Core\Arcanist.Core.csproj" Private="false" />
+  </ItemGroup>
+
+</Project>

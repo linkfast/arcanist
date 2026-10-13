@@ -70,6 +70,7 @@ public static class RestSetup
         rest.MapSearchEndpoints();
         rest.MapDiscoveryEndpoints();
         rest.MapFrontendEndpoints();
+        rest.MapExtensionEndpoints();
         rest.MapOnlineEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();

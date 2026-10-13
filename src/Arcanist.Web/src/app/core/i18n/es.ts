@@ -620,6 +620,10 @@ export const es: Dictionary = {
     manifest_invalid: 'El manifiesto del paquete no es válido.',
     api_version_unsupported: 'El paquete necesita una versión más reciente de Arcanist.',
     download_failed: 'No se pudo descargar desde esa dirección.',
+    extension_failed: 'La extensión no se pudo cargar; revisa el registro del servidor.',
+    route_not_allowed: 'La extensión usa rutas que no le corresponden.',
+    route_conflict: 'Otra extensión activa ya usa esas rutas.',
+    set_by_environment: 'Ese ajuste viene del entorno (variables o archivos de configuración) y no se puede cambiar desde el panel.',
     playlist_full: 'Una playlist admite como mucho 10.000 canciones.',
     not_undoable: 'Eso ya no se puede deshacer.',
     ffmpeg_checksum_mismatch:

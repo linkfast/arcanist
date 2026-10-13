@@ -8,6 +8,8 @@ using Arcanist.Core.Application.Analysis;
 using Arcanist.Core.Application.Artwork;
 using Arcanist.Core.Application.Catalog;
 using Arcanist.Core.Application.Discovery;
+using Arcanist.Core.Application.Extensions;
+using Arcanist.Core.Extensions;
 using Arcanist.Core.Application.Frontends;
 using Arcanist.Core.Application.Media;
 using Arcanist.Core.Application.Online;
@@ -103,6 +105,7 @@ builder.Services.AddScoped<PlaylistService>();
 builder.Services.AddScoped<SearchService>();
 builder.Services.AddScoped<DiscoveryService>();
 builder.Services.AddScoped<FrontendService>();
+builder.Services.AddScoped<ExtensionService>();
 builder.Services.AddHttpClient(FrontendService.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddSingleton<RatingSettings>();
 builder.Services.AddHostedService<RatingSettingsWarmup>();
@@ -118,6 +121,9 @@ builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddArcanistRest();
 builder.Services.AddArcanistGraphQL(builder.Environment);
 builder.Services.AddFrontends(builder.Configuration);
+
+// Last, so extensions can override services and see everything the server registered.
+builder.AddExtensions(paths);
 
 var app = builder.Build();
 
@@ -142,6 +148,7 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 
 app.MapArcanistRest();
+app.MapExtensions();
 app.MapArcanistGraphQL();
 
 app.UseFrontends();

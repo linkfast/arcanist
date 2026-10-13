@@ -3234,6 +3234,163 @@
         }
       }
     },
+    "/rest/v1/extensions": {
+      "get": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Built-in and installed extensions, with what happened to them at startup. Administrators only.",
+        "operationId": "Extensions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Extension"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Installs (or updates) the extension in an uploaded .zip with arcanist-extension.json at its root (form field \u0060file\u0060); it runs once enabled and the server restarts. Administrators only, with a recent authentication.",
+        "operationId": "UploadExtension",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "file"
+                ],
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "$ref": "#/components/schemas/IFormFile"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Extension"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/extensions/from-url": {
+      "post": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Downloads an extension\u0027s .zip and installs it (or updates it); it runs once enabled and the server restarts. Extensions run inside the server with full trust. Administrators only, with a recent authentication.",
+        "operationId": "InstallExtensionFromUrl",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallFromUrlInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Extension"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/extensions/{id}/enabled": {
+      "put": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Switches an extension on or off. Built-in extensions and switching off apply at once; an installed one runs after a restart. Administrators only, with a recent authentication.",
+        "operationId": "SetExtensionEnabled",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetExtensionEnabledInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Extension"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/extensions/{id}": {
+      "delete": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Removes an installed extension (it stops at once and is gone after a restart). Administrators only, with a recent authentication.",
+        "operationId": "UninstallExtension",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -4466,6 +4623,94 @@
           "OPEN",
           "MERGED",
           "DISMISSED"
+        ]
+      },
+      "Extension": {
+        "required": [
+          "id",
+          "name",
+          "version",
+          "description",
+          "author",
+          "license",
+          "homepage",
+          "builtIn",
+          "enabled",
+          "status",
+          "errorCode",
+          "restartRequired",
+          "routes",
+          "basePath"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "author": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "homepage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "builtIn": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExtensionStatus"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "restartRequired": {
+            "type": "boolean"
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "basePath": {
+            "type": "string"
+          }
+        }
+      },
+      "ExtensionStatus": {
+        "enum": [
+          "NOT_LOADED",
+          "RUNNING",
+          "FAILED"
         ]
       },
       "FfmpegDownloadProgress": {
@@ -6820,6 +7065,17 @@
           }
         }
       },
+      "SetExtensionEnabledInput": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetFfmpegPathInput": {
         "required": [
           "path"
@@ -7891,6 +8147,9 @@
     },
     {
       "name": "Frontends"
+    },
+    {
+      "name": "Extensions"
     },
     {
       "name": "Online services"

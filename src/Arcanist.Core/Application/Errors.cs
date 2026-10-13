@@ -63,6 +63,14 @@ public static class ErrorCodes
     public const string ApiVersionUnsupported = "api_version_unsupported";
     /// <summary>Downloading from the given URL failed.</summary>
     public const string DownloadFailed = "download_failed";
+    /// <summary>The extension failed to load, register its services or map its endpoints; see the server log.</summary>
+    public const string ExtensionFailed = "extension_failed";
+    /// <summary>An extension maps or claims routes outside /ext/&lt;id&gt; and the prefixes kept for compatibility layers.</summary>
+    public const string RouteNotAllowed = "route_not_allowed";
+    /// <summary>Another enabled extension already claims one of the extension's route prefixes.</summary>
+    public const string RouteConflict = "route_conflict";
+    /// <summary>The setting comes from the environment (variables, appsettings, command line): the panel cannot change it.</summary>
+    public const string SetByEnvironment = "set_by_environment";
     /// <summary>A playlist holds at most 10,000 tracks.</summary>
     public const string PlaylistFull = "playlist_full";
     /// <summary>Only finished runs can be undone, and only once.</summary>

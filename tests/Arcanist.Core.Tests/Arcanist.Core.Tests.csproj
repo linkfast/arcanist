@@ -21,7 +21,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Arcanist.Core\Arcanist.Core.csproj" />
+    <!-- Built, but not referenced: the tests install it as a package, so it loads like a third-party extension. -->
+    <ProjectReference Include="..\Arcanist.TestExtension\Arcanist.TestExtension.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <Target Name="CopyTestExtension" AfterTargets="Build">
+    <MSBuild Projects="..\Arcanist.TestExtension\Arcanist.TestExtension.csproj" Targets="GetTargetPath">
+      <Output TaskParameter="TargetOutputs" ItemName="TestExtensionAssembly" />
+    </MSBuild>
+    <Copy SourceFiles="@(TestExtensionAssembly)" DestinationFolder="$(OutDir)test-extension" SkipUnchangedFiles="true" />
+  </Target>
 
   <ItemGroup>
     <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />

@@ -92,6 +92,35 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Creates a folder on the server, to pick it as a library location.",
+        "operationId": "CreateSetupDirectory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServerDirectoryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDirectory"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rest/v1/setup/ffmpeg": {
@@ -348,6 +377,35 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServerDirectoryListing"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Creates a folder on the server, to pick it as a location. Administrators only.",
+        "operationId": "CreateServerDirectory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServerDirectoryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerDirectory"
                 }
               }
             }
@@ -2919,6 +2977,21 @@
             "items": {
               "$ref": "#/components/schemas/LibrarySourceInput"
             }
+          }
+        }
+      },
+      "CreateServerDirectoryInput": {
+        "required": [
+          "parent",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "parent": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },

@@ -145,6 +145,20 @@ public sealed class SetupTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_wizard_can_create_folders_but_other_devices_need_the_code()
+    {
+        var input = new { parent = _musicFolder, name = "Singles" };
+
+        var remote = await _factory.CreateRemoteClient().PostAsJsonAsync("/rest/v1/setup/directories", input, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.Forbidden, remote.StatusCode);
+        Assert.False(Directory.Exists(Path.Combine(_musicFolder, "Singles")));
+
+        var response = await _factory.CreateClient().PostAsJsonAsync("/rest/v1/setup/directories", input, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.True(Directory.Exists(Path.Combine(_musicFolder, "Singles")));
+    }
+
+    [Fact]
     public async Task A_database_set_by_the_environment_is_used_without_asking()
     {
         await using var factory = new ArcanistFactory(new Dictionary<string, string?> { ["Arcanist:Database:Provider"] = "Sqlite" });

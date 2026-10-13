@@ -39,10 +39,11 @@ import {
   ImportQueueQuery as ImportQueue,
   LibrariesQuery,
   RetryImportItemMutation,
+  CreateServerDirectoryMutation,
   ServerDirectoriesQuery,
   UpdateDropFolderMutation,
 } from '../../graphql/operations';
-import { DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
+import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { BytesPipe, DurationPipe, RelativeTimePipe } from '../../shared/format';
 
 type Library = LibrariesResult['libraries'][number];
@@ -143,6 +144,9 @@ export class ImportPage implements OnInit {
   protected readonly deleting = signal<DropFolder | null>(null);
   protected readonly loadDirectories: DirectoryLoader = async (path) =>
     (await this.gql.query(ServerDirectoriesQuery, { path })).serverDirectories;
+  protected readonly createDirectory: DirectoryCreator = async (parent, name) =>
+    (await this.gql.mutate(CreateServerDirectoryMutation, { input: { parent, name } }))
+      .createServerDirectory;
 
   // Review dialog
   protected readonly reviewing = signal<ImportItem | null>(null);

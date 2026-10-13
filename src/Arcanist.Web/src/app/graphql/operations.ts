@@ -130,6 +130,16 @@ export const ServerDirectoriesQuery = graphql(`
   }
 `);
 
+export const CreateServerDirectoryMutation = graphql(`
+  mutation CreateServerDirectory($input: CreateServerDirectoryInput!) {
+    createServerDirectory(input: $input) {
+      name
+      path
+      isHidden
+    }
+  }
+`);
+
 export const ScanJobsQuery = graphql(`
   query ScanJobs($libraryId: ID, $limit: Int) {
     scanJobs(libraryId: $libraryId, limit: $limit) {

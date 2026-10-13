@@ -372,6 +372,9 @@ export const es: Dictionary = {
     roots: 'Unidades y raíces',
     empty: 'Sin subcarpetas',
     select: 'Usar esta carpeta',
+    newFolder: 'Nueva carpeta',
+    newFolderName: 'Nombre de la nueva carpeta',
+    create: 'Crear',
   },
   import: {
     title: 'Importación',

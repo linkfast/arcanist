@@ -69,10 +69,16 @@ export interface SetupFfmpegCheck {
   source: 'CONFIGURED' | 'DOWNLOADED' | 'SYSTEM' | null;
 }
 
+export interface ServerDirectory {
+  name: string;
+  path: string;
+  isHidden: boolean;
+}
+
 export interface ServerDirectoryListing {
   path: string | null;
   parent: string | null;
-  directories: { name: string; path: string; isHidden: boolean }[];
+  directories: ServerDirectory[];
 }
 
 /** A failed API call: its error code and, for validation failures, the codes per field. */

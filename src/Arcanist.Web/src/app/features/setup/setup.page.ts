@@ -24,7 +24,7 @@ import {
 import { AuthService } from '../../core/auth/auth.service';
 import { I18n, Language, TranslatePipe } from '../../core/i18n/i18n';
 import { SetupService } from '../../core/setup/setup.service';
-import { DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
+import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 
 type Step =
   'code' | 'welcome' | 'database' | 'admin' | 'libraries' | 'media' | 'privacy' | 'review';
@@ -128,6 +128,8 @@ export class SetupPage implements OnInit {
   // Folder picker
   protected readonly pickingFor = signal<number | null>(null);
   protected readonly loadDirectories: DirectoryLoader = (path) => this.setup.directories(path);
+  protected readonly createDirectory: DirectoryCreator = (parent, name) =>
+    this.setup.createDirectory(parent, name);
 
   async ngOnInit(): Promise<void> {
     const status = await this.setup.loadStatus();

@@ -164,6 +164,26 @@ public sealed class LibraryService(
         return Browse(directories, path);
     }
 
+    /// <summary>Creates a folder on the server, to pick it as a location. Administrators only.</summary>
+    public ServerDirectory CreateServerDirectory(CreateServerDirectoryInput input)
+    {
+        guard.Admin();
+        return CreateDirectory(directories, input);
+    }
+
+    internal static ServerDirectory CreateDirectory(DirectoryBrowser directories, CreateServerDirectoryInput input)
+    {
+        var (directory, error) = directories.Create(input.Parent, input.Name);
+        return error switch
+        {
+            null => new ServerDirectory(directory!.Name, directory.Path, directory.IsHidden),
+            DirectoryBrowseError.InvalidName => throw ArcanistException.Field("name", ErrorCodes.InvalidFormat),
+            DirectoryBrowseError.AlreadyExists => throw ArcanistException.Field("name", ErrorCodes.Duplicate),
+            DirectoryBrowseError.ReadOnly => throw ArcanistException.Field("parent", ErrorCodes.ReadOnly),
+            _ => throw new ArcanistException.NotFound(),
+        };
+    }
+
     internal static ServerDirectoryListing Browse(DirectoryBrowser directories, string? path)
     {
         var (listing, error) = directories.List(path);

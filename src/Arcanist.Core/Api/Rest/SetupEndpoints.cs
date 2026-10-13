@@ -29,6 +29,12 @@ public static class SetupEndpoints
         guarded.MapGet("/directories", (string? path, DirectoryBrowser browser) => LibraryService.Browse(browser, path))
             .WithName("BrowseSetupDirectories");
 
+        guarded.MapPost("/directories", (CreateServerDirectoryInput input, DirectoryBrowser browser) =>
+                Results.Created((string?)null, LibraryService.CreateDirectory(browser, input)))
+            .WithName("CreateSetupDirectory")
+            .WithSummary("Creates a folder on the server, to pick it as a library location.")
+            .Produces<ServerDirectory>(StatusCodes.Status201Created);
+
         guarded.MapGet("/ffmpeg", (string? path, SetupService service, CancellationToken cancellationToken) =>
                 service.CheckFfmpegAsync(path, cancellationToken))
             .WithName("CheckSetupFfmpeg")

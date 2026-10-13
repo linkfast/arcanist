@@ -54,6 +54,13 @@ public static class LibraryEndpoints
             .WithName("ServerDirectories")
             .WithSummary("Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only.");
 
+        rest.MapPost("/server/directories", (CreateServerDirectoryInput input, LibraryService service) =>
+                Results.Created((string?)null, service.CreateServerDirectory(input)))
+            .WithTags("Server")
+            .WithName("CreateServerDirectory")
+            .WithSummary("Creates a folder on the server, to pick it as a location. Administrators only.")
+            .Produces<ServerDirectory>(StatusCodes.Status201Created);
+
         return rest;
     }
 }

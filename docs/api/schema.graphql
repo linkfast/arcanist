@@ -593,6 +593,8 @@ type Mutation {
   deleteLibrary(id: ID!): Boolean!
   "Adds a location to a library. Requires MANAGE_LIBRARIES."
   addLibrarySource(libraryId: ID!, input: LibrarySourceInput!): Library!
+  "Creates a folder on the server, to pick it as a location. Administrators only."
+  createServerDirectory(input: CreateServerDirectoryInput!): ServerDirectory!
   "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES."
   removeLibrarySource(id: ID!): Library!
   "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password."
@@ -658,6 +660,11 @@ input UpdateLibraryInput {
   name: String!
   visibleToAll: Boolean!
   scanIntervalHours: Int
+}
+
+input CreateServerDirectoryInput {
+  parent: String!
+  name: String!
 }
 
 input SetOnlineServicesInput {

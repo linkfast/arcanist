@@ -47,6 +47,11 @@ public sealed partial class Mutation
     public static Task<Library> AddLibrarySource([Id] Guid libraryId, LibrarySourceInput input, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
         libraries.AddSourceAsync(libraryId, input, cancellationToken);
 
+    [Name("createServerDirectory")]
+    [Description("Creates a folder on the server, to pick it as a location. Administrators only.")]
+    public static ServerDirectory CreateServerDirectory(CreateServerDirectoryInput input, [FromServices] LibraryService libraries) =>
+        libraries.CreateServerDirectory(input);
+
     [Name("removeLibrarySource")]
     [Description("Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES.")]
     public static Task<Library> RemoveLibrarySource([Id] Guid id, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>

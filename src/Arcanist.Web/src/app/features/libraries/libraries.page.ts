@@ -42,11 +42,12 @@ import {
   RemoveLibrarySourceMutation,
   ScanJobUpdatedSubscription,
   ScanJobsQuery,
+  CreateServerDirectoryMutation,
   ServerDirectoriesQuery,
   StartScanMutation,
   UpdateLibraryMutation,
 } from '../../graphql/operations';
-import { DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
+import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { OrganizeDialog } from './organize-dialog';
 import { CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
@@ -123,6 +124,9 @@ export class LibrariesPage implements OnInit {
   protected readonly picking = signal<{ libraryId: string | null } | null>(null);
   protected readonly loadDirectories: DirectoryLoader = async (path) =>
     (await this.gql.query(ServerDirectoriesQuery, { path })).serverDirectories;
+  protected readonly createDirectory: DirectoryCreator = async (parent, name) =>
+    (await this.gql.mutate(CreateServerDirectoryMutation, { input: { parent, name } }))
+      .createServerDirectory;
 
   protected readonly deleting = signal<Library | null>(null);
   protected readonly organizing = signal<Library | null>(null);

@@ -372,6 +372,9 @@ export const en: Dictionary = {
     roots: 'Drives and roots',
     empty: 'No subfolders',
     select: 'Use this folder',
+    newFolder: 'New folder',
+    newFolderName: 'Name of the new folder',
+    create: 'Create',
   },
   import: {
     title: 'Import',

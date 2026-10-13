@@ -182,6 +182,39 @@ public sealed class LibraryManagementTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
     }
 
+    [Fact]
+    public async Task Administrators_create_server_folders_to_pick_them()
+    {
+        var parent = Folder("Create");
+
+        var response = await _admin.PostAsJsonAsync("/rest/v1/server/directories", new CreateServerDirectoryInput(parent, " New Music "), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<ServerDirectory>(ArcanistFactory.Json, Cancel);
+        Assert.Equal(("New Music", Path.Combine(parent, "New Music")), (created!.Name, created.Path));
+        Assert.True(Directory.Exists(created.Path));
+
+        var again = await _admin.GraphQLAsync("mutation($input: CreateServerDirectoryInput!) { createServerDirectory(input: $input) { path } }",
+            new { input = new { parent, name = "New Music" } });
+        Assert.Equal("validation_failed", again.ErrorCode());
+        Assert.Equal("duplicate", again.GetProperty("errors")[0].GetProperty("extensions").GetProperty("errors").GetProperty("name")[0].GetString());
+
+        foreach (var name in new[] { "", "a/b", "..", "what?", "CON", "trailing." })
+        {
+            var invalid = await _admin.PostAsJsonAsync("/rest/v1/server/directories", new CreateServerDirectoryInput(parent, name), ArcanistFactory.Json, Cancel);
+            Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        }
+
+        var missing = await _admin.PostAsJsonAsync("/rest/v1/server/directories",
+            new CreateServerDirectoryInput(Path.Combine(_root, "nope"), "x"), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+
+        await _factory.CreateUserAsync("manager", permissions: Permissions.ManageLibraries);
+        var manager = await _factory.CreateAuthenticatedClientAsync("manager");
+        var forbidden = await manager.PostAsJsonAsync("/rest/v1/server/directories", new CreateServerDirectoryInput(parent, "Mine"), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        Assert.False(Directory.Exists(Path.Combine(parent, "Mine")));
+    }
+
     private string Folder(string name) => Directory.CreateDirectory(Path.Combine(_root, name)).FullName;
 
     private async Task<Library> CreateAsync(string name, bool visibleToAll, params string[] folders)

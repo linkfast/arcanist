@@ -197,7 +197,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - Los datos de usuario cuelgan de `Track`/`Recording`, nunca de rutas.
   - La deduplicación va por `ContentHash`/MBID y, más adelante, por Chromaprint/AcoustID.
 - **Almacenamiento (implementado):** `Library` → varias `LibrarySource`, siempre leídas a través de `ILibraryStorage` (`Storage/`), que se obtiene por tipo con `ILibraryStorageResolver`.
-  - Nunca usar `System.IO` sobre archivos de bibliotecas fuera de `LocalStorage`. La única excepción es `DirectoryBrowser`, que lista carpetas del servidor para elegir ubicaciones.
+  - Nunca usar `System.IO` sobre archivos de bibliotecas fuera de `LocalStorage`. La única excepción es `DirectoryBrowser`, que lista y crea carpetas del servidor para elegir ubicaciones.
   - `LocalStorage` ignora archivos y carpetas ocultos (`.`) y carpetas de sistema de NAS y SO (`@eaDir`, `#recycle`, `$RECYCLE.BIN`…). También rechaza rutas relativas que escapen de la raíz.
   - **Las rutas relativas se guardan tal cual están en disco, sin normalizar Unicode:** en Linux, un nombre en NFD (copiado desde un Mac) solo se abre con esa grafía exacta.
   - Las ubicaciones se validan con `LibraryRules` (compartido con el setup): deben existir y ser legibles, y no pueden repetirse ni anidarse dentro de la misma biblioteca (código `overlapping`). Entre bibliotecas distintas sí pueden coincidir.
@@ -207,7 +207,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - `sources` (las rutas) solo se devuelve a quien tiene `MANAGE_LIBRARIES`.
   - Un gestor que no es admin solo gestiona las bibliotecas que ve, y recibe acceso automático a las que crea.
   - Borrar una biblioteca exige step-up y **nunca toca los archivos**.
-  - `serverDirectories` es solo para admins.
+  - `serverDirectories` y `createServerDirectory` son solo para admins; durante el setup, `GET`/`POST /rest/v1/setup/directories`. Los nombres de carpeta nuevos se validan con las reglas de Windows, las más estrictas.
 - **Escáner (implementado):** `Scanning/` y `Application/Scanning/`.
   - `ScanCoordinator` encola trabajos (`ScanJob` en BD) y `ScanWorker` (BackgroundService) los ejecuta **de uno en uno**. Una biblioteca nunca tiene dos trabajos activos. Al arrancar se recuperan los encolados y los interrumpidos.
   - Se escanea automáticamente al completar el setup, al crear una biblioteca y al añadir o quitar fuentes.

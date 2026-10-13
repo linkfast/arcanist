@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   ApiError,
   DatabaseProvider,
+  ServerDirectory,
   ServerDirectoryListing,
   SetupFfmpegCheck,
   SetupRequest,
@@ -56,6 +57,16 @@ export class SetupService {
         params,
         headers: this.headers(),
       }),
+    );
+  }
+
+  createDirectory(parent: string, name: string): Promise<ServerDirectory> {
+    return this.call(
+      this.http.post<ServerDirectory>(
+        '/rest/v1/setup/directories',
+        { parent, name },
+        { headers: this.headers() },
+      ),
     );
   }
 

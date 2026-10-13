@@ -39,6 +39,10 @@ public sealed record LibrarySourceInput(string Location);
 /// <summary>A folder on the server, offered when choosing library locations.</summary>
 public sealed record ServerDirectory(string Name, string Path, bool IsHidden);
 
+/// <param name="Parent">Absolute path of the folder to create it in.</param>
+/// <param name="Name">The new folder's name; it must be valid on Windows too.</param>
+public sealed record CreateServerDirectoryInput(string Parent, string Name);
+
 /// <param name="Path">Null when listing the file system roots (drives on Windows).</param>
 public sealed record ServerDirectoryListing(string? Path, string? Parent, IReadOnlyList<ServerDirectory> Directories);
 

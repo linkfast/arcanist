@@ -485,6 +485,7 @@
     </hlm-dialog-header>
     <app-folder-picker
       [load]="loadDirectories"
+      [create]="createDirectory"
       (picked)="addFolder($event)"
       (cancelled)="pickingFor.set(null)"
     />

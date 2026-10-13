@@ -11,7 +11,7 @@ Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ff
 - De la F6: probar Subsonic y mStream con apps reales (Symfonium, DSub, Feishin, Amperfy, mStream Music) y el importador con una instalación real de mStream 5 y 6 (también el hash PBKDF2: no hay vector de prueba publicado).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-Siguiente: Fase 7, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+En curso: Fase 7 (DLNA). Hecho el backend (`Dlna/`, `Extensions/Dlna/`, `Application/Dlna/`: servidor DLNA con SSDP propio, árbol configurable, formatos lossless primero con LPCM, y "reproducir en" con cola en el servidor). Falta la sección DLNA del panel (ajustes, bibliotecas, secciones ordenables, renderers con controles), la guía en `docs/developers` y documentar aquí la arquitectura. Decidido con el usuario: servidor + "reproducir en", solo bibliotecas marcadas, árbol personalizable desde el panel, lossless si el dispositivo lo admite y si no ffmpeg; las bibliotecas en la nube (F10) se servirán por DLNA a través de `ILibraryStorage`. La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 

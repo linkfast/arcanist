@@ -396,6 +396,12 @@ Decididas en la F3:
 - **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
 - **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
 
+Decididas para la F8 (con el usuario):
+- **Las dos cosas:** acceso remoto al propio servidor sin abrir puertos (emparejar con QR o ticket) y compartir bibliotecas entre servidores Arcanist ("Biblioteca de X"). Incluye la crate `arcanist-p2p` para .NET y los bindings uniffi para móviles.
+- **Relays públicos de n0 por defecto**, con opción de relay propio del admin; el relay de Ultimate es del tier de pago (F10).
+- **Bibliotecas compartidas en streaming bajo demanda, y descarga o copia solo si el dueño lo permite.**
+- **Controles por peer desde ya:** bibliotecas y caducidad (con revocación inmediata), solo stream / solo comprimido con bitrate máximo, límites de ancho de banda y de streams simultáneos (por peer y globales), y estadísticas con registro de actividad.
+
 Decididas tras la F7 (con el usuario):
 - **Importar desde otros servidores también en el asistente, con progreso**, y en el panel dentro de la sección Importación, en un diálogo que abre un botón (no una página propia).
 

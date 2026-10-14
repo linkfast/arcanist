@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Arcanist.Core.Data;
 using Arcanist.Core.Import.Mstream;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Online;
@@ -251,6 +252,46 @@ public sealed class MstreamImportTests : IAsyncDisposable
         Assert.Equal(5, tracks["Again"].GetProperty("rating").GetInt32());
         var report = (await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/mstream/imports", ArcanistFactory.Json, Cancel))![0];
         Assert.Equal((1, 1, 1), (report.GetProperty("playlists").GetInt32(), report.GetProperty("ratings").GetInt32(), report.GetProperty("plays").GetInt32()));
+    }
+
+    [Fact]
+    public async Task The_setup_wizard_reads_and_imports_an_mStream_installation()
+    {
+        WriteVersion6();
+        var client = _factory.CreateClient();
+
+        var analysis = await PostAsync(client, "/rest/v1/setup/mstream/analyze", new { folder = _install });
+        Assert.Equal(6, analysis.GetProperty("version").GetInt32());
+        var library = Assert.Single(analysis.GetProperty("libraries").EnumerateArray());
+        Assert.Equal(("music", true), (library.GetProperty("vpath").GetString(), library.GetProperty("rootExists").GetBoolean()));
+        Assert.Equal(JsonValueKind.Null, library.GetProperty("sourceId").ValueKind);
+
+        SetupRequest Request(string folder) => new(
+            new SetupDatabase(DatabaseProvider.Sqlite, null),
+            new SetupAdmin(ArcanistFactory.AdminUserName, ArcanistFactory.Password, null),
+            [new SetupLibrary("Music", [_music], VisibleToAll: false)],
+            ShareAnonymousStatistics: false,
+            Language: null,
+            Mstream: new SetupMstreamImport(_install, null, [new SetupMstreamLibrary("music", folder)], ImportUsers: true));
+
+        // The vpath must go to one of the new libraries' folders; nothing is set up otherwise.
+        var refused = await client.PostAsJsonAsync("/rest/v1/setup/complete", Request(Path.Combine(_music, "Zed")), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("mstream.libraries[0].folder", await refused.Content.ReadAsStringAsync(Cancel));
+
+        // The same folder, written another way.
+        var sameFolder = _music.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + "/";
+        (await client.PostAsJsonAsync("/rest/v1/setup/complete", Request(sameFolder), ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+        var admin = await _factory.CreateAuthenticatedClientAsync();
+        var import = await WaitForImportAsync(admin);
+        Assert.Equal("COMPLETED", import.GetProperty("status").GetString());
+        Assert.Equal((1, 1), (import.GetProperty("librariesCreated").GetInt32(), import.GetProperty("usersCreated").GetInt32()));
+        Assert.Equal((1, 2, 1), (import.GetProperty("playlists").GetInt32(), import.GetProperty("ratings").GetInt32(), import.GetProperty("plays").GetInt32()));
+
+        // Paul keeps his mStream password and gets the library of his vpath, with his data.
+        var paul = await _factory.CreateAuthenticatedClientAsync("paul", MstreamPassword);
+        var alone = (await TracksAsync(paul))["Alone"];
+        Assert.Equal((4, 3), (alone.GetProperty("rating").GetInt32(), alone.GetProperty("playCount").GetInt32()));
     }
 
     [Fact]

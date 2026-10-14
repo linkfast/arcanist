@@ -72,8 +72,11 @@ internal sealed class MstreamImportWorker(
 
         var vpaths = JsonSerializer.Deserialize<Dictionary<string, Guid>>(import.VpathMap) ?? [];
         var sources = vpaths.Values.ToList();
-        var libraries = await db.LibrarySources.Where(s => sources.Contains(s.Id)).Select(s => s.LibraryId).ToListAsync(cancellationToken);
-        if (await db.ScanJobs.AnyAsync(j => libraries.Contains(j.LibraryId) && (j.Status == ScanStatus.Queued || j.Status == ScanStatus.Running), cancellationToken))
+        var libraries = await db.LibrarySources.Where(s => sources.Contains(s.Id)).Select(s => s.LibraryId).Distinct().ToListAsync(cancellationToken);
+        var scans = await db.ScanJobs.Where(j => libraries.Contains(j.LibraryId)).Select(j => new { j.LibraryId, j.Status }).ToListAsync(cancellationToken);
+        // Every library is scanned when it is created (setup queues those scans just after recording its import), and
+        // scan jobs are kept: a library without any has its first scan still to come.
+        if (scans.Any(j => j.Status is ScanStatus.Queued or ScanStatus.Running) || libraries.Any(id => scans.All(j => j.LibraryId != id)))
             return false;
 
         import.Status = MstreamImportStatus.Running;
@@ -181,6 +184,7 @@ public static class MstreamImportServiceCollectionExtensions
         services.AddSingleton<MstreamImportSignal>();
         services.AddSingleton<MstreamImporter>();
         services.AddSingleton<MstreamServerClient>();
+        services.AddSingleton<MstreamReader>();
         services.AddSingleton<IExternalSignIn, MstreamServerSignIn>();
         services.AddHostedService<MstreamImportWorker>();
         services.AddScoped<Application.Import.MstreamImportService>();

@@ -25,7 +25,6 @@ export const es: Dictionary = {
   nav: {
     dlna: 'DLNA',
     extensions: 'Extensiones',
-    mstream: 'Importar de mStream',
     overview: 'Inicio',
     libraries: 'Bibliotecas',
     users: 'Usuarios',
@@ -66,6 +65,10 @@ export const es: Dictionary = {
         title: 'Cuenta de administrador',
         description: 'La cuenta principal, con acceso a todo.',
       },
+      import: {
+        title: '¿Vienes de otro servidor?',
+        description: 'Arcanist puede traer tu música, tus usuarios y sus datos.',
+      },
       libraries: {
         title: 'Tus bibliotecas',
         description: 'Las carpetas donde está tu música. Puedes añadir más después.',
@@ -77,6 +80,10 @@ export const es: Dictionary = {
       },
       privacy: { title: 'Privacidad', description: 'Tú decides qué se comparte.' },
       review: { title: 'Todo listo', description: 'Revisa la configuración antes de terminar.' },
+      progress: {
+        title: 'Preparando tu música',
+        description: 'Arcanist está leyendo tus bibliotecas.',
+      },
     },
     code: {
       label: 'Código',
@@ -110,7 +117,16 @@ export const es: Dictionary = {
       passwordTooShort: 'La contraseña necesita al menos 8 caracteres.',
       passwordsDiffer: 'Las contraseñas no coinciden.',
     },
+    import: {
+      none: 'Empezar de cero',
+      noneHelp: 'Añadirás las carpetas de tu música en el siguiente paso.',
+      mstreamHelp:
+        'Bibliotecas, usuarios con sus contraseñas, playlists, valoraciones y reproducciones. mStream no se modifica.',
+      analyzeFirst: 'Lee la instalación de mStream antes de continuar.',
+      incomplete: 'Pon nombre y carpeta a cada biblioteca que vayas a importar.',
+    },
     libraries: {
+      fromMstream: 'De mStream: {vpath}',
       namePlaceholder: 'Música, Audiolibros…',
       nameRequired: 'Pon un nombre a cada biblioteca con carpetas.',
       another: 'Otra biblioteca',
@@ -159,9 +175,10 @@ export const es: Dictionary = {
       },
     },
     review: {
-      mstream: 'Importar desde mStream al terminar',
-      mstreamHelp:
-        'Bibliotecas, usuarios con sus contraseñas, playlists, valoraciones y reproducciones de una instalación de mStream.',
+      import: 'Importar',
+      importNone: 'Nada',
+      mstreamWithUsers: 'mStream: {count} biblioteca(s), con sus usuarios',
+      mstreamWithoutUsers: 'mStream: {count} biblioteca(s), sin usuarios',
       database: 'Base de datos',
       admin: 'Administrador',
       libraries: 'Bibliotecas',
@@ -172,7 +189,17 @@ export const es: Dictionary = {
       ratings: 'Valoraciones',
       noOnlineServices: 'Ninguno',
       afterwards:
-        'Al terminar, Arcanist empezará a analizar tu música. Puedes seguir el progreso en Bibliotecas.',
+        'Al terminar verás cómo Arcanist lee tu música y, si importas, cómo llegan los datos.',
+    },
+    progress: {
+      libraries: 'Bibliotecas',
+      mstream: 'Importación desde mStream',
+      created: '{libraries} biblioteca(s) y {users} usuario(s) creados.',
+      brought:
+        '{playlists} playlists, {ratings} valoraciones y {plays} canciones reproducidas · {unmatched} sin encontrar.',
+      background: 'Puedes ir al panel cuando quieras: esto seguirá en segundo plano.',
+      done: 'Todo listo. Tu música te espera.',
+      open: 'Ir al panel',
     },
   },
   overview: {
@@ -427,7 +454,12 @@ export const es: Dictionary = {
   import: {
     title: 'Importación',
     subtitle:
-      'Deja música en una carpeta de entrada y Arcanist la coloca en su biblioteca, ordenada según su plantilla.',
+      'Trae música y datos a Arcanist: desde otro servidor, o dejando archivos en una carpeta de entrada.',
+    migrate: {
+      title: 'Migrar desde otro servidor',
+      help: 'Trae bibliotecas, usuarios, playlists, valoraciones y reproducciones de otro servidor de música. El otro servidor no se modifica.',
+      mstream: 'Desde mStream',
+    },
     folders: {
       title: 'Carpetas de entrada',
       help: 'Lo que copies en ellas se identifica por sus etiquetas y se mueve a la biblioteca cuando termina de copiarse.',
@@ -709,6 +741,7 @@ export const es: Dictionary = {
       'Trae las bibliotecas, los usuarios (con sus contraseñas) y sus playlists, valoraciones y reproducciones de una instalación de mStream. mStream no se modifica.',
     browse: 'Examinar',
     analyze: 'Leer',
+    analyzeAgain: 'Volver a leer',
     import: 'Importar',
     started: 'Importación iniciada',
     version: 'mStream {version}.',
@@ -728,6 +761,9 @@ export const es: Dictionary = {
     libraries: {
       title: 'Bibliotecas',
       help: 'Elige qué será cada biblioteca de mStream. Sus archivos se buscan por su ruta dentro de la carpeta elegida.',
+      helpSetup:
+        'Las que importes se añaden a tus bibliotecas en el siguiente paso. Sus archivos se buscan por su ruta dentro de la carpeta elegida.',
+      none: 'mStream no tiene bibliotecas.',
       notHere: 'No está en este servidor',
       skip: 'No importar',
       new: 'Nueva biblioteca',
@@ -741,6 +777,9 @@ export const es: Dictionary = {
       helpServer:
         'Los usuarios nuevos inician sesión con su contraseña de mStream (se comprueba con ese servidor la primera vez) y entonces llegan sus playlists, valoraciones y reproducciones.',
       exists: 'Ya existe',
+      you: 'Tu cuenta',
+      sameName:
+        'Si tu usuario de administrador se llama igual que tu usuario de mStream, tus playlists, valoraciones y reproducciones pasan a tu cuenta.',
       noPassword: 'Sin contraseña: un administrador deberá asignarle una',
       none: 'mStream no tiene usuarios.',
       data: '{playlists} playlists, {rated} canciones valoradas y {played} reproducidas.',
@@ -751,6 +790,7 @@ export const es: Dictionary = {
       report:
         '{libraries} bibliotecas y {users} usuarios creados · {playlists} playlists, {ratings} valoraciones y {plays} canciones reproducidas · {unmatched} sin encontrar',
       waiting: 'Esperando a que terminen los escaneos de las bibliotecas.',
+      running: 'Trayendo playlists, valoraciones y reproducciones…',
       server: 'Los datos de cada usuario llegan cuando inicia sesión por primera vez.',
     },
     status: {

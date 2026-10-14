@@ -25,7 +25,6 @@ export const en: Dictionary = {
   nav: {
     dlna: 'DLNA',
     extensions: 'Extensions',
-    mstream: 'Import from mStream',
     overview: 'Home',
     libraries: 'Libraries',
     users: 'Users',
@@ -63,6 +62,10 @@ export const en: Dictionary = {
         title: 'Administrator account',
         description: 'The main account, with access to everything.',
       },
+      import: {
+        title: 'Coming from another server?',
+        description: 'Arcanist can bring your music, your users and their data.',
+      },
       libraries: {
         title: 'Your libraries',
         description: 'The folders that hold your music. You can add more later.',
@@ -71,6 +74,10 @@ export const en: Dictionary = {
       ratings: { title: 'Ratings', description: 'How music is rated on this server.' },
       privacy: { title: 'Privacy', description: 'You decide what is shared.' },
       review: { title: 'All set', description: 'Review the setup before finishing.' },
+      progress: {
+        title: 'Getting your music ready',
+        description: 'Arcanist is reading your libraries.',
+      },
     },
     code: {
       label: 'Code',
@@ -103,7 +110,16 @@ export const en: Dictionary = {
       passwordTooShort: 'The password needs at least 8 characters.',
       passwordsDiffer: 'The passwords do not match.',
     },
+    import: {
+      none: 'Start from scratch',
+      noneHelp: 'You will add your music folders in the next step.',
+      mstreamHelp:
+        'Libraries, users with their passwords, playlists, ratings and plays. mStream is not changed.',
+      analyzeFirst: 'Read the mStream installation before going on.',
+      incomplete: 'Give each library you import a name and a folder.',
+    },
     libraries: {
+      fromMstream: 'From mStream: {vpath}',
       namePlaceholder: 'Music, Audiobooks…',
       nameRequired: 'Name every library that has folders.',
       another: 'Another library',
@@ -154,9 +170,10 @@ export const en: Dictionary = {
       },
     },
     review: {
-      mstream: 'Import from mStream afterwards',
-      mstreamHelp:
-        'Libraries, users with their passwords, playlists, ratings and plays from an mStream installation.',
+      import: 'Import',
+      importNone: 'Nothing',
+      mstreamWithUsers: 'mStream: {count} library(ies), with their users',
+      mstreamWithoutUsers: 'mStream: {count} library(ies), without users',
       database: 'Database',
       admin: 'Administrator',
       libraries: 'Libraries',
@@ -167,7 +184,17 @@ export const en: Dictionary = {
       ratings: 'Ratings',
       noOnlineServices: 'None',
       afterwards:
-        'Once finished, Arcanist starts analyzing your music. You can follow the progress in Libraries.',
+        'Once finished you will see Arcanist read your music and, if you import, the data arrive.',
+    },
+    progress: {
+      libraries: 'Libraries',
+      mstream: 'Import from mStream',
+      created: '{libraries} library(ies) and {users} user(s) created.',
+      brought:
+        '{playlists} playlists, {ratings} ratings and {plays} played songs · {unmatched} not found.',
+      background: 'You can go to the panel whenever you like: this goes on in the background.',
+      done: 'All done. Your music is waiting.',
+      open: 'Go to the panel',
     },
   },
   overview: {
@@ -424,7 +451,12 @@ export const en: Dictionary = {
   import: {
     title: 'Import',
     subtitle:
-      'Drop music into a drop folder and Arcanist places it in its library, arranged by the library template.',
+      'Bring music and data into Arcanist: from another server, or by dropping files into a drop folder.',
+    migrate: {
+      title: 'Migrate from another server',
+      help: 'Bring libraries, users, playlists, ratings and plays from another music server. The other server is not changed.',
+      mstream: 'From mStream',
+    },
     folders: {
       title: 'Drop folders',
       help: 'What you copy into them is identified by its tags and moved to the library once it has finished copying.',
@@ -705,6 +737,7 @@ export const en: Dictionary = {
       'Brings the libraries, the users (with their passwords) and their playlists, ratings and plays from an mStream installation. mStream is not changed.',
     browse: 'Browse',
     analyze: 'Read',
+    analyzeAgain: 'Read again',
     import: 'Import',
     started: 'Import started',
     version: 'mStream {version}.',
@@ -724,6 +757,9 @@ export const en: Dictionary = {
     libraries: {
       title: 'Libraries',
       help: 'Choose what each mStream library becomes. Its files are found by their path inside the chosen folder.',
+      helpSetup:
+        'The ones you import join your libraries in the next step. Their files are found by their path inside the chosen folder.',
+      none: 'mStream has no libraries.',
       notHere: 'Not on this server',
       skip: 'Do not import',
       new: 'New library',
@@ -737,6 +773,9 @@ export const en: Dictionary = {
       helpServer:
         'New users sign in with their mStream password (checked with that server the first time), and then their playlists, ratings and plays arrive.',
       exists: 'Already here',
+      you: 'Your account',
+      sameName:
+        'If your administrator user name is the same as your mStream one, your playlists, ratings and plays come to your account.',
       noPassword: 'No password: an administrator must set one',
       none: 'mStream has no users.',
       data: '{playlists} playlists, {rated} rated and {played} played songs.',
@@ -748,6 +787,7 @@ export const en: Dictionary = {
         '{libraries} libraries and {users} users created · {playlists} playlists, {ratings} ratings and {plays} played songs · {unmatched} not found',
       waiting: 'Waiting for the libraries’ scans to finish.',
       server: 'Each user’s data arrives when they first sign in.',
+      running: 'Bringing playlists, ratings and plays…',
     },
     status: {
       WAITING: 'Waiting',

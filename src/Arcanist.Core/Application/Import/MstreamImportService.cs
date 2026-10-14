@@ -74,62 +74,27 @@ public sealed class MstreamImportService(
     MstreamImportSignal signal,
     IServiceProvider services)
 {
-    private MstreamServerClient Client => services.GetRequiredService<MstreamServerClient>();
+    private MstreamReader Reader => services.GetRequiredService<MstreamReader>();
 
     public async Task<MstreamAnalysis> AnalyzeFolderAsync(string folder, CancellationToken cancellationToken)
     {
         guard.Admin();
-        var data = MstreamFolder.Read(folder ?? "");
-        return await AnalysisAsync(data.Version, data.Libraries, data.Users, data.Content.Values.ToList(), cancellationToken);
+        return await AnalysisAsync(await Reader.ReadAsync(folder ?? "", null, cancellationToken), cancellationToken);
     }
 
     public async Task<MstreamAnalysis> AnalyzeServerAsync(MstreamServerInput input, CancellationToken cancellationToken)
     {
         guard.Admin();
-        var (_, read) = await ReadServerAsync(input, cancellationToken);
-        return await AnalysisAsync(null, read.Libraries, read.Users, [], cancellationToken);
+        return await AnalysisAsync(await Reader.ReadAsync(null, input, cancellationToken), cancellationToken);
     }
 
     public async Task<MstreamImportJob> ImportAsync(ImportMstreamInput input, CancellationToken cancellationToken)
     {
         var actor = guard.Admin();
         guard.RecentAuthentication();
-        if ((input.Folder is null) == (input.Server is null))
-            throw ArcanistException.Field("folder", ErrorCodes.Required);
-
-        IReadOnlyList<MstreamLibraryData> sourceLibraries;
-        IReadOnlyList<MstreamUserData> sourceUsers;
-        string source;
-        if (input.Folder is { } folder)
-        {
-            var data = MstreamFolder.Read(folder);
-            (sourceLibraries, sourceUsers, source) = (data.Libraries, data.Users, folder.Trim());
-        }
-        else
-        {
-            var (url, read) = await ReadServerAsync(input.Server!, cancellationToken);
-            (sourceLibraries, sourceUsers, source) = (read.Libraries, read.Users, url.AbsoluteUri.TrimEnd('/'));
-        }
-
-        var vpaths = await MapLibrariesAsync(input.Libraries ?? [], sourceLibraries, cancellationToken);
-        var import = new MstreamImportEntity
-        {
-            Kind = input.Folder is null ? MstreamImportKind.Server : MstreamImportKind.Folder,
-            Source = source,
-            RequestedByUserId = actor.UserId,
-            CreatedAt = Now(),
-            VpathMap = "{}",
-            UserMap = "{}",
-            LibrariesCreated = vpaths.Created,
-        };
-
-        var users = input.ImportUsers ? await ImportUsersAsync(import, sourceUsers, vpaths.Map, cancellationToken) : [];
-        import.VpathMap = JsonSerializer.Serialize(vpaths.Map.ToDictionary(v => v.Key, v => v.Value.SourceId));
-        import.UserMap = JsonSerializer.Serialize(users);
-        // Through the API there is nothing more to do now: each user brings their data when they sign in.
-        import.Status = import.Kind == MstreamImportKind.Folder && users.Count > 0 ? MstreamImportStatus.Waiting : MstreamImportStatus.Completed;
-        import.FinishedAt = import.Status == MstreamImportStatus.Completed ? Now() : null;
-        db.MstreamImports.Add(import);
+        var source = await Reader.ReadAsync(input.Folder, input.Server, cancellationToken);
+        var vpaths = await MapLibrariesAsync(input.Libraries ?? [], source.Libraries, cancellationToken);
+        var import = await RecordAsync(db, source, vpaths.Map, vpaths.Created, input.ImportUsers, actor.UserId, Now(), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateAll();
         signal.Notify();
@@ -143,37 +108,40 @@ public sealed class MstreamImportService(
         return imports.Select(ToModel).ToList();
     }
 
-    private async Task<(Uri Url, (IReadOnlyList<MstreamLibraryData> Libraries, IReadOnlyList<MstreamUserData> Users) Read)> ReadServerAsync(
-        MstreamServerInput input, CancellationToken cancellationToken)
+    /// <summary>
+    /// Adds the import to <paramref name="db"/> (not saved), with the users it creates. A folder import with users
+    /// waits for the import worker, which brings their data once the scans of their libraries are over; one through
+    /// the API is done: each user brings their data when they first sign in.
+    /// </summary>
+    internal static async Task<MstreamImportEntity> RecordAsync(
+        ArcanistDbContext db, MstreamSource source, IReadOnlyDictionary<string, (Guid SourceId, Guid LibraryId)> vpaths, int librariesCreated,
+        bool importUsers, Guid? requestedBy, DateTime now, CancellationToken cancellationToken)
     {
-        var url = MstreamServerClient.ParseUrl(input.Url) ?? throw ArcanistException.Field("url", ErrorCodes.InvalidFormat);
-        var token = await Client.LoginAsync(url, input.UserName ?? "", input.Password ?? "", cancellationToken)
-                    ?? throw ArcanistException.Field("password", ErrorCodes.InvalidCredentials);
-        return (url, await Client.ReadAsync(url, token, cancellationToken));
+        var import = new MstreamImportEntity
+        {
+            Kind = source.Kind,
+            Source = source.Location,
+            RequestedByUserId = requestedBy,
+            CreatedAt = now,
+            VpathMap = JsonSerializer.Serialize(vpaths.ToDictionary(v => v.Key, v => v.Value.SourceId)),
+            UserMap = "{}",
+            LibrariesCreated = librariesCreated,
+        };
+
+        var users = importUsers ? await ImportUsersAsync(db, import, source.Users, vpaths, now, cancellationToken) : [];
+        import.UserMap = JsonSerializer.Serialize(users);
+        import.Status = import.Kind == MstreamImportKind.Folder && users.Count > 0 ? MstreamImportStatus.Waiting : MstreamImportStatus.Completed;
+        import.FinishedAt = import.Status == MstreamImportStatus.Completed ? now : null;
+        db.MstreamImports.Add(import);
+        return import;
     }
 
-    private async Task<MstreamAnalysis> AnalysisAsync(
-        int? version, IReadOnlyList<MstreamLibraryData> sourceLibraries, IReadOnlyList<MstreamUserData> sourceUsers,
-        IReadOnlyList<MstreamUserContent> content, CancellationToken cancellationToken)
+    private async Task<MstreamAnalysis> AnalysisAsync(MstreamSource source, CancellationToken cancellationToken)
     {
         var sources = await db.LibrarySources.AsNoTracking().Select(s => new { s.Id, s.Location }).ToListAsync(cancellationToken);
         var names = await db.Users.Select(u => u.NormalizedUserName).ToListAsync(cancellationToken);
-        var server = version is null;
-
-        return new MstreamAnalysis(
-            version,
-            sourceLibraries.Select(l => new MstreamLibraryInfo(l.Name, l.Root, l.Root.Length > 0 && Directory.Exists(l.Root),
-                sources.FirstOrDefault(s => SamePath(s.Location, l.Root))?.Id)).ToList(),
-            sourceUsers.Select(u => new MstreamUserInfo(u.Name, u.IsAdmin, u.Vpaths, names.Contains(TextNormalizer.Normalize(u.Name)),
-                server || u is { PasswordHash.Length: > 0, Salt.Length: > 0 })).ToList(),
-            content.Sum(c => c.Playlists.Count),
-            content.Sum(c => c.Tracks.Count(t => t.Rating > 0)),
-            content.Sum(c => c.Tracks.Count(t => t.PlayCount > 0)));
+        return MstreamReader.Analyze(source, sources.Select(s => (s.Id, s.Location)).ToList(), names);
     }
-
-    private static bool SamePath(string a, string b) =>
-        string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b),
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     /// <summary>The library folder of each chosen vpath, creating the new libraries.</summary>
     private async Task<(Dictionary<string, (Guid SourceId, Guid LibraryId)> Map, int Created)> MapLibrariesAsync(
@@ -231,9 +199,9 @@ public sealed class MstreamImportService(
     /// Creates the users Arcanist does not have yet: administrators stay administrators, the rest may download and
     /// get the libraries of their vpaths. Users with names Arcanist does not accept are left out.
     /// </summary>
-    private async Task<Dictionary<string, Guid>> ImportUsersAsync(
-        MstreamImportEntity import, IReadOnlyList<MstreamUserData> sourceUsers, IReadOnlyDictionary<string, (Guid SourceId, Guid LibraryId)> vpaths,
-        CancellationToken cancellationToken)
+    private static async Task<Dictionary<string, Guid>> ImportUsersAsync(
+        ArcanistDbContext db, MstreamImportEntity import, IReadOnlyList<MstreamUserData> sourceUsers,
+        IReadOnlyDictionary<string, (Guid SourceId, Guid LibraryId)> vpaths, DateTime now, CancellationToken cancellationToken)
     {
         var users = new Dictionary<string, Guid>(StringComparer.Ordinal);
         foreach (var source in sourceUsers)
@@ -259,7 +227,7 @@ public sealed class MstreamImportService(
                 PasswordHash = import.Kind == MstreamImportKind.Server
                     ? MstreamPasswords.Server(import.Id)
                     : source is { PasswordHash.Length: > 0, Salt.Length: > 0 } ? MstreamPasswords.Hash(source.Salt, source.PasswordHash) : "",
-                CreatedAt = Now(),
+                CreatedAt = now,
             };
             if (!source.IsAdmin)
             {

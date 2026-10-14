@@ -1,9 +1,11 @@
 <main class="flex min-h-screen items-start justify-center bg-muted/40 p-4 md:items-center">
   <section hlmCard class="w-full max-w-2xl">
     <div hlmCardHeader>
-      <p class="text-xs text-muted-foreground">
-        {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}
-      </p>
+      @if (step() !== 'progress') {
+        <p class="text-xs text-muted-foreground">
+          {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}
+        </p>
+      }
       <h1 hlmCardTitle class="text-xl">{{ 'setup.steps.' + step() + '.title' | t }}</h1>
       <p hlmCardDescription>{{ 'setup.steps.' + step() + '.description' | t }}</p>
     </div>
@@ -189,9 +191,45 @@
           </div>
         }
 
+        @case ('import') {
+          <hlm-radio-group class="grid gap-3" name="migrateFrom" [(ngModel)]="migrateFrom">
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="none" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <span class="grid gap-1">
+                <span class="font-medium">{{ 'setup.import.none' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.import.noneHelp' | t }}</span>
+              </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="mstream" class="mt-0.5"
+                ><hlm-radio-indicator indicator
+              /></hlm-radio>
+              <span class="grid gap-1">
+                <span class="font-medium">mStream</span>
+                <span class="text-muted-foreground">{{ 'setup.import.mstreamHelp' | t }}</span>
+              </span>
+            </label>
+          </hlm-radio-group>
+          @if (migrateFrom === 'mstream') {
+            <app-mstream-import
+              [draft]="mstream"
+              [analyzeWith]="analyzeMstream"
+              [loadDirectories]="loadDirectories"
+              [createDirectory]="createDirectory"
+              [setup]="true"
+              [adminName]="userName"
+            />
+          }
+        }
+
         @case ('libraries') {
           @for (library of libraries(); track $index; let index = $index) {
             <div class="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-lg border p-4">
+              @if (library.mstream; as from) {
+                <span hlmBadge variant="secondary" class="justify-self-start">{{
+                  'setup.libraries.fromMstream' | t: { vpath: from.vpath }
+                }}</span>
+              }
               <div class="flex items-end gap-2">
                 <hlm-field class="flex-1">
                   <label hlmFieldLabel [for]="'library-' + index">{{ 'libraries.name' | t }}</label>
@@ -414,6 +452,20 @@
                 {{ 'common.edit' | t }}
               </button>
             </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.import' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{
+                migrateFrom === 'mstream'
+                  ? ((mstream.importUsers
+                      ? 'setup.review.mstreamWithUsers'
+                      : 'setup.review.mstreamWithoutUsers'
+                    ) | t: { count: mstreamLibraries().length })
+                  : ('setup.review.importNone' | t)
+              }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('import')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
             <dt class="text-muted-foreground">{{ 'setup.review.libraries' | t }}</dt>
             <dd class="flex items-start justify-between gap-2">
               <ul class="grid gap-1">
@@ -466,20 +518,129 @@
               </button>
             </dd>
           </dl>
-          <label class="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
-            <span>
-              {{ 'setup.review.mstream' | t }}
-              <span class="block text-xs text-muted-foreground">{{
-                'setup.review.mstreamHelp' | t
-              }}</span>
-            </span>
-            <hlm-switch
-              [checked]="importMstream"
-              (checkedChange)="importMstream = $event"
-              [aria-label]="'setup.review.mstream' | t"
-            />
-          </label>
           <p class="text-sm text-muted-foreground">{{ 'setup.review.afterwards' | t }}</p>
+        }
+
+        @case ('progress') {
+          <section class="grid gap-3">
+            <h2 class="text-sm font-medium">{{ 'setup.progress.libraries' | t }}</h2>
+            @for (job of scanJobs(); track job.id) {
+              <div class="grid gap-2 rounded-lg border p-3 text-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="font-medium">{{ libraryNames()[job.libraryId] }}</span>
+                  @if (job.status === 'QUEUED' || job.status === 'RUNNING') {
+                    <span class="flex items-center gap-2 text-muted-foreground">
+                      <hlm-spinner class="size-4" />
+                      {{
+                        (job.status === 'QUEUED'
+                          ? 'scan.queued'
+                          : 'scan.phase.' + (job.progress?.phase ?? 'DISCOVERING')
+                        ) | t
+                      }}
+                    </span>
+                  } @else {
+                    <span
+                      hlmBadge
+                      [variant]="job.status === 'COMPLETED' ? 'secondary' : 'destructive'"
+                      >{{ 'scan.status.' + job.status | t }}</span
+                    >
+                  }
+                </div>
+                @if (job.status === 'RUNNING') {
+                  @if (job.progress; as progress) {
+                    <span class="text-xs text-muted-foreground">
+                      {{
+                        'scan.progress'
+                          | t
+                            : {
+                                read: (progress.filesRead | count),
+                                total: (progress.filesToRead | count),
+                                found: (progress.filesFound | count),
+                              }
+                      }}
+                    </span>
+                  }
+                  <hlm-progress [value]="scanPercent(job)"><hlm-progress-indicator /></hlm-progress>
+                } @else if (job.status !== 'QUEUED') {
+                  <span class="text-xs text-muted-foreground">{{
+                    'scan.summary'
+                      | t
+                        : {
+                            seen: (job.filesSeen | count),
+                            added: (job.filesAdded | count),
+                            updated: (job.filesUpdated | count),
+                            missing: (job.filesMissing | count),
+                          }
+                  }}</span>
+                }
+                @if (job.errorCode) {
+                  <span class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</span>
+                }
+              </div>
+            } @empty {
+              <hlm-spinner class="size-5" />
+            }
+          </section>
+
+          @if (importJob(); as job) {
+            <section class="grid gap-2">
+              <h2 class="text-sm font-medium">{{ 'setup.progress.mstream' | t }}</h2>
+              <div class="grid gap-1 rounded-lg border p-3 text-sm">
+                <p class="flex flex-wrap items-center gap-2">
+                  @if (job.status === 'WAITING' || job.status === 'RUNNING') {
+                    <hlm-spinner class="size-4" />
+                  }
+                  <span
+                    hlmBadge
+                    [variant]="job.status === 'FAILED' ? 'destructive' : 'secondary'"
+                    >{{ 'mstream.status.' + job.status | t }}</span
+                  >
+                  <span class="min-w-0 text-xs break-all text-muted-foreground">{{
+                    job.source
+                  }}</span>
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{
+                    'setup.progress.created'
+                      | t: { libraries: job.librariesCreated, users: job.usersCreated }
+                  }}
+                </p>
+                @if (job.status === 'WAITING') {
+                  <p class="text-xs text-muted-foreground">{{ 'mstream.history.waiting' | t }}</p>
+                } @else if (job.status === 'RUNNING') {
+                  <p class="text-xs text-muted-foreground">{{ 'mstream.history.running' | t }}</p>
+                } @else if (job.status === 'COMPLETED') {
+                  @if (job.kind === 'SERVER') {
+                    <p class="text-xs text-muted-foreground">
+                      {{ 'mstream.history.server' | t }}
+                    </p>
+                  } @else {
+                    <p class="text-xs text-muted-foreground">
+                      {{
+                        'setup.progress.brought'
+                          | t
+                            : {
+                                playlists: job.playlists,
+                                ratings: job.ratings,
+                                plays: job.plays,
+                                unmatched: job.unmatched,
+                              }
+                      }}
+                    </p>
+                  }
+                }
+                @if (job.errorCode) {
+                  <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
+                }
+              </div>
+            </section>
+          }
+
+          <div hlmAlert>
+            <p hlmAlertDescription>
+              {{ (finished() ? 'setup.progress.done' : 'setup.progress.background') | t }}
+            </p>
+          </div>
         }
       }
 
@@ -491,26 +652,38 @@
     </div>
 
     <div hlmCardFooter class="justify-between gap-2">
-      <button
-        hlmBtn
-        variant="ghost"
-        type="button"
-        [disabled]="stepIndex() === 0 || busy()"
-        (click)="back()"
-      >
-        {{ 'common.back' | t }}
-      </button>
-      @if (step() === 'review') {
-        <button hlmBtn type="button" [disabled]="busy()" (click)="finish()">
-          @if (busy()) {
-            <hlm-spinner class="size-4" />
-          }
-          {{ 'setup.finish' | t }}
+      @if (step() === 'progress') {
+        <span></span>
+        <button
+          hlmBtn
+          type="button"
+          [variant]="finished() ? 'default' : 'outline'"
+          (click)="openPanel()"
+        >
+          {{ 'setup.progress.open' | t }}
         </button>
       } @else {
-        <button hlmBtn type="button" [disabled]="busy() || !status()" (click)="next()">
-          {{ 'common.next' | t }}
+        <button
+          hlmBtn
+          variant="ghost"
+          type="button"
+          [disabled]="stepIndex() === 0 || busy()"
+          (click)="back()"
+        >
+          {{ 'common.back' | t }}
         </button>
+        @if (step() === 'review') {
+          <button hlmBtn type="button" [disabled]="busy()" (click)="finish()">
+            @if (busy()) {
+              <hlm-spinner class="size-4" />
+            }
+            {{ 'setup.finish' | t }}
+          </button>
+        } @else {
+          <button hlmBtn type="button" [disabled]="busy() || !status()" (click)="next()">
+            {{ 'common.next' | t }}
+          </button>
+        }
       }
     </div>
   </section>

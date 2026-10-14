@@ -57,6 +57,13 @@ export interface SetupRequest {
   ffmpegPath: string | null;
   onlineServices: OnlineServicesChoice;
   ratingMode: RatingMode;
+  /** An mStream installation to import; each vpath goes to one of the folders of `libraries`. */
+  mstream: {
+    folder: string | null;
+    server: { url: string; userName: string; password: string } | null;
+    libraries: { vpath: string; folder: string }[];
+    importUsers: boolean;
+  } | null;
 }
 
 export interface OnlineServicesChoice {

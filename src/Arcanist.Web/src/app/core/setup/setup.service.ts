@@ -10,6 +10,8 @@ import {
   SetupRequest,
   SetupStatus,
 } from '../api/rest';
+import type { MstreamAnalysisFieldsFragment } from '../../graphql/generated/graphql';
+import type { MstreamSourceInput } from '../../shared/mstream-import';
 
 /** Talks to /rest/v1/setup. From other devices every call carries the one-time setup code. */
 @Injectable({ providedIn: 'root' })
@@ -75,6 +77,15 @@ export class SetupService {
     const params = path ? new HttpParams().set('path', path) : undefined;
     return this.call(
       this.http.get<SetupFfmpegCheck>('/rest/v1/setup/ffmpeg', { params, headers: this.headers() }),
+    );
+  }
+
+  /** Reads an mStream installation, to choose what to import. */
+  analyzeMstream(source: MstreamSourceInput): Promise<MstreamAnalysisFieldsFragment> {
+    return this.call(
+      this.http.post<MstreamAnalysisFieldsFragment>('/rest/v1/setup/mstream/analyze', source, {
+        headers: this.headers(),
+      }),
     );
   }
 

@@ -915,19 +915,6 @@ export const MstreamImportsQuery = graphql(`
   }
 `);
 
-export const MstreamLibrarySourcesQuery = graphql(`
-  query MstreamLibrarySources {
-    libraries {
-      id
-      name
-      sources {
-        id
-        location
-      }
-    }
-  }
-`);
-
 export const AnalyzeMstreamFolderMutation = graphql(`
   mutation AnalyzeMstreamFolder($folder: String!) {
     analyzeMstreamFolder(folder: $folder) {

@@ -93,7 +93,6 @@ type Documents = {
     "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": typeof types.MstreamImportJobFieldsFragmentDoc,
     "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": typeof types.MstreamAnalysisFieldsFragmentDoc,
     "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.MstreamImportsDocument,
-    "\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n": typeof types.MstreamLibrarySourcesDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.ImportMstreamDocument,
@@ -191,7 +190,6 @@ const documents: Documents = {
     "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": types.MstreamImportJobFieldsFragmentDoc,
     "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": types.MstreamAnalysisFieldsFragmentDoc,
     "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": types.MstreamImportsDocument,
-    "\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n": types.MstreamLibrarySourcesDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.ImportMstreamDocument,
@@ -540,10 +538,6 @@ export function graphql(source: "\n  fragment MstreamAnalysisFields on MstreamAn
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n"): (typeof documents)["\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n"];
-/**
- * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
- */
-export function graphql(source: "\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n"): (typeof documents)["\n  query MstreamLibrarySources {\n    libraries {\n      id\n      name\n      sources {\n        id\n        location\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

@@ -153,6 +153,37 @@
         }
       }
     },
+    "/rest/v1/setup/mstream/analyze": {
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Reads an mStream installation, from its folder on this server or from its server, to choose what to import.",
+        "operationId": "AnalyzeSetupMstream",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupMstreamSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamAnalysis"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/setup/complete": {
       "post": {
         "tags": [
@@ -8381,6 +8412,91 @@
           }
         }
       },
+      "SetupMstreamImport": {
+        "required": [
+          "folder",
+          "server",
+          "libraries",
+          "importUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "server": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MstreamServerInput"
+              }
+            ]
+          },
+          "libraries": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SetupMstreamLibrary"
+            }
+          },
+          "importUsers": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetupMstreamLibrary": {
+        "required": [
+          "vpath",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "vpath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "folder": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SetupMstreamSource": {
+        "required": [
+          "folder",
+          "server"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "server": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MstreamServerInput"
+              }
+            ]
+          }
+        }
+      },
       "SetupRequest": {
         "required": [
           "database",
@@ -8455,6 +8571,16 @@
               },
               {
                 "$ref": "#/components/schemas/RatingMode"
+              }
+            ]
+          },
+          "mstream": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SetupMstreamImport"
               }
             ]
           }

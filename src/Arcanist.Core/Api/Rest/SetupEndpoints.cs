@@ -40,6 +40,11 @@ public static class SetupEndpoints
             .WithName("CheckSetupFfmpeg")
             .WithSummary("Checks the ffmpeg at the given path, or which one would be found automatically.");
 
+        guarded.MapPost("/mstream/analyze", (SetupMstreamSource request, SetupService service, CancellationToken cancellationToken) =>
+                service.AnalyzeMstreamAsync(request, cancellationToken))
+            .WithName("AnalyzeSetupMstream")
+            .WithSummary("Reads an mStream installation, from its folder on this server or from its server, to choose what to import.");
+
         guarded.MapPost("/complete", async (SetupRequest request, SetupService service, CancellationToken cancellationToken) =>
                 await service.CompleteAsync(request, cancellationToken) switch
                 {

@@ -1,7 +1,13 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideFolderPlus, lucidePencil, lucidePlus, lucideTrash2 } from '@ng-icons/lucide';
+import {
+  lucideFolderPlus,
+  lucideImport,
+  lucidePencil,
+  lucidePlus,
+  lucideTrash2,
+} from '@ng-icons/lucide';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -27,6 +33,7 @@ import type {
   ImportQueueQuery,
   ImportStatus,
   LibrariesQuery as LibrariesResult,
+  MstreamImportJobFieldsFragment as MstreamImportJob,
   TranscodeFormat,
 } from '../../graphql/generated/graphql';
 import {
@@ -35,7 +42,11 @@ import {
   DeleteDropFolderMutation,
   DiscardImportItemMutation,
   DropFoldersQuery,
+  AnalyzeMstreamFolderMutation,
+  AnalyzeMstreamServerMutation,
   IgnoreImportItemMutation,
+  ImportMstreamMutation,
+  MstreamImportsQuery,
   ImportQueueQuery as ImportQueue,
   LibrariesQuery,
   RetryImportItemMutation,
@@ -44,7 +55,12 @@ import {
   UpdateDropFolderMutation,
 } from '../../graphql/operations';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
-import { BytesPipe, DurationPipe, RelativeTimePipe } from '../../shared/format';
+import { BytesPipe, DateTimePipe, DurationPipe, RelativeTimePipe } from '../../shared/format';
+import {
+  MstreamImportDraft,
+  MstreamImportForm,
+  MstreamSourceInput,
+} from '../../shared/mstream-import';
 
 type Library = LibrariesResult['libraries'][number];
 type Summary = ImportQueueQuery['importSummary'];
@@ -96,16 +112,20 @@ const REFRESH_MS = 5000;
     TranslatePipe,
     FolderPicker,
     BytesPipe,
+    DateTimePipe,
     DurationPipe,
     RelativeTimePipe,
+    MstreamImportForm,
   ],
-  providers: [provideIcons({ lucidePlus, lucidePencil, lucideTrash2, lucideFolderPlus })],
+  providers: [
+    provideIcons({ lucidePlus, lucidePencil, lucideTrash2, lucideFolderPlus, lucideImport }),
+  ],
   templateUrl: './import.page.html',
 })
 export class ImportPage implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly gql = inject(Gql);
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
 
   protected readonly statuses: ImportStatus[] = [
     'NEEDS_REVIEW',
@@ -152,14 +172,74 @@ export class ImportPage implements OnInit {
   protected readonly reviewing = signal<ImportItem | null>(null);
   protected tags: TagsForm = this.emptyTags();
 
+  // Migrations from other servers
+  protected readonly migrations = signal<MstreamImportJob[]>([]);
+  /** The mStream import dialog, with its answers; null while closed. */
+  protected readonly migrating = signal<MstreamImportDraft | null>(null);
+  protected readonly migrationSources = signal<{ id: string; label: string }[]>([]);
+  protected readonly startingMigration = signal(false);
+  protected readonly analyzeMstream = async (source: MstreamSourceInput) =>
+    source.server
+      ? (await this.gql.mutate(AnalyzeMstreamServerMutation, { input: source.server }))
+          .analyzeMstreamServer
+      : (await this.gql.mutate(AnalyzeMstreamFolderMutation, { folder: source.folder ?? '' }))
+          .analyzeMstreamFolder;
+
   constructor() {
-    const timer = setInterval(() => void this.loadQueue(), REFRESH_MS);
+    const timer = setInterval(() => {
+      void this.loadQueue();
+      if (this.migrations().some((m) => m.status === 'WAITING' || m.status === 'RUNNING'))
+        void this.loadMigrations();
+    }, REFRESH_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   async ngOnInit(): Promise<void> {
     await this.loadQueue();
-    if (this.auth.isAdmin()) await this.loadFolders();
+    if (this.auth.isAdmin()) await Promise.all([this.loadFolders(), this.loadMigrations()]);
+  }
+
+  private async loadMigrations(): Promise<void> {
+    this.migrations.set((await this.gql.query(MstreamImportsQuery)).mstreamImports);
+  }
+
+  protected async openMstream(): Promise<void> {
+    await this.loadLibraries();
+    this.migrationSources.set(
+      this.libraries().flatMap((library) =>
+        (library.sources ?? []).map((source) => ({
+          id: source.id,
+          label: `${library.name} — ${source.location}`,
+        })),
+      ),
+    );
+    this.migrating.set(new MstreamImportDraft());
+  }
+
+  protected async startMstream(): Promise<void> {
+    const draft = this.migrating();
+    if (!draft?.analyzed) return;
+    this.startingMigration.set(true);
+    try {
+      const result = await this.gql.mutate(ImportMstreamMutation, {
+        input: {
+          folder: draft.analyzed.folder,
+          server: draft.analyzed.server,
+          importUsers: draft.importUsers,
+          libraries: draft.libraryInputs(),
+        },
+      });
+      this.migrations.update((list) => [result.importMstream, ...list]);
+      this.migrating.set(null);
+      toast.success(this.i18n.t('mstream.started'));
+      // New libraries are scanned now.
+      await this.loadLibraries();
+    } catch (error) {
+      const apiError = ApiError.from(error);
+      toast.error(this.i18n.error(Object.values(apiError.fields)[0]?.[0] ?? apiError.code));
+    } finally {
+      this.startingMigration.set(false);
+    }
   }
 
   protected count(status: ImportStatus): number {
@@ -367,6 +447,10 @@ export class ImportPage implements OnInit {
     ]);
     this.libraries.set(libraries.libraries);
     this.folders.set(folders.dropFolders);
+  }
+
+  private async loadLibraries(): Promise<void> {
+    this.libraries.set((await this.gql.query(LibrariesQuery)).libraries);
   }
 
   private async loadQueue(): Promise<void> {

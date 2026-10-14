@@ -7,6 +7,70 @@
   @if (auth.isAdmin()) {
     <section hlmCard>
       <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'import.migrate.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'import.migrate.help' | t }}</p>
+      </div>
+      <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-4">
+        <div class="flex flex-wrap gap-2">
+          <button hlmBtn variant="outline" type="button" class="gap-2" (click)="openMstream()">
+            <ng-icon name="lucideImport" />
+            {{ 'import.migrate.mstream' | t }}
+          </button>
+        </div>
+        @if (migrations().length > 0) {
+          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+            @for (job of migrations(); track job.id) {
+              <li class="grid gap-1 rounded-md border p-3 text-sm">
+                <p class="flex flex-wrap items-center gap-2">
+                  <span hlmBadge variant="outline">mStream</span>
+                  <span
+                    hlmBadge
+                    [variant]="job.status === 'FAILED' ? 'destructive' : 'secondary'"
+                    >{{ 'mstream.status.' + job.status | t }}</span
+                  >
+                  <span class="min-w-0 font-medium break-all">{{ job.source }}</span>
+                  <span class="text-xs text-muted-foreground" [title]="job.createdAt | dateTime">{{
+                    job.createdAt | relativeTime
+                  }}</span>
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{
+                    'mstream.history.report'
+                      | t
+                        : {
+                            libraries: job.librariesCreated,
+                            users: job.usersCreated,
+                            playlists: job.playlists,
+                            ratings: job.ratings,
+                            plays: job.plays,
+                            unmatched: job.unmatched,
+                          }
+                  }}
+                </p>
+                @if (job.status === 'WAITING') {
+                  <p class="flex items-center gap-2 text-xs text-muted-foreground">
+                    <hlm-spinner class="size-3" />{{ 'mstream.history.waiting' | t }}
+                  </p>
+                } @else if (job.status === 'RUNNING') {
+                  <p class="flex items-center gap-2 text-xs text-muted-foreground">
+                    <hlm-spinner class="size-3" />{{ 'mstream.history.running' | t }}
+                  </p>
+                }
+                @if (job.kind === 'SERVER') {
+                  <p class="text-xs text-muted-foreground">{{ 'mstream.history.server' | t }}</p>
+                }
+                @if (job.errorCode) {
+                  <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+
+    <section hlmCard>
+      <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'import.folders.title' | t }}</h2>
         <p hlmCardDescription>{{ 'import.folders.help' | t }}</p>
         <div hlmCardAction>
@@ -248,6 +312,43 @@
 </div>
 
 <!-- Drop folder -->
+<hlm-dialog [state]="migrating() ? 'open' : 'closed'" (closed)="migrating.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100vh-2rem)] w-[min(48rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-3xl"
+  >
+    @if (migrating(); as draft) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'mstream.title' | t }}</h3>
+        <p hlmDialogDescription>{{ 'mstream.subtitle' | t }}</p>
+      </hlm-dialog-header>
+      <app-mstream-import
+        [draft]="draft"
+        [analyzeWith]="analyzeMstream"
+        [loadDirectories]="loadDirectories"
+        [createDirectory]="createDirectory"
+        [sources]="migrationSources()"
+      />
+      <hlm-dialog-footer>
+        <button hlmBtn variant="ghost" type="button" (click)="migrating.set(null)">
+          {{ 'common.cancel' | t }}
+        </button>
+        <button
+          hlmBtn
+          type="button"
+          [disabled]="startingMigration() || !draft.analysis() || !draft.complete()"
+          (click)="startMstream()"
+        >
+          @if (startingMigration()) {
+            <hlm-spinner class="size-4" />
+          }
+          {{ 'mstream.import' | t }}
+        </button>
+      </hlm-dialog-footer>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
 <hlm-dialog [state]="form() ? 'open' : 'closed'" (closed)="form.set(null)">
   <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(32rem,calc(100vw-2rem))]">
     @if (form(); as current) {

@@ -7,7 +7,6 @@ import {
   lucideCopy,
   lucideExternalLink,
   lucideHouse,
-  lucideImport,
   lucideInbox,
   lucideLibrary,
   lucideLogOut,
@@ -39,7 +38,6 @@ import { LanguageSelect } from '../shared/language-select';
       lucideChartColumn,
       lucideCopy,
       lucideHouse,
-      lucideImport,
       lucideInbox,
       lucidePuzzle,
       lucideLibrary,
@@ -156,12 +154,6 @@ export class Shell {
         visible: this.auth.isAdmin(),
       },
       { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
-      {
-        path: '/mstream',
-        label: 'nav.mstream',
-        icon: 'lucideImport',
-        visible: this.auth.isAdmin(),
-      },
       { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
     ].filter((item) => item.visible),
   );

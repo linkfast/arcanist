@@ -2,10 +2,12 @@ using System.Text.Json;
 using Arcanist.Core.Api;
 using Arcanist.Core.Application;
 using LibraryRules = Arcanist.Core.Application.Libraries.LibraryRules;
+using Arcanist.Core.Application.Import;
 using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
+using Arcanist.Core.Import.Mstream;
 using Arcanist.Core.Media;
 using Arcanist.Core.Scanning;
 using Microsoft.AspNetCore.Identity;
@@ -34,10 +36,25 @@ public sealed record SetupAdmin(string? UserName, string? Password, string? Disp
 
 public sealed record SetupLibrary(string? Name, IReadOnlyList<string>? Folders, bool VisibleToAll = true);
 
+/// <summary>An mStream installation to import while setting up: its folder on this server, or its server.</summary>
+public sealed record SetupMstreamSource(string? Folder, MstreamServerInput? Server);
+
+/// <param name="Vpath">mStream's name for the library.</param>
+/// <param name="Folder">Where its music is on this server: one of the folders of <see cref="SetupRequest.Libraries"/>.</param>
+public sealed record SetupMstreamLibrary(string? Vpath, string? Folder);
+
+/// <summary>Imports an mStream installation into the new server.</summary>
+/// <param name="Libraries">The mStream libraries whose data comes along, and where they are now. Others are left out.</param>
+/// <param name="ImportUsers">Create mStream's users (with their passwords and library access) and bring their data. A
+/// user with the administrator's name is the administrator: their data goes to them.</param>
+public sealed record SetupMstreamImport(string? Folder, MstreamServerInput? Server, IReadOnlyList<SetupMstreamLibrary>? Libraries, bool ImportUsers);
+
 /// <summary>Everything the wizard collects, submitted at once so setup never ends half-done.</summary>
 /// <param name="FfmpegPath">ffmpeg to use; null to find it automatically (or download it later from the panel).</param>
 /// <param name="OnlineServices">Online services to turn on; none when null.</param>
 /// <param name="RatingMode">How users rate tracks; five stars when null. Can be changed later in the settings.</param>
+/// <param name="Mstream">An mStream installation to import, or null. Its progress shows in <c>mstreamImports</c>
+/// once signed in: the users' data comes once the first scans are over.</param>
 public sealed record SetupRequest(
     SetupDatabase? Database,
     SetupAdmin? Admin,
@@ -46,7 +63,8 @@ public sealed record SetupRequest(
     string? Language,
     string? FfmpegPath = null,
     Application.Online.OnlineServicesSettings? OnlineServices = null,
-    RatingMode? RatingMode = null);
+    RatingMode? RatingMode = null,
+    SetupMstreamImport? Mstream = null);
 
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
@@ -74,9 +92,14 @@ public sealed class SetupService(
     ScanCoordinator scans,
     FfmpegLocator ffmpeg,
     Application.Listening.RatingSettings ratings,
+    IServiceProvider services,
+    MstreamImportSignal mstreamSignal,
+    TimeProvider time,
     ILogger<SetupService> logger)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    private MstreamReader Mstream => services.GetRequiredService<MstreamReader>();
 
     public bool IsCompleted => setupOptions.CurrentValue.Completed;
 
@@ -109,6 +132,10 @@ public sealed class SetupService(
         var found = (await ffmpeg.RefreshAsync(cancellationToken)).Installation;
         return new SetupFfmpegCheck(found is not null, found?.Path, found?.Version, found?.Source);
     }
+
+    /// <summary>What an mStream installation holds, to choose what to import. There are no libraries or users to match yet.</summary>
+    public async Task<MstreamAnalysis> AnalyzeMstreamAsync(SetupMstreamSource request, CancellationToken cancellationToken) =>
+        MstreamReader.Analyze(await Mstream.ReadAsync(request.Folder, request.Server, cancellationToken), [], []);
 
     public async Task<DatabaseTestResult> TestDatabaseAsync(SetupDatabase request, CancellationToken cancellationToken)
     {
@@ -155,6 +182,8 @@ public sealed class SetupService(
             if (!string.IsNullOrWhiteSpace(request.FfmpegPath) && await FfmpegLocator.ProbeAsync(request.FfmpegPath.Trim(), cancellationToken) is null)
                 errors.Add("ffmpegPath", ErrorCodes.NotFfmpeg);
 
+            var mstreamImport = request.Mstream is null ? null : await ValidateMstreamAsync(request.Mstream, libraries, errors, cancellationToken);
+
             if (!errors.IsEmpty || database is null)
                 return new SetupResult.Invalid(errors);
 
@@ -175,7 +204,8 @@ public sealed class SetupService(
 
             await initializer.MigrateAsync(database, cancellationToken);
 
-            IReadOnlyList<Guid> libraryIds;
+            IReadOnlyList<Library> created;
+            Data.Entities.MstreamImport? imported = null;
             await using (var db = ArcanistDbContextFactory.Create(database, paths))
             {
                 if (await db.Users.AnyAsync(cancellationToken))
@@ -185,21 +215,35 @@ public sealed class SetupService(
                     return new SetupResult.Invalid(errors);
                 }
 
-                libraryIds = Seed(db, request, libraries, folders);
+                // All or nothing: a setup that fails here can be submitted again.
+                await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+                (var adminId, created) = Seed(db, request, libraries, folders);
                 await db.SaveChangesAsync(cancellationToken);
+                // The import worker waits until these libraries have been scanned, so their files can be matched.
+                if (mstreamImport is { } found)
+                    imported = await RecordMstreamImportAsync(db, request.Mstream!, found.Source, found.Vpaths, created, adminId, cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
             }
 
-            await settingsWriter.SetAsync(new Dictionary<string, object?> { [SetupOptions.CompletedKey] = true }, cancellationToken);
+            // Committed: the rest happens even if the wizard goes away, or the first scans would never be queued.
+            await settingsWriter.SetAsync(new Dictionary<string, object?> { [SetupOptions.CompletedKey] = true }, CancellationToken.None);
             setupCode.Discard();
 
             // The chosen ffmpeg and rating mode are in the database now.
-            await ffmpeg.RefreshAsync(cancellationToken);
+            await ffmpeg.RefreshAsync(CancellationToken.None);
             ratings.Reset();
-            await ratings.GetAsync(cancellationToken);
+            await ratings.GetAsync(CancellationToken.None);
 
             // The wizard's last step shows this first scan in progress.
-            foreach (var libraryId in libraryIds)
-                await scans.EnqueueAsync(libraryId, ScanKind.Full, requestedBy: null, cancellationToken);
+            foreach (var library in created)
+                await scans.EnqueueAsync(library.Id, ScanKind.Full, requestedBy: null, CancellationToken.None);
+
+            if (imported is not null)
+            {
+                mstreamSignal.Notify();
+                logger.LogInformation("Importing mStream from {Source}: {Libraries} library(ies), {Users} user(s) created",
+                    imported.Source, imported.LibrariesCreated, imported.UsersCreated);
+            }
 
             logger.LogInformation("Setup completed: {Provider} database, administrator {UserName}, {LibraryCount} library(ies)",
                 database.Provider, request.Admin!.UserName, libraries.Count);
@@ -212,7 +256,7 @@ public sealed class SetupService(
         }
     }
 
-    private IReadOnlyList<Guid> Seed(ArcanistDbContext db, SetupRequest request, IReadOnlyList<SetupLibrary> libraries, IReadOnlyList<IReadOnlyList<string?>> folders)
+    private (Guid AdminId, IReadOnlyList<Library> Libraries) Seed(ArcanistDbContext db, SetupRequest request, IReadOnlyList<SetupLibrary> libraries, IReadOnlyList<IReadOnlyList<string?>> folders)
     {
         var admin = new User
         {
@@ -225,7 +269,7 @@ public sealed class SetupService(
         admin.PasswordHash = passwordHasher.HashPassword(admin, request.Admin.Password!);
         db.Users.Add(admin);
 
-        var libraryIds = new List<Guid>();
+        var created = new List<Library>();
         for (var i = 0; i < libraries.Count; i++)
         {
             var library = new Library { Number = i + 1, Name = libraries[i].Name!.Trim(), VisibleToAll = libraries[i].VisibleToAll };
@@ -240,7 +284,7 @@ public sealed class SetupService(
             }
 
             db.Libraries.Add(library);
-            libraryIds.Add(library.Id);
+            created.Add(library);
         }
 
         db.Settings.Add(new Setting
@@ -260,7 +304,68 @@ public sealed class SetupService(
 
         db.Settings.Add(new Setting { Key = SettingKeys.RatingMode, Value = JsonSerializer.Serialize(request.RatingMode ?? RatingMode.Stars, JsonSerializerOptions.Web) });
 
-        return libraryIds;
+        return (admin.Id, created);
+    }
+
+    /// <summary>
+    /// Reads the mStream installation and checks the chosen libraries: each must be one of mStream's, and its folder
+    /// one of the new libraries'. Returns the installation and, for each vpath, which library and folder it goes to.
+    /// </summary>
+    private async Task<(MstreamSource Source, IReadOnlyDictionary<string, (int Library, int Folder)> Vpaths)?> ValidateMstreamAsync(
+        SetupMstreamImport request, IReadOnlyList<SetupLibrary> libraries, ValidationErrors errors, CancellationToken cancellationToken)
+    {
+        MstreamSource source;
+        try
+        {
+            source = await Mstream.ReadAsync(request.Folder, request.Server, cancellationToken);
+        }
+        catch (ArcanistException.Invalid invalid)
+        {
+            foreach (var (field, codes) in invalid.Errors.ToDictionary())
+                errors.Add(field is "url" or "userName" or "password" ? $"mstream.server.{field}" : $"mstream.{field}", codes[0]);
+            return null;
+        }
+        catch (ArcanistException e)
+        {
+            errors.Add("mstream", e.Code);
+            return null;
+        }
+
+        var folders = libraries
+            .SelectMany((library, l) => (library.Folders ?? []).Select((folder, f) => (Path: folder, Position: (l, f))))
+            .ToList();
+        var vpaths = new Dictionary<string, (int, int)>(StringComparer.Ordinal);
+        var chosen = request.Libraries ?? [];
+        for (var i = 0; i < chosen.Count; i++)
+        {
+            var (vpath, folder) = (chosen[i].Vpath ?? "", chosen[i].Folder ?? "");
+            var target = folders.FindIndex(f => MstreamReader.SamePath(f.Path, folder));
+            if (source.Libraries.All(l => l.Name != vpath))
+                errors.Add($"mstream.libraries[{i}].vpath", ErrorCodes.NotFound);
+            else if (target < 0)
+                errors.Add($"mstream.libraries[{i}].folder", ErrorCodes.NotFound);
+            else
+                vpaths.TryAdd(vpath, folders[target].Position);
+        }
+
+        return (source, vpaths);
+    }
+
+    private async Task<Data.Entities.MstreamImport> RecordMstreamImportAsync(
+        ArcanistDbContext db, SetupMstreamImport request, MstreamSource source, IReadOnlyDictionary<string, (int Library, int Folder)> vpaths,
+        IReadOnlyList<Library> libraries, Guid adminId, CancellationToken cancellationToken)
+    {
+        // The libraries' folders are in the order they were submitted.
+        var map = vpaths.ToDictionary(v => v.Key, v =>
+        {
+            var library = libraries[v.Value.Library];
+            return (library.Sources[v.Value.Folder].Id, library.Id);
+        }, StringComparer.Ordinal);
+
+        var import = await MstreamImportService.RecordAsync(db, source, map, map.Values.Select(v => v.Item2).Distinct().Count(),
+            request.ImportUsers, adminId, time.GetUtcNow().UtcDateTime, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return import;
     }
 
     private static DatabaseOptions? ValidateDatabase(SetupDatabase request, string prefix, ValidationErrors errors)

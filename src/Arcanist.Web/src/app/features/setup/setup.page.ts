@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -11,6 +11,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
@@ -23,26 +24,46 @@ import {
   SetupStatus,
 } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
+import { Gql } from '../../core/graphql/gql.service';
 import { I18n, Language, TranslatePipe } from '../../core/i18n/i18n';
 import { SetupService } from '../../core/setup/setup.service';
+import type {
+  MstreamImportJobFieldsFragment as MstreamImportJob,
+  ScanJobFieldsFragment as ScanJob,
+} from '../../graphql/generated/graphql';
+import { LibrariesQuery, MstreamImportsQuery, ScanJobsQuery } from '../../graphql/operations';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
+import { CountPipe } from '../../shared/format';
+import {
+  MstreamImportDraft,
+  MstreamImportForm,
+  MstreamSourceInput,
+  NewLibrary,
+} from '../../shared/mstream-import';
 
 type Step =
   | 'code'
   | 'welcome'
   | 'database'
   | 'admin'
+  | 'import'
   | 'libraries'
   | 'media'
   | 'ratings'
   | 'privacy'
-  | 'review';
+  | 'review'
+  | 'progress';
 
 interface DraftLibrary {
   name: string;
   folders: string[];
   visibleToAll: boolean;
+  /** The mStream library it was made for, and the folder chosen for it there. */
+  mstream?: { vpath: string; folder: string };
 }
+
+/** How often the last screen refreshes the first scans and the import. */
+const PROGRESS_MS = 1500;
 
 @Component({
   selector: 'app-setup-page',
@@ -60,8 +81,11 @@ interface DraftLibrary {
     HlmBadgeImports,
     HlmDialogImports,
     HlmSpinnerImports,
+    HlmProgressImports,
     TranslatePipe,
     FolderPicker,
+    MstreamImportForm,
+    CountPipe,
   ],
   providers: [provideIcons({ lucideCheck, lucideFolderPlus, lucidePlus, lucideTrash2, lucideX })],
   templateUrl: './setup.page.html',
@@ -71,6 +95,8 @@ export class SetupPage implements OnInit {
   private readonly setup = inject(SetupService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly gql = inject(Gql);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly status = signal<SetupStatus | null>(null);
   protected readonly step = signal<Step>('welcome');
@@ -84,6 +110,7 @@ export class SetupPage implements OnInit {
       'welcome',
       'database',
       'admin',
+      'import',
       'libraries',
       'media',
       'ratings',
@@ -107,8 +134,11 @@ export class SetupPage implements OnInit {
     { name: '', folders: [], visibleToAll: true },
   ]);
   protected shareStatistics: 'yes' | 'no' | null = null;
-  /** Opens the mStream import once the server is set up. */
-  protected importMstream = false;
+  /** Another server to bring music, users and their data from. */
+  protected migrateFrom: 'none' | 'mstream' = 'none';
+  protected readonly mstream = new MstreamImportDraft();
+  protected readonly analyzeMstream = (source: MstreamSourceInput) =>
+    this.setup.analyzeMstream(source);
   protected ffmpegPath = '';
   protected ratingMode: RatingMode = 'STARS';
   /** Off until the user turns each on: they contact other servers. */
@@ -137,6 +167,21 @@ export class SetupPage implements OnInit {
   protected readonly ffmpegDetected = signal<SetupFfmpegCheck | null>(null);
   /** Result of checking the path the user typed. */
   protected readonly ffmpegCheck = signal<SetupFfmpegCheck | null>(null);
+
+  // Last screen: the first scans and the import, once the server is set up
+  protected readonly scanJobs = signal<ScanJob[]>([]);
+  protected readonly libraryNames = signal<Record<string, string>>({});
+  protected readonly importJob = signal<MstreamImportJob | null>(null);
+  private importing = false;
+  private readonly progressLoaded = signal(false);
+  protected readonly finished = computed(
+    () =>
+      this.progressLoaded() &&
+      this.scanJobs().every((job) => job.status !== 'QUEUED' && job.status !== 'RUNNING') &&
+      (!this.importing ||
+        this.importJob()?.status === 'COMPLETED' ||
+        this.importJob()?.status === 'FAILED'),
+  );
 
   // Folder picker
   protected readonly pickingFor = signal<number | null>(null);
@@ -261,6 +306,58 @@ export class SetupPage implements OnInit {
     return code ? this.i18n.error(code) : null;
   }
 
+  /** The mStream libraries that come along, each with the folder of a new library it goes to. */
+  protected mstreamLibraries(): { vpath: string; folder: string }[] {
+    if (this.migrateFrom !== 'mstream') return [];
+    const folders = this.libraries().flatMap((library) => library.folders);
+    return this.mstream
+      .choices()
+      .filter((c) => c.target === NewLibrary && folders.includes(c.path.trim()))
+      .map((c) => ({ vpath: c.vpath, folder: c.path.trim() }));
+  }
+
+  /**
+   * Turns the mStream libraries chosen into libraries of the next step: they keep what the user changed there,
+   * those no longer chosen go, and a folder already in a library is not added again.
+   */
+  private mergeMstreamLibraries(): void {
+    const chosen =
+      this.migrateFrom === 'mstream'
+        ? this.mstream.choices().filter((c) => c.target === NewLibrary && c.path.trim())
+        : [];
+    this.libraries.update((libraries) => {
+      const kept = libraries
+        .filter((l) => !l.mstream || chosen.some((c) => c.vpath === l.mstream!.vpath))
+        .map((l) => {
+          const choice = l.mstream && chosen.find((c) => c.vpath === l.mstream!.vpath);
+          if (!choice || choice.path.trim() === l.mstream!.folder) return l;
+          const folder = choice.path.trim();
+          return {
+            ...l,
+            folders: [...l.folders.filter((f) => f !== l.mstream!.folder), folder],
+            mstream: { vpath: choice.vpath, folder },
+          };
+        });
+      const added = chosen
+        .filter(
+          (c) =>
+            !kept.some((l) => l.mstream?.vpath === c.vpath || l.folders.includes(c.path.trim())),
+        )
+        .map((c) => ({
+          name: c.name.trim(),
+          folders: [c.path.trim()],
+          // With their users, each sees the libraries they had in mStream.
+          visibleToAll: !this.mstream.importUsers,
+          mstream: { vpath: c.vpath, folder: c.path.trim() },
+        }));
+      const result = [
+        ...kept.filter((l) => l.mstream || l.name.trim() || l.folders.length > 0),
+        ...added,
+      ];
+      return result.length > 0 ? result : [{ name: '', folders: [], visibleToAll: true }];
+    });
+  }
+
   protected async finish(): Promise<void> {
     this.busy.set(true);
     this.error.set(null);
@@ -290,25 +387,78 @@ export class SetupPage implements OnInit {
         ffmpegPath: this.ffmpegPath.trim() || null,
         onlineServices: { ...this.onlineServices },
         ratingMode: this.ratingMode,
+        mstream:
+          this.migrateFrom === 'mstream' && this.mstream.analyzed
+            ? {
+                folder: this.mstream.analyzed.folder,
+                server: this.mstream.analyzed.server,
+                libraries: this.mstreamLibraries(),
+                importUsers: this.mstream.importUsers,
+              }
+            : null,
       });
 
       await this.setup.loadStatus();
       await this.auth.login(this.userName.trim(), this.password);
-      await this.router.navigateByUrl(this.importMstream ? '/mstream' : '/libraries');
+      this.importing = this.migrateFrom === 'mstream';
+      if (!this.importing && !this.libraries().some((library) => library.folders.length > 0)) {
+        await this.router.navigateByUrl('/libraries');
+        return;
+      }
+      this.step.set('progress');
+      await this.followProgress();
     } catch (error) {
       const apiError = ApiError.from(error);
       this.fieldErrors.set(apiError.fields);
       this.error.set(this.i18n.error(apiError.code));
       // Show the first step with a problem.
-      const step = (['database', 'admin', 'libraries', 'media'] as Step[]).find((s) =>
-        Object.keys(apiError.fields).some((field) =>
-          field.startsWith(s === 'media' ? 'ffmpegPath' : s),
-        ),
+      const prefixes: Partial<Record<Step, string>> = {
+        database: 'database',
+        admin: 'admin',
+        import: 'mstream',
+        libraries: 'libraries',
+        media: 'ffmpegPath',
+      };
+      const step = (Object.keys(prefixes) as Step[]).find((s) =>
+        Object.keys(apiError.fields).some((field) => field.startsWith(prefixes[s]!)),
       );
       if (step) this.step.set(step);
     } finally {
       this.busy.set(false);
     }
+  }
+
+  protected async openPanel(): Promise<void> {
+    await this.router.navigateByUrl('/libraries');
+  }
+
+  protected scanPercent(job: ScanJob): number | null {
+    const progress = job.progress;
+    if (!progress || progress.phase !== 'READING' || progress.filesToRead === 0) return null;
+    return Math.round((progress.filesRead / progress.filesToRead) * 100);
+  }
+
+  /** Follows the first scans and the import until they are over, or the user leaves. */
+  private async followProgress(): Promise<void> {
+    const libraries = (await this.gql.query(LibrariesQuery)).libraries;
+    this.libraryNames.set(Object.fromEntries(libraries.map((l) => [l.id, l.name])));
+    const refresh = async () => {
+      try {
+        const [scans, imports] = await Promise.all([
+          this.gql.query(ScanJobsQuery, { limit: 50 }),
+          this.importing ? this.gql.query(MstreamImportsQuery) : null,
+        ]);
+        this.scanJobs.set(scans.scanJobs);
+        this.importJob.set(imports?.mstreamImports[0] ?? null);
+        this.progressLoaded.set(true);
+      } catch {
+        // Retried on the next tick.
+      }
+      if (this.finished()) clearInterval(timer);
+    };
+    const timer = setInterval(() => void refresh(), PROGRESS_MS);
+    this.destroyRef.onDestroy(() => clearInterval(timer));
+    await refresh();
   }
 
   private async validate(step: Step): Promise<boolean> {
@@ -350,6 +500,19 @@ export class SetupPage implements OnInit {
           this.error.set(this.i18n.t('setup.admin.passwordsDiffer'));
           return false;
         }
+        return true;
+      case 'import':
+        if (this.migrateFrom === 'mstream') {
+          if (!this.mstream.analysis()) {
+            this.error.set(this.i18n.t('setup.import.analyzeFirst'));
+            return false;
+          }
+          if (!this.mstream.complete()) {
+            this.error.set(this.i18n.t('setup.import.incomplete'));
+            return false;
+          }
+        }
+        this.mergeMstreamLibraries();
         return true;
       case 'libraries':
         if (

@@ -59,6 +59,27 @@ GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr
 
 Symphonia's source code is available at https://github.com/pdeljanov/Symphonia, as the MPL-2.0 requires.
 
+## Native P2P library (`native/arcanist-p2p`, shipped with the server and in the mobile bindings)
+
+About 300 crates in all; `cargo metadata --manifest-path native/arcanist-p2p/Cargo.toml` lists each one with its
+license. All of them are permissive or MPL-2.0:
+
+| Component | License |
+|---|---|
+| iroh, iroh-base, iroh-relay, iroh-dns, noq (QUIC) and the other n0 crates | MIT OR Apache-2.0 |
+| tokio, rustls, hyper, the RustCrypto crates and most other dependencies | MIT / Apache-2.0 / MIT OR Apache-2.0 |
+| ring | Apache-2.0 AND ISC |
+| uniffi and its crates (mobile bindings only), attohttpc (port mapping) | MPL-2.0 |
+| webpki-roots (Mozilla's root certificates) | CDLA-Permissive-2.0 |
+| ICU4X crates (`icu_*`, `zerovec`, `tinystr`…) | Unicode-3.0 |
+| curve25519-dalek, ed25519-dalek, subtle, sha1_smol | BSD-3-Clause |
+| rustls-webpki, untrusted | ISC |
+| spez | BSD-2-Clause |
+| foldhash | Zlib |
+| blake3, constant_time_eq, ryu, tinyvec, num_enum | permissive alternatives including Apache-2.0 |
+
+The source code of uniffi (https://github.com/mozilla/uniffi-rs) and attohttpc (https://github.com/sbstp/attohttpc) is available there, as the MPL-2.0 requires.
+
 ## Windows app (`src/Arcanist.Tray`)
 
 | Component | License |

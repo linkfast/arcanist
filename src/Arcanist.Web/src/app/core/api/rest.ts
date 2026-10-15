@@ -10,7 +10,8 @@ export type Permission =
   | 'MANAGE_SETTINGS'
   | 'RUN_SCANS'
   | 'DOWNLOAD'
-  | 'VIEW_ALL_STATS';
+  | 'VIEW_ALL_STATS'
+  | 'UPLOAD';
 export type DatabaseProvider = 'SQLITE' | 'POSTGRES';
 
 export interface UserAccount {

@@ -218,6 +218,68 @@ public sealed class ListeningService(
             next);
     }
 
+    public const int MaxImportEntries = 1000;
+
+    /// <summary>
+    /// Brings ratings and play counts an app kept on its own. Ratings only fill gaps (what the user rated here
+    /// stays); play counts keep the highest, so importing twice changes nothing. Plays add no history.
+    /// </summary>
+    public async Task<ListeningImportResult> ImportAsync(ImportListeningInput input, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var importedRatings = input.Ratings ?? [];
+        var importedPlays = input.PlayCounts ?? [];
+        if (importedRatings.Count > MaxImportEntries)
+            throw ArcanistException.Field("ratings", ErrorCodes.TooMany);
+        if (importedPlays.Count > MaxImportEntries)
+            throw ArcanistException.Field("playCounts", ErrorCodes.TooMany);
+        if (importedRatings.Any(r => r.Rating is < 1 or > 5))
+            throw ArcanistException.Field("ratings", ErrorCodes.InvalidFormat);
+        if (importedPlays.Any(p => p.PlayCount < 0))
+            throw ArcanistException.Field("playCounts", ErrorCodes.InvalidFormat);
+
+        var ids = importedRatings.Select(r => r.TrackId).Concat(importedPlays.Select(p => p.TrackId)).Distinct().ToList();
+        var visible = (await catalog.Visible(access).Where(t => ids.Contains(t.Id)).Select(t => t.Id).ToListAsync(cancellationToken)).ToHashSet();
+        var ignored = importedRatings.Count(r => !visible.Contains(r.TrackId)) + importedPlays.Count(p => !visible.Contains(p.TrackId));
+
+        var rated = (await db.TrackRatings.Where(r => r.UserId == access.UserId && ids.Contains(r.TrackId)).Select(r => r.TrackId).ToListAsync(cancellationToken)).ToHashSet();
+        var added = 0;
+        foreach (var rating in importedRatings.Where(r => visible.Contains(r.TrackId)).DistinctBy(r => r.TrackId))
+        {
+            if (!rated.Add(rating.TrackId))
+                continue;
+            db.TrackRatings.Add(new TrackRating { UserId = access.UserId, TrackId = rating.TrackId, Rating = rating.Rating, RatedAt = Now() });
+            added++;
+        }
+
+        var stats = await db.TrackPlayStats.Where(p => p.UserId == access.UserId && ids.Contains(p.TrackId)).ToDictionaryAsync(p => p.TrackId, cancellationToken);
+        var raised = 0;
+        foreach (var plays in importedPlays.Where(p => visible.Contains(p.TrackId)).GroupBy(p => p.TrackId))
+        {
+            var count = plays.Max(p => p.PlayCount);
+            var last = plays.Max(p => p.LastPlayedAt);
+            if (!stats.TryGetValue(plays.Key, out var existing))
+            {
+                if (count == 0)
+                    continue;
+                db.TrackPlayStats.Add(new TrackPlayStats { UserId = access.UserId, TrackId = plays.Key, PlayCount = count, LastPlayedAt = last });
+                raised++;
+                continue;
+            }
+
+            if (last > existing.LastPlayedAt || existing.LastPlayedAt is null && last is not null)
+                existing.LastPlayedAt = last;
+            if (count > existing.PlayCount)
+            {
+                existing.PlayCount = count;
+                raised++;
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return new ListeningImportResult(added, raised, ignored);
+    }
+
     private async Task EnsureVisibleAsync(UserAccess access, Guid trackId, CancellationToken cancellationToken)
     {
         if (!await catalog.Visible(access).AnyAsync(t => t.Id == trackId, cancellationToken))

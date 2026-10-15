@@ -693,6 +693,37 @@
         }
       }
     },
+    "/rest/v1/me/listening/import": {
+      "post": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Brings ratings and play counts an app kept on its own (at most 1000 of each per call). Ratings only fill gaps; play counts keep the highest.",
+        "operationId": "ImportListening",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportListeningInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListeningImportResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/me/plays": {
       "get": {
         "tags": [
@@ -1931,6 +1962,66 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{id}/uploads": {
+      "post": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Adds an audio file (the request body, \u0060application/octet-stream\u0060; its name in \u0060fileName\u0060) to a library the user can access, placed with the library\u0027s template and never overwriting. 201 when it entered the library (catalogued by a scan shortly after the last upload), 200 when the library already had that audio. Requires UPLOAD.",
+        "operationId": "UploadToLibrary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fileName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
           }
         }
       }
@@ -5300,7 +5391,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Performers and album artists with music the user can play, by name. Pages of \u0060first\u0060 items (default 50, at most 500) after the \u0060after\u0060 cursor.",
+        "summary": "Performers and album artists with music the user can play, by name; optionally only those with music in a library. Pages of \u0060first\u0060 items (default 50, at most 500) after the \u0060after\u0060 cursor.",
         "operationId": "Artists",
         "parameters": [
           {
@@ -5327,6 +5418,14 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -5380,7 +5479,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Albums with music the user can play, by title; optionally only those of an artist.",
+        "summary": "Albums with music the user can play, by title; optionally only those of an artist, or with music in a library.",
         "operationId": "Albums",
         "parameters": [
           {
@@ -5415,6 +5514,14 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -5468,7 +5575,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Tracks the user can play, by title. With albumId, all of the album\u0027s tracks in disc and track order, without paging.",
+        "summary": "Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album\u0027s tracks in disc and track order, without paging.",
         "operationId": "Tracks",
         "parameters": [
           {
@@ -5512,6 +5619,14 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -5521,6 +5636,40 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrackPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/match": {
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Finds the server\u0027s tracks for an app\u0027s own (at most 1000 per call): by audio hash, MusicBrainz recording, AcoustID, and last by title, artist and album.",
+        "operationId": "MatchTracks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackMatch"
+                  }
                 }
               }
             }
@@ -5945,6 +6094,14 @@
             "type": "string"
           }
         }
+      },
+      "ApiFeature": {
+        "enum": [
+          "LIBRARY_FILTER",
+          "UPLOADS",
+          "TRACK_MATCHING",
+          "LISTENING_IMPORT"
+        ]
       },
       "AppPassword": {
         "required": [
@@ -7973,6 +8130,56 @@
         "type": "string",
         "format": "binary"
       },
+      "ImportedPlayCount": {
+        "required": [
+          "trackId",
+          "playCount",
+          "lastPlayedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastPlayedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ImportedRating": {
+        "required": [
+          "trackId",
+          "rating"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ImportFileDetails": {
         "required": [
           "title",
@@ -8169,6 +8376,33 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ImportListeningInput": {
+        "required": [
+          "ratings",
+          "playCounts"
+        ],
+        "type": "object",
+        "properties": {
+          "ratings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImportedRating"
+            }
+          },
+          "playCounts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImportedPlayCount"
+            }
           }
         }
       },
@@ -8736,6 +8970,40 @@
           }
         }
       },
+      "ListeningImportResult": {
+        "required": [
+          "ratingsAdded",
+          "playCountsRaised",
+          "ignored"
+        ],
+        "type": "object",
+        "properties": {
+          "ratingsAdded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playCountsRaised": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ignored": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ListeningStats": {
         "required": [
           "period",
@@ -8962,6 +9230,28 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "MatchTracksInput": {
+        "required": [
+          "candidates",
+          "libraryId"
+        ],
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackCandidate"
+            }
+          },
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10495,7 +10785,8 @@
           "MANAGE_SETTINGS",
           "RUN_SCANS",
           "DOWNLOAD",
-          "VIEW_ALL_STATS"
+          "VIEW_ALL_STATS",
+          "UPLOAD"
         ]
       },
       "PlannedMove": {
@@ -11421,7 +11712,8 @@
           "capabilities",
           "cloudTier",
           "transcodingFormats",
-          "ratingMode"
+          "ratingMode",
+          "features"
         ],
         "type": "object",
         "properties": {
@@ -11465,6 +11757,12 @@
           },
           "ratingMode": {
             "$ref": "#/components/schemas/RatingMode"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiFeature"
+            }
           }
         }
       },
@@ -12203,7 +12501,8 @@
           "rating",
           "starred",
           "playCount",
-          "lastPlayedAt"
+          "lastPlayedAt",
+          "libraryIds"
         ],
         "type": "object",
         "properties": {
@@ -12323,6 +12622,97 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "libraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "TrackCandidate": {
+        "required": [
+          "key",
+          "contentHash",
+          "acoustId",
+          "musicBrainzRecordingId",
+          "title",
+          "artist",
+          "album",
+          "discNumber",
+          "trackNumber",
+          "durationMs"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "contentHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "acoustId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "musicBrainzRecordingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "discNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trackNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -12474,6 +12864,45 @@
             "type": "boolean"
           }
         }
+      },
+      "TrackMatch": {
+        "required": [
+          "key",
+          "trackId",
+          "matchedBy"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "matchedBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TrackMatchKind"
+              }
+            ]
+          }
+        }
+      },
+      "TrackMatchKind": {
+        "enum": [
+          "CONTENT_HASH",
+          "MUSIC_BRAINZ",
+          "ACOUST_ID",
+          "TAGS",
+          null
+        ]
       },
       "TrackPage": {
         "required": [
@@ -12888,6 +13317,42 @@
             "type": "boolean"
           }
         }
+      },
+      "UploadResult": {
+        "required": [
+          "status",
+          "contentHash",
+          "path",
+          "trackId"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/UploadStatus"
+          },
+          "contentHash": {
+            "type": "string"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "UploadStatus": {
+        "enum": [
+          "IMPORTED",
+          "DUPLICATE"
+        ]
       },
       "UserAccount": {
         "required": [

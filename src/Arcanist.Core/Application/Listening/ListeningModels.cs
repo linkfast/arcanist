@@ -11,6 +11,19 @@ namespace Arcanist.Core.Application.Listening;
 /// <param name="PlayedAt">When playback started; now when omitted. Plays up to 14 days old are accepted, so
 /// players can report what was played offline.</param>
 /// <param name="Client">The player's name, e.g. "Ultimate Web Player".</param>
+/// <summary>Ratings and play counts an app kept on its own, brought to the server (migrating its library).</summary>
+public sealed record ImportListeningInput(IReadOnlyList<ImportedRating>? Ratings, IReadOnlyList<ImportedPlayCount>? PlayCounts);
+
+/// <param name="Rating">1–5; a star is 5.</param>
+public sealed record ImportedRating(Guid TrackId, int Rating);
+
+public sealed record ImportedPlayCount(Guid TrackId, int PlayCount, DateTime? LastPlayedAt);
+
+/// <param name="RatingsAdded">Ratings set on tracks the user had not rated (those they had keep theirs).</param>
+/// <param name="PlayCountsRaised">Tracks whose play count went up to the imported one.</param>
+/// <param name="Ignored">Entries for tracks the user cannot play.</param>
+public sealed record ListeningImportResult(int RatingsAdded, int PlayCountsRaised, int Ignored);
+
 public sealed record RecordPlayInput(Guid TrackId, int PlayedMs, DateTime? PlayedAt, string? Client);
 
 /// <param name="Counted">It counts as a play: at least 30 seconds, and half the track or four minutes.</param>

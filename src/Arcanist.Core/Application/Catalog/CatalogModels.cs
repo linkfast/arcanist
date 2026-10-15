@@ -91,6 +91,7 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// is reported.</param>
 /// <param name="Starred">The user starred it (rated it 5).</param>
 /// <param name="PlayCount">How many times the user played it.</param>
+/// <param name="LibraryIds">The libraries the user can access with a copy of it.</param>
 public sealed record Track(
     Guid Id,
     string Title,
@@ -110,7 +111,8 @@ public sealed record Track(
     int? Rating,
     bool Starred,
     int PlayCount,
-    DateTime? LastPlayedAt);
+    DateTime? LastPlayedAt,
+    IReadOnlyList<Guid> LibraryIds);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);

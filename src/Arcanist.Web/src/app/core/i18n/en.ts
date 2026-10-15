@@ -516,6 +516,7 @@ export const en: Dictionary = {
     RUN_SCANS: 'Scan',
     DOWNLOAD: 'Download',
     VIEW_ALL_STATS: 'View all statistics',
+    UPLOAD: 'Upload music',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Create, edit and delete the libraries they can access.',
@@ -524,6 +525,7 @@ export const en: Dictionary = {
     RUN_SCANS: 'Start and cancel scans.',
     DOWNLOAD: 'Download the original files.',
     VIEW_ALL_STATS: "See every user's statistics.",
+    UPLOAD: 'Add music to the libraries they can access, from apps (for example, migrating Ultimate Desktop’s library).',
   },
   account: {
     appPasswords: {

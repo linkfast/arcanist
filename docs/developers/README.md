@@ -18,7 +18,8 @@ Every GraphQL query and mutation has a REST operation whose `operationId` is the
 ## Discovering a server
 
 `GET /rest/v1/server-info` (or the `serverInfo` query) works without authentication and returns the version, API
-version, whether setup is complete, the Ultimate Cloud features enabled and `sourceUrl` (where to get the server's
+version, whether setup is complete, the Ultimate Cloud features enabled, `features` (parts of the API that older servers lack:
+`LIBRARY_FILTER`, `UPLOADS`, `TRACK_MATCHING`, `LISTENING_IMPORT`) and `sourceUrl` (where to get the server's
 source code, as the AGPL requires). Until setup is complete every other call answers `503` with code
 `setup_required`; send the user to `/admin/setup`.
 
@@ -80,6 +81,10 @@ query {
 ```
 
 `tracks(albumId: …)` returns the whole album in disc and track order without paging.
+
+`libraries` lists the libraries the user can use. To show them apart, pass `libraryId` to `artists`, `albums` or
+`tracks` (an album's counts are then those of that library); `Track.libraryIds` says which of the user's libraries
+have a copy of a track. A library the user cannot use answers `not_found`.
 
 What a user sees depends on their library access: a track appears only while one of its files is present in a
 library they can use, and albums and artists appear through such tracks. Anything else answers `not_found`.
@@ -202,6 +207,26 @@ days start at their midnight.
 `playlistEntries(playlistId, after, first)` pages through the tracks in order. Entries, not tracks, are removed and
 moved (`removePlaylistEntries`, `movePlaylistEntries`), since a track can appear twice. Tracks from libraries the user
 cannot access stay in the playlist but are not listed for them. `artworkIds` has up to four covers for a collage.
+
+## Apps with a library of their own
+
+An app that keeps its own library (Ultimate Desktop, for one) can use the server next to it, or move to it:
+
+- **Matching:** `matchTracks` / `POST /rest/v1/tracks/match` takes up to 1000 `candidates`, each with the app's own
+  `key` and what it knows (`contentHash`, `acoustId`, `musicBrainzRecordingId`, `title`, `artist`, `album`,
+  `discNumber`, `trackNumber`, `durationMs`), and answers each key with the server's `trackId` (or null) and
+  `matchedBy`: the same audio first, then the MusicBrainz recording, the AcoustID, and last the same title, artist and
+  album (with the duration within three seconds). `libraryId` limits it to one library.
+- **Uploading:** `POST /rest/v1/libraries/{id}/uploads?fileName=…` with the file as the body
+  (`application/octet-stream`, up to 2 GB) adds it to a library the user can use. It needs the `UPLOAD` permission and
+  a library folder the server can write to (`read_only` otherwise). The file is placed with the library's folder
+  template and never overwrites anything: `201` with `status: IMPORTED`, its `contentHash` and `path`, or `200` with
+  `status: DUPLICATE` when the library already has that audio (with its `trackId` once catalogued). The library is
+  scanned shortly after the last upload of a batch; then `matchTracks` finds the new tracks by `contentHash`.
+- **Ratings and play counts:** `importListening` / `POST /rest/v1/me/listening/import` brings up to 1000 `ratings`
+  (1–5; a star is 5) and `playCounts` (`playCount`, `lastPlayedAt`) per call. Ratings only fill gaps and play counts
+  keep the highest, so sending them twice changes nothing. Unknown tracks are counted as `ignored`.
+- **Playlists:** `createPlaylist` with the matched `trackIds` (up to 10,000 per playlist).
 
 ## Home page, mixes and artist pages
 

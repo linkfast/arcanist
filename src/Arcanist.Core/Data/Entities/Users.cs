@@ -18,6 +18,7 @@ public enum Permissions : long
     RunScans = 1 << 3,
     Download = 1 << 4,
     ViewAllStats = 1 << 5,
+    Upload = 1 << 6,
 }
 
 public sealed class User : Entity

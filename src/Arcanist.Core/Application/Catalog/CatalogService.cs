@@ -19,9 +19,10 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 500;
 
-    public async Task<ArtistPage> ArtistsAsync(string? search, string? after, int? first, CancellationToken cancellationToken)
+    /// <param name="libraryId">Only artists with music in this library.</param>
+    public async Task<ArtistPage> ArtistsAsync(string? search, string? after, int? first, CancellationToken cancellationToken, Guid? libraryId = null)
     {
-        var artists = Matching(VisibleArtists(guard.Authenticated()), SearchKind.Artists, search);
+        var artists = Matching(VisibleArtists(VisibleTracks(guard.Authenticated(), libraryId)), SearchKind.Artists, search);
 
         var (page, next, total) = await Keyset.PageAsync(artists, a => a.NormalizedName, after, first, cancellationToken);
         return new ArtistPage(page.Select(ToModel).ToList(), next, total);
@@ -40,9 +41,10 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
     }
 
     /// <param name="artistId">Albums by this album artist or with tracks performed by them.</param>
-    public async Task<AlbumPage> AlbumsAsync(string? search, Guid? artistId, string? after, int? first, CancellationToken cancellationToken)
+    /// <param name="libraryId">Only albums with music in this library (their track counts are those of the library).</param>
+    public async Task<AlbumPage> AlbumsAsync(string? search, Guid? artistId, string? after, int? first, CancellationToken cancellationToken, Guid? libraryId = null)
     {
-        var visible = VisibleTracks(guard.Authenticated());
+        var visible = VisibleTracks(guard.Authenticated(), libraryId);
         var albums = db.Albums.Where(a => visible.Any(t => t.AlbumId == a.Id));
 
         if (artistId is { } artist)
@@ -70,11 +72,12 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
     }
 
     /// <param name="albumId">When set, all of the album's tracks are returned at once, in disc and track order.</param>
+    /// <param name="libraryId">Only tracks with a copy in this library.</param>
     public async Task<TrackPage> TracksAsync(
-        string? search, Guid? albumId, Guid? artistId, string? after, int? first, CancellationToken cancellationToken)
+        string? search, Guid? albumId, Guid? artistId, string? after, int? first, CancellationToken cancellationToken, Guid? libraryId = null)
     {
         var access = guard.Authenticated();
-        var tracks = VisibleTracks(access);
+        var tracks = VisibleTracks(access, libraryId);
 
         if (artistId is { } artist)
             tracks = tracks.Where(t => t.Artists.Any(ta => ta.ArtistId == artist));
@@ -114,9 +117,10 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
     /// Artists <paramref name="access"/> can see: performers and album artists of visible tracks. Composers and
     /// other credits only appear on tracks.
     /// </summary>
-    internal IQueryable<ArtistEntity> VisibleArtists(UserAccess access)
+    internal IQueryable<ArtistEntity> VisibleArtists(UserAccess access) => VisibleArtists(VisibleTracks(access));
+
+    private IQueryable<ArtistEntity> VisibleArtists(IQueryable<TrackEntity> visible)
     {
-        var visible = VisibleTracks(access);
         var visibleAlbums = db.Albums.Where(a => visible.Any(t => t.AlbumId == a.Id));
         return db.Artists.Where(a =>
             visibleAlbums.Any(al => al.AlbumArtistId == a.Id)
@@ -133,7 +137,7 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
     }
 
     /// <summary>Tracks <paramref name="access"/> can play, for queries built elsewhere.</summary>
-    internal IQueryable<TrackEntity> Visible(UserAccess access) => VisibleTracks(access);
+    internal IQueryable<TrackEntity> Visible(UserAccess access, Guid? libraryId = null) => VisibleTracks(access, libraryId);
 
     /// <summary>Turns track rows <paramref name="access"/> can see into contract tracks, in the same order.</summary>
     internal Task<IReadOnlyList<Track>> ToModelsAsync(IReadOnlyList<TrackEntity> tracks, CancellationToken cancellationToken) =>
@@ -163,9 +167,17 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
         return files.Where(f => libraries.Contains(f.LibrarySource.LibraryId));
     }
 
-    private IQueryable<TrackEntity> VisibleTracks(UserAccess access)
+    private IQueryable<TrackEntity> VisibleTracks(UserAccess access, Guid? libraryId = null)
     {
         var files = VisibleFiles(access);
+        if (libraryId is { } library)
+        {
+            // A library the caller cannot use does not exist for them.
+            if (!access.CanAccessLibrary(library) || !db.Libraries.Any(l => l.Id == library))
+                throw new ArcanistException.NotFound();
+            files = files.Where(f => f.LibrarySource.LibraryId == library);
+        }
+
         return db.Tracks.Where(t => files.Any(f => f.TrackId == t.Id));
     }
 
@@ -214,6 +226,9 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
 
         var visibleFiles = await VisibleFiles(access).AsNoTracking().Where(f => ids.Contains(f.TrackId)).ToListAsync(cancellationToken);
         var files = visibleFiles.ToLookup(f => f.TrackId);
+        var sourceIds = visibleFiles.Select(f => f.LibrarySourceId).Distinct().ToList();
+        var libraryOf = await db.LibrarySources.AsNoTracking().Where(s => sourceIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.LibraryId, cancellationToken);
 
         var withLyrics = (await db.Lyrics.AsNoTracking().Where(l => ids.Contains(l.TrackId)).Select(l => l.TrackId).ToListAsync(cancellationToken)).ToHashSet();
 
@@ -263,7 +278,8 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
                 userRatings.TryGetValue(t.Id, out var rating) && (!singleStar || rating == 5) ? rating : null,
                 rating == 5,
                 userPlays.TryGetValue(t.Id, out var plays) ? plays.PlayCount : 0,
-                plays?.LastPlayedAt);
+                plays?.LastPlayedAt,
+                copies.Select(f => libraryOf[f.LibrarySourceId]).Distinct().ToList());
         }).ToList();
     }
 

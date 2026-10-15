@@ -3,14 +3,16 @@ type Query {
   analysisProgress: AnalysisProgress!
   "The user's app passwords, for Subsonic and mStream apps; their secrets are never shown again."
   appPasswords: [AppPassword!]!
-  "Performers and album artists with music the user can play, by name. Pages of `first` items (default 50, at most 500) after the `after` cursor."
-  artists(search: String, after: String, first: Int): ArtistPage!
+  "Performers and album artists with music the user can play, by name; optionally only those with music in a library. Pages of `first` items (default 50, at most 500) after the `after` cursor."
+  artists(search: String, after: String, first: Int, libraryId: ID): ArtistPage!
   artist(id: ID!): Artist!
-  "Albums with music the user can play, by title; optionally only those of an artist."
-  albums(search: String, artistId: ID, after: String, first: Int): AlbumPage!
+  "Albums with music the user can play, by title; optionally only those of an artist, or with music in a library."
+  albums(search: String, artistId: ID, after: String, first: Int, libraryId: ID): AlbumPage!
   album(id: ID!): Album!
-  "Tracks the user can play, by title. With albumId, all of the album's tracks in disc and track order, without paging."
-  tracks(search: String, albumId: ID, artistId: ID, after: String, first: Int): TrackPage!
+  "Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album's tracks in disc and track order, without paging."
+  tracks(search: String, albumId: ID, artistId: ID, after: String, first: Int, libraryId: ID): TrackPage!
+  "Finds the server's tracks for an app's own (at most 1000 per call): by audio hash, MusicBrainz recording, AcoustID, and last by title, artist and album."
+  matchTracks(input: MatchTracksInput!): [TrackMatch!]!
   track(id: ID!): Track!
   "A track's lyrics, with synchronized lines when known. not_found when it has none."
   trackLyrics(trackId: ID!): TrackLyrics!
@@ -210,6 +212,7 @@ type Track {
   starred: Boolean!
   playCount: Int!
   lastPlayedAt: DateTime
+  libraryIds: [ID!]!
 }
 
 type AlbumReference {
@@ -268,6 +271,37 @@ type Loudness {
   trackGain: Float!
   albumGain: Float
   albumPeak: Float
+}
+
+type TrackMatch {
+  key: String!
+  trackId: ID
+  matchedBy: TrackMatchKind
+}
+
+enum TrackMatchKind {
+  CONTENT_HASH
+  MUSIC_BRAINZ
+  ACOUST_ID
+  TAGS
+}
+
+input MatchTracksInput {
+  candidates: [TrackCandidate!]!
+  libraryId: ID
+}
+
+input TrackCandidate {
+  key: String!
+  contentHash: String
+  acoustId: String
+  musicBrainzRecordingId: ID
+  title: String
+  artist: String
+  album: String
+  discNumber: Int
+  trackNumber: Int
+  durationMs: Int
 }
 
 type TrackLyrics {
@@ -1276,11 +1310,19 @@ type ServerInfo {
   cloudTier: CloudTier!
   transcodingFormats: [TranscodeFormat!]!
   ratingMode: RatingMode!
+  features: [ApiFeature!]!
 }
 
 enum RatingMode {
   STARS
   STAR
+}
+
+enum ApiFeature {
+  LIBRARY_FILTER
+  UPLOADS
+  TRACK_MATCHING
+  LISTENING_IMPORT
 }
 
 type UserAccount {
@@ -1307,6 +1349,7 @@ enum Permission {
   RUN_SCANS
   DOWNLOAD
   VIEW_ALL_STATS
+  UPLOAD
 }
 
 type Session {
@@ -1377,6 +1420,8 @@ type Mutation {
   createServerDirectory(input: CreateServerDirectoryInput!): ServerDirectory!
   "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES."
   removeLibrarySource(id: ID!): Library!
+  "Brings ratings and play counts an app kept on its own (at most 1000 of each per call). Ratings only fill gaps; play counts keep the highest."
+  importListening(input: ImportListeningInput!): ListeningImportResult!
   "Rates a track 1–5 for the user, or clears the rating with null. With the single-star rating mode only 5 is accepted."
   rateTrack(trackId: ID!, rating: Int): Track!
   "Stars a track for the user (rates it 5) or unstars it (clears a 5). Works with both rating modes."
@@ -1573,6 +1618,28 @@ input UpdateLibraryInput {
 input CreateServerDirectoryInput {
   parent: String!
   name: String!
+}
+
+type ListeningImportResult {
+  ratingsAdded: Int!
+  playCountsRaised: Int!
+  ignored: Int!
+}
+
+input ImportListeningInput {
+  ratings: [ImportedRating!]
+  playCounts: [ImportedPlayCount!]
+}
+
+input ImportedRating {
+  trackId: ID!
+  rating: Int!
+}
+
+input ImportedPlayCount {
+  trackId: ID!
+  playCount: Int!
+  lastPlayedAt: DateTime
 }
 
 type RecordedPlay {

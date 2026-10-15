@@ -33,6 +33,11 @@ public sealed partial class Query
 
 public sealed partial class Mutation
 {
+    [Name("importListening")]
+    [Description("Brings ratings and play counts an app kept on its own (at most 1000 of each per call). Ratings only fill gaps; play counts keep the highest.")]
+    public static Task<ListeningImportResult> ImportListening(ImportListeningInput input, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
+        listening.ImportAsync(input, cancellationToken);
+
     [Name("rateTrack")]
     [Description("Rates a track 1–5 for the user, or clears the rating with null. With the single-star rating mode only 5 is accepted.")]
     public static Task<Track> RateTrack([Id] Guid trackId, int? rating, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>

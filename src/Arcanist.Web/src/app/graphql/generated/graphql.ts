@@ -347,6 +347,7 @@ export type Permission =
   | 'MANAGE_SETTINGS'
   | 'MANAGE_USERS'
   | 'RUN_SCANS'
+  | 'UPLOAD'
   | 'VIEW_ALL_STATS';
 
 export type PlayOnDlnaRendererInput = {

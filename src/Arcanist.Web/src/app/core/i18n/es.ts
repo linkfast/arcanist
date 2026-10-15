@@ -522,6 +522,7 @@ export const es: Dictionary = {
     RUN_SCANS: 'Escanear',
     DOWNLOAD: 'Descargar',
     VIEW_ALL_STATS: 'Ver todas las estadísticas',
+    UPLOAD: 'Subir música',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Crear, editar y eliminar las bibliotecas a las que tiene acceso.',
@@ -530,6 +531,7 @@ export const es: Dictionary = {
     RUN_SCANS: 'Lanzar y cancelar escaneos.',
     DOWNLOAD: 'Descargar los archivos originales.',
     VIEW_ALL_STATS: 'Ver las estadísticas de todos los usuarios.',
+    UPLOAD: 'Añadir música a las bibliotecas a las que tiene acceso, desde las apps (por ejemplo, al migrar la biblioteca de Ultimate Desktop).',
   },
   account: {
     appPasswords: {

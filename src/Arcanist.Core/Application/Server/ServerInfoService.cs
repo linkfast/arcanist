@@ -24,6 +24,7 @@ public sealed class ServerOptions
 /// <param name="Capabilities">Ultimate Cloud features currently enabled; local features are always available.</param>
 /// <param name="TranscodingFormats">Formats the stream endpoint can convert to (none without ffmpeg).</param>
 /// <param name="RatingMode">How users rate tracks here: show five stars, or a single star.</param>
+/// <param name="Features">Parts of the API this version has, for clients that also talk to older servers.</param>
 public sealed record ServerInfo(
     string Name,
     string Version,
@@ -33,7 +34,24 @@ public sealed record ServerInfo(
     IReadOnlyList<Capability> Capabilities,
     CloudTier CloudTier,
     IReadOnlyList<Core.Media.TranscodeFormat> TranscodingFormats,
-    Data.Entities.RatingMode RatingMode);
+    Data.Entities.RatingMode RatingMode,
+    IReadOnlyList<ApiFeature> Features);
+
+/// <summary>A part of the API that clients may need to know a server has (older versions lack it).</summary>
+public enum ApiFeature
+{
+    /// <summary><c>libraryId</c> on tracks, albums and artists, and <c>Track.libraryIds</c>.</summary>
+    LibraryFilter,
+
+    /// <summary>Uploading files to a library (<c>POST /rest/v1/libraries/{id}/uploads</c>, permission UPLOAD).</summary>
+    Uploads,
+
+    /// <summary><c>matchTracks</c>: finding the server's tracks for an app's own.</summary>
+    TrackMatching,
+
+    /// <summary><c>importListening</c>: bringing an app's ratings and play counts.</summary>
+    ListeningImport,
+}
 
 public sealed class ServerInfoService(
     ICapabilityService capabilities,
@@ -61,5 +79,6 @@ public sealed class ServerInfoService(
         Enum.GetValues<Capability>().Where(capabilities.IsEnabled).ToList(),
         cloudLink.Tier,
         transcoder.Formats(ffmpeg.Current),
-        ratings.Current);
+        ratings.Current,
+        Enum.GetValues<ApiFeature>());
 }

@@ -45,6 +45,7 @@ const allPermissions: Permission[] = [
   'RUN_SCANS',
   'DOWNLOAD',
   'VIEW_ALL_STATS',
+  'UPLOAD',
 ];
 
 interface UserForm {

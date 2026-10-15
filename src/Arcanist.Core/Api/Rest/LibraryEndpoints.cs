@@ -25,6 +25,20 @@ public static class LibraryEndpoints
             .WithSummary("Requires MANAGE_LIBRARIES.")
             .Produces<Library>(StatusCodes.Status201Created);
 
+        libraries.MapPost("/{id:guid}/uploads", async (Guid id, string fileName, HttpContext context, UploadService service,
+                Microsoft.Extensions.Options.IOptionsMonitor<UploadOptions> options, CancellationToken ct) =>
+            {
+                if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+                    limit.MaxRequestBodySize = options.CurrentValue.MaxBytes;
+                var result = await service.UploadAsync(id, fileName, context.Request.Body, ct);
+                return result.Status == UploadStatus.Imported ? Results.Created((string?)null, result) : Results.Ok(result);
+            })
+            .WithName("UploadToLibrary")
+            .WithSummary("Adds an audio file (the request body, `application/octet-stream`; its name in `fileName`) to a library the user can access, placed with the library's template and never overwriting. 201 when it entered the library (catalogued by a scan shortly after the last upload), 200 when the library already had that audio. Requires UPLOAD.")
+            .Accepts<Stream>("application/octet-stream")
+            .Produces<UploadResult>(StatusCodes.Status201Created)
+            .Produces<UploadResult>();
+
         libraries.MapPost("/s3/test", (S3ConnectionInput input, S3LibraryService service, CancellationToken ct) => service.TestAsync(input, ct))
             .WithName("TestS3Connection")
             .WithSummary("Checks that an S3 bucket answers with those keys, and how much music it holds. Needs the Cloud plan. Administrators only.");

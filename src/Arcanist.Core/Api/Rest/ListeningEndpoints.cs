@@ -38,6 +38,11 @@ public static class ListeningEndpoints
             .WithName("RecordPlay")
             .WithSummary("Reports that the user listened to a track. The server decides whether it counts as a play (30 seconds, and half the track or four minutes) or a skip.");
 
+        rest.MapPost("/me/listening/import", (ImportListeningInput input, ListeningService service, CancellationToken ct) => service.ImportAsync(input, ct))
+            .WithTags("Listening")
+            .WithName("ImportListening")
+            .WithSummary("Brings ratings and play counts an app kept on its own (at most 1000 of each per call). Ratings only fill gaps; play counts keep the highest.");
+
         rest.MapGet("/me/plays", (string? after, int? first, ListeningService service, CancellationToken ct) => service.HistoryAsync(after, first, ct))
             .WithTags("Listening")
             .WithName("PlayHistory")

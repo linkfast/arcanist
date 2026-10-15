@@ -14,6 +14,9 @@ public enum Permission
     RunScans,
     Download,
     ViewAllStats,
+
+    /// <summary>Add music to the libraries the user can access (uploads, and migrating an app's library).</summary>
+    Upload,
 }
 
 /// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed.</param>
@@ -76,6 +79,7 @@ public static class PermissionMapping
         Permission.RunScans => Permissions.RunScans,
         Permission.Download => Permissions.Download,
         Permission.ViewAllStats => Permissions.ViewAllStats,
+        Permission.Upload => Permissions.Upload,
         _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null),
     };
 

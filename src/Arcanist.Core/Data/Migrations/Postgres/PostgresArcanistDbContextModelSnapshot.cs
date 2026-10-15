@@ -285,6 +285,13 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<string>("LibraryPath")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid?>("LibrarySourceId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
@@ -292,8 +299,18 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Upload")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UploadedTrackId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.HasKey("Id");
 
@@ -528,6 +545,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsRequired()
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
+
+                    b.Property<bool>("UploadToCloud")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

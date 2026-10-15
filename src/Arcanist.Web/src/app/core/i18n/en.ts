@@ -589,6 +589,10 @@ export const en: Dictionary = {
       convertsTo: 'converts to {format}',
       copies: 'copies (keeps the originals)',
       cloudDrop: 'Cloud Drop',
+      uploadToCloud: 'Upload what gets identified to Ultimate Cloud',
+      uploadToCloudHelp:
+        'Once a song brought from Cloud Drop is in the library and identified (AcoustID or MusicBrainz, in Settings > Online services), it is uploaded to the linked account’s library with Arcanist’s description. What is not identified is not uploaded.',
+      uploads: 'uploads what is identified to Ultimate Cloud',
       kind: 'Source',
       kinds: {
         FOLDER: 'A folder of the server',

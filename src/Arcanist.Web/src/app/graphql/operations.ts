@@ -532,6 +532,7 @@ export const DropFolderFields = graphql(`
     convertLossy
     mode
     kind
+    uploadToCloud
     createdAt
     available
   }

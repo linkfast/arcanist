@@ -85,6 +85,7 @@ interface FolderForm {
   convertLossy: boolean;
   mode: DropFolderMode;
   kind: DropFolderKind;
+  uploadToCloud: boolean;
 }
 
 interface TagsForm {
@@ -467,6 +468,7 @@ export class ImportPage implements OnInit {
       convertLossy: false,
       mode: 'MOVE',
       kind: 'FOLDER',
+      uploadToCloud: false,
     });
   }
 
@@ -483,6 +485,7 @@ export class ImportPage implements OnInit {
       convertLossy: folder.convertLossy,
       mode: folder.mode,
       kind: folder.kind,
+      uploadToCloud: folder.uploadToCloud,
     });
   }
 
@@ -503,6 +506,7 @@ export class ImportPage implements OnInit {
     const input = {
       path: form.kind === 'FOLDER' ? form.path.trim() : null,
       kind: form.kind,
+      uploadToCloud: form.kind === 'ULTIMATE_CLOUD_DROP' && form.uploadToCloud,
       librarySourceId: form.librarySourceId,
       enabled: form.enabled,
       duplicatePolicy: form.duplicatePolicy,

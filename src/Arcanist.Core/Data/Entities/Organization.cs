@@ -54,6 +54,12 @@ public sealed class DropFolder : Entity
     /// </summary>
     public DropFolderKind Kind { get; set; }
 
+    /// <summary>
+    /// Cloud Drop only: once a song it brought is in the library and identified (AcoustID or MusicBrainz), it is
+    /// uploaded to the account's library, with the catalog's description.
+    /// </summary>
+    public bool UploadToCloud { get; set; }
+
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 }
 
@@ -82,11 +88,35 @@ public sealed class CloudDropFetch : Entity
 
     public CloudDropFetchState State { get; set; }
 
+    /// <summary>Where the drop folder put it in the library (or the library track it duplicated).</summary>
+    public Guid? LibrarySourceId { get; set; }
+
+    public string? LibraryPath { get; set; }
+
+    public Guid? TrackId { get; set; }
+
+    /// <summary>Its upload to the account's library, when the folder uploads.</summary>
+    public CloudDropUpload? Upload { get; set; }
+
+    public string? UploadedTrackId { get; set; }
+
     public string? ErrorCode { get; set; }
 
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public enum CloudDropUpload
+{
+    /// <summary>Waiting until the song is identified (and catalogued).</summary>
+    Waiting,
+
+    /// <summary>In the account's library.</summary>
+    Uploaded,
+
+    /// <summary>The upload failed; tried again later.</summary>
+    Failed,
 }
 
 public enum CloudDropFetchState

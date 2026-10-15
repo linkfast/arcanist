@@ -295,6 +295,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             fetch.Property(f => f.FileName).HasMaxLength(512);
             fetch.Property(f => f.Title).HasMaxLength(500);
             fetch.Property(f => f.ErrorCode).HasMaxLength(NameLength);
+            fetch.Property(f => f.LibraryPath).HasMaxLength(2048);
+            fetch.Property(f => f.UploadedTrackId).HasMaxLength(64);
             fetch.HasIndex(f => new { f.DropFolderId, f.CloudTrackId }).IsUnique();
         });
 

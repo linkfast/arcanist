@@ -217,6 +217,16 @@ public sealed class CloudSyncWorker(
         public string MatchKey => Key(Artist, Album, Title);
     }
 
+    private static readonly System.Linq.Expressions.Expression<Func<MediaFile, LocalSong>> ToSong = f => new LocalSong(
+        f.ContentHash, f.LibrarySourceId, f.RelativePath, f.Track.Title,
+        f.Track.Artists.Where(a => a.Role == ArtistRole.Primary).OrderBy(a => a.Position).Select(a => a.Artist.Name).FirstOrDefault(),
+        f.Track.Album.Title,
+        f.Track.Genres.Select(g => g.Genre.Name).FirstOrDefault(),
+        f.Track.Album.Year, f.Track.TrackNumber, f.Track.DiscNumber, f.Format, f.BitRate, f.SampleRate, f.BitDepth, f.Channels, f.DurationMs,
+        f.Track.Recording.MusicBrainzId, f.Track.Recording.AcoustId,
+        f.Track.Artwork != null ? f.Track.Artwork.Hash : f.Track.Album.Artwork != null ? f.Track.Album.Artwork.Hash : null,
+        f.Track.Artwork != null ? f.Track.Artwork.MimeType : f.Track.Album.Artwork != null ? f.Track.Album.Artwork.MimeType : null);
+
     private async Task<List<LocalSong>> LocalSongsAsync(Guid libraryId, List<LibrarySource> sources, CancellationToken cancellationToken)
     {
         var sourceIds = sources.Select(s => s.Id).ToList();
@@ -224,17 +234,41 @@ public sealed class CloudSyncWorker(
             // Whole files only: a song of an album file split by a cue sheet cannot be uploaded on its own.
             .Where(f => sourceIds.Contains(f.LibrarySourceId) && f.MissingSince == null && f.CueTrack == 0)
             .OrderByDescending(f => f.BitDepth).ThenByDescending(f => f.SampleRate).ThenByDescending(f => f.BitRate)
-            .Select(f => new LocalSong(
-                f.ContentHash, f.LibrarySourceId, f.RelativePath, f.Track.Title,
-                f.Track.Artists.Where(a => a.Role == ArtistRole.Primary).OrderBy(a => a.Position).Select(a => a.Artist.Name).FirstOrDefault(),
-                f.Track.Album.Title,
-                f.Track.Genres.Select(g => g.Genre.Name).FirstOrDefault(),
-                f.Track.Album.Year, f.Track.TrackNumber, f.Track.DiscNumber, f.Format, f.BitRate, f.SampleRate, f.BitDepth, f.Channels, f.DurationMs,
-                f.Track.Recording.MusicBrainzId, f.Track.Recording.AcoustId,
-                f.Track.Artwork != null ? f.Track.Artwork.Hash : f.Track.Album.Artwork != null ? f.Track.Album.Artwork.Hash : null,
-                f.Track.Artwork != null ? f.Track.Artwork.MimeType : f.Track.Album.Artwork != null ? f.Track.Album.Artwork.MimeType : null))
+            .Select(ToSong)
             .ToListAsync(cancellationToken), cancellationToken);
         return rows.DistinctBy(r => r.ContentHash).ToList();
+    }
+
+    /// <summary>
+    /// Uploads one song of a library to the account's library, whatever the library's sync mode (as Cloud Drop's
+    /// drop folder does with the songs it brought, once identified). Its best whole local copy goes, tag-free, with
+    /// the catalog's description; one the account already has is only paired. Kept as the library's sync items, so
+    /// syncing never uploads it again.
+    /// </summary>
+    /// <returns>The track's id in Ultimate Cloud, or why it was not uploaded.</returns>
+    public async Task<(string? CloudTrackId, string? ErrorCode)> UploadTrackAsync(Guid trackId, CancellationToken cancellationToken)
+    {
+        if (!audio.IsInstalled)
+            return (null, ErrorCodes.CloudToolMissing);
+        var song = await DbAsync(db => db.MediaFiles.AsNoTracking()
+            .Where(f => f.TrackId == trackId && f.MissingSince == null && f.CueTrack == 0 && f.LibrarySource.Kind == LibrarySourceKind.Local)
+            .OrderByDescending(f => f.BitDepth).ThenByDescending(f => f.SampleRate).ThenByDescending(f => f.BitRate)
+            .Select(ToSong)
+            .FirstOrDefaultAsync(cancellationToken), cancellationToken);
+        if (song is null)
+            return (null, ErrorCodes.NotFound);
+
+        var libraryId = await DbAsync(db => db.LibrarySources.Where(s => s.Id == song.SourceId).Select(s => s.LibraryId).SingleAsync(cancellationToken), cancellationToken);
+        var item = await DbAsync(db => db.CloudSyncItems.AsNoTracking().FirstOrDefaultAsync(i => i.LibraryId == libraryId && i.ContentHash == song.ContentHash, cancellationToken),
+            cancellationToken);
+        if (item is { CloudTrackId: { } known, Status: CloudSyncItemStatus.Uploaded or CloudSyncItemStatus.Matched })
+            return (known, null);
+
+        item ??= await AddItemAsync(new CloudSyncItem { LibraryId = libraryId, ContentHash = song.ContentHash, Title = Cut(song.Title)! }, cancellationToken);
+        var stop = await LocalAsync(song, item, upload: true, cancellationToken);
+        return item.Status is CloudSyncItemStatus.Uploaded or CloudSyncItemStatus.Matched
+            ? (item.CloudTrackId, null)
+            : (null, stop ?? item.Reason ?? ErrorCodes.UploadFailed);
     }
 
     /// <summary>Pairs a song of the library with Ultimate Cloud, uploading it when asked to. Returns the stop reason of an upload refused for the whole account.</summary>

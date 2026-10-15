@@ -897,6 +897,7 @@ type DropFolder {
   convertLossy: Boolean!
   mode: DropFolderMode!
   kind: DropFolderKind!
+  uploadToCloud: Boolean!
   createdAt: DateTime!
   available: Boolean!
 }
@@ -1665,6 +1666,7 @@ input DropFolderInput {
   convertLossy: Boolean!
   mode: DropFolderMode!
   kind: DropFolderKind!
+  uploadToCloud: Boolean!
 }
 
 input ImportTagsInput {

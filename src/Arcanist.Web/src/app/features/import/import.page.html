@@ -212,6 +212,9 @@
                     @if (folder.mode === 'COPY') {
                       · {{ 'import.folders.copies' | t }}
                     }
+                    @if (folder.uploadToCloud) {
+                      · {{ 'import.folders.uploads' | t }}
+                    }
                   </span>
                   <span class="flex flex-wrap gap-1">
                     @if (!folder.enabled) {
@@ -583,6 +586,19 @@
             }}
           </p>
         </hlm-field>
+
+        @if (current.kind === 'ULTIMATE_CLOUD_DROP') {
+          <hlm-field>
+            <label class="flex items-center gap-2 text-sm">
+              <hlm-switch
+                [checked]="current.uploadToCloud"
+                (checkedChange)="updateForm({ uploadToCloud: $event })"
+              />
+              {{ 'import.folders.uploadToCloud' | t }}
+            </label>
+            <p hlmFieldDescription>{{ 'import.folders.uploadToCloudHelp' | t }}</p>
+          </hlm-field>
+        }
 
         <hlm-field>
           <label hlmFieldLabel>{{ 'import.folders.convert' | t }}</label>

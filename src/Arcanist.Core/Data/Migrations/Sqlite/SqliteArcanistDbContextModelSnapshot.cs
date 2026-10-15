@@ -280,6 +280,13 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("LibraryPath")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("LibrarySourceId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("State")
                         .HasColumnType("INTEGER");
 
@@ -287,7 +294,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Upload")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UploadedTrackId")
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -523,6 +540,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired()
                         .HasMaxLength(4096)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("UploadToCloud")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

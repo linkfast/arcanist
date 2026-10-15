@@ -22,6 +22,7 @@ public sealed class CloudDropWorker(
     UltimateCloudClient client,
     ICapabilityService capabilities,
     CloudTrackDownloader downloader,
+    CloudSyncWorker uploads,
     ImportMonitor imports,
     DatabaseMaintenance maintenance,
     IOptions<OrganizationOptions> options,
@@ -96,6 +97,54 @@ public sealed class CloudDropWorker(
             await SettleAsync(folder, present, cancellationToken);
             if (await FetchAsync(folder, tracks, cancellationToken))
                 imports.RequestRun();
+            if (folder.UploadToCloud)
+                await UploadAsync(folder, cancellationToken);
+        }
+    }
+
+    /// <summary>Songs brought from Cloud Drop, now in the library and identified, go to the account's library.</summary>
+    private async Task UploadAsync(DropFolder folder, CancellationToken cancellationToken)
+    {
+        List<CloudDropFetch> waiting;
+        await using (var db = databases.CreateDbContext())
+        {
+            waiting = await db.CloudDropFetches.AsNoTracking()
+                .Where(f => f.DropFolderId == folder.Id && (f.Upload == CloudDropUpload.Waiting || f.Upload == CloudDropUpload.Failed))
+                .OrderBy(f => f.UpdatedAt)
+                .Take(MaxPerRun)
+                .ToListAsync(cancellationToken);
+        }
+
+        foreach (var fetch in waiting)
+        {
+            Guid? trackId;
+            bool identified;
+            await using (var db = databases.CreateDbContext())
+            {
+                trackId = fetch.TrackId ?? await db.MediaFiles
+                    .Where(f => f.LibrarySourceId == fetch.LibrarySourceId && f.RelativePath == fetch.LibraryPath && f.MissingSince == null)
+                    .Select(f => (Guid?)f.TrackId)
+                    .FirstOrDefaultAsync(cancellationToken);
+                identified = trackId is not null && await db.Tracks
+                    .AnyAsync(t => t.Id == trackId && (t.Recording.AcoustId != null || t.Recording.MusicBrainzId != null), cancellationToken);
+            }
+
+            // Not catalogued yet, or not identified yet: looked at again on the next run.
+            if (!identified)
+                continue;
+
+            var (cloudTrackId, error) = await uploads.UploadTrackAsync(trackId!.Value, cancellationToken);
+            using var work = await maintenance.WorkAsync(cancellationToken);
+            await using var save = databases.CreateDbContext();
+            var row = await save.CloudDropFetches.SingleAsync(f => f.Id == fetch.Id, cancellationToken);
+            row.TrackId = trackId;
+            row.Upload = cloudTrackId is not null ? CloudDropUpload.Uploaded : CloudDropUpload.Failed;
+            row.UploadedTrackId = cloudTrackId;
+            row.ErrorCode = error;
+            row.UpdatedAt = Now();
+            await save.SaveChangesAsync(cancellationToken);
+            if (cloudTrackId is not null)
+                logger.LogInformation("{Title} was identified and uploaded to the account's library", fetch.Title);
         }
     }
 
@@ -121,6 +170,9 @@ public sealed class CloudDropWorker(
             {
                 case ImportStatus.Imported:
                 case ImportStatus.Duplicate:
+                    (fetch.LibrarySourceId, fetch.LibraryPath, fetch.TrackId) = (item.DestinationSourceId, item.DestinationPath, item.TrackId);
+                    if (folder.UploadToCloud)
+                        fetch.Upload = CloudDropUpload.Waiting;
                     if (item.Status == ImportStatus.Duplicate)
                     {
                         // The library has the song: the downloaded copy is not needed.

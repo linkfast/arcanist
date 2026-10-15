@@ -52,7 +52,7 @@ public sealed class CloudDropTests : IAsyncDisposable
             .GetProperty("data").GetProperty("ultimateCloud").GetProperty("plan").ValueKind != JsonValueKind.Null, "The account was not linked");
     }
 
-    private async Task<HttpResponseMessage> AddCloudDropFolderAsync(string mode) =>
+    private async Task<HttpResponseMessage> AddCloudDropFolderAsync(string mode, bool uploadToCloud = false) =>
         await _admin.PostAsJsonAsync("/rest/v1/drop-folders", new
         {
             path = (string?)null,
@@ -64,6 +64,7 @@ public sealed class CloudDropTests : IAsyncDisposable
             convertLossy = false,
             mode,
             kind = "ULTIMATE_CLOUD_DROP",
+            uploadToCloud,
         }, ArcanistFactory.Json, Cancel);
 
     private List<string> Music() =>
@@ -119,6 +120,35 @@ public sealed class CloudDropTests : IAsyncDisposable
         await _factory.Services.GetRequiredService<CloudDropWorker>().RunAsync(Cancel);
         await _factory.WaitForImportsAsync();
         Assert.Single(Music());
+    }
+
+    [Fact]
+    public async Task Songs_from_Cloud_Drop_go_to_the_account_s_library_once_identified()
+    {
+        _cloud.AddDropTrack("drop-4", "Tidal", "Haze", "Low Tide", 4, AudioFixtures.Music(bpm: 110, seconds: 3, chordSeed: 4));
+        await StartAsync();
+        Assert.Equal(HttpStatusCode.Created, (await AddCloudDropFolderAsync("MOVE", uploadToCloud: true)).StatusCode);
+        await WaitAsync(async () => (await FetchesAsync()).Any(f => f.Upload == CloudDropUpload.Waiting), "The song was not brought");
+        await _factory.WaitForScansAsync(_admin);
+
+        // Not identified yet: it waits.
+        var worker = _factory.Services.GetRequiredService<CloudDropWorker>();
+        await worker.RunAsync(Cancel);
+        Assert.Equal(CloudDropUpload.Waiting, Assert.Single(await FetchesAsync()).Upload);
+        Assert.Empty(_cloud.Tracks);
+
+        // Identified (as AcoustID would): uploaded, described by the catalog.
+        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
+        {
+            var recording = await db.Tracks.Where(t => t.Title == "Tidal").Select(t => t.Recording).SingleAsync(Cancel);
+            recording.MusicBrainzId = Guid.NewGuid();
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        await worker.RunAsync(Cancel);
+        var fetch = Assert.Single(await FetchesAsync());
+        Assert.Equal((CloudDropUpload.Uploaded, "up-1"), (fetch.Upload!.Value, fetch.UploadedTrackId));
+        Assert.Equal("up-1", Assert.Single(_cloud.Tracks).Id);
     }
 
     [Fact]

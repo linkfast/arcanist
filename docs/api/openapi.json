@@ -7405,6 +7405,7 @@
           "convertLossy",
           "mode",
           "kind",
+          "uploadToCloud",
           "createdAt",
           "available"
         ],
@@ -7458,6 +7459,9 @@
           },
           "kind": {
             "$ref": "#/components/schemas/DropFolderKind"
+          },
+          "uploadToCloud": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -7523,6 +7527,10 @@
           },
           "kind": {
             "$ref": "#/components/schemas/DropFolderKind"
+          },
+          "uploadToCloud": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

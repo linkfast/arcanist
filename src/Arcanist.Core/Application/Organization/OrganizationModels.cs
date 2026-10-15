@@ -63,12 +63,14 @@ public sealed record DropFolder(
     bool ConvertLossy,
     DropFolderMode Mode,
     DropFolderKind Kind,
+    bool UploadToCloud,
     DateTime CreatedAt,
     bool Available);
 
 /// <param name="Path">Absolute folder path on the server, outside library locations. Not used for Cloud Drop.</param>
 /// <param name="Mode">What happens to imported files: they leave the folder (or Cloud Drop), or stay there.</param>
 /// <param name="Kind">A folder of the server, or the linked account's Cloud Drop (one at most). Set when the folder is created.</param>
+/// <param name="UploadToCloud">Cloud Drop only: upload each song it brings to the account's library once it is in the library and identified.</param>
 /// <param name="ConvertTo">Format to convert files to before importing; null keeps them as they are.</param>
 /// <param name="ConvertBitRate">kbit/s for lossy formats; null for the format's default.</param>
 /// <param name="ConvertLossy">Also convert lossy files in another format, losing some quality. Lossless files are
@@ -82,7 +84,8 @@ public sealed record DropFolderInput(
     int? ConvertBitRate,
     bool ConvertLossy,
     DropFolderMode Mode = DropFolderMode.Move,
-    DropFolderKind Kind = DropFolderKind.Folder);
+    DropFolderKind Kind = DropFolderKind.Folder,
+    bool UploadToCloud = false);
 
 /// <summary>What was read from a dropped file.</summary>
 public sealed record ImportFileDetails(

@@ -11,7 +11,20 @@ namespace Arcanist.Core.Cloud;
 
 /// <summary>The linked account as stored: who it is, and its refresh token protected with Data Protection.</summary>
 /// <param name="LinkedByUserId">The administrator who linked it: the account's devices are theirs on this server.</param>
-public sealed record StoredCloudLink(string Subject, string? UserName, string? Email, DateTime LinkedAt, string ProtectedRefreshToken, Guid? LinkedByUserId = null);
+/// <param name="FirstName">The owner's first name (<c>given_name</c>), to name what comes from the account.</param>
+public sealed record StoredCloudLink(
+    string Subject,
+    string? UserName,
+    string? Email,
+    DateTime LinkedAt,
+    string ProtectedRefreshToken,
+    Guid? LinkedByUserId = null,
+    string? FirstName = null)
+{
+    /// <summary>The first name, or failing that the first word of the full name, the user name or the email's.</summary>
+    public string? DisplayFirstName =>
+        new[] { FirstName, UserName, Email?.Split('@')[0] }.FirstOrDefault(n => !string.IsNullOrWhiteSpace(n))?.Trim();
+}
 
 /// <summary>A device authorization in progress: what the administrator types (or opens) on Ultimate Cloud's site.</summary>
 public sealed record CloudLinkRequest(string UserCode, string VerificationUri, string? VerificationUriComplete, DateTime ExpiresAt);
@@ -242,7 +255,10 @@ public sealed class UltimateCloudAuth(
             claims?["email"]?.GetValue<string>() ?? current?.Email,
             current?.LinkedAt ?? time.GetUtcNow().UtcDateTime,
             refresh is null ? current?.ProtectedRefreshToken ?? throw new UltimateCloudException(ErrorCodes.CloudLinkUnsupported) : _protector.Protect(refresh),
-            current?.LinkedByUserId);
+            current?.LinkedByUserId,
+            claims?["given_name"]?.GetValue<string>()
+                ?? claims?["name"]?.GetValue<string>()?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
+                ?? current?.FirstName);
         if (link != current)
         {
             await settings.SetAsync(SettingKeys.UltimateCloudLink, link, cancellationToken);

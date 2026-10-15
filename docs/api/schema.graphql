@@ -1136,6 +1136,7 @@ type SearchResults {
 type UltimateCloudStatus {
   state: UltimateCloudLinkState!
   account: String
+  ownerFirstName: String
   linkedAt: DateTime
   pending: UltimateCloudPendingLink
   plan: UltimateCloudPlan

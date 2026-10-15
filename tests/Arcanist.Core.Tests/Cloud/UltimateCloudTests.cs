@@ -348,7 +348,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     {
         var n = Interlocked.Increment(ref _issued);
         RefreshToken = $"refresh-{n}";
-        var payload = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(new { sub = "user-1", preferred_username = "ana", email = "ana@example.com" }))
+        var payload = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(new { sub = "user-1", preferred_username = "ana", email = "ana@example.com", given_name = "Ana", family_name = "Pérez" }))
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
         return Json(new { access_token = $"eyJhbGciOiJub25lIn0.{payload}.", expires_in = 10, refresh_token = RefreshToken, token_type = "Bearer" });
     }
@@ -420,6 +420,15 @@ public sealed class UltimateCloudTests : IAsyncDisposable
             await Task.Delay(50, TestContext.Current.CancellationToken);
         }
     }
+
+    [Theory]
+    [InlineData(UltimateCloudCollection.Library, "Ana", null, "Ana's Ultimate Cloud")]
+    [InlineData(UltimateCloudCollection.Library, "Ana", "es", "Ultimate Cloud de Ana")]
+    [InlineData(UltimateCloudCollection.CloudDrop, "Ana", "es-PE", "Cloud Drop de Ana")]
+    [InlineData(UltimateCloudCollection.CloudDrop, "Ana", "en", "Ana's Cloud Drop")]
+    [InlineData(UltimateCloudCollection.Library, null, "es", "Ultimate Cloud")]
+    public void Cloud_libraries_are_named_after_the_account_s_owner(UltimateCloudCollection collection, string? owner, string? language, string expected) =>
+        Assert.Equal(expected, Arcanist.Core.Application.Cloud.UltimateCloudService.DefaultName(collection, owner, language));
 
     [Fact]
     public async Task Without_an_address_linking_is_unavailable()
@@ -529,7 +538,8 @@ public sealed class UltimateCloudTests : IAsyncDisposable
 
         var added = (await admin.GraphQLAsync(add, new { c = "LIBRARY" })).GetProperty("data").GetProperty("addUltimateCloudLibrary");
         var library = added.GetProperty("libraries").EnumerateArray().Single();
-        Assert.Equal(("Ultimate Cloud", "LIBRARY"), (library.GetProperty("name").GetString(), library.GetProperty("collection").GetString()));
+        // Named after the account's owner.
+        Assert.Equal(("Ana's Ultimate Cloud", "LIBRARY"), (library.GetProperty("name").GetString(), library.GetProperty("collection").GetString()));
         Assert.Equal("validation_failed", (await admin.GraphQLAsync(add, new { c = "LIBRARY" })).ErrorCode());
         await _factory.WaitForScansAsync(admin);
 

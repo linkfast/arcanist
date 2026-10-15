@@ -1413,6 +1413,7 @@ export const UltimateCloudStatusFields = graphql(`
   fragment UltimateCloudStatusFields on UltimateCloudStatus {
     state
     account
+    ownerFirstName
     linkedAt
     pending {
       userCode

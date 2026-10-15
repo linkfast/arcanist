@@ -57,10 +57,12 @@ public sealed record UltimateCloudTool(string? Version, string? ErrorCode);
 
 /// <summary>The Ultimate Cloud account linked to this server, and what it enables.</summary>
 /// <param name="Account">The account's user name or email.</param>
+/// <param name="OwnerFirstName">The account owner's first name, which names its libraries ("Ana's Ultimate Cloud").</param>
 /// <param name="ErrorCode">The last problem: <c>cloud_unreachable</c>, <c>cloud_link_expired</c> (link again), <c>cloud_link_denied</c>…</param>
 public sealed record UltimateCloudStatus(
     UltimateCloudLinkState State,
     string? Account,
+    string? OwnerFirstName,
     DateTime? LinkedAt,
     UltimateCloudPendingLink? Pending,
     UltimateCloudPlan? Plan,
@@ -79,6 +81,7 @@ public sealed class UltimateCloudService(
     ICapabilityService capabilities,
     ScanCoordinator scans,
     UserAccessCache accessCache,
+    SettingsStore settings,
     UltimateAudioTool tool)
 {
     public async Task<UltimateCloudStatus> StatusAsync(CancellationToken cancellationToken)
@@ -128,7 +131,7 @@ public sealed class UltimateCloudService(
     {
         var actor = guard.Admin();
         guard.RecentAuthentication();
-        if (!capabilities.IsEnabled(Capability.UltimateCloudSource) || await auth.LinkAsync(cancellationToken) is null)
+        if (!capabilities.IsEnabled(Capability.UltimateCloudSource) || await auth.LinkAsync(cancellationToken) is not { } link)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
 
         var location = input.Collection.ToString();
@@ -136,7 +139,8 @@ public sealed class UltimateCloudService(
             throw ArcanistException.Field("collection", ErrorCodes.Duplicate);
 
         var name = string.IsNullOrWhiteSpace(input.Name)
-            ? input.Collection == UltimateCloudCollection.CloudDrop ? "Cloud Drop" : "Ultimate Cloud"
+            ? DefaultName(input.Collection, link.DisplayFirstName,
+                await settings.GetAsync<string?>(SettingKeys.DefaultLanguage, null, cancellationToken))
             : input.Name.Trim();
         var normalized = TextNormalizer.Normalize(name);
         if ((await db.Libraries.Select(l => l.Name).ToListAsync(cancellationToken)).Any(n => TextNormalizer.Normalize(n) == normalized))
@@ -158,6 +162,18 @@ public sealed class UltimateCloudService(
         return await CurrentAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// "Ana's Ultimate Cloud", or "Ultimate Cloud de Ana" when the server speaks Spanish (the panel sends the name in
+    /// the administrator's language; this is for clients that do not).
+    /// </summary>
+    internal static string DefaultName(UltimateCloudCollection collection, string? owner, string? language)
+    {
+        var product = collection == UltimateCloudCollection.CloudDrop ? "Cloud Drop" : "Ultimate Cloud";
+        if (string.IsNullOrWhiteSpace(owner))
+            return product;
+        return language?.StartsWith("es", StringComparison.OrdinalIgnoreCase) == true ? $"{product} de {owner}" : $"{owner}'s {product}";
+    }
+
     private async Task<UltimateCloudStatus> CurrentAsync(CancellationToken cancellationToken)
     {
         var link = account.IsConfigured ? await auth.LinkAsync(cancellationToken) : null;
@@ -170,6 +186,7 @@ public sealed class UltimateCloudService(
         return new UltimateCloudStatus(
             state,
             link?.UserName ?? link?.Email,
+            link?.DisplayFirstName,
             link?.LinkedAt,
             state == UltimateCloudLinkState.Pending
                 ? new UltimateCloudPendingLink(pending!.UserCode, pending.VerificationUri, pending.VerificationUriComplete, pending.ExpiresAt)

@@ -100,12 +100,18 @@ export class CloudPage implements OnInit {
       this.show(
         (
           await this.gql.mutate(AddUltimateCloudLibraryMutation, {
-            input: { collection, name: null },
+            input: { collection, name: this.defaultName(collection) },
           })
         ).addUltimateCloudLibrary,
       );
       toast.success(this.i18n.t('cloud.libraries.added'));
     });
+  }
+
+  /** "Ultimate Cloud de Ana" / "Ana's Ultimate Cloud", in the administrator's language; null lets the server name it. */
+  private defaultName(collection: UltimateCloudCollection): string | null {
+    const owner = this.status()?.ownerFirstName;
+    return owner ? this.i18n.t('cloud.libraries.' + collection + '.libraryName', { owner }) : null;
   }
 
   protected enabled(capability: Capability): boolean {

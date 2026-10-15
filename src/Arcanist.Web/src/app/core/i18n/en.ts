@@ -869,10 +869,12 @@ export const en: Dictionary = {
       LIBRARY: {
         name: 'My library',
         help: 'What you upload from Ultimate Desktop and the web player.',
+        libraryName: "{owner}'s Ultimate Cloud",
       },
       CLOUD_DROP: {
         name: 'Cloud Drop',
         help: 'The music you drop into Cloud Drop, apart from your library.',
+        libraryName: "{owner}'s Cloud Drop",
       },
     },
     tool: {

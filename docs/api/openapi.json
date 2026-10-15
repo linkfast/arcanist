@@ -12450,6 +12450,7 @@
         "required": [
           "state",
           "account",
+          "ownerFirstName",
           "linkedAt",
           "pending",
           "plan",
@@ -12465,6 +12466,12 @@
             "$ref": "#/components/schemas/UltimateCloudLinkState"
           },
           "account": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ownerFirstName": {
             "type": [
               "null",
               "string"

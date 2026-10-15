@@ -22,6 +22,74 @@ export const en: Dictionary = {
     actions: 'Actions',
     close: 'Close',
   },
+  mstreamPage: {
+    title: 'mStream',
+    subtitle: 'How Arcanist behaves with the mStream apps.',
+    off: 'The mStream extension is off: the apps cannot connect. Turn it on in',
+    saved: 'mStream settings saved',
+    ratings: {
+      title: 'Ratings',
+      description:
+        'mStream rates from 1 to 5 stars. In single-star mode, choose from how many mStream stars a song gets the star.',
+      threshold: 'The star is given from',
+      from: '{stars} ★ in mStream',
+      anyHelp: 'Any rating gives the star.',
+      thresholdHelp:
+        'From {stars} stars the song gets the star; fewer are kept as a rating, unseen in single-star mode.',
+      singleStarNow: 'The server uses single-star mode now.',
+      fiveStarsNow:
+        'The server uses five stars now: mStream ratings are kept as they are and this is not used.',
+    },
+    signIn: {
+      title: 'Signing in',
+      description:
+        'The mStream apps sign in with an app password (My account). You can also let them use each user’s own password.',
+      password: 'Allow signing in with the user’s password',
+      warning:
+        'The user’s password will travel with every sign-in of the app: use HTTPS. An app password can be revoked without changing the main one. Once Arcanist has a second factor, users who turn it on will still need an app password.',
+    },
+    features: {
+      title: 'The apps’ functions',
+      description:
+        'Functions of the mStream apps that Arcanist offers with what it already has. Off, the server says it does not have them and the apps hide them.',
+      WAVEFORM: {
+        name: 'Waveform',
+        help: 'The shape of each song, from Arcanist’s audio analysis.',
+      },
+      STATS: {
+        name: 'Listening statistics',
+        help: 'mStream 6.27’s statistics: history, most played, summaries and series per day or hour, over Arcanist’s plays.',
+      },
+      SIMILAR: {
+        name: 'Similar songs and journeys',
+        help: 'Similar songs and artists, and journeys from one song to another, by tempo, key, genres and related artists.',
+      },
+      SCAN_STATUS: {
+        name: 'Scan progress',
+        help: 'Running scans and how far the audio analysis has got.',
+      },
+    },
+    unavailable: {
+      title: 'Not available in Arcanist',
+      description: 'mStream functions with no equivalent in Arcanist. The apps do not show them.',
+      badge: 'Not available',
+      federation: {
+        name: 'Federation',
+        help: 'Connecting mStream servers to each other. Arcanist has its own P2P network, which is not compatible.',
+      },
+      torrents: { name: 'Torrents', help: 'Downloading and sharing music over BitTorrent.' },
+      backups: { name: 'Backups', help: 'Scheduled copies of the libraries to other folders.' },
+      discoveryCatalog: {
+        name: 'P2P discovery catalog',
+        help: 'Sharing song fingerprints with other mStream servers for recommendations.',
+      },
+      youtube: { name: 'YouTube downloads', help: 'Getting audio from YouTube into the library.' },
+      discoveryPlugins: {
+        name: 'Discovery plug-ins',
+        help: 'External services that find and download recommended music.',
+      },
+    },
+  },
   theme: {
     label: 'Theme',
     system: 'System theme',
@@ -32,6 +100,7 @@ export const en: Dictionary = {
     cloud: 'Ultimate Cloud',
     database: 'Database',
     network: 'P2P network',
+    mstream: 'mStream',
     dlna: 'DLNA',
     extensions: 'Extensions',
     overview: 'Home',

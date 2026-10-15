@@ -350,6 +350,9 @@ public sealed class DiscoveryService(
     /// Artists like this one: those sharing its main genres, and those on the same albums (compilations,
     /// collaborations), most related first.
     /// </summary>
+    internal Task<List<Guid>> RelatedArtistIdsAsync(UserAccess access, Guid artistId, int count, CancellationToken cancellationToken) =>
+        RelatedArtistIdsAsync(catalog.Visible(access), artistId, count, cancellationToken);
+
     private async Task<List<Guid>> RelatedArtistIdsAsync(IQueryable<TrackEntity> visible, Guid artistId, int count, CancellationToken cancellationToken)
     {
         var own = ArtistTracks(visible, artistId);
@@ -499,16 +502,16 @@ public sealed class DiscoveryService(
     }
 
     /// <summary>Tempo difference, also comparing at double and half time (90 and 180 BPM mix well).</summary>
-    private static double TempoGap(double a, double b) => new[] { Math.Abs(a - b), Math.Abs(a * 2 - b), Math.Abs(a - b * 2) }.Min();
+    internal static double TempoGap(double a, double b) => new[] { Math.Abs(a - b), Math.Abs(a * 2 - b), Math.Abs(a - b * 2) }.Min();
 
-    private static (int Number, bool Minor) Camelot(int tonic, bool minor)
+    internal static (int Number, bool Minor) Camelot(int tonic, bool minor)
     {
         var code = MusicalKeys.Create(tonic, minor, 0).Camelot;
         return (int.Parse(code[..^1], CultureInfo.InvariantCulture), minor);
     }
 
     /// <summary>Steps on the Camelot wheel: 0 for the same key, 1 for a neighbor or the relative major/minor.</summary>
-    private static int CamelotSteps((int Number, bool Minor) a, (int Number, bool Minor) b)
+    internal static int CamelotSteps((int Number, bool Minor) a, (int Number, bool Minor) b)
     {
         var around = Math.Abs(a.Number - b.Number);
         around = Math.Min(around, 12 - around);

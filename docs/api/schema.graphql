@@ -64,6 +64,8 @@ type Query {
   ffmpeg: FfmpegStatus!
   "The latest imports from mStream, newest first. Administrators only."
   mstreamImports: [MstreamImportJob!]!
+  "How the mStream extension behaves with the mStream apps: the star threshold, signing in with the user's password and the apps' own functions. Administrators only."
+  mstream: MstreamStatus!
   "Which online services are on (MusicBrainz, AcoustID, Cover Art Archive, LRCLib) and what each has done. Requires MANAGE_SETTINGS."
   onlineServices: OnlineServicesStatus!
   "What organizing the library would move, with the given template or the library's own. Requires MANAGE_LIBRARIES."
@@ -789,6 +791,20 @@ enum MstreamImportStatus {
   FAILED
 }
 
+type MstreamStatus {
+  enabled: Boolean!
+  starThreshold: Int!
+  passwordSignIn: Boolean!
+  features: [MstreamFeature!]!
+}
+
+enum MstreamFeature {
+  WAVEFORM
+  STATS
+  SIMILAR
+  SCAN_STATUS
+}
+
 type OnlineServicesStatus {
   settings: OnlineServicesSettings!
   hasAcoustIdKey: Boolean!
@@ -1363,6 +1379,8 @@ type Mutation {
   analyzeMstreamServer(input: MstreamServerInput!): MstreamAnalysis!
   "Imports from mStream: the chosen libraries, its users (who keep their passwords) and their playlists, ratings and play counts, which arrive once the new libraries are scanned (or, from a server, when each user first signs in). Needs a recent authentication."
   importMstream(input: ImportMstreamInput!): MstreamImportJob!
+  "Changes how the mStream extension behaves with the mStream apps. Administrators only, with a recent authentication."
+  setMstreamSettings(input: MstreamSettingsInput!): MstreamStatus!
   "Turns online services on or off. They send only fingerprints, identifiers and artist, album and track names. Requires MANAGE_SETTINGS."
   setOnlineServices(input: SetOnlineServicesInput!): OnlineServicesStatus!
   "Uses your own AcoustID application key instead of the project's; null or empty goes back to the project's. Requires MANAGE_SETTINGS."
@@ -1543,6 +1561,7 @@ type RecordedPlay {
   id: ID!
   counted: Boolean!
   skipped: Boolean!
+  duplicate: Boolean!
 }
 
 input RecordPlayInput {
@@ -1594,6 +1613,12 @@ input MstreamLibraryChoice {
   sourceId: ID
   newLibraryName: String
   newLibraryPath: String
+}
+
+input MstreamSettingsInput {
+  starThreshold: Int!
+  passwordSignIn: Boolean!
+  features: [MstreamFeature!]!
 }
 
 input SetOnlineServicesInput {

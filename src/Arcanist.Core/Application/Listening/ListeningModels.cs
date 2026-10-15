@@ -15,7 +15,8 @@ public sealed record RecordPlayInput(Guid TrackId, int PlayedMs, DateTime? Playe
 
 /// <param name="Counted">It counts as a play: at least 30 seconds, and half the track or four minutes.</param>
 /// <param name="Skipped">Stopped within the first 30 seconds of a longer track.</param>
-public sealed record RecordedPlay(Guid Id, bool Counted, bool Skipped);
+/// <param name="Duplicate">The same play was already recorded (a player sending it again); nothing changed.</param>
+public sealed record RecordedPlay(Guid Id, bool Counted, bool Skipped, bool Duplicate = false);
 
 /// <summary>A counted play in the user's history.</summary>
 public sealed record PlayHistoryItem(Guid Id, Track Track, DateTime PlayedAt, int PlayedMs);

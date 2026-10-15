@@ -21,6 +21,7 @@ import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
+import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
@@ -411,6 +412,7 @@ const AllSections: DlnaSection[] = [
 })
 export class DlnaPage implements OnInit, OnDestroy {
   private readonly gql = inject(Gql);
+  private readonly enabledExtensions = inject(EnabledExtensions);
   private readonly i18n = inject(I18n);
 
   protected readonly status = signal<Status | null>(null);
@@ -458,6 +460,7 @@ export class DlnaPage implements OnInit, OnDestroy {
   protected async setEnabled(enabled: boolean): Promise<void> {
     await this.run(async () => {
       await this.gql.mutate(SetExtensionEnabledMutation, { id: 'dlna', enabled });
+      await this.enabledExtensions.refresh();
       await this.load();
       if (enabled) await this.loadRenderers();
     });

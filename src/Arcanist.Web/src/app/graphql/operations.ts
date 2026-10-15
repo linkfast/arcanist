@@ -1048,6 +1048,34 @@ export const DlnaStatusFields = graphql(`
   }
 `);
 
+export const MstreamStatusFields = graphql(`
+  fragment MstreamStatusFields on MstreamStatus {
+    enabled
+    starThreshold
+    passwordSignIn
+    features
+  }
+`);
+
+export const MstreamQuery = graphql(`
+  query Mstream {
+    mstream {
+      ...MstreamStatusFields
+    }
+    serverInfo {
+      ratingMode
+    }
+  }
+`);
+
+export const SetMstreamSettingsMutation = graphql(`
+  mutation SetMstreamSettings($input: MstreamSettingsInput!) {
+    setMstreamSettings(input: $input) {
+      ...MstreamStatusFields
+    }
+  }
+`);
+
 export const DlnaQuery = graphql(`
   query Dlna {
     dlna {

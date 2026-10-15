@@ -51,43 +51,11 @@ public sealed class AuthService(
 
     public async Task<AuthResult> LoginAsync(string? userName, string? password, ClientInfo client, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrEmpty(password))
-            return new AuthResult.Failure(ErrorCodes.InvalidCredentials);
+        var (found, failure) = await CheckPasswordAsync(userName, password, cancellationToken);
+        if (failure is not null)
+            return failure;
 
-        var normalized = TextNormalizer.Normalize(userName);
-        if (throttle.GetLockout(normalized) is { } lockout)
-            return new AuthResult.Failure(ErrorCodes.TooManyRequests, lockout);
-
-        var user = await db.Users.SingleOrDefaultAsync(u => u.NormalizedUserName == normalized, cancellationToken);
-        if (user is null)
-        {
-            passwordHasher.VerifyHashedPassword(TimingUser, TimingHash, password);
-            throttle.RecordFailure(normalized);
-            return new AuthResult.Failure(ErrorCodes.InvalidCredentials);
-        }
-
-        var verification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
-        foreach (var external in externalSignIns)
-        {
-            if (verification == PasswordVerificationResult.Failed && await external.VerifyAsync(user, password, cancellationToken))
-                verification = PasswordVerificationResult.SuccessRehashNeeded;
-        }
-
-        if (verification == PasswordVerificationResult.Failed)
-        {
-            throttle.RecordFailure(normalized);
-            return new AuthResult.Failure(ErrorCodes.InvalidCredentials);
-        }
-
-        throttle.RecordSuccess(normalized);
-
-        // Only revealed once the password is right, so it does not help guessing accounts.
-        if (user.IsDisabled)
-            return new AuthResult.Failure(ErrorCodes.AccountDisabled);
-
-        if (verification == PasswordVerificationResult.SuccessRehashNeeded)
-            user.PasswordHash = passwordHasher.HashPassword(user, password);
-
+        var user = found!;
         var now = Now();
         var refreshToken = TokenService.CreateRefreshToken();
         var session = new UserSession
@@ -108,6 +76,62 @@ public sealed class AuthService(
         await db.SaveChangesAsync(cancellationToken);
 
         return await IssueAsync(user, session, refreshToken, cancellationToken);
+    }
+
+    /// <summary>
+    /// Checks a user's own password without starting a session, for apps that sign in their own way (the mStream
+    /// apps, when an administrator allows it). Failures count towards the same lockout as the login.
+    /// </summary>
+    /// <returns>The user, or the error code: <c>invalid_credentials</c>, <c>too_many_requests</c> or <c>account_disabled</c>.</returns>
+    public async Task<(Guid? UserId, string? ErrorCode)> VerifyPasswordAsync(string? userName, string? password, CancellationToken cancellationToken)
+    {
+        var (user, failure) = await CheckPasswordAsync(userName, password, cancellationToken);
+        if (failure is not null)
+            return (null, failure.Code);
+        await db.SaveChangesAsync(cancellationToken);
+        return (user!.Id, null);
+    }
+
+    /// <summary>The user whose password this is (rehashed when needed, not saved yet), or why not.</summary>
+    private async Task<(User? User, AuthResult.Failure? Failure)> CheckPasswordAsync(string? userName, string? password, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrEmpty(password))
+            return (null, new AuthResult.Failure(ErrorCodes.InvalidCredentials));
+
+        var normalized = TextNormalizer.Normalize(userName);
+        if (throttle.GetLockout(normalized) is { } lockout)
+            return (null, new AuthResult.Failure(ErrorCodes.TooManyRequests, lockout));
+
+        var user = await db.Users.SingleOrDefaultAsync(u => u.NormalizedUserName == normalized, cancellationToken);
+        if (user is null)
+        {
+            passwordHasher.VerifyHashedPassword(TimingUser, TimingHash, password);
+            throttle.RecordFailure(normalized);
+            return (null, new AuthResult.Failure(ErrorCodes.InvalidCredentials));
+        }
+
+        var verification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        foreach (var external in externalSignIns)
+        {
+            if (verification == PasswordVerificationResult.Failed && await external.VerifyAsync(user, password, cancellationToken))
+                verification = PasswordVerificationResult.SuccessRehashNeeded;
+        }
+
+        if (verification == PasswordVerificationResult.Failed)
+        {
+            throttle.RecordFailure(normalized);
+            return (null, new AuthResult.Failure(ErrorCodes.InvalidCredentials));
+        }
+
+        throttle.RecordSuccess(normalized);
+
+        // Only revealed once the password is right, so it does not help guessing accounts.
+        if (user.IsDisabled)
+            return (null, new AuthResult.Failure(ErrorCodes.AccountDisabled));
+
+        if (verification == PasswordVerificationResult.SuccessRehashNeeded)
+            user.PasswordHash = passwordHasher.HashPassword(user, password);
+        return (user, null);
     }
 
     public async Task<AuthResult> RefreshAsync(string? refreshToken, CancellationToken cancellationToken)

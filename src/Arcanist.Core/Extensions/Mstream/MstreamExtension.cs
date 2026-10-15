@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Arcanist.Core.Application;
 using Arcanist.Core.Application.Libraries;
+using Arcanist.Core.Application.Mstream;
 using Arcanist.Core.Application.Playlists;
 using Arcanist.Core.Application.Server;
 using Arcanist.Core.Application.Users;
@@ -25,10 +26,17 @@ namespace Arcanist.Core.Extensions.Mstream;
 internal sealed partial class MstreamExtension : IBuiltInExtension
 {
     public const string Id = "mstream";
+
+    /// <summary>
+    /// The mStream version whose API this extension speaks, as <c>/api</c> reports it: the apps turn functions on by
+    /// version (the auto-DJ's batches and filters, the statistics). Arcanist's own version goes in <c>arcanist</c>.
+    /// </summary>
+    public const string ApiVersion = "6.28.0";
     private const string TokenName = "x-access-token";
 
     private static readonly string[] Get = [HttpMethods.Get];
     private static readonly string[] Post = [HttpMethods.Post];
+    private static readonly string[] Delete = [HttpMethods.Delete];
     private static readonly string[] GetOrPost = [HttpMethods.Get, HttpMethods.Post];
     private static readonly string[] GetOrHead = [HttpMethods.Get, HttpMethods.Head];
 
@@ -68,6 +76,27 @@ internal sealed partial class MstreamExtension : IBuiltInExtension
         Map(endpoints, "/api/v1/db/random-songs", Post, RandomSongsAsync);
         Map(endpoints, "/api/v1/lyrics", Get, LyricsAsync);
 
+        // The apps' own functions, each switched on in the panel (MstreamFeature).
+        Map(endpoints, "/api/v1/db/waveform", Get, WaveformAsync);
+        Map(endpoints, "/api/v1/scan/progress", Get, ScanProgressAsync);
+        Map(endpoints, "/api/v1/scan/status", Get, ScanStatusAsync);
+        Map(endpoints, "/api/v1/discovery/local/similar/tracks", Post, SimilarTracksAsync);
+        Map(endpoints, "/api/v1/discovery/local/similar/artists", Post, SimilarArtistsAsync);
+        Map(endpoints, "/api/v1/discovery/local/path", Post, JourneyAsync);
+        Map(endpoints, "/api/v1/stats/plays", Post, ReportPlaysAsync);
+        Map(endpoints, "/api/v1/stats/plays", Delete, ForgetPlaysAsync);
+        Map(endpoints, "/api/v1/stats/plays/{id}", Delete, ForgetPlayAsync);
+        Map(endpoints, "/api/v1/stats/now-playing", Post, AnnounceNowPlayingAsync);
+        Map(endpoints, "/api/v1/stats/now-playing", Get, NowPlayingAsync);
+        Map(endpoints, "/api/v1/stats/summary", Get, StatsSummaryAsync);
+        Map(endpoints, "/api/v1/stats/top", Get, StatsTopAsync);
+        Map(endpoints, "/api/v1/stats/timeseries", Get, StatsTimeSeriesAsync);
+        Map(endpoints, "/api/v1/stats/history", Get, StatsHistoryAsync);
+        Map(endpoints, "/api/v1/stats/tracks", Post, StatsTracksAsync);
+        Map(endpoints, "/api/v1/stats/periods", Get, StatsPeriodsAsync);
+        Map(endpoints, "/api/v1/stats/reset", Post, ResetStatsAsync);
+        Map(endpoints, "/api/v1/stats/export", Get, StatsExportAsync);
+
         Map(endpoints, "/api/v1/file-explorer", Post, FileExplorerAsync);
         Map(endpoints, "/api/v1/file-explorer/recursive", Post, RecursiveAsync);
         Map(endpoints, "/media/{vpath}/{**path}", GetOrHead, MediaAsync);
@@ -95,7 +124,7 @@ internal sealed partial class MstreamExtension : IBuiltInExtension
             endpoints.MapMethods(prefix + "/{**path}", [HttpMethods.Options], (HttpContext http) =>
                 {
                     AllowAnyOrigin(http);
-                    http.Response.Headers.AccessControlAllowMethods = "GET, POST, HEAD, OPTIONS";
+                    http.Response.Headers.AccessControlAllowMethods = "GET, POST, DELETE, HEAD, OPTIONS";
                     return Results.NoContent();
                 })
                 .ExcludeFromDescription();
@@ -143,26 +172,57 @@ internal sealed partial class MstreamExtension : IBuiltInExtension
     {
         var request = call.Http.Request;
         var token = call.Body.String("token") ?? call.Query("token") ?? request.Headers[TokenName].FirstOrDefault() ?? request.Cookies[TokenName];
-        if (string.IsNullOrEmpty(token) || call.Service<MstreamTokens>().Read(token) is not { } passwordId)
+        if (string.IsNullOrEmpty(token))
             return false;
 
-        return await call.Service<AppPasswordService>().UserOfAsync(passwordId, call.Cancellation) is { } userId
-               && await ExtensionAuthentication.SignInAsync(call.Http, userId, "mstream", call.Cancellation);
+        switch (call.Service<MstreamTokens>().Read(token))
+        {
+            case MstreamTokenSubject.AppPassword app:
+                return await call.Service<AppPasswordService>().UserOfAsync(app.PasswordId, call.Cancellation) is { } userId
+                       && await ExtensionAuthentication.SignInAsync(call.Http, userId, "mstream", call.Cancellation);
+            case MstreamTokenSubject.UserPassword user:
+                // Only while that sign-in is allowed, and until the user's password (or state) changes.
+                return (await call.Service<MstreamSettings>().GetAsync(call.Cancellation)).PasswordSignIn
+                       && await ExtensionAuthentication.SignInAsync(call.Http, user.UserId, "mstream", call.Cancellation)
+                       && call.Access.SecurityStamp == user.SecurityStamp
+                       && await PasswordHashAsync(call, user.UserId) is { } hash
+                       && MstreamTokenSubject.Fingerprint(hash) == user.PasswordFingerprint;
+            default:
+                return false;
+        }
     }
 
-    /// <summary>Signs in with an app password (JSON or form). Failures are slowed down and all look the same.</summary>
+    private static Task<string?> PasswordHashAsync(MstreamCall call, Guid userId) =>
+        call.Service<Data.ArcanistDbContext>().Users.Where(u => u.Id == userId).Select(u => u.PasswordHash).SingleOrDefaultAsync(call.Cancellation);
+
+    /// <summary>
+    /// Signs in (JSON or form) with an app password, or with the user's own password when an administrator allows it.
+    /// Failures are slowed down and all look the same.
+    /// </summary>
     private static async Task<IResult> LoginAsync(MstreamCall call)
     {
         var userName = call.Body.Required("username");
         var password = call.Body.Required("password");
-        var match = await call.Service<AppPasswordService>().SignInAsync(userName, password, call.Cancellation);
-        if (match is not { } signedIn || !await ExtensionAuthentication.SignInAsync(call.Http, signedIn.UserId, "mstream", call.Cancellation))
+        var tokens = call.Service<MstreamTokens>();
+        string? token = null;
+        if (await call.Service<AppPasswordService>().SignInAsync(userName, password, call.Cancellation) is { } signedIn
+            && await ExtensionAuthentication.SignInAsync(call.Http, signedIn.UserId, "mstream", call.Cancellation))
+        {
+            token = tokens.Create(signedIn.PasswordId);
+        }
+        else if ((await call.Service<MstreamSettings>().GetAsync(call.Cancellation)).PasswordSignIn
+                 && await call.Service<AuthService>().VerifyPasswordAsync(userName, password, call.Cancellation) is ({ } userId, null)
+                 && await ExtensionAuthentication.SignInAsync(call.Http, userId, "mstream", call.Cancellation))
+        {
+            token = tokens.CreateForUser(userId, call.Access.SecurityStamp, (await PasswordHashAsync(call, userId))!);
+        }
+
+        if (token is null)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(800), call.Service<TimeProvider>(), call.Cancellation);
             return MstreamCall.Error(StatusCodes.Status401Unauthorized, "Login Failed");
         }
 
-        var token = call.Service<MstreamTokens>().Create(signedIn.PasswordId);
         call.Http.Response.Cookies.Append(TokenName, token, new CookieOptions
         {
             HttpOnly = true,
@@ -179,21 +239,27 @@ internal sealed partial class MstreamExtension : IBuiltInExtension
     private static async Task<IResult> ServerAsync(MstreamCall call)
     {
         var vpaths = await new MstreamLibrary(call).VpathsAsync();
+        var config = await call.Service<MstreamSettings>().GetAsync(call.Cancellation);
+        var features = new JsonObject
+        {
+            ["transcode"] = Transcode(call),
+            ["supportedAudioFiles"] = SupportedFiles(),
+            ["discovery"] = config.Has(MstreamFeature.Similar),
+            ["discoveryP2p"] = false,
+            ["discoveryReady"] = config.Has(MstreamFeature.Similar),
+            ["discoveryPlugins"] = false,
+            ["discoveryOwned"] = false,
+            ["sync"] = false,
+        };
+        // Present only on servers that speak the statistics API: apps gate on the key.
+        if (config.Has(MstreamFeature.Stats))
+            features["stats"] = StatsVersion;
         return MstreamCall.Json(new JsonObject
         {
-            ["server"] = call.Service<ServerInfoService>().Get().Version,
+            ["server"] = ApiVersion,
+            ["arcanist"] = call.Service<ServerInfoService>().Get().Version,
             ["apiVersions"] = new JsonArray("1"),
-            ["features"] = new JsonObject
-            {
-                ["transcode"] = Transcode(call),
-                ["supportedAudioFiles"] = SupportedFiles(),
-                ["discovery"] = false,
-                ["discoveryP2p"] = false,
-                ["discoveryReady"] = false,
-                ["discoveryPlugins"] = false,
-                ["discoveryOwned"] = false,
-                ["sync"] = false,
-            },
+            ["features"] = features,
             ["user"] = new JsonObject
             {
                 ["username"] = call.Access.UserName,
@@ -213,7 +279,8 @@ internal sealed partial class MstreamExtension : IBuiltInExtension
     {
         var vpaths = await new MstreamLibrary(call).VpathsAsync();
         var playlists = await EditablePlaylistsAsync(call);
-        return MstreamCall.Json(new JsonObject
+        var config = await call.Service<MstreamSettings>().GetAsync(call.Cancellation);
+        var ping = new JsonObject
         {
             ["vpaths"] = Names(vpaths),
             ["playlists"] = new JsonArray(playlists.Select(p => p.Name).Distinct().Order(StringComparer.OrdinalIgnoreCase)
@@ -224,7 +291,12 @@ internal sealed partial class MstreamExtension : IBuiltInExtension
             ["noFileModify"] = true,
             ["supportedAudioFiles"] = SupportedFiles(),
             ["vpathMetaData"] = VpathMetadata(vpaths),
-        });
+            ["discovery"] = config.Has(MstreamFeature.Similar),
+            ["discoveryPath"] = config.Has(MstreamFeature.Similar),
+        };
+        if (config.Has(MstreamFeature.Stats))
+            ping["stats"] = StatsVersion;
+        return MstreamCall.Json(ping);
     }
 
     private static async Task<IResult> StatusAsync(MstreamCall call)

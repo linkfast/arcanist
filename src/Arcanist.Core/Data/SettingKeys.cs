@@ -33,6 +33,9 @@ public static class SettingKeys
     /// <summary>DLNA: the device's name, the libraries it publishes and the sections of its tree.</summary>
     public const string Dlna = "dlna.settings";
 
+    /// <summary>mStream apps: the star threshold, sign-in with the user's password and their own functions (<c>MstreamConfig</c>).</summary>
+    public const string Mstream = "mstream.settings";
+
     /// <summary>The DLNA device's UUID, created once so devices keep recognizing the server.</summary>
     public const string DlnaDeviceId = "dlna.deviceId";
 

@@ -1317,6 +1317,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<bool>("Counted")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("PlayedAt")
                         .HasColumnType("TEXT");
 
@@ -1325,6 +1329,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.Property<bool>("Skipped")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("TrackId")
                         .HasColumnType("TEXT");
@@ -1337,6 +1345,8 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.HasIndex("PlayedAt");
 
                     b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "ExternalId");
 
                     b.HasIndex("UserId", "PlayedAt");
 

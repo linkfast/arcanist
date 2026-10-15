@@ -104,25 +104,52 @@ internal sealed class MstreamBody
 }
 
 /// <summary>
-/// mStream tokens. Each names the app password it was signed in with, so it lasts until that password is deleted,
-/// as mStream's own tokens last until changed. Protected with the server's Data Protection keys.
+/// What an mStream token names: the app password it was signed in with, or the user, their security stamp and a
+/// fingerprint of their password (a new password ends the token: changing one's own password keeps the stamp).
+/// </summary>
+internal abstract record MstreamTokenSubject
+{
+    public sealed record AppPassword(Guid PasswordId) : MstreamTokenSubject;
+
+    public sealed record UserPassword(Guid UserId, string SecurityStamp, string PasswordFingerprint) : MstreamTokenSubject;
+
+    /// <summary>A short digest of the stored password hash: it changes with the password, and reveals nothing.</summary>
+    public static string Fingerprint(string passwordHash) =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(passwordHash)))[..16];
+}
+
+/// <summary>
+/// mStream tokens, protected with the server's Data Protection keys. One signed in with an app password lasts until
+/// that password is deleted, as mStream's own tokens last until changed. One signed in with the user's own password
+/// lasts while that sign-in is allowed and the user keeps their password and security stamp.
 /// </summary>
 internal sealed class MstreamTokens(IDataProtectionProvider protection)
 {
+    private const string UserPrefix = "u:";
+
     private IDataProtector Protector => protection.CreateProtector("Arcanist.Mstream.Tokens");
 
     public string Create(Guid passwordId) => Protector.Protect(passwordId.ToString("N"));
 
-    public Guid? Read(string token)
+    public string CreateForUser(Guid userId, string securityStamp, string passwordHash) =>
+        Protector.Protect($"{UserPrefix}{userId:N}:{securityStamp}:{MstreamTokenSubject.Fingerprint(passwordHash)}");
+
+    public MstreamTokenSubject? Read(string token)
     {
+        string value;
         try
         {
-            return Guid.TryParseExact(Protector.Unprotect(token), "N", out var id) ? id : null;
+            value = Protector.Unprotect(token);
         }
         catch (CryptographicException)
         {
             return null;
         }
+
+        if (!value.StartsWith(UserPrefix, StringComparison.Ordinal))
+            return Guid.TryParseExact(value, "N", out var id) ? new MstreamTokenSubject.AppPassword(id) : null;
+        var parts = value[UserPrefix.Length..].Split(':');
+        return parts.Length == 3 && Guid.TryParseExact(parts[0], "N", out var userId) ? new MstreamTokenSubject.UserPassword(userId, parts[1], parts[2]) : null;
     }
 }
 

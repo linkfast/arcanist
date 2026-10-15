@@ -53,7 +53,7 @@ internal sealed class MstreamLibrary(MstreamCall call)
     public async Task<IQueryable<MediaFile>> FilesAsync()
     {
         var files = Catalog.VisibleFiles(Access);
-        var ignored = call.Body.Strings("ignoreVPaths");
+        var ignored = call.Body.Strings("ignoreVPaths").Concat(call.Http.Request.Query["ignoreVPaths"].OfType<string>()).ToList();
         if (ignored.Count > 0)
         {
             var excluded = (await VpathsAsync()).Where(v => ignored.Contains(v.Name)).Select(v => v.SourceId).ToList();

@@ -187,18 +187,22 @@ internal sealed partial class MstreamExtension
         return MstreamCall.Json(result);
     }
 
-    /// <summary>Rated songs, best first.</summary>
+    /// <summary>Rated songs, best first. In single-star mode, the starred ones (lower ratings are kept, unseen).</summary>
     private static async Task<IResult> RatedAsync(MstreamCall call)
     {
         var library = new MstreamLibrary(call);
         var tracks = await library.TracksAsync();
         var user = call.Access.UserId;
-        var ids = await library.Db.TrackRatings.Where(r => r.UserId == user && tracks.Any(t => t.Id == r.TrackId))
+        var lowest = call.Service<RatingSettings>().Current == RatingMode.Star ? 5 : 1;
+        var ids = await library.Db.TrackRatings.Where(r => r.UserId == user && r.Rating >= lowest && tracks.Any(t => t.Id == r.TrackId))
             .OrderByDescending(r => r.Rating).ThenByDescending(r => r.RatedAt).Select(r => r.TrackId).Take(5000).ToListAsync(call.Cancellation);
         return await TrackListAsync(library, ids);
     }
 
-    /// <summary>Rates a song from 0 to 10 (half stars), or clears its rating with null or 0.</summary>
+    /// <summary>
+    /// Rates a song from 0 to 10 (half stars), or clears its rating with null or 0. In single-star mode, from the
+    /// panel's threshold up it gets the star; below it, the rating is kept as such (not shown in that mode).
+    /// </summary>
     private static async Task<IResult> RateSongAsync(MstreamCall call)
     {
         var library = new MstreamLibrary(call);
@@ -207,10 +211,11 @@ internal sealed partial class MstreamExtension
         if (rating is < 0 or > 10)
             throw MstreamException.Invalid("rating");
 
-        int? stars = rating is null or 0 ? null
-            : call.Service<RatingSettings>().Current == RatingMode.Star ? 5
-            : (rating.Value + 1) / 2;
-        await call.Service<ListeningService>().RateTrackAsync(file.TrackId, stars, call.Cancellation);
+        int? stars = rating is null or 0 ? null : (rating.Value + 1) / 2;
+        var singleStar = call.Service<RatingSettings>().Current == RatingMode.Star;
+        if (singleStar && stars >= (await call.Service<MstreamSettings>().GetAsync(call.Cancellation)).StarThreshold)
+            stars = 5;
+        await call.Service<ListeningService>().RateTrackAsync(file.TrackId, stars, keepUnseen: singleStar, call.Cancellation);
         return MstreamCall.Json(new JsonObject());
     }
 
@@ -244,30 +249,6 @@ internal sealed partial class MstreamExtension
             .Where(p => p.UserId == user && p.PlayCount > 0 && tracks.Any(t => t.Id == p.TrackId))
             .OrderByDescending(p => p.PlayCount).ThenByDescending(p => p.LastPlayedAt).Select(p => p.TrackId).Take(limit).ToListAsync(call.Cancellation);
         return await TrackListAsync(library, ids);
-    }
-
-    /// <summary>One random song for the auto-DJ, with a minimum rating if asked (0–10).</summary>
-    private static async Task<IResult> RandomSongsAsync(MstreamCall call)
-    {
-        var library = new MstreamLibrary(call);
-        var tracks = await library.TracksAsync();
-        if (call.Body.Int("minRating") is > 0 and var minRating)
-        {
-            var user = call.Access.UserId;
-            var stars = (minRating + 1) / 2;
-            tracks = tracks.Where(t => library.Db.TrackRatings.Any(r => r.UserId == user && r.TrackId == t.Id && r.Rating >= stars));
-        }
-
-        var picked = await library.TracksAsync(tracks.OrderBy(_ => EF.Functions.Random()).Take(1));
-        if (picked.Count == 0)
-            throw new MstreamException(StatusCodes.Status400BadRequest, "No songs that match criteria");
-
-        return MstreamCall.Json(new JsonObject
-        {
-            ["songs"] = new JsonArray((await library.ObjectsAsync(picked)).Cast<JsonNode?>().ToArray()),
-            // mStream's cursor of songs already played; Arcanist picks at random each time.
-            ["ignoreList"] = new JsonArray(),
-        });
     }
 
     private static async Task<IResult> TrackListAsync(MstreamLibrary library, IQueryable<Data.Entities.Track> tracks) =>

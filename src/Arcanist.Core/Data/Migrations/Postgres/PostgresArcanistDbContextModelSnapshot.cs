@@ -1322,6 +1322,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<bool>("Counted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<DateTime>("PlayedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1330,6 +1334,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<bool>("Skipped")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<Guid?>("TrackId")
                         .HasColumnType("uuid");
@@ -1342,6 +1350,8 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.HasIndex("PlayedAt");
 
                     b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "ExternalId");
 
                     b.HasIndex("UserId", "PlayedAt");
 

@@ -54,6 +54,12 @@ public sealed class PlayEvent : Entity
 
     /// <summary>The player that reported it, as it names itself.</summary>
     public string? Client { get; init; }
+
+    /// <summary>The id the player gave the play (mStream's statistics), so a report sent again is recognized.</summary>
+    public string? ExternalId { get; init; }
+
+    /// <summary>How the play was queued, as the player says (manual, shuffle, autodj…).</summary>
+    public string? Source { get; init; }
 }
 
 /// <summary>Running totals of a user's plays of a track, kept with each play so lists stay fast.</summary>

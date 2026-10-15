@@ -291,7 +291,10 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             play.HasOne(p => p.User).WithMany().OnDelete(DeleteBehavior.Cascade);
             play.HasOne(p => p.Track).WithMany().OnDelete(DeleteBehavior.SetNull);
             play.Property(p => p.Client).HasMaxLength(NameLength);
+            play.Property(p => p.ExternalId).HasMaxLength(128);
+            play.Property(p => p.Source).HasMaxLength(32);
             play.HasIndex(p => new { p.UserId, p.PlayedAt });
+            play.HasIndex(p => new { p.UserId, p.ExternalId });
             play.HasIndex(p => p.PlayedAt);
             play.HasIndex(p => p.TrackId);
         });

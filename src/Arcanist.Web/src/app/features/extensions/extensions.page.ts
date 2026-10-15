@@ -13,6 +13,7 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { firstValueFrom } from 'rxjs';
 import { ApiError } from '../../core/api/rest';
+import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
@@ -284,6 +285,7 @@ interface PendingInstall {
 export class ExtensionsPage implements OnInit {
   protected readonly i18n = inject(I18n);
   private readonly gql = inject(Gql);
+  private readonly enabledExtensions = inject(EnabledExtensions);
   private readonly http = inject(HttpClient);
 
   protected readonly frontends = signal<Frontend[]>([]);
@@ -356,6 +358,7 @@ export class ExtensionsPage implements OnInit {
       });
       if (result.setExtensionEnabled.restartRequired)
         toast.info(this.i18n.t('extensions.list.restartRequiredHelp'));
+      await this.enabledExtensions.refresh();
     });
   }
 

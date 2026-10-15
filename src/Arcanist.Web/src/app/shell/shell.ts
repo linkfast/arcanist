@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, effect, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
@@ -12,6 +12,7 @@ import {
   lucideInbox,
   lucideLibrary,
   lucideLogOut,
+  lucideMusic,
   lucideNetwork,
   lucidePuzzle,
   lucideSettings,
@@ -20,6 +21,7 @@ import {
 } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { AuthService } from '../core/auth/auth.service';
+import { EnabledExtensions } from '../core/extensions/enabled-extensions';
 import { TranslatePipe } from '../core/i18n/i18n';
 import { LanguageSelect } from '../shared/language-select';
 import { ThemeSelect } from '../shared/theme-select';
@@ -51,6 +53,7 @@ import { ThemeSelect } from '../shared/theme-select';
       lucideUsers,
       lucideUserCog,
       lucideLogOut,
+      lucideMusic,
       lucideNetwork,
       lucideSettings,
       lucideExternalLink,
@@ -121,6 +124,14 @@ import { ThemeSelect } from '../shared/theme-select';
 })
 export class Shell {
   protected readonly auth = inject(AuthService);
+  private readonly extensions = inject(EnabledExtensions);
+
+  constructor() {
+    // Pages of extensions show while those are on; only administrators manage them.
+    effect(() => {
+      if (this.auth.isAdmin()) void this.extensions.refresh();
+    });
+  }
 
   protected readonly navigation = computed(() =>
     [
@@ -176,6 +187,12 @@ export class Shell {
       },
       { path: '/cloud', label: 'nav.cloud', icon: 'lucideCloud', visible: this.auth.isAdmin() },
       { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
+      {
+        path: '/mstream',
+        label: 'nav.mstream',
+        icon: 'lucideMusic',
+        visible: this.auth.isAdmin() && this.extensions.has('mstream'),
+      },
       { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
     ].filter((item) => item.visible),
   );

@@ -4011,6 +4011,58 @@
         }
       }
     },
+    "/rest/v1/mstream": {
+      "get": {
+        "tags": [
+          "mStream"
+        ],
+        "summary": "How the mStream extension behaves with the mStream apps: the star threshold, signing in with the user\u0027s password and the apps\u0027 own functions. Administrators only.",
+        "operationId": "Mstream",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/mstream/settings": {
+      "put": {
+        "tags": [
+          "mStream"
+        ],
+        "summary": "Changes how the mStream extension behaves with the mStream apps. Administrators only, with a recent authentication.",
+        "operationId": "SetMstreamSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MstreamSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/p2p": {
       "get": {
         "tags": [
@@ -9055,6 +9107,14 @@
           }
         }
       },
+      "MstreamFeature": {
+        "enum": [
+          "WAVEFORM",
+          "STATS",
+          "SIMILAR",
+          "SCAN_STATUS"
+        ]
+      },
       "MstreamImportJob": {
         "required": [
           "id",
@@ -9243,6 +9303,64 @@
           },
           "password": {
             "type": "string"
+          }
+        }
+      },
+      "MstreamSettingsInput": {
+        "required": [
+          "starThreshold",
+          "passwordSignIn",
+          "features"
+        ],
+        "type": "object",
+        "properties": {
+          "starThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "passwordSignIn": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MstreamFeature"
+            }
+          }
+        }
+      },
+      "MstreamStatus": {
+        "required": [
+          "enabled",
+          "starThreshold",
+          "passwordSignIn",
+          "features"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "starThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "passwordSignIn": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MstreamFeature"
+            }
           }
         }
       },
@@ -10807,6 +10925,10 @@
           },
           "skipped": {
             "type": "boolean"
+          },
+          "duplicate": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -12947,6 +13069,9 @@
     },
     {
       "name": "DLNA"
+    },
+    {
+      "name": "mStream"
     },
     {
       "name": "P2P"

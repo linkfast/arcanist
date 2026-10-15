@@ -41,10 +41,17 @@ public sealed class ListeningService(
     }
 
     /// <summary>Rates a track 1–5, or clears its rating with null. In single-star mode only 5 (a star) is accepted.</summary>
-    public async Task<Track> RateTrackAsync(Guid trackId, int? rating, CancellationToken cancellationToken)
+    public Task<Track> RateTrackAsync(Guid trackId, int? rating, CancellationToken cancellationToken) =>
+        RateTrackAsync(trackId, rating, keepUnseen: false, cancellationToken);
+
+    /// <param name="keepUnseen">
+    /// In single-star mode, also accept ratings below 5, which are kept but not shown (apps that rate in stars, like
+    /// mStream's, with a rating below the server's star threshold).
+    /// </param>
+    internal async Task<Track> RateTrackAsync(Guid trackId, int? rating, bool keepUnseen, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
-        if (rating is not null && (rating is < 1 or > 5 || await ratings.GetAsync(cancellationToken) == RatingMode.Star && rating != 5))
+        if (rating is not null && (rating is < 1 or > 5 || !keepUnseen && await ratings.GetAsync(cancellationToken) == RatingMode.Star && rating != 5))
             throw ArcanistException.Field("rating", ErrorCodes.InvalidFormat);
 
         await EnsureVisibleAsync(access, trackId, cancellationToken);
@@ -119,7 +126,12 @@ public sealed class ListeningService(
         RecordPlayAsync(guard.Authenticated(), input, cancellationToken);
 
     /// <summary>Records a play for a user outside a request of theirs (a renderer playing their queue).</summary>
-    internal async Task<RecordedPlay> RecordPlayAsync(UserAccess access, RecordPlayInput input, CancellationToken cancellationToken)
+    internal Task<RecordedPlay> RecordPlayAsync(UserAccess access, RecordPlayInput input, CancellationToken cancellationToken) =>
+        RecordPlayAsync(access, input, null, null, cancellationToken);
+
+    /// <param name="externalId">The id the player gave the play: one already recorded for the user is a duplicate.</param>
+    /// <param name="source">How the play was queued, as the player says.</param>
+    internal async Task<RecordedPlay> RecordPlayAsync(UserAccess access, RecordPlayInput input, string? externalId, string? source, CancellationToken cancellationToken)
     {
         var now = Now();
         var playedAt = input.PlayedAt?.ToUniversalTime() ?? now;
@@ -138,11 +150,12 @@ public sealed class ListeningService(
 
         // A player resending a report it did not see acknowledged.
         var duplicate = await db.PlayEvents.AsNoTracking()
-            .Where(p => p.UserId == access.UserId && p.TrackId == input.TrackId
-                        && p.PlayedAt >= playedAt - DuplicateWindow && p.PlayedAt <= playedAt + DuplicateWindow)
+            .Where(p => p.UserId == access.UserId
+                        && (externalId != null && p.ExternalId == externalId
+                            || p.TrackId == input.TrackId && p.PlayedAt >= playedAt - DuplicateWindow && p.PlayedAt <= playedAt + DuplicateWindow))
             .FirstOrDefaultAsync(cancellationToken);
         if (duplicate is not null)
-            return new RecordedPlay(duplicate.Id, duplicate.Counted, duplicate.Skipped);
+            return new RecordedPlay(duplicate.Id, duplicate.Counted, duplicate.Skipped, Duplicate: true);
 
         // Never more than the track (a paused player may report wall time).
         var playedMs = durationMs > 0 ? Math.Min(input.PlayedMs, durationMs) : input.PlayedMs;
@@ -158,6 +171,8 @@ public sealed class ListeningService(
             Counted = counted,
             Skipped = skipped,
             Client = string.IsNullOrWhiteSpace(input.Client) ? null : input.Client.Trim(),
+            ExternalId = externalId,
+            Source = source,
         };
         db.PlayEvents.Add(play);
 

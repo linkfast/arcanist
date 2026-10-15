@@ -22,6 +22,12 @@ export const en: Dictionary = {
     actions: 'Actions',
     close: 'Close',
   },
+  theme: {
+    label: 'Theme',
+    system: 'System theme',
+    light: 'Light',
+    dark: 'Dark',
+  },
   nav: {
     cloud: 'Ultimate Cloud',
     database: 'Database',

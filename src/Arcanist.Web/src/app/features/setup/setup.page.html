@@ -123,7 +123,7 @@
                 </button>
                 @if (databaseTest(); as test) {
                   @if (test.success) {
-                    <span class="flex items-center gap-1 text-sm text-green-600"
+                    <span class="flex items-center gap-1 text-sm text-green-600 dark:text-green-400"
                       ><ng-icon name="lucideCheck" />{{ 'setup.database.ok' | t }}</span
                     >
                   } @else {

@@ -10,6 +10,7 @@ import { ApiError } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import { LanguageSelect } from '../../shared/language-select';
+import { ThemeSelect } from '../../shared/theme-select';
 
 @Component({
   selector: 'app-login-page',
@@ -22,6 +23,7 @@ import { LanguageSelect } from '../../shared/language-select';
     HlmAlertImports,
     TranslatePipe,
     LanguageSelect,
+    ThemeSelect,
   ],
   template: `
     <main class="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -63,7 +65,8 @@ import { LanguageSelect } from '../../shared/language-select';
             {{ 'login.submit' | t }}
           </button>
         </form>
-        <div hlmCardFooter class="justify-end">
+        <div hlmCardFooter class="justify-end gap-2">
+          <app-theme-select />
           <app-language-select />
         </div>
       </section>

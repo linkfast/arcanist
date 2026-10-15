@@ -22,6 +22,7 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { AuthService } from '../core/auth/auth.service';
 import { TranslatePipe } from '../core/i18n/i18n';
 import { LanguageSelect } from '../shared/language-select';
+import { ThemeSelect } from '../shared/theme-select';
 
 /** Layout of the signed-in panel: navigation on the side (on top on small screens) and the page content. */
 @Component({
@@ -34,6 +35,7 @@ import { LanguageSelect } from '../shared/language-select';
     HlmButtonImports,
     TranslatePipe,
     LanguageSelect,
+    ThemeSelect,
   ],
   providers: [
     provideIcons({
@@ -97,6 +99,7 @@ import { LanguageSelect } from '../shared/language-select';
             {{ 'nav.player' | t }}
           </a>
           <app-language-select />
+          <app-theme-select />
           <button
             hlmBtn
             variant="ghost"

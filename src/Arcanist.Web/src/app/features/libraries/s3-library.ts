@@ -127,7 +127,7 @@ import { CreateS3LibraryMutation, TestS3ConnectionMutation } from '../../graphql
         </button>
         @if (tested(); as result) {
           @if (result.success) {
-            <span class="text-sm text-green-600">{{
+            <span class="text-sm text-green-600 dark:text-green-400">{{
               (result.truncated ? 's3.foundMore' : 's3.found') | t: { count: result.audioFiles }
             }}</span>
           } @else {

@@ -17,8 +17,8 @@ public sealed class CapabilityService(ICloudLinkState cloudLink) : ICapabilitySe
 
     public static CloudTier RequiredTier(Capability capability) => capability switch
     {
-        Capability.UltimateCloudSource => CloudTier.Free,
-        Capability.CloudSync or Capability.ThirdPartyStorage or Capability.CloudConnect => CloudTier.Paid,
+        Capability.UltimateCloudSource or Capability.CloudConnect => CloudTier.Free,
+        Capability.CloudSync or Capability.ThirdPartyStorage => CloudTier.Paid,
         _ => throw new ArgumentOutOfRangeException(nameof(capability), capability, null),
     };
 }

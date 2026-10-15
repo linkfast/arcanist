@@ -10,8 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Arcanist.Core.Tests.Cloud;
 
 /// <summary>
-/// The transparent P2P connection of the Cloud plan: the server registers its node in Ultimate Cloud, trusts the
-/// account's devices. A real node, on a real port, without anything outside this machine.
+/// The transparent P2P connection, with any linked account: the server registers its node in Ultimate Cloud and trusts
+/// the account's devices. A real node, on a real port, without anything outside this machine.
 /// </summary>
 public sealed class UltimateCloudConnectTests : IAsyncDisposable
 {
@@ -94,10 +94,10 @@ public sealed class UltimateCloudConnectTests : IAsyncDisposable
         await _admin.GraphQLAsync("mutation { refreshUltimateCloud { tier } }");
         Assert.Equal([Phone], (await PeersAsync()).Select(p => p.GetProperty("nodeId").GetString()));
 
-        // Without the Cloud plan, none are.
+        // Any plan will do.
         _cloud.Plan = "Standard";
         await _admin.GraphQLAsync("mutation { refreshUltimateCloud { tier } }");
-        Assert.Empty(await PeersAsync());
+        Assert.Equal([Phone], (await PeersAsync()).Select(p => p.GetProperty("nodeId").GetString()));
     }
 
     private static int FreeUdpPort()

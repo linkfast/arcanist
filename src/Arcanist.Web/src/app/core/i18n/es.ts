@@ -989,7 +989,7 @@ export const es: Dictionary = {
       },
       CLOUD_CONNECT: {
         name: 'Conexión transparente',
-        help: 'Tus dispositivos encuentran este servidor por la red P2P sin emparejarlos con un QR. Plan Cloud.',
+        help: 'Tus dispositivos encuentran este servidor por la red P2P sin emparejarlos con un QR. Con cualquier cuenta.',
       },
     },
   },
@@ -1116,7 +1116,7 @@ export const es: Dictionary = {
     },
     fromUltimate: 'Ultimate Cloud',
     fromUltimateHelp:
-      'Un dispositivo de tu cuenta de Ultimate Cloud (plan Cloud): conecta sin emparejar y deja de hacerlo si sale de la cuenta.',
+      'Un dispositivo de tu cuenta de Ultimate Cloud: conecta sin emparejar y deja de hacerlo si sale de la cuenta.',
     rules: {
       allowDownload: 'Permitir descargas',
       allowDownloadHelp:

@@ -15,7 +15,7 @@ public enum Capability
     /// <summary>Third-party storage such as S3-compatible buckets as library source or sync target. Paid tier.</summary>
     ThirdPartyStorage,
 
-    /// <summary>Clients reach this server over iroh without pairing, coordinated by Ultimate Cloud. Paid tier.</summary>
+    /// <summary>Clients reach this server over iroh without pairing, coordinated by Ultimate Cloud. Any linked account.</summary>
     CloudConnect,
 }
 

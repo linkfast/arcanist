@@ -99,15 +99,12 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             var variables = JsonNode.Parse(body)!["variables"];
             if (query.Contains("myP2PNodes"))
             {
-                var cloud = Plan == "Cloud";
                 return Json(new
                 {
                     data = new
                     {
-                        myP2PNodes = cloud
-                            ? DeviceNodes.Select(d => new { nodeId = d.Key, kind = "DEVICE", name = d.Value })
-                                .Concat(RegisteredNodes.Select(n => new { nodeId = n.Key, kind = "SERVER", name = n.Value })).ToArray()
-                            : [],
+                        myP2PNodes = DeviceNodes.Select(d => new { nodeId = d.Key, kind = "DEVICE", name = d.Value })
+                            .Concat(RegisteredNodes.Select(n => new { nodeId = n.Key, kind = "SERVER", name = n.Value })).ToArray(),
                     },
                 });
             }
@@ -476,7 +473,7 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         var refreshed = (await admin.GraphQLAsync("mutation { refreshUltimateCloud { tier capabilities plan { name } } }"))
             .GetProperty("data").GetProperty("refreshUltimateCloud");
         Assert.Equal("FREE", refreshed.GetProperty("tier").GetString());
-        Assert.Equal(["ULTIMATE_CLOUD_SOURCE"], refreshed.GetProperty("capabilities").EnumerateArray().Select(c => c.GetString()));
+        Assert.Equal(["ULTIMATE_CLOUD_SOURCE", "CLOUD_CONNECT"], refreshed.GetProperty("capabilities").EnumerateArray().Select(c => c.GetString()));
 
         // Unlinking ends the session on Ultimate Cloud and turns everything off.
         var unlinked = (await admin.GraphQLAsync("mutation { unlinkUltimateCloud { state tier plan { name } } }"))

@@ -981,7 +981,7 @@ export const en: Dictionary = {
       },
       CLOUD_CONNECT: {
         name: 'Seamless connection',
-        help: 'Your devices find this server through the P2P network without pairing it with a QR code. Cloud plan.',
+        help: 'Your devices find this server through the P2P network without pairing it with a QR code. Any account.',
       },
     },
   },
@@ -1101,7 +1101,7 @@ export const en: Dictionary = {
     },
     fromUltimate: 'Ultimate Cloud',
     fromUltimateHelp:
-      'A device of your Ultimate Cloud account (Cloud plan): it connects without pairing, and stops when it leaves the account.',
+      'A device of your Ultimate Cloud account: it connects without pairing, and stops when it leaves the account.',
     rules: {
       allowDownload: 'Allow downloads',
       allowDownloadHelp:

@@ -10,7 +10,7 @@ public sealed class CapabilityServiceTests
     [InlineData(CloudTier.Free, Capability.UltimateCloudSource, true)]
     [InlineData(CloudTier.Free, Capability.CloudSync, false)]
     [InlineData(CloudTier.Free, Capability.ThirdPartyStorage, false)]
-    [InlineData(CloudTier.Free, Capability.CloudConnect, false)]
+    [InlineData(CloudTier.Free, Capability.CloudConnect, true)]
     [InlineData(CloudTier.Paid, Capability.UltimateCloudSource, true)]
     [InlineData(CloudTier.Paid, Capability.CloudSync, true)]
     [InlineData(CloudTier.Paid, Capability.ThirdPartyStorage, true)]

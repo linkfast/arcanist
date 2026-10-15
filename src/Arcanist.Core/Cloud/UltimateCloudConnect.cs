@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Arcanist.Core.Cloud;
 
 /// <summary>
-/// The transparent P2P connection of the Cloud plan (<see cref="Capability.CloudConnect"/>): this server registers its
+/// The transparent P2P connection, with any linked account (<see cref="Capability.CloudConnect"/>): this server registers its
 /// node in Ultimate Cloud, so the account's apps find it without pairing; the account's devices are trusted here as
 /// they register theirs (<see cref="P2PPeerSource.UltimateCloud"/>), and dropped when they no longer are. The nodes
 /// reach each other through the relays chosen in the P2P settings. Run after every plan check.
@@ -29,7 +29,7 @@ public sealed class UltimateCloudConnect(
     public async Task SyncAsync(CancellationToken cancellationToken)
     {
         var config = await p2p.GetAsync(cancellationToken);
-        if (link.Tier != CloudTier.Paid || !config.Enabled)
+        if (link.Tier == CloudTier.None || !config.Enabled)
         {
             await TrustAsync([], cancellationToken);
             return;

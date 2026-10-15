@@ -131,6 +131,9 @@ public static class StorageServiceCollectionExtensions
     public static IServiceCollection AddLibraryStorage(this IServiceCollection services)
     {
         services.AddSingleton<ILibraryStorage, LocalStorage>();
+        services.AddSingleton<ILibraryStorage, S3.S3Storage>();
+        // Audio lasts as long as the music: requests end with their cancellation, not with a timeout.
+        services.AddHttpClient(S3.S3Storage.HttpClientName, client => client.Timeout = Timeout.InfiniteTimeSpan);
         services.AddSingleton<ILibraryStorageResolver, LibraryStorageResolver>();
         return services;
     }

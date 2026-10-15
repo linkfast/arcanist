@@ -601,6 +601,7 @@ enum LibrarySourceKind {
   LOCAL
   PEER
   ULTIMATE_CLOUD
+  S3
 }
 
 type LibraryOrganization {
@@ -1407,6 +1408,10 @@ type Mutation {
   movePlaylistEntries(playlistId: ID!, input: MovePlaylistEntriesInput!): Playlist!
   "Replaces the users who can add, remove and reorder the playlist's tracks. Owner only."
   setPlaylistCollaborators(playlistId: ID!, userIds: [ID!]!): Playlist!
+  "Checks that an S3 bucket answers with those keys, and how much music it holds. Needs the Cloud plan. Administrators only."
+  testS3Connection(input: S3ConnectionInput!): S3ConnectionTest!
+  "A library in an S3 bucket (any S3-compatible service). Needs the Cloud plan. Administrators only, with a recent authentication."
+  createS3Library(input: CreateS3LibraryInput!): Library!
   "Queues a scan, or returns the one already queued or running for the library. A full scan re-reads every file. Requires RUN_SCANS."
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
@@ -1685,6 +1690,28 @@ input AddPlaylistTracksInput {
 input MovePlaylistEntriesInput {
   entryIds: [ID!]!
   position: Int!
+}
+
+type S3ConnectionTest {
+  success: Boolean!
+  errorCode: String
+  audioFiles: Int!
+  truncated: Boolean!
+}
+
+input S3ConnectionInput {
+  endpoint: String!
+  region: String
+  bucket: String!
+  prefix: String
+  accessKeyId: String!
+  secretAccessKey: String!
+  pathStyle: Boolean!
+}
+
+input CreateS3LibraryInput {
+  name: String!
+  connection: S3ConnectionInput!
 }
 
 input AddUltimateCloudLibraryInput {

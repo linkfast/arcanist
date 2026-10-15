@@ -143,6 +143,8 @@ type Documents = {
     "\n  query CloudSyncs {\n    cloudSyncs {\n      ...CloudSyncStateFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n": typeof types.CloudSyncsDocument,
     "\n  mutation SetLibraryCloudSync($libraryId: ID!, $input: SetLibraryCloudSyncInput!) {\n    setLibraryCloudSync(libraryId: $libraryId, input: $input) {\n      ...CloudSyncStateFields\n    }\n  }\n": typeof types.SetLibraryCloudSyncDocument,
     "\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n": typeof types.SyncLibraryWithCloudDocument,
+    "\n  mutation TestS3Connection($input: S3ConnectionInput!) {\n    testS3Connection(input: $input) {\n      success\n      errorCode\n      audioFiles\n      truncated\n    }\n  }\n": typeof types.TestS3ConnectionDocument,
+    "\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n": typeof types.CreateS3LibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.ResolvePreviousSqliteDocument,
 };
@@ -276,6 +278,8 @@ const documents: Documents = {
     "\n  query CloudSyncs {\n    cloudSyncs {\n      ...CloudSyncStateFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n": types.CloudSyncsDocument,
     "\n  mutation SetLibraryCloudSync($libraryId: ID!, $input: SetLibraryCloudSyncInput!) {\n    setLibraryCloudSync(libraryId: $libraryId, input: $input) {\n      ...CloudSyncStateFields\n    }\n  }\n": types.SetLibraryCloudSyncDocument,
     "\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n": types.SyncLibraryWithCloudDocument,
+    "\n  mutation TestS3Connection($input: S3ConnectionInput!) {\n    testS3Connection(input: $input) {\n      success\n      errorCode\n      audioFiles\n      truncated\n    }\n  }\n": types.TestS3ConnectionDocument,
+    "\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n": types.CreateS3LibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.ResolvePreviousSqliteDocument,
 };
@@ -810,6 +814,14 @@ export function graphql(source: "\n  mutation SetLibraryCloudSync($libraryId: ID
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n"): (typeof documents)["\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation TestS3Connection($input: S3ConnectionInput!) {\n    testS3Connection(input: $input) {\n      success\n      errorCode\n      audioFiles\n      truncated\n    }\n  }\n"): (typeof documents)["\n  mutation TestS3Connection($input: S3ConnectionInput!) {\n    testS3Connection(input: $input) {\n      success\n      errorCode\n      audioFiles\n      truncated\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

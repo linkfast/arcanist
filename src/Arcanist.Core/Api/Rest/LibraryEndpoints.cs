@@ -25,6 +25,19 @@ public static class LibraryEndpoints
             .WithSummary("Requires MANAGE_LIBRARIES.")
             .Produces<Library>(StatusCodes.Status201Created);
 
+        libraries.MapPost("/s3/test", (S3ConnectionInput input, S3LibraryService service, CancellationToken ct) => service.TestAsync(input, ct))
+            .WithName("TestS3Connection")
+            .WithSummary("Checks that an S3 bucket answers with those keys, and how much music it holds. Needs the Cloud plan. Administrators only.");
+
+        libraries.MapPost("/s3", async (CreateS3LibraryInput input, S3LibraryService service, CancellationToken ct) =>
+            {
+                var library = await service.CreateAsync(input, ct);
+                return Results.Created($"/rest/v1/libraries/{library.Id}", library);
+            })
+            .WithName("CreateS3Library")
+            .WithSummary("A library in an S3 bucket (any S3-compatible service). Needs the Cloud plan. Administrators only, with a recent authentication.")
+            .Produces<Library>(StatusCodes.Status201Created);
+
         libraries.MapPut("/{id:guid}", (Guid id, UpdateLibraryInput input, LibraryService service, CancellationToken ct) =>
                 service.UpdateAsync(id, input, ct))
             .WithName("UpdateLibrary")

@@ -1532,6 +1532,25 @@ export const SyncLibraryWithCloudMutation = graphql(`
   }
 `);
 
+export const TestS3ConnectionMutation = graphql(`
+  mutation TestS3Connection($input: S3ConnectionInput!) {
+    testS3Connection(input: $input) {
+      success
+      errorCode
+      audioFiles
+      truncated
+    }
+  }
+`);
+
+export const CreateS3LibraryMutation = graphql(`
+  mutation CreateS3Library($input: CreateS3LibraryInput!) {
+    createS3Library(input: $input) {
+      id
+    }
+  }
+`);
+
 export const RefreshUltimateCloudMutation = graphql(`
   mutation RefreshUltimateCloud {
     refreshUltimateCloud {

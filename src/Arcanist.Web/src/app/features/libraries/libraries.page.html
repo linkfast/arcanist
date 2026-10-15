@@ -4,12 +4,39 @@
     <p class="text-sm text-muted-foreground">{{ 'libraries.subtitle' | t }}</p>
   </div>
   @if (canManage()) {
-    <button hlmBtn type="button" class="gap-1" (click)="openCreate()">
-      <ng-icon name="lucidePlus" />
-      {{ 'libraries.create' | t }}
-    </button>
+    <div class="flex flex-wrap gap-2">
+      @if (auth.isAdmin()) {
+        <button
+          hlmBtn
+          variant="outline"
+          type="button"
+          [disabled]="!s3Available()"
+          [title]="s3Available() ? '' : ('s3.needsPlan' | t)"
+          (click)="s3Open.set(true)"
+        >
+          {{ 's3.open' | t }}
+        </button>
+      }
+      <button hlmBtn type="button" class="gap-1" (click)="openCreate()">
+        <ng-icon name="lucidePlus" />
+        {{ 'libraries.create' | t }}
+      </button>
+    </div>
   }
 </header>
+
+<hlm-dialog [state]="s3Open() ? 'open' : 'closed'" (closed)="s3Open.set(false)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100vh-2rem)] w-[min(40rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 's3.title' | t }}</h3>
+      <p hlmDialogDescription>{{ 's3.subtitle' | t }}</p>
+    </hlm-dialog-header>
+    <app-s3-library (created)="s3Created()" (cancelled)="s3Open.set(false)" />
+  </hlm-dialog-content>
+</hlm-dialog>
 
 @if (libraries() === null) {
   <div class="flex justify-center py-12"><hlm-spinner /></div>
@@ -233,7 +260,7 @@
                 <span hlmBadge variant="secondary">{{ 'organize.autoBadge' | t }}</span>
               }
             </button>
-            @if (auth.isAdmin()) {
+            @if (auth.isAdmin() && takesFolders(library)) {
               <button
                 hlmBtn
                 variant="ghost"

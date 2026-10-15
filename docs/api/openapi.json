@@ -1935,6 +1935,68 @@
         }
       }
     },
+    "/rest/v1/libraries/s3/test": {
+      "post": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Checks that an S3 bucket answers with those keys, and how much music it holds. Needs the Cloud plan. Administrators only.",
+        "operationId": "TestS3Connection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/S3ConnectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/S3ConnectionTest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/s3": {
+      "post": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "A library in an S3 bucket (any S3-compatible service). Needs the Cloud plan. Administrators only, with a recent authentication.",
+        "operationId": "CreateS3Library",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateS3LibraryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/libraries/{libraryId}/sources": {
       "post": {
         "tags": [
@@ -6546,6 +6608,21 @@
           }
         }
       },
+      "CreateS3LibraryInput": {
+        "required": [
+          "name",
+          "connection"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/S3ConnectionInput"
+          }
+        }
+      },
       "CreateServerDirectoryInput": {
         "required": [
           "parent",
@@ -8439,7 +8516,8 @@
         "enum": [
           "LOCAL",
           "PEER",
-          "ULTIMATE_CLOUD"
+          "ULTIMATE_CLOUD",
+          "S3"
         ]
       },
       "LibraryTotals": {
@@ -10790,6 +10868,78 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "S3ConnectionInput": {
+        "required": [
+          "endpoint",
+          "region",
+          "bucket",
+          "prefix",
+          "accessKeyId",
+          "secretAccessKey",
+          "pathStyle"
+        ],
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          },
+          "region": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bucket": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accessKeyId": {
+            "type": "string"
+          },
+          "secretAccessKey": {
+            "type": "string"
+          },
+          "pathStyle": {
+            "type": "boolean"
+          }
+        }
+      },
+      "S3ConnectionTest": {
+        "required": [
+          "success",
+          "errorCode",
+          "audioFiles",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "audioFiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "truncated": {
+            "type": "boolean"
           }
         }
       },

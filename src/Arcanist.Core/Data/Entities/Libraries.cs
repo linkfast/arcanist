@@ -52,6 +52,12 @@ public enum LibrarySourceKind
     /// <c>CloudDrop</c>); tracks are described by Ultimate Cloud and their audio fetched when played.
     /// </summary>
     UltimateCloud,
+
+    /// <summary>
+    /// A bucket of an S3-compatible service, under a prefix: the location is <c>s3://bucket/prefix</c>, and
+    /// <see cref="LibrarySource.Settings"/> holds the endpoint and the credentials (the secret protected).
+    /// </summary>
+    S3,
 }
 
 /// <summary>A location whose audio files belong to a library. Always read through <c>ILibraryStorage</c>.</summary>

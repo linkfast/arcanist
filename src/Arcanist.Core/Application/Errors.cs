@@ -155,6 +155,14 @@ public static class ErrorCodes
     public const string CloudQuotaExceeded = "cloud_quota_exceeded";
     /// <summary>The account is read-only (a lapsed subscription): nothing is uploaded.</summary>
     public const string CloudReadOnly = "cloud_read_only";
+    /// <summary>Libraries in S3 need the Cloud plan.</summary>
+    public const string S3Unavailable = "s3_unavailable";
+    /// <summary>The S3 service did not answer at that address.</summary>
+    public const string S3Unreachable = "s3_unreachable";
+    /// <summary>The S3 service refused the keys (wrong keys, or no permission on the bucket).</summary>
+    public const string S3AccessDenied = "s3_access_denied";
+    /// <summary>There is no such bucket on that S3 service (or in that region).</summary>
+    public const string S3BucketNotFound = "s3_bucket_not_found";
     /// <summary>A sync stopped because of an unexpected error; see the server log.</summary>
     public const string CloudSyncFailed = "cloud_sync_failed";
     /// <summary>Uploading a file to Ultimate Cloud failed.</summary>

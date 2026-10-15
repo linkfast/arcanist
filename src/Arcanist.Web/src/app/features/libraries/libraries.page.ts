@@ -52,6 +52,7 @@ import {
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { OrganizeDialog } from './organize-dialog';
 import { CloudSyncPanel } from './cloud-sync';
+import { S3LibraryForm } from './s3-library';
 import { CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
 type Library = LibrariesResult['libraries'][number];
@@ -87,6 +88,7 @@ interface LibraryForm {
     FolderPicker,
     OrganizeDialog,
     CloudSyncPanel,
+    S3LibraryForm,
     DateTimePipe,
     RelativeTimePipe,
     CountPipe,
@@ -107,7 +109,12 @@ interface LibraryForm {
 export class LibrariesPage implements OnInit {
   /** A library another server shares through the P2P network, or kept in Ultimate Cloud: read-only here. */
   protected isShared(library: { sources?: { kind: string }[] | null }): boolean {
-    return (library.sources ?? []).some((s) => s.kind !== 'LOCAL');
+    return (library.sources ?? []).some((s) => s.kind === 'PEER' || s.kind === 'ULTIMATE_CLOUD');
+  }
+
+  /** Folders of this server can be added: not to libraries in a bucket, shared or in Ultimate Cloud. */
+  protected takesFolders(library: { sources?: { kind: string }[] | null }): boolean {
+    return (library.sources ?? []).every((s) => s.kind === 'LOCAL');
   }
 
   protected readonly auth = inject(AuthService);
@@ -120,6 +127,14 @@ export class LibrariesPage implements OnInit {
   protected readonly cloudSyncs = signal<Record<string, CloudSyncState>>({});
   /** The linked account has the Cloud plan. */
   protected readonly cloudSyncAvailable = signal(false);
+  /** The linked account has the Cloud plan's storage on other clouds (S3). */
+  protected readonly s3Available = signal(false);
+  protected readonly s3Open = signal(false);
+
+  protected async s3Created(): Promise<void> {
+    this.s3Open.set(false);
+    await this.load();
+  }
   /** Latest scan of each library, updated live. */
   protected readonly scans = signal<Record<string, ScanJob>>({});
   protected readonly busy = signal(false);
@@ -313,6 +328,7 @@ export class LibrariesPage implements OnInit {
       const result = await this.gql.query(CloudSyncsQuery);
       this.cloudSyncs.set(Object.fromEntries(result.cloudSyncs.map((s) => [s.libraryId, s])));
       this.cloudSyncAvailable.set(result.serverInfo.capabilities.includes('CLOUD_SYNC'));
+      this.s3Available.set(result.serverInfo.capabilities.includes('THIRD_PARTY_STORAGE'));
     } catch {
       // Retried while following; without it the libraries still show.
     }

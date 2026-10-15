@@ -744,6 +744,30 @@ export const es: Dictionary = {
       PREVIOUS: 'Anterior',
     },
   },
+  s3: {
+    open: 'Biblioteca en S3',
+    title: 'Biblioteca en S3',
+    subtitle:
+      'Música guardada en un bucket de cualquier servicio compatible con S3 (AWS, Backblaze B2, Wasabi, Cloudflare R2, MinIO…). Se lee al escanear y al reproducir, sin descargarla entera.',
+    needsPlan:
+      'Las bibliotecas en S3 necesitan el plan Cloud de la cuenta de Ultimate Cloud vinculada.',
+    endpoint: 'Dirección del servicio',
+    endpointHelp: 'La URL S3 de tu proveedor (para AWS, https://s3.amazonaws.com).',
+    bucket: 'Bucket',
+    prefix: 'Carpeta',
+    prefixPlaceholder: 'todo el bucket',
+    region: 'Región',
+    accessKeyId: 'Clave de acceso',
+    secretAccessKey: 'Clave secreta',
+    pathStyle: 'Bucket en la ruta',
+    pathStyleHelp: 'Para MinIO y la mayoría de servicios compatibles. Desactívalo para AWS.',
+    notes:
+      'La clave secreta se guarda cifrada en este servidor y no se vuelve a mostrar. Con permiso de escritura, organizar mueve los archivos dentro del bucket (nunca sobrescribe; lo quitado va a .arcanist-trash).',
+    found: 'Conectado: {count} archivos de audio',
+    foundMore: 'Conectado: {count} archivos de audio entre los primeros mil objetos',
+    create: 'Crear biblioteca',
+    created: 'Biblioteca creada; se está leyendo su contenido',
+  },
   cloudSync: {
     title: 'Ultimate Cloud',
     needsPlan: 'Sincronizar con Ultimate Cloud necesita el plan Cloud de la cuenta vinculada.',
@@ -1230,6 +1254,11 @@ export const es: Dictionary = {
     upload_failed: 'La subida a Ultimate Cloud falló.',
     cloud_sync_failed:
       'La sincronización se detuvo por un error inesperado. Revisa el registro del servidor.',
+    s3_unavailable: 'Las bibliotecas en S3 necesitan el plan Cloud.',
+    s3_unreachable: 'El servicio S3 no responde en esa dirección.',
+    s3_access_denied:
+      'El servicio S3 rechazó las claves (incorrectas, o sin permiso en el bucket).',
+    s3_bucket_not_found: 'No existe ese bucket en ese servicio (o en esa región).',
     cloud_not_configured: 'Este servidor no tiene configurada la dirección de Ultimate Cloud.',
     cloud_not_linked: 'No hay ninguna cuenta de Ultimate Cloud vinculada.',
     cloud_unreachable: 'No se puede contactar con Ultimate Cloud. Se volverá a intentar.',

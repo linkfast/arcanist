@@ -740,6 +740,32 @@ export const en: Dictionary = {
       PREVIOUS: 'Previous',
     },
   },
+  cloudSync: {
+    title: 'Ultimate Cloud',
+    needsPlan: 'Syncing with Ultimate Cloud needs the Cloud plan on the linked account.',
+    downloadTo: 'Download to',
+    mode: {
+      OFF: 'Do not sync',
+      UPLOAD: 'Upload',
+      DOWNLOAD: 'Download',
+      BOTH: 'Upload and download',
+    },
+    phase: {
+      listing: 'Reading Ultimate Cloud…',
+      matching: 'Comparing…',
+      uploading: 'Uploading…',
+      downloading: 'Downloading…',
+    },
+    queued: 'Sync queued',
+    lastRun: 'Synced {when}',
+    counts:
+      '{matched} on both sides · {uploaded} uploaded · {downloaded} downloaded · {localOnly} only here',
+    failures: '{count} with errors (retried on every sync)',
+    cannotStrip: 'cannot be uploaded as it is (removing its tags changes the audio)',
+    toolError: 'the audio tool could not read it',
+    nothingDeleted: 'Nothing is ever deleted on either side. Syncs every 6 h.',
+    now: 'Sync now',
+  },
   cloud: {
     title: 'Ultimate Cloud',
     subtitle:
@@ -1181,6 +1207,14 @@ export const en: Dictionary = {
     cloud_tool_unsupported:
       'There is no audio tool for this platform, or it needs a newer version of Arcanist.',
     cloud_tool_missing: 'Ultimate’s audio tool is not installed.',
+    cloud_sync_unavailable: 'Syncing with Ultimate Cloud needs the Cloud plan.',
+    cloud_sync_download_taken:
+      'Another library already downloads from Ultimate Cloud: only one can, or both would get everything.',
+    cloud_quota_exceeded: 'The Ultimate Cloud storage is full: nothing more is uploaded.',
+    cloud_read_only:
+      'The Ultimate Cloud account is read only (a lapsed subscription): nothing is uploaded.',
+    upload_failed: 'Uploading to Ultimate Cloud failed.',
+    cloud_sync_failed: 'The sync stopped because of an unexpected error. Check the server log.',
     cloud_not_configured: 'This server has no Ultimate Cloud address configured.',
     cloud_not_linked: 'No Ultimate Cloud account is linked.',
     cloud_unreachable: 'Ultimate Cloud cannot be reached. It will be tried again.',

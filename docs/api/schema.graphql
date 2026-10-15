@@ -100,6 +100,8 @@ type Query {
   search(query: String!, first: Int): SearchResults!
   "The linked Ultimate Cloud account, its plan and what it enables. Administrators only."
   ultimateCloud: UltimateCloudStatus!
+  "How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only."
+  cloudSyncs: [LibraryCloudSyncState!]!
   "Public description of the server. Does not require authentication."
   serverInfo: ServerInfo!
   "The signed-in user."
@@ -1188,6 +1190,41 @@ type UltimateCloudTool {
   errorCode: String
 }
 
+type LibraryCloudSyncState {
+  libraryId: ID!
+  mode: CloudSyncMode!
+  downloadSourceId: ID
+  lastRunAt: DateTime
+  requested: Boolean!
+  running: CloudSyncRun
+  matched: Int!
+  uploaded: Int!
+  downloaded: Int!
+  localOnly: Int!
+  failed: Int!
+  errorCode: String
+  failures: [CloudSyncFailure!]!
+}
+
+enum CloudSyncMode {
+  OFF
+  UPLOAD
+  DOWNLOAD
+  BOTH
+}
+
+type CloudSyncRun {
+  phase: String!
+  done: Int!
+  total: Int!
+}
+
+type CloudSyncFailure {
+  title: String!
+  path: String
+  reason: String!
+}
+
 type ServerInfo {
   name: String!
   version: String!
@@ -1382,6 +1419,10 @@ type Mutation {
   unlinkUltimateCloud: UltimateCloudStatus!
   "Shows a collection of the account (its library or Cloud Drop) as a library of this server; nothing is downloaded. Administrators only, with a recent authentication."
   addUltimateCloudLibrary(input: AddUltimateCloudLibraryInput!): UltimateCloudStatus!
+  "Uploads, downloads or both between a library and the Ultimate Cloud account (Cloud plan); nothing is deleted on either side. Administrators only; turning it on needs a recent authentication."
+  setLibraryCloudSync(libraryId: ID!, input: SetLibraryCloudSyncInput!): LibraryCloudSyncState!
+  "Syncs a library with Ultimate Cloud now (otherwise every 6 hours). Administrators only."
+  syncLibraryWithCloud(libraryId: ID!): LibraryCloudSyncState!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
   "Requires MANAGE_USERS and a recent authentication."
@@ -1649,6 +1690,11 @@ input MovePlaylistEntriesInput {
 input AddUltimateCloudLibraryInput {
   collection: UltimateCloudCollection!
   name: String
+}
+
+input SetLibraryCloudSyncInput {
+  mode: CloudSyncMode!
+  downloadSourceId: ID
 }
 
 input CreateUserInput {

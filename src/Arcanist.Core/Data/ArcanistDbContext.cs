@@ -46,6 +46,10 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
 
     public DbSet<DlnaImport> DlnaImports => Set<DlnaImport>();
 
+    public DbSet<LibraryCloudSync> LibraryCloudSyncs => Set<LibraryCloudSync>();
+
+    public DbSet<CloudSyncItem> CloudSyncItems => Set<CloudSyncItem>();
+
     public DbSet<DlnaImportItem> DlnaImportItems => Set<DlnaImportItem>();
 
     public DbSet<P2PPeer> P2PPeers => Set<P2PPeer>();
@@ -180,6 +184,29 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             import.HasOne(i => i.LibrarySource).WithMany().HasForeignKey(i => i.LibrarySourceId).OnDelete(DeleteBehavior.Cascade);
             import.HasMany(i => i.Items).WithOne().HasForeignKey(i => i.ImportId).OnDelete(DeleteBehavior.Cascade);
             import.HasIndex(i => i.Status);
+        });
+
+        modelBuilder.Entity<LibraryCloudSync>(sync =>
+        {
+            sync.HasKey(s => s.LibraryId);
+            sync.HasOne(s => s.Library).WithMany().HasForeignKey(s => s.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            sync.Property(s => s.Mode).HasConversion<string>().HasMaxLength(EnumLength);
+            sync.Property(s => s.ErrorCode).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<CloudSyncItem>(item =>
+        {
+            item.HasOne<Library>().WithMany().HasForeignKey(i => i.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            item.Property(i => i.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            item.Property(i => i.ContentHash).HasMaxLength(64);
+            item.Property(i => i.AudioHash).HasMaxLength(64);
+            item.Property(i => i.CloudTrackId).HasMaxLength(64);
+            item.Property(i => i.Reason).HasMaxLength(64);
+            item.Property(i => i.MatchKey).HasMaxLength(NameLength);
+            item.Property(i => i.Title).HasMaxLength(NameLength);
+            item.Property(i => i.Path).HasMaxLength(PathLength);
+            item.HasIndex(i => new { i.LibraryId, i.ContentHash });
+            item.HasIndex(i => new { i.LibraryId, i.CloudTrackId });
         });
 
         modelBuilder.Entity<DlnaImportItem>(item =>

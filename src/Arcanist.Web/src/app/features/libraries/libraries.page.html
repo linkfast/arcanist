@@ -107,6 +107,16 @@
             </ul>
           }
 
+          @if (canSync(library)) {
+            <app-cloud-sync
+              [libraryId]="library.id"
+              [sources]="library.sources ?? []"
+              [state]="cloudSyncs()[library.id]"
+              [available]="cloudSyncAvailable()"
+              (changed)="cloudSyncChanged($event)"
+            />
+          }
+
           @if (job) {
             <div class="grid gap-2 text-sm">
               @if (isRunning(job)) {

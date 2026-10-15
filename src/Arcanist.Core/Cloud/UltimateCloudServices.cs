@@ -15,11 +15,15 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddHostedService(provider => provider.GetRequiredService<UltimateCloudAccount>());
         services.AddHttpClient(UltimateCloudClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddSingleton<UltimateAudioTool>();
+        services.AddSingleton<IUltimateAudio>(provider => provider.GetRequiredService<UltimateAudioTool>());
+        services.AddSingleton<CloudSyncWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<CloudSyncWorker>());
         services.AddSingleton<UltimateCloudStorage>();
         services.AddSingleton<ILibraryStorage>(provider => provider.GetRequiredService<UltimateCloudStorage>());
         // Audio lasts as long as the music: requests end with their cancellation, not with a timeout.
         services.AddHttpClient(UltimateCloudStorage.FilesClientName, client => client.Timeout = Timeout.InfiniteTimeSpan);
         services.AddScoped<Application.Cloud.UltimateCloudService>();
+        services.AddScoped<Application.Cloud.CloudSyncService>();
         return services;
     }
 }

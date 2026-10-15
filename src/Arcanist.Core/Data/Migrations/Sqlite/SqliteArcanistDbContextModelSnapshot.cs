@@ -255,6 +255,60 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("AudioAnalyses");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AudioHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CloudTrackId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MatchKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "CloudTrackId");
+
+                    b.HasIndex("LibraryId", "ContentHash");
+
+                    b.ToTable("CloudSyncItems");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DlnaImport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -614,6 +668,34 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.HasIndex("LibraryId");
 
                     b.ToTable("LibraryAccess");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LibraryCloudSync", b =>
+                {
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("DownloadSourceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Requested")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("LibraryId");
+
+                    b.ToTable("LibraryCloudSyncs");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.LibrarySource", b =>
@@ -1714,6 +1796,15 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DlnaImport", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.LibrarySource", "LibrarySource")
@@ -1773,6 +1864,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Navigation("Library");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LibraryCloudSync", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.LibrarySource", b =>

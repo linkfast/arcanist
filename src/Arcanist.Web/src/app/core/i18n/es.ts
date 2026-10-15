@@ -744,6 +744,32 @@ export const es: Dictionary = {
       PREVIOUS: 'Anterior',
     },
   },
+  cloudSync: {
+    title: 'Ultimate Cloud',
+    needsPlan: 'Sincronizar con Ultimate Cloud necesita el plan Cloud de la cuenta vinculada.',
+    downloadTo: 'Bajar a',
+    mode: {
+      OFF: 'No sincronizar',
+      UPLOAD: 'Subir',
+      DOWNLOAD: 'Bajar',
+      BOTH: 'Subir y bajar',
+    },
+    phase: {
+      listing: 'Leyendo Ultimate Cloud…',
+      matching: 'Comparando…',
+      uploading: 'Subiendo…',
+      downloading: 'Bajando…',
+    },
+    queued: 'Sincronización en cola',
+    lastRun: 'Sincronizada {when}',
+    counts:
+      '{matched} en ambos lados · {uploaded} subidas · {downloaded} bajadas · {localOnly} solo aquí',
+    failures: '{count} con errores (se reintentan en cada sincronización)',
+    cannotStrip: 'no se puede subir tal cual (quitar sus etiquetas cambia el audio)',
+    toolError: 'la herramienta de audio no pudo leerla',
+    nothingDeleted: 'Nunca se borra nada en ningún lado. Se sincroniza cada 6 h.',
+    now: 'Sincronizar ahora',
+  },
   cloud: {
     title: 'Ultimate Cloud',
     subtitle:
@@ -1195,6 +1221,15 @@ export const es: Dictionary = {
     cloud_tool_unsupported:
       'No hay herramienta de audio para esta plataforma, o necesita una versión más nueva de Arcanist.',
     cloud_tool_missing: 'La herramienta de audio de Ultimate no está instalada.',
+    cloud_sync_unavailable: 'Sincronizar con Ultimate Cloud necesita el plan Cloud.',
+    cloud_sync_download_taken:
+      'Otra biblioteca ya baja de Ultimate Cloud: solo una puede, o las dos recibirían todo.',
+    cloud_quota_exceeded: 'El almacenamiento de Ultimate Cloud está lleno: no se sube nada más.',
+    cloud_read_only:
+      'La cuenta de Ultimate Cloud está en solo lectura (suscripción vencida): no se sube nada.',
+    upload_failed: 'La subida a Ultimate Cloud falló.',
+    cloud_sync_failed:
+      'La sincronización se detuvo por un error inesperado. Revisa el registro del servidor.',
     cloud_not_configured: 'Este servidor no tiene configurada la dirección de Ultimate Cloud.',
     cloud_not_linked: 'No hay ninguna cuenta de Ultimate Cloud vinculada.',
     cloud_unreachable: 'No se puede contactar con Ultimate Cloud. Se volverá a intentar.',

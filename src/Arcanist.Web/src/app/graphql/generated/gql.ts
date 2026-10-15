@@ -139,6 +139,10 @@ type Documents = {
     "\n  mutation CancelUltimateCloudLink {\n    cancelUltimateCloudLink {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.CancelUltimateCloudLinkDocument,
     "\n  mutation UnlinkUltimateCloud {\n    unlinkUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.UnlinkUltimateCloudDocument,
     "\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.AddUltimateCloudLibraryDocument,
+    "\n  fragment CloudSyncStateFields on LibraryCloudSyncState {\n    libraryId\n    mode\n    downloadSourceId\n    lastRunAt\n    requested\n    running {\n      phase\n      done\n      total\n    }\n    matched\n    uploaded\n    downloaded\n    localOnly\n    failed\n    errorCode\n    failures {\n      title\n      path\n      reason\n    }\n  }\n": typeof types.CloudSyncStateFieldsFragmentDoc,
+    "\n  query CloudSyncs {\n    cloudSyncs {\n      ...CloudSyncStateFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n": typeof types.CloudSyncsDocument,
+    "\n  mutation SetLibraryCloudSync($libraryId: ID!, $input: SetLibraryCloudSyncInput!) {\n    setLibraryCloudSync(libraryId: $libraryId, input: $input) {\n      ...CloudSyncStateFields\n    }\n  }\n": typeof types.SetLibraryCloudSyncDocument,
+    "\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n": typeof types.SyncLibraryWithCloudDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.ResolvePreviousSqliteDocument,
 };
@@ -268,6 +272,10 @@ const documents: Documents = {
     "\n  mutation CancelUltimateCloudLink {\n    cancelUltimateCloudLink {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.CancelUltimateCloudLinkDocument,
     "\n  mutation UnlinkUltimateCloud {\n    unlinkUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.UnlinkUltimateCloudDocument,
     "\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.AddUltimateCloudLibraryDocument,
+    "\n  fragment CloudSyncStateFields on LibraryCloudSyncState {\n    libraryId\n    mode\n    downloadSourceId\n    lastRunAt\n    requested\n    running {\n      phase\n      done\n      total\n    }\n    matched\n    uploaded\n    downloaded\n    localOnly\n    failed\n    errorCode\n    failures {\n      title\n      path\n      reason\n    }\n  }\n": types.CloudSyncStateFieldsFragmentDoc,
+    "\n  query CloudSyncs {\n    cloudSyncs {\n      ...CloudSyncStateFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n": types.CloudSyncsDocument,
+    "\n  mutation SetLibraryCloudSync($libraryId: ID!, $input: SetLibraryCloudSyncInput!) {\n    setLibraryCloudSync(libraryId: $libraryId, input: $input) {\n      ...CloudSyncStateFields\n    }\n  }\n": types.SetLibraryCloudSyncDocument,
+    "\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n": types.SyncLibraryWithCloudDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.ResolvePreviousSqliteDocument,
 };
@@ -786,6 +794,22 @@ export function graphql(source: "\n  mutation UnlinkUltimateCloud {\n    unlinkU
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment CloudSyncStateFields on LibraryCloudSyncState {\n    libraryId\n    mode\n    downloadSourceId\n    lastRunAt\n    requested\n    running {\n      phase\n      done\n      total\n    }\n    matched\n    uploaded\n    downloaded\n    localOnly\n    failed\n    errorCode\n    failures {\n      title\n      path\n      reason\n    }\n  }\n"): (typeof documents)["\n  fragment CloudSyncStateFields on LibraryCloudSyncState {\n    libraryId\n    mode\n    downloadSourceId\n    lastRunAt\n    requested\n    running {\n      phase\n      done\n      total\n    }\n    matched\n    uploaded\n    downloaded\n    localOnly\n    failed\n    errorCode\n    failures {\n      title\n      path\n      reason\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query CloudSyncs {\n    cloudSyncs {\n      ...CloudSyncStateFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n"): (typeof documents)["\n  query CloudSyncs {\n    cloudSyncs {\n      ...CloudSyncStateFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetLibraryCloudSync($libraryId: ID!, $input: SetLibraryCloudSyncInput!) {\n    setLibraryCloudSync(libraryId: $libraryId, input: $input) {\n      ...CloudSyncStateFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetLibraryCloudSync($libraryId: ID!, $input: SetLibraryCloudSyncInput!) {\n    setLibraryCloudSync(libraryId: $libraryId, input: $input) {\n      ...CloudSyncStateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n"): (typeof documents)["\n  mutation SyncLibraryWithCloud($libraryId: ID!) {\n    syncLibraryWithCloud(libraryId: $libraryId) {\n      ...CloudSyncStateFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

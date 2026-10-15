@@ -260,6 +260,60 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("AudioAnalyses");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AudioHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CloudTrackId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MatchKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Path")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId", "CloudTrackId");
+
+                    b.HasIndex("LibraryId", "ContentHash");
+
+                    b.ToTable("CloudSyncItems");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DlnaImport", b =>
                 {
                     b.Property<Guid>("Id")
@@ -619,6 +673,34 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.HasIndex("LibraryId");
 
                     b.ToTable("LibraryAccess");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LibraryCloudSync", b =>
+                {
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DownloadSourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("Requested")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("LibraryId");
+
+                    b.ToTable("LibraryCloudSyncs");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.LibrarySource", b =>
@@ -1719,6 +1801,15 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DlnaImport", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.LibrarySource", "LibrarySource")
@@ -1778,6 +1869,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Library");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LibraryCloudSync", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Library", "Library")
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Library");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.LibrarySource", b =>

@@ -1046,6 +1046,80 @@
         }
       }
     },
+    "/rest/v1/libraries/{libraryId}/cloud-sync": {
+      "put": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Uploads, downloads or both between a library and the Ultimate Cloud account (Cloud plan); nothing is deleted on either side. Administrators only; turning it on needs a recent authentication.",
+        "operationId": "SetLibraryCloudSync",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLibraryCloudSyncInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryCloudSyncState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{libraryId}/cloud-sync/run": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Syncs a library with Ultimate Cloud now (otherwise every 6 hours). Administrators only.",
+        "operationId": "SyncLibraryWithCloud",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryCloudSyncState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/stream/{trackId}": {
       "get": {
         "tags": [
@@ -4771,6 +4845,30 @@
         }
       }
     },
+    "/rest/v1/ultimate-cloud/syncs": {
+      "get": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only.",
+        "operationId": "CloudSyncs",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibraryCloudSyncState"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/dlna-import/servers": {
       "get": {
         "tags": [
@@ -6210,6 +6308,65 @@
           },
           "newPassword": {
             "type": "string"
+          }
+        }
+      },
+      "CloudSyncFailure": {
+        "required": [
+          "title",
+          "path",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "CloudSyncMode": {
+        "enum": [
+          "OFF",
+          "UPLOAD",
+          "DOWNLOAD",
+          "BOTH"
+        ]
+      },
+      "CloudSyncRun": {
+        "required": [
+          "phase",
+          "done",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string"
+          },
+          "done": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -8111,6 +8268,112 @@
                 "$ref": "#/components/schemas/LibraryOrganization"
               }
             ]
+          }
+        }
+      },
+      "LibraryCloudSyncState": {
+        "required": [
+          "libraryId",
+          "mode",
+          "downloadSourceId",
+          "lastRunAt",
+          "requested",
+          "running",
+          "matched",
+          "uploaded",
+          "downloaded",
+          "localOnly",
+          "failed",
+          "errorCode",
+          "failures"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/CloudSyncMode"
+          },
+          "downloadSourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "lastRunAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "requested": {
+            "type": "boolean"
+          },
+          "running": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudSyncRun"
+              }
+            ]
+          },
+          "matched": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "uploaded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "downloaded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "localOnly": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CloudSyncFailure"
+            }
           }
         }
       },
@@ -10978,6 +11241,25 @@
           }
         }
       },
+      "SetLibraryCloudSyncInput": {
+        "required": [
+          "mode",
+          "downloadSourceId"
+        ],
+        "type": "object",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/CloudSyncMode"
+          },
+          "downloadSourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "SetOnlineServicesInput": {
         "required": [
           "musicBrainz",
@@ -12452,6 +12734,9 @@
       "name": "Database"
     },
     {
+      "name": "Ultimate Cloud"
+    },
+    {
       "name": "Media"
     },
     {
@@ -12489,9 +12774,6 @@
     },
     {
       "name": "Peer"
-    },
-    {
-      "name": "Ultimate Cloud"
     },
     {
       "name": "Online services"

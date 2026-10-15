@@ -147,6 +147,18 @@ public static class ErrorCodes
     public const string CloudToolUnsupported = "cloud_tool_unsupported";
     /// <summary>The ultimate-audio tool is not installed.</summary>
     public const string CloudToolMissing = "cloud_tool_missing";
+    /// <summary>Syncing with Ultimate Cloud needs the Cloud plan.</summary>
+    public const string CloudSyncUnavailable = "cloud_sync_unavailable";
+    /// <summary>Another library already downloads from Ultimate Cloud (only one can, or both would get everything).</summary>
+    public const string CloudSyncDownloadTaken = "cloud_sync_download_taken";
+    /// <summary>The account's storage is full: nothing more is uploaded.</summary>
+    public const string CloudQuotaExceeded = "cloud_quota_exceeded";
+    /// <summary>The account is read-only (a lapsed subscription): nothing is uploaded.</summary>
+    public const string CloudReadOnly = "cloud_read_only";
+    /// <summary>A sync stopped because of an unexpected error; see the server log.</summary>
+    public const string CloudSyncFailed = "cloud_sync_failed";
+    /// <summary>Uploading a file to Ultimate Cloud failed.</summary>
+    public const string UploadFailed = "upload_failed";
     /// <summary>Ultimate Cloud's sign-in does not offer linking with a code for this server.</summary>
     public const string CloudLinkUnsupported = "cloud_link_unsupported";
 }

@@ -30,12 +30,14 @@ import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
+  CloudSyncStateFieldsFragment as CloudSyncState,
   LibrariesQuery as LibrariesResult,
   ScanJobFieldsFragment,
 } from '../../graphql/generated/graphql';
 import {
   AddLibrarySourceMutation,
   CancelScanMutation,
+  CloudSyncsQuery,
   CreateLibraryMutation,
   DeleteLibraryMutation,
   LibrariesQuery,
@@ -49,6 +51,7 @@ import {
 } from '../../graphql/operations';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { OrganizeDialog } from './organize-dialog';
+import { CloudSyncPanel } from './cloud-sync';
 import { CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
 type Library = LibrariesResult['libraries'][number];
@@ -83,6 +86,7 @@ interface LibraryForm {
     TranslatePipe,
     FolderPicker,
     OrganizeDialog,
+    CloudSyncPanel,
     DateTimePipe,
     RelativeTimePipe,
     CountPipe,
@@ -112,6 +116,10 @@ export class LibrariesPage implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly libraries = signal<Library[] | null>(null);
+  /** How each library syncs with Ultimate Cloud (administrators only). */
+  protected readonly cloudSyncs = signal<Record<string, CloudSyncState>>({});
+  /** The linked account has the Cloud plan. */
+  protected readonly cloudSyncAvailable = signal(false);
   /** Latest scan of each library, updated live. */
   protected readonly scans = signal<Record<string, ScanJob>>({});
   protected readonly busy = signal(false);
@@ -144,6 +152,15 @@ export class LibrariesPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.load();
+    if (this.auth.isAdmin()) {
+      await this.loadCloudSyncs();
+      // Syncs run in the background: follow the ones going on.
+      const timer = setInterval(() => {
+        if (Object.values(this.cloudSyncs()).some((s) => s.running || s.requested))
+          void this.loadCloudSyncs();
+      }, 2000);
+      this.destroyRef.onDestroy(() => clearInterval(timer));
+    }
 
     if (this.canFollowScans()) {
       const jobs = await this.gql.query(ScanJobsQuery, { limit: 100 });
@@ -289,6 +306,29 @@ export class LibrariesPage implements OnInit {
       toast.success(this.i18n.t('libraries.deleted', { name: library.name }));
       await this.load();
     });
+  }
+
+  private async loadCloudSyncs(): Promise<void> {
+    try {
+      const result = await this.gql.query(CloudSyncsQuery);
+      this.cloudSyncs.set(Object.fromEntries(result.cloudSyncs.map((s) => [s.libraryId, s])));
+      this.cloudSyncAvailable.set(result.serverInfo.capabilities.includes('CLOUD_SYNC'));
+    } catch {
+      // Retried while following; without it the libraries still show.
+    }
+  }
+
+  protected cloudSyncChanged(state: CloudSyncState): void {
+    this.cloudSyncs.update((syncs) => ({ ...syncs, [state.libraryId]: state }));
+  }
+
+  /** Libraries with folders on this server, which can sync with Ultimate Cloud. */
+  protected canSync(library: Library): boolean {
+    return (
+      this.auth.isAdmin() &&
+      (library.sources?.length ?? 0) > 0 &&
+      (library.sources ?? []).every((s) => s.kind === 'LOCAL')
+    );
   }
 
   private async load(): Promise<void> {

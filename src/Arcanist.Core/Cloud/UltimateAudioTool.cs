@@ -28,6 +28,18 @@ public sealed record UltimateAudioMetadata(
     string? MusicBrainzArtistId = null,
     string? CoverPath = null);
 
+/// <summary>The audio hash and tag handling of Ultimate clients (<see cref="UltimateAudioTool"/>; tests replace it).</summary>
+public interface IUltimateAudio
+{
+    bool IsInstalled { get; }
+
+    Task<string> HashAsync(string path, CancellationToken cancellationToken);
+
+    Task<(string AudioHash, string Sha1, long Size)> StripAsync(string path, string output, CancellationToken cancellationToken);
+
+    Task TagAsync(string path, UltimateAudioMetadata metadata, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// <c>ultimate-audio</c>: the audio hash and tag handling of Ultimate clients, which syncing with Ultimate Cloud needs
 /// to be compatible with them. It is Ultimate's own (proprietary) program, so it is not part of Arcanist: Ultimate
@@ -43,7 +55,7 @@ public sealed class UltimateAudioTool(
     IHttpClientFactory clients,
     IOptionsMonitor<UltimateCloudOptions> options,
     ArcanistPaths paths,
-    ILogger<UltimateAudioTool> logger)
+    ILogger<UltimateAudioTool> logger) : IUltimateAudio
 {
     /// <summary>The public half of the key that signs what Ultimate Cloud serves (ECDSA P-256, SHA-256).</summary>
     public const string PublicKey = """
@@ -71,6 +83,8 @@ public sealed class UltimateAudioTool(
 
     /// <summary>The installed version, or null.</summary>
     public string? Version => Current?.Version;
+
+    public bool IsInstalled => Current is not null;
 
     /// <summary>Why the last install or update failed: <c>cloud_tool_unavailable</c>, <c>cloud_tool_invalid</c>, <c>cloud_tool_unsupported</c>…</summary>
     public string? ErrorCode { get; private set; }

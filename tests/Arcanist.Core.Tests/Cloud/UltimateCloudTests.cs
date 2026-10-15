@@ -97,6 +97,58 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             if (query.Contains("library {"))
                 return Json(new { data = new { library = Tracks.Select(t => t.Payload).ToArray() } });
             var variables = JsonNode.Parse(body)!["variables"];
+            if (query.Contains("checkCloudFile"))
+            {
+                var hash = variables!["h"]!.GetValue<string>();
+                var track = TrackHashes.FirstOrDefault(t => t.Value == hash).Key;
+                return Json(new
+                {
+                    data = new
+                    {
+                        checkCloudFile = new
+                        {
+                            blobExists = Blobs.ContainsKey(hash) || track is not null,
+                            cloudFileId = Blobs.GetValueOrDefault(hash),
+                            alreadyInLibrary = track is not null,
+                            existingTrackId = track,
+                        },
+                    },
+                });
+            }
+
+            if (query.Contains("uploadUrl("))
+            {
+                if (Full)
+                    return Json(new { errors = new[] { new { message = "Over quota.", extensions = new { code = "QUOTA_EXCEEDED" } } } });
+                return Json(new { data = new { uploadUrl = new { uploadUrl = $"{FilesBase}/b2api/upload", authorizationToken = "upload-token", filePrefix = "CloudFiles/" } } });
+            }
+
+            if (query.Contains("registerCloudUpload"))
+            {
+                var input = variables!["i"]!;
+                var hash = input["audioHash"]!.GetValue<string>();
+                Assert.Equal("CloudFiles/" + hash, input["fileName"]!.GetValue<string>());
+                Blobs[hash] = "file-" + hash[..8];
+                return Json(new { data = new { registerCloudUpload = new { cloudFileId = Blobs[hash] } } });
+            }
+
+            if (query.Contains("addCloudTrack"))
+            {
+                var fileId = variables!["f"]!.GetValue<string>();
+                var hash = Blobs.Single(b => b.Value == fileId).Key;
+                var input = variables["i"]!;
+                var id = $"up-{Tracks.Count + 1}";
+                AddTrack(id, input["title"]!.GetValue<string>(), input["artist"]?.GetValue<string>() ?? "", input["album"]?.GetValue<string>() ?? "",
+                    input["trackNumber"]?.GetValue<int>() ?? 0, Uploaded[$"CloudFiles/{hash}"], hash: hash, format: "WAV");
+                return Json(new { data = new { addCloudTrack = new { cloudTrackId = id } } });
+            }
+
+            if (query.Contains("downloadUrl"))
+            {
+                var id = variables!["id"]!.GetValue<string>();
+                return Json(new { data = new { downloadUrl = new { url = $"{FilesBase}/file/bucket/{id}?Authorization=token" } } });
+            }
+
             if (query.Contains("streamUrl"))
             {
                 var id = variables!["id"]!.GetValue<string>();
@@ -153,6 +205,17 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
         {
             Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(ToolBytes) };
+        }
+
+        // Backblaze B2 uploads, checked as B2 checks them.
+        if (url == $"{FilesBase}/b2api/upload")
+        {
+            Assert.Equal("upload-token", request.Headers.GetValues("Authorization").Single());
+            var bytes = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+            if (!request.Headers.GetValues("X-Bz-Content-Sha1").Single().Equals(Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(bytes)), StringComparison.OrdinalIgnoreCase))
+                return new HttpResponseMessage(HttpStatusCode.BadRequest);
+            Uploaded[Uri.UnescapeDataString(request.Headers.GetValues("X-Bz-File-Name").Single())] = bytes;
+            return Json(new { fileId = $"b2-{Uploaded.Count}" });
         }
 
         // Backblaze B2: the tracks' audio (with Range) and covers.
@@ -216,11 +279,30 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
     private int _streamUrls;
 
-    public void AddTrack(string id, string title, string artist, string album, int track, byte[] audio, string? cover = null) =>
+    /// <summary>Ultimate's audio hash of each track (its blob).</summary>
+    public ConcurrentDictionary<string, string> TrackHashes { get; } = new();
+
+    /// <summary>Blobs by audio hash: their CloudFile ids.</summary>
+    public ConcurrentDictionary<string, string> Blobs { get; } = new();
+
+    /// <summary>What reached B2, by file name.</summary>
+    public ConcurrentDictionary<string, byte[]> Uploaded { get; } = new();
+
+    /// <summary>The account's storage is full.</summary>
+    public bool Full { get; set; }
+
+    public void AddTrack(string id, string title, string artist, string album, int track, byte[] audio, string? cover = null, string? hash = null,
+        string format = "FLAC")
+    {
+        TrackHashes[id] = hash ?? Convert.ToHexStringLower(System.Security.Cryptography.SHA1.HashData(audio));
+        AddDescribed(id, title, artist, album, track, audio, cover, format);
+    }
+
+    private void AddDescribed(string id, string title, string artist, string album, int track, byte[] audio, string? cover, string format) =>
         Tracks.Add((id, new
         {
             cloudTrackId = id, title, artist, album, genre = "Ambient", trackNumber = track, discNumber = 1, year = 2020,
-            duration = 8.5, audioBitrate = 900, audioSampleRate = 44100, audioFormat = "FLAC", size = (long)audio.Length,
+            duration = 8.5, audioBitrate = 900, audioSampleRate = 44100, audioFormat = format, size = (long)audio.Length,
             coverImageId = cover, musicBrainzRecordingId = (string?)null, musicBrainzArtistId = (string?)null,
             dateUpdated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         }, audio));

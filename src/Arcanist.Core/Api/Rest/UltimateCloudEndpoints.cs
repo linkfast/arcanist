@@ -35,6 +35,23 @@ public static class UltimateCloudEndpoints
             .WithName("RefreshUltimateCloud")
             .WithSummary("Reads the account's plan again now. Administrators only.");
 
+        cloud.MapGet("/syncs", (CloudSyncService service, CancellationToken ct) => service.ListAsync(ct))
+            .WithName("CloudSyncs")
+            .WithSummary("How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only.");
+
+        rest.MapPut("/libraries/{libraryId:guid}/cloud-sync", (Guid libraryId, SetLibraryCloudSyncInput input, CloudSyncService service, CancellationToken ct) =>
+                service.SetAsync(libraryId, input, ct))
+            .WithTags("Ultimate Cloud")
+            .WithName("SetLibraryCloudSync")
+            .WithSummary("Uploads, downloads or both between a library and the Ultimate Cloud account (Cloud plan); nothing is deleted on either side. " +
+                         "Administrators only; turning it on needs a recent authentication.");
+
+        rest.MapPost("/libraries/{libraryId:guid}/cloud-sync/run", (Guid libraryId, CloudSyncService service, CancellationToken ct) =>
+                service.SyncNowAsync(libraryId, ct))
+            .WithTags("Ultimate Cloud")
+            .WithName("SyncLibraryWithCloud")
+            .WithSummary("Syncs a library with Ultimate Cloud now (otherwise every 6 hours). Administrators only.");
+
         return rest;
     }
 }

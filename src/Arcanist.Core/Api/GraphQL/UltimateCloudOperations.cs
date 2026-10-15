@@ -10,6 +10,11 @@ public sealed partial class Query
     [Description("The linked Ultimate Cloud account, its plan and what it enables. Administrators only.")]
     public static Task<UltimateCloudStatus> UltimateCloud([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
         cloud.StatusAsync(cancellationToken);
+
+    [Name("cloudSyncs")]
+    [Description("How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only.")]
+    public static Task<IReadOnlyList<LibraryCloudSyncState>> CloudSyncs([FromServices] CloudSyncService sync, CancellationToken cancellationToken) =>
+        sync.ListAsync(cancellationToken);
 }
 
 public sealed partial class Mutation
@@ -34,6 +39,17 @@ public sealed partial class Mutation
     public static Task<UltimateCloudStatus> AddUltimateCloudLibrary(
         AddUltimateCloudLibraryInput input, [FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
         cloud.AddLibraryAsync(input, cancellationToken);
+
+    [Name("setLibraryCloudSync")]
+    [Description("Uploads, downloads or both between a library and the Ultimate Cloud account (Cloud plan); nothing is deleted on either side. Administrators only; turning it on needs a recent authentication.")]
+    public static Task<LibraryCloudSyncState> SetLibraryCloudSync(
+        [Id] Guid libraryId, SetLibraryCloudSyncInput input, [FromServices] CloudSyncService sync, CancellationToken cancellationToken) =>
+        sync.SetAsync(libraryId, input, cancellationToken);
+
+    [Name("syncLibraryWithCloud")]
+    [Description("Syncs a library with Ultimate Cloud now (otherwise every 6 hours). Administrators only.")]
+    public static Task<LibraryCloudSyncState> SyncLibraryWithCloud([Id] Guid libraryId, [FromServices] CloudSyncService sync, CancellationToken cancellationToken) =>
+        sync.SyncNowAsync(libraryId, cancellationToken);
 
     [Name("refreshUltimateCloud")]
     [Description("Reads the account's plan again now. Administrators only.")]

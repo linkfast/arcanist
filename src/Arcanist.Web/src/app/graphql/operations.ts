@@ -1479,6 +1479,59 @@ export const AddUltimateCloudLibraryMutation = graphql(`
   }
 `);
 
+export const CloudSyncStateFields = graphql(`
+  fragment CloudSyncStateFields on LibraryCloudSyncState {
+    libraryId
+    mode
+    downloadSourceId
+    lastRunAt
+    requested
+    running {
+      phase
+      done
+      total
+    }
+    matched
+    uploaded
+    downloaded
+    localOnly
+    failed
+    errorCode
+    failures {
+      title
+      path
+      reason
+    }
+  }
+`);
+
+export const CloudSyncsQuery = graphql(`
+  query CloudSyncs {
+    cloudSyncs {
+      ...CloudSyncStateFields
+    }
+    serverInfo {
+      capabilities
+    }
+  }
+`);
+
+export const SetLibraryCloudSyncMutation = graphql(`
+  mutation SetLibraryCloudSync($libraryId: ID!, $input: SetLibraryCloudSyncInput!) {
+    setLibraryCloudSync(libraryId: $libraryId, input: $input) {
+      ...CloudSyncStateFields
+    }
+  }
+`);
+
+export const SyncLibraryWithCloudMutation = graphql(`
+  mutation SyncLibraryWithCloud($libraryId: ID!) {
+    syncLibraryWithCloud(libraryId: $libraryId) {
+      ...CloudSyncStateFields
+    }
+  }
+`);
+
 export const RefreshUltimateCloudMutation = graphql(`
   mutation RefreshUltimateCloud {
     refreshUltimateCloud {

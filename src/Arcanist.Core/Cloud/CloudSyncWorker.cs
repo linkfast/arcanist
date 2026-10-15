@@ -35,6 +35,7 @@ public sealed class CloudSyncWorker(
     ArtworkStore artworkStore,
     DatabaseMaintenance maintenance,
     IHttpClientFactory clients,
+    CloudTrackDownloader downloader,
     IOptionsMonitor<Setup.SetupOptions> setup,
     ArcanistPaths paths,
     TimeProvider time,
@@ -43,9 +44,7 @@ public sealed class CloudSyncWorker(
     public static readonly TimeSpan Interval = TimeSpan.FromHours(6);
     private const long MaxCoverBytes = 5 * 1024 * 1024;
 
-    private const string CloudFields =
-        "cloudTrackId title artist album genre trackNumber discNumber year beatsPerMinute audioFormat " +
-        "coverImageId musicBrainzRecordingId musicBrainzReleaseGroupId musicBrainzArtistId";
+    private const string CloudFields = CloudTrackDownloader.Fields;
 
     private readonly SemaphoreSlim _wake = new(0);
 
@@ -392,42 +391,18 @@ public sealed class CloudSyncWorker(
         var folder = Path.Combine(paths.Cache, "sync");
         Directory.CreateDirectory(folder);
         var file = Path.Combine(folder, $"{Guid.NewGuid():N}{UltimateCloudStorage.Extension(Text(track, "audioFormat"))}");
-        string? cover = null;
         try
         {
-            var url = (await client.SendAsync(
-                "mutation Download($id: String!) { downloadUrl(trackId: $id) { url } }", new { id }, cancellationToken))["downloadUrl"]!["url"]!.GetValue<string>();
-            if (!await FetchAsync(url, file, cancellationToken))
+            if (await downloader.DownloadAsync(track, id, file, cancellationToken) is { } error)
             {
-                await SaveAsync(item, CloudSyncItemStatus.Failed, ErrorCodes.DownloadFailed, cancellationToken);
+                await SaveAsync(item, CloudSyncItemStatus.Failed, error, cancellationToken);
                 return false;
-            }
-
-            if (Text(track, "coverImageId") is { } coverId)
-            {
-                var coverUrl = (await client.SendAsync("query Cover($id: String!) { coverImageUrl(coverImageId: $id) { url } }", new { id = coverId }, cancellationToken))
-                    ["coverImageUrl"]?["url"]?.GetValue<string>();
-                cover = Path.Combine(folder, $"{Guid.NewGuid():N}.img");
-                if (coverUrl is null || !await FetchAsync(coverUrl, cover, cancellationToken))
-                    cover = null;
             }
 
             var artist = Text(track, "artist");
             var album = Text(track, "album");
             var title = Text(track, "title");
             int? Int(string name) => track[name] is JsonValue value && value.TryGetValue<int>(out var number) && number > 0 ? number : null;
-            try
-            {
-                await audio.TagAsync(file, new UltimateAudioMetadata(
-                    title, artist, album, Text(track, "genre"), Int("trackNumber"), Int("discNumber"), Int("year"), Int("beatsPerMinute"),
-                    Text(track, "musicBrainzRecordingId"), Text(track, "musicBrainzReleaseGroupId"), null, Text(track, "musicBrainzArtistId"), cover),
-                    cancellationToken);
-            }
-            catch (UltimateCloudException e)
-            {
-                // Untagged, the song is still the song: it goes in as it is.
-                logger.LogDebug("Could not tag {Title} from Ultimate Cloud: {Error}", title, e.Code);
-            }
 
             string contentHash;
             try
@@ -483,25 +458,6 @@ public sealed class CloudSyncWorker(
         finally
         {
             File.Delete(file);
-            if (cover is not null)
-                File.Delete(cover);
-        }
-    }
-
-    private async Task<bool> FetchAsync(string url, string path, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var response = await clients.CreateClient(UltimateCloudStorage.FilesClientName).GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-                return false;
-            await using var target = File.Create(path);
-            await response.Content.CopyToAsync(target, cancellationToken);
-            return true;
-        }
-        catch (HttpRequestException)
-        {
-            return false;
         }
     }
 

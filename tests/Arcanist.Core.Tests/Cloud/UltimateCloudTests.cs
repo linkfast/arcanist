@@ -93,7 +93,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             if (query.Contains("myLibrary"))
                 return Json(new { data = new { myLibrary = new { id = "lib-1" } } });
             if (query.Contains("cloudDropTracks"))
-                return Json(new { data = new { cloudDropTracks = Array.Empty<object>() } });
+                return Json(new { data = new { cloudDropTracks = DropTracks.Select(t => t.Payload).ToArray() } });
             if (query.Contains("library {"))
                 return Json(new { data = new { library = Tracks.Select(t => t.Payload).ToArray() } });
             var variables = JsonNode.Parse(body)!["variables"];
@@ -162,6 +162,15 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 AddTrack(id, input["title"]!.GetValue<string>(), input["artist"]?.GetValue<string>() ?? "", input["album"]?.GetValue<string>() ?? "",
                     input["trackNumber"]?.GetValue<int>() ?? 0, Uploaded[$"CloudFiles/{hash}"], hash: hash, format: "WAV");
                 return Json(new { data = new { addCloudTrack = new { cloudTrackId = id } } });
+            }
+
+            if (query.Contains("removeCloudTrack"))
+            {
+                var removed = variables!["id"]!.GetValue<string>();
+                RemovedTracks.Enqueue(removed);
+                DropTracks.RemoveAll(t => t.Id == removed);
+                Tracks.RemoveAll(t => t.Id == removed);
+                return Json(new { data = new { removeCloudTrack = true } });
             }
 
             if (query.Contains("downloadUrl"))
@@ -245,7 +254,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             var name = request.RequestUri!.AbsolutePath["/file/bucket/".Length..];
             if (name.StartsWith("cover-", StringComparison.Ordinal))
                 return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Cover) };
-            if (Tracks.FirstOrDefault(t => t.Id == name) is not { Audio: not null } track)
+            if (Tracks.Concat(DropTracks).FirstOrDefault(t => t.Id == name) is not { Audio: not null } track)
                 return new HttpResponseMessage(HttpStatusCode.NotFound);
             Ranges.Enqueue(request.Headers.Range?.ToString());
             if (request.Headers.Range?.Ranges.SingleOrDefault() is { } range)
@@ -291,6 +300,21 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
     /// <summary>The account's library: what <c>library</c> describes, and the audio B2 serves.</summary>
     public List<(string Id, object Payload, byte[] Audio)> Tracks { get; } = [];
+
+    /// <summary>The account's Cloud Drop: what <c>cloudDropTracks</c> describes.</summary>
+    public List<(string Id, object Payload, byte[] Audio)> DropTracks { get; } = [];
+
+    /// <summary>Tracks taken off the account with <c>removeCloudTrack</c>.</summary>
+    public ConcurrentQueue<string> RemovedTracks { get; } = new();
+
+    /// <summary>A song in Cloud Drop, described like the library's.</summary>
+    public void AddDropTrack(string id, string title, string artist, string album, int track, byte[] audio)
+    {
+        AddDescribed(id, title, artist, album, track, audio, null, "WAV");
+        var added = Tracks[^1];
+        Tracks.RemoveAt(Tracks.Count - 1);
+        DropTracks.Add(added);
+    }
 
     public byte[] Cover { get; set; } = [];
 

@@ -588,6 +588,18 @@ export const en: Dictionary = {
       into: 'Into {library}',
       convertsTo: 'converts to {format}',
       copies: 'copies (keeps the originals)',
+      cloudDrop: 'Cloud Drop',
+      kind: 'Source',
+      kinds: {
+        FOLDER: 'A folder of the server',
+        ULTIMATE_CLOUD_DROP: 'Ultimate Cloud’s Cloud Drop',
+      },
+      cloudDropHelp:
+        'The songs you upload to Cloud Drop (unidentified) come here and are imported with the same rules: identified, placed with the template, and skipped when repeated.',
+      cloudModeHelp: {
+        MOVE: 'Once in the library, the songs leave Cloud Drop.',
+        COPY: 'The songs stay in Cloud Drop too; each is brought once.',
+      },
       mode: 'When importing',
       modes: { MOVE: 'Move into the library', COPY: 'Copy into the library' },
       modeHelp: {

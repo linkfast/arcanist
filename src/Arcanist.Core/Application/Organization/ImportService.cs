@@ -22,6 +22,9 @@ public sealed class ImportService(
     AccessGuard guard,
     ILibraryStorageResolver storages,
     ImportMonitor monitor,
+    Hosting.ArcanistPaths paths,
+    Capabilities.ICapabilityService capabilities,
+    IServiceProvider services,
     TimeProvider time)
 {
     public const int MaxItems = 200;
@@ -41,11 +44,13 @@ public sealed class ImportService(
     public async Task<DropFolder> CreateDropFolderAsync(DropFolderInput input, CancellationToken cancellationToken)
     {
         guard.Admin();
-        var folder = new DropFolderEntity { Path = "", CreatedAt = Now() };
+        var folder = new DropFolderEntity { Path = "", CreatedAt = Now(), Kind = input.Kind };
         await ApplyAsync(folder, input, cancellationToken);
         db.DropFolders.Add(folder);
         await db.SaveChangesAsync(cancellationToken);
         monitor.RequestRun();
+        if (folder.Kind == DropFolderKind.UltimateCloudDrop)
+            services.GetService<Core.Cloud.CloudDropWorker>()?.Wake();
         return await ToModelAsync(folder, cancellationToken);
     }
 
@@ -56,6 +61,8 @@ public sealed class ImportService(
         await ApplyAsync(folder, input, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         monitor.RequestRun();
+        if (folder.Kind == DropFolderKind.UltimateCloudDrop)
+            services.GetService<Core.Cloud.CloudDropWorker>()?.Wake();
         return await ToModelAsync(folder, cancellationToken);
     }
 
@@ -74,7 +81,17 @@ public sealed class ImportService(
         var storage = storages.For(LibrarySourceKind.Local);
 
         string? path = null;
-        if (string.IsNullOrWhiteSpace(input.Path))
+        if (folder.Kind == DropFolderKind.UltimateCloudDrop)
+        {
+            // Its songs are downloaded to a folder of the server's own, and imported from there.
+            path = Path.Combine(paths.Cache, "cloud-drop", folder.Id.ToString("N"));
+            Directory.CreateDirectory(path);
+            if (!capabilities.IsEnabled(Capabilities.Capability.UltimateCloudSource))
+                errors.Add("kind", ErrorCodes.CloudNotLinked);
+            else if (await db.DropFolders.AnyAsync(d => d.Id != folder.Id && d.Kind == DropFolderKind.UltimateCloudDrop, cancellationToken))
+                errors.Add("kind", ErrorCodes.Duplicate);
+        }
+        else if (string.IsNullOrWhiteSpace(input.Path))
             errors.Add("path", ErrorCodes.Required);
         else
         {
@@ -94,7 +111,7 @@ public sealed class ImportService(
                 // Inside a library its files would be scanned before being imported; inside another drop folder,
                 // imported twice.
                 var libraries = await db.LibrarySources.Where(s => s.Kind == LibrarySourceKind.Local).Select(s => s.Location).ToListAsync(cancellationToken);
-                var drops = await db.DropFolders.Where(d => d.Id != folder.Id).Select(d => d.Path).ToListAsync(cancellationToken);
+                var drops = await db.DropFolders.Where(d => d.Id != folder.Id && d.Kind == DropFolderKind.Folder).Select(d => d.Path).ToListAsync(cancellationToken);
                 if (libraries.Concat(drops).Any(other => storage.Contains(other, path) || storage.Contains(path, other)))
                     errors.Add("path", ErrorCodes.Overlapping);
                 else if (!await storage.CanWriteAsync(new StorageLocation(LibrarySourceKind.Local, path), cancellationToken))
@@ -256,10 +273,11 @@ public sealed class ImportService(
     private async Task<DropFolder> ToModelAsync(DropFolderEntity folder, CancellationToken cancellationToken)
     {
         var libraryId = await db.LibrarySources.Where(s => s.Id == folder.LibrarySourceId).Select(s => s.LibraryId).SingleAsync(cancellationToken);
-        var available = (await storages.For(LibrarySourceKind.Local)
-            .ProbeAsync(new StorageLocation(LibrarySourceKind.Local, folder.Path), cancellationToken)).IsAvailable;
+        var available = folder.Kind == DropFolderKind.UltimateCloudDrop
+            ? capabilities.IsEnabled(Capabilities.Capability.UltimateCloudSource)
+            : (await storages.For(LibrarySourceKind.Local).ProbeAsync(new StorageLocation(LibrarySourceKind.Local, folder.Path), cancellationToken)).IsAvailable;
         return new DropFolder(folder.Id, folder.Path, libraryId, folder.LibrarySourceId, folder.Enabled, folder.DuplicatePolicy,
-            folder.ConvertTo, folder.ConvertBitRate, folder.ConvertLossy, folder.Mode, folder.CreatedAt, available);
+            folder.ConvertTo, folder.ConvertBitRate, folder.ConvertLossy, folder.Mode, folder.Kind, folder.CreatedAt, available);
     }
 
     private static ImportItem ToModel(ImportItemEntity item) => new(

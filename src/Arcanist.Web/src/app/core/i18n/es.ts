@@ -594,6 +594,18 @@ export const es: Dictionary = {
       into: 'A {library}',
       convertsTo: 'convierte a {format}',
       copies: 'copia (deja los originales)',
+      cloudDrop: 'Cloud Drop',
+      kind: 'Origen',
+      kinds: {
+        FOLDER: 'Una carpeta del servidor',
+        ULTIMATE_CLOUD_DROP: 'Cloud Drop de Ultimate Cloud',
+      },
+      cloudDropHelp:
+        'Las canciones que subas a Cloud Drop (sin identificar) llegan aquí y se importan con las mismas reglas: se identifican, se colocan con la plantilla y se omiten las repetidas.',
+      cloudModeHelp: {
+        MOVE: 'Una vez en la biblioteca, las canciones salen de Cloud Drop.',
+        COPY: 'Las canciones se quedan también en Cloud Drop; cada una se trae una sola vez.',
+      },
       mode: 'Al importar',
       modes: { MOVE: 'Mover a la biblioteca', COPY: 'Copiar a la biblioteca' },
       modeHelp: {

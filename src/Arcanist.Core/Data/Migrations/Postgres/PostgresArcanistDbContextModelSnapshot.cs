@@ -260,6 +260,49 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("AudioAnalyses");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudDropFetch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CloudTrackId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DropFolderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DropFolderId", "CloudTrackId")
+                        .IsUnique();
+
+                    b.ToTable("CloudDropFetches");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -471,6 +514,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("LibrarySourceId")
                         .HasColumnType("uuid");
@@ -1820,6 +1866,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudDropFetch", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.DropFolder", "DropFolder")
+                        .WithMany()
+                        .HasForeignKey("DropFolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DropFolder");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>

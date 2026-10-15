@@ -55,7 +55,7 @@ public sealed class DropFolderImporter(
             PathTemplate.TryParse(library.OrganizeTemplate, out var template, out _) ? template : PathTemplate.DefaultTemplate,
             await db.LibrarySources.AsNoTracking().Where(s => s.LibraryId == library.Id).ToDictionaryAsync(s => s.Id, cancellationToken));
 
-        var copying = drop.Mode == DropFolderMode.Copy;
+        var copying = KeepsFiles(drop);
         var items = (await db.ImportItems
                 .Where(i => i.DropFolderId == drop.Id && (i.Status != ImportStatus.Imported || copying) && i.Status != ImportStatus.Discarded)
                 .ToListAsync(cancellationToken))
@@ -236,7 +236,7 @@ public sealed class DropFolderImporter(
                 destination = wanted + extension;
             }
 
-            if (conversion is not null && batch.Drop.Mode == DropFolderMode.Move)
+            if (conversion is not null && !KeepsFiles(batch.Drop))
                 await batch.DropStorage.TrashAsync(batch.DropLocation, entry.RelativePath, cancellationToken);
 
             await ImportSidecarsAsync(batch, entry.RelativePath, destination, cue?.Entry, entries, cancellationToken);
@@ -438,7 +438,7 @@ public sealed class DropFolderImporter(
     /// </summary>
     private string Take(Batch batch, string localPath)
     {
-        if (batch.Drop.Mode == DropFolderMode.Move)
+        if (!KeepsFiles(batch.Drop))
             return localPath;
         var folder = Path.Combine(paths.Cache, "import");
         Directory.CreateDirectory(folder);
@@ -447,10 +447,16 @@ public sealed class DropFolderImporter(
         return copy;
     }
 
+    /// <summary>
+    /// Whether imported files stay in the drop folder: a folder that copies. A Cloud Drop folder imports from its own
+    /// staging folder, always emptied; its mode says what happens in Cloud Drop.
+    /// </summary>
+    internal static bool KeepsFiles(DropFolder drop) => drop.Kind == DropFolderKind.Folder && drop.Mode == DropFolderMode.Copy;
+
     /// <summary>Removes the drop folder's subfolders that importing emptied.</summary>
     private async Task TidyDropFolderAsync(Batch batch, CancellationToken cancellationToken)
     {
-        if (batch.Drop.Mode == DropFolderMode.Copy)
+        if (KeepsFiles(batch.Drop))
             return;
         var folders = batch.Imported.Select(i => i.DropPath).Concat(batch.Moved).Select(AudioFormats.Folder).Distinct().OrderByDescending(f => f.Length);
         foreach (var folder in folders)

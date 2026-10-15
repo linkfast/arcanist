@@ -181,7 +181,7 @@ internal sealed class DropFolderWorker(
             _observed.Remove(key);
 
         // Copying, an imported file stays: it is not imported again unless it changes.
-        var copying = folder.Mode == DropFolderMode.Copy;
+        var copying = DropFolderImporter.KeepsFiles(folder);
         var items = await db.ImportItems
             .Where(i => i.DropFolderId == folder.Id && (i.Status != ImportStatus.Imported || copying) && i.Status != ImportStatus.Discarded)
             .ToListAsync(cancellationToken);
@@ -279,7 +279,7 @@ internal sealed class DropFolderWorker(
         await db.ImportItems
             .Where(i => (i.Status == ImportStatus.Imported || i.Status == ImportStatus.Discarded) && i.UpdatedAt < historyBefore
                         // What a copying folder imported is remembered while it is there, or it would be imported again.
-                        && !(i.Status == ImportStatus.Imported && i.DropFolder.Mode == DropFolderMode.Copy))
+                        && !(i.Status == ImportStatus.Imported && i.DropFolder.Mode == DropFolderMode.Copy && i.DropFolder.Kind == DropFolderKind.Folder))
             .ExecuteDeleteAsync(cancellationToken);
 
         foreach (var libraryId in await db.OrganizeRuns.Select(r => r.LibraryId).Distinct().ToListAsync(cancellationToken))

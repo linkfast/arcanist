@@ -62,23 +62,27 @@ public sealed record DropFolder(
     int? ConvertBitRate,
     bool ConvertLossy,
     DropFolderMode Mode,
+    DropFolderKind Kind,
     DateTime CreatedAt,
     bool Available);
 
-/// <param name="Path">Absolute folder path on the server. It cannot be inside a library location.</param>
+/// <param name="Path">Absolute folder path on the server, outside library locations. Not used for Cloud Drop.</param>
+/// <param name="Mode">What happens to imported files: they leave the folder (or Cloud Drop), or stay there.</param>
+/// <param name="Kind">A folder of the server, or the linked account's Cloud Drop (one at most). Set when the folder is created.</param>
 /// <param name="ConvertTo">Format to convert files to before importing; null keeps them as they are.</param>
 /// <param name="ConvertBitRate">kbit/s for lossy formats; null for the format's default.</param>
 /// <param name="ConvertLossy">Also convert lossy files in another format, losing some quality. Lossless files are
 /// always converted when a format is set; FLAC never converts lossy files.</param>
 public sealed record DropFolderInput(
-    string Path,
+    string? Path,
     Guid LibrarySourceId,
     bool Enabled,
     DuplicatePolicy DuplicatePolicy,
     TranscodeFormat? ConvertTo,
     int? ConvertBitRate,
     bool ConvertLossy,
-    DropFolderMode Mode = DropFolderMode.Move);
+    DropFolderMode Mode = DropFolderMode.Move,
+    DropFolderKind Kind = DropFolderKind.Folder);
 
 /// <summary>What was read from a dropped file.</summary>
 public sealed record ImportFileDetails(

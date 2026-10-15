@@ -17,6 +17,9 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddSingleton<UltimateCloudConnect>();
         services.AddSingleton<UltimateAudioTool>();
         services.AddSingleton<IUltimateAudio>(provider => provider.GetRequiredService<UltimateAudioTool>());
+        services.AddSingleton<CloudTrackDownloader>();
+        services.AddSingleton<CloudDropWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<CloudDropWorker>());
         services.AddSingleton<CloudSyncWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<CloudSyncWorker>());
         services.AddSingleton<UltimateCloudStorage>();

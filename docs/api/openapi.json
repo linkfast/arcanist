@@ -7404,6 +7404,7 @@
           "convertBitRate",
           "convertLossy",
           "mode",
+          "kind",
           "createdAt",
           "available"
         ],
@@ -7455,6 +7456,9 @@
           "mode": {
             "$ref": "#/components/schemas/DropFolderMode"
           },
+          "kind": {
+            "$ref": "#/components/schemas/DropFolderKind"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -7477,7 +7481,10 @@
         "type": "object",
         "properties": {
           "path": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "librarySourceId": {
             "type": "string",
@@ -7513,8 +7520,17 @@
           },
           "mode": {
             "$ref": "#/components/schemas/DropFolderMode"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DropFolderKind"
           }
         }
+      },
+      "DropFolderKind": {
+        "enum": [
+          "FOLDER",
+          "ULTIMATE_CLOUD_DROP"
+        ]
       },
       "DropFolderMode": {
         "enum": [

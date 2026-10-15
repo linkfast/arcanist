@@ -63,6 +63,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<P2PActivity> P2PActivities => Set<P2PActivity>();
     public DbSet<TrackRating> TrackRatings => Set<TrackRating>();
     public DbSet<PlayEvent> PlayEvents => Set<PlayEvent>();
+
+    public DbSet<CloudDropFetch> CloudDropFetches => Set<CloudDropFetch>();
     public DbSet<TrackPlayStats> TrackPlayStats => Set<TrackPlayStats>();
     public DbSet<Playlist> Playlists => Set<Playlist>();
     public DbSet<PlaylistEntry> PlaylistEntries => Set<PlaylistEntry>();
@@ -284,6 +286,16 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             rating.HasOne(r => r.Track).WithMany().OnDelete(DeleteBehavior.Cascade);
             rating.HasIndex(r => new { r.UserId, r.Rating, r.RatedAt });
             rating.HasIndex(r => r.TrackId);
+        });
+
+        modelBuilder.Entity<CloudDropFetch>(fetch =>
+        {
+            fetch.HasOne(f => f.DropFolder).WithMany().OnDelete(DeleteBehavior.Cascade);
+            fetch.Property(f => f.CloudTrackId).HasMaxLength(64);
+            fetch.Property(f => f.FileName).HasMaxLength(512);
+            fetch.Property(f => f.Title).HasMaxLength(500);
+            fetch.Property(f => f.ErrorCode).HasMaxLength(NameLength);
+            fetch.HasIndex(f => new { f.DropFolderId, f.CloudTrackId }).IsUnique();
         });
 
         modelBuilder.Entity<PlayEvent>(play =>

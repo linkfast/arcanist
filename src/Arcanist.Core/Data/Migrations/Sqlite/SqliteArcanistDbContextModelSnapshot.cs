@@ -255,6 +255,49 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("AudioAnalyses");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudDropFetch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CloudTrackId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("DropFolderId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DropFolderId", "CloudTrackId")
+                        .IsUnique();
+
+                    b.ToTable("CloudDropFetches");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -465,6 +508,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid>("LibrarySourceId")
@@ -1815,6 +1861,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudDropFetch", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.DropFolder", "DropFolder")
+                        .WithMany()
+                        .HasForeignKey("DropFolderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DropFolder");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.CloudSyncItem", b =>

@@ -896,6 +896,7 @@ type DropFolder {
   convertBitRate: Int
   convertLossy: Boolean!
   mode: DropFolderMode!
+  kind: DropFolderKind!
   createdAt: DateTime!
   available: Boolean!
 }
@@ -916,6 +917,11 @@ enum TranscodeFormat {
 enum DropFolderMode {
   MOVE
   COPY
+}
+
+enum DropFolderKind {
+  FOLDER
+  ULTIMATE_CLOUD_DROP
 }
 
 type ImportItem {
@@ -1650,7 +1656,7 @@ input UpdateLibraryOrganizationInput {
 }
 
 input DropFolderInput {
-  path: String!
+  path: String
   librarySourceId: ID!
   enabled: Boolean!
   duplicatePolicy: DuplicatePolicy!
@@ -1658,6 +1664,7 @@ input DropFolderInput {
   convertBitRate: Int
   convertLossy: Boolean!
   mode: DropFolderMode!
+  kind: DropFolderKind!
 }
 
 input ImportTagsInput {

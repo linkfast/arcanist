@@ -194,9 +194,13 @@
             @for (folder of list; track folder.id) {
               <li class="flex items-start justify-between gap-3 rounded-lg border p-3">
                 <div class="grid min-w-0 gap-1 text-sm">
-                  <span class="truncate font-mono text-xs" [title]="folder.path">{{
-                    folder.path
-                  }}</span>
+                  @if (folder.kind === 'ULTIMATE_CLOUD_DROP') {
+                    <span class="font-medium">{{ 'import.folders.cloudDrop' | t }}</span>
+                  } @else {
+                    <span class="truncate font-mono text-xs" [title]="folder.path">{{
+                      folder.path
+                    }}</span>
+                  }
                   <span class="text-muted-foreground">
                     {{
                       'import.folders.into' | t: { library: targetLabel(folder.librarySourceId) }
@@ -482,31 +486,53 @@
           </h3>
         </hlm-dialog-header>
 
-        <hlm-field>
-          <label hlmFieldLabel for="drop-path">{{ 'import.folders.path' | t }}</label>
-          <div class="flex gap-2">
-            <input
-              hlmInput
-              id="drop-path"
-              name="path"
-              class="min-w-0 flex-1 font-mono text-xs"
-              [ngModel]="current.path"
-              (ngModelChange)="updateForm({ path: $event })"
-              required
-            />
-            <button
-              hlmBtn
-              variant="outline"
-              size="icon"
-              type="button"
-              [attr.aria-label]="'folderPicker.title' | t"
-              (click)="picking.set(true)"
+        @if (!current.id) {
+          <hlm-field>
+            <label hlmFieldLabel>{{ 'import.folders.kind' | t }}</label>
+            <hlm-native-select
+              [value]="current.kind"
+              (change)="updateForm({ kind: $any($event.target).value })"
             >
-              <ng-icon name="lucideFolderPlus" />
-            </button>
-          </div>
-          <p hlmFieldDescription>{{ 'import.folders.pathHelp' | t }}</p>
-        </hlm-field>
+              <option hlmNativeSelectOption value="FOLDER">
+                {{ 'import.folders.kinds.FOLDER' | t }}
+              </option>
+              <option hlmNativeSelectOption value="ULTIMATE_CLOUD_DROP">
+                {{ 'import.folders.kinds.ULTIMATE_CLOUD_DROP' | t }}
+              </option>
+            </hlm-native-select>
+            @if (current.kind === 'ULTIMATE_CLOUD_DROP') {
+              <p hlmFieldDescription>{{ 'import.folders.cloudDropHelp' | t }}</p>
+            }
+          </hlm-field>
+        }
+
+        @if (current.kind === 'FOLDER') {
+          <hlm-field>
+            <label hlmFieldLabel for="drop-path">{{ 'import.folders.path' | t }}</label>
+            <div class="flex gap-2">
+              <input
+                hlmInput
+                id="drop-path"
+                name="path"
+                class="min-w-0 flex-1 font-mono text-xs"
+                [ngModel]="current.path"
+                (ngModelChange)="updateForm({ path: $event })"
+                required
+              />
+              <button
+                hlmBtn
+                variant="outline"
+                size="icon"
+                type="button"
+                [attr.aria-label]="'folderPicker.title' | t"
+                (click)="picking.set(true)"
+              >
+                <ng-icon name="lucideFolderPlus" />
+              </button>
+            </div>
+            <p hlmFieldDescription>{{ 'import.folders.pathHelp' | t }}</p>
+          </hlm-field>
+        }
 
         <hlm-field>
           <label hlmFieldLabel>{{ 'import.folders.target' | t }}</label>
@@ -549,7 +575,13 @@
               {{ 'import.folders.modes.COPY' | t }}
             </option>
           </hlm-native-select>
-          <p hlmFieldDescription>{{ 'import.folders.modeHelp.' + current.mode | t }}</p>
+          <p hlmFieldDescription>
+            {{
+              'import.folders.' +
+                (current.kind === 'FOLDER' ? 'modeHelp.' : 'cloudModeHelp.') +
+                current.mode | t
+            }}
+          </p>
         </hlm-field>
 
         <hlm-field>
@@ -623,7 +655,11 @@
           <button
             hlmBtn
             type="submit"
-            [disabled]="busy() === 'form' || !current.path.trim() || !current.librarySourceId"
+            [disabled]="
+              busy() === 'form' ||
+              (current.kind === 'FOLDER' && !current.path.trim()) ||
+              !current.librarySourceId
+            "
           >
             {{ 'common.save' | t }}
           </button>

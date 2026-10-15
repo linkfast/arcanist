@@ -31,6 +31,7 @@ import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   DlnaImportJobFieldsFragment as DlnaImportJob,
   DropFolderFieldsFragment as DropFolder,
+  DropFolderKind,
   DropFolderMode,
   DuplicatePolicy,
   ImportItemFieldsFragment as ImportItem,
@@ -83,6 +84,7 @@ interface FolderForm {
   convertBitRate: number | null;
   convertLossy: boolean;
   mode: DropFolderMode;
+  kind: DropFolderKind;
 }
 
 interface TagsForm {
@@ -464,6 +466,7 @@ export class ImportPage implements OnInit {
       convertBitRate: null,
       convertLossy: false,
       mode: 'MOVE',
+      kind: 'FOLDER',
     });
   }
 
@@ -479,6 +482,7 @@ export class ImportPage implements OnInit {
       convertBitRate: folder.convertBitRate ?? null,
       convertLossy: folder.convertLossy,
       mode: folder.mode,
+      kind: folder.kind,
     });
   }
 
@@ -497,7 +501,8 @@ export class ImportPage implements OnInit {
     this.formError.set(null);
     this.busy.set('form');
     const input = {
-      path: form.path.trim(),
+      path: form.kind === 'FOLDER' ? form.path.trim() : null,
+      kind: form.kind,
       librarySourceId: form.librarySourceId,
       enabled: form.enabled,
       duplicatePolicy: form.duplicatePolicy,

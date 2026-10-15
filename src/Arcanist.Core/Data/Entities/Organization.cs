@@ -48,7 +48,63 @@ public sealed class DropFolder : Entity
     /// <summary>What happens to a file once imported: it leaves the drop folder (the default) or stays there.</summary>
     public DropFolderMode Mode { get; set; }
 
+    /// <summary>
+    /// A folder of the server, or the linked account's Cloud Drop: its songs are downloaded to <see cref="Path"/> (a
+    /// folder of the server's own) and imported from there; <see cref="Mode"/> then says whether they leave Cloud Drop.
+    /// </summary>
+    public DropFolderKind Kind { get; set; }
+
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+}
+
+public enum DropFolderKind
+{
+    /// <summary>A folder of the server.</summary>
+    Folder,
+
+    /// <summary>The Cloud Drop of the linked Ultimate Cloud account.</summary>
+    UltimateCloudDrop,
+}
+
+/// <summary>A song of Cloud Drop brought to a Cloud Drop drop folder, and what became of it.</summary>
+public sealed class CloudDropFetch : Entity
+{
+    public Guid DropFolderId { get; init; }
+
+    public DropFolder DropFolder { get; init; } = null!;
+
+    public required string CloudTrackId { get; init; }
+
+    /// <summary>The file's name in the drop folder's staging folder.</summary>
+    public required string FileName { get; init; }
+
+    public string? Title { get; set; }
+
+    public CloudDropFetchState State { get; set; }
+
+    public string? ErrorCode { get; set; }
+
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public enum CloudDropFetchState
+{
+    /// <summary>Downloaded, waiting to be imported (or for a review).</summary>
+    Staged,
+
+    /// <summary>In the library (or it had it already) and taken off Cloud Drop.</summary>
+    Removed,
+
+    /// <summary>In the library (or it had it already), and left in Cloud Drop (the folder copies).</summary>
+    Kept,
+
+    /// <summary>An administrator discarded it; it stays in Cloud Drop.</summary>
+    Discarded,
+
+    /// <summary>It could not be downloaded; tried again later.</summary>
+    Failed,
 }
 
 public enum DropFolderMode

@@ -4,8 +4,10 @@
   <PropertyGroup>
     <Product>Arcanist</Product>
     <Version>0.1.0</Version>
-    <Authors>Arcanist Contributors</Authors>
-    <Copyright>Copyright (C) 2026 Arcanist Contributors</Copyright>
+    <!-- Arcanist is an open source product of LinkFast. Contributions keep their authors' copyright (DCO, no CLA). -->
+    <Authors>LinkFast S.A.</Authors>
+    <Company>LinkFast S.A.</Company>
+    <Copyright>Copyright (C) 2026 LinkFast S.A. and Arcanist contributors</Copyright>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <!-- Default for serverInfo.sourceUrl (AGPL section 13). Forks distributing modified builds must change it. -->
     <RepositoryUrl>https://github.com/linkfast/arcanist</RepositoryUrl>

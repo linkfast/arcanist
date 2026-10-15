@@ -18,9 +18,9 @@ public sealed class OnlineOptions
 
     /// <summary>
     /// The project's AcoustID application key, used when the administrator has not set their own. Application keys
-    /// identify the program, not its users, and are meant to ship with it. Empty until the project registers one.
+    /// identify the program, not its users, and are meant to ship with it.
     /// </summary>
-    public const string? ProjectAcoustIdKey = null;
+    public const string? ProjectAcoustIdKey = "hXVwtfLtdR";
 
     /// <summary>Overrides <see cref="ProjectAcoustIdKey"/> (for forks and packagers).</summary>
     public string? AcoustIdKey { get; set; }

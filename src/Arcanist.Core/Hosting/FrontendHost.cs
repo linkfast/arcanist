@@ -158,8 +158,8 @@ public static partial class FrontendHost
     private static string PlaceholderPage(ServerInfo info)
     {
         var source = info.SourceUrl is { } url
-            ? $"""<p><a href="{System.Net.WebUtility.HtmlEncode(url)}">Source code</a> (AGPL-3.0-or-later)</p>"""
-            : "<p>Arcanist is free software under the AGPL-3.0-or-later.</p>";
+            ? $"""<p>An open source product of LinkFast. <a href="{System.Net.WebUtility.HtmlEncode(url)}">Source code</a> (AGPL-3.0-or-later)</p>"""
+            : "<p>Arcanist is an open source product of LinkFast, free software under the AGPL-3.0-or-later.</p>";
 
         return $"""
             <!doctype html>

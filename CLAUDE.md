@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador), 7 (DLNA), 8 (red P2P) y 9 (migrador a PostgreSQL) completas. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
-- De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`). La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
-- De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (necesita la clave del proyecto).
+- De la F3: probar AcoustID con la clave del proyecto (`OnlineOptions.ProjectAcoustIdKey`, ya registrada) contra el servicio real. La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
+- De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (la clave del proyecto ya existe).
 - Importar desde un servidor DLNA: probar con servidores de terceros reales (MinimServer, Serviio, UMS, Twonky, Asset UPnP; solo se probó contra el DLNA de Arcanist) y con bibliotecas grandes. Siguientes importadores posibles (investigados, sin hacer): Plex, Jellyfin/Emby, Navidrome y Subsonic (Gonic, Airsonic, Ampache, LMS), Last.fm/ListenBrainz e iTunes `Library.xml`.
 - De la F7: probar DLNA con dispositivos reales (televisores Samsung/LG, Kodi, VLC, BubbleUPnP, altavoces) y con varias interfaces de red.
 - De la F8: probar la red P2P con los relays reales de n0 entre redes distintas (los tests usan el modo `Local`), los bindings de Swift y Kotlin en apps reales (solo se generaron), el QR con cámaras reales, e integrarla en Ultimate Desktop (el NuGet `Arcanist.P2P` del plan inicial no existe todavía).
@@ -146,7 +146,7 @@ mise solo lee `mise.toml` después de un `mise trust` (una vez por clon). Si fal
 
 ## Qué es Arcanist
 
-Servidor de música self-hosted y open source: un "Spotify personal/familiar". El usuario crea bibliotecas a partir de sus carpetas y las consume desde todos sus dispositivos. Compite con [mStream](https://github.com/IrosTheBeggar/mStream) y quiere superarlo.
+Servidor de música self-hosted y open source: un "Spotify personal/familiar". **Es un producto open source de LinkFast (LinkFast S.A.)**: así figura en los metadatos (`Directory.Build.props`, instalador, `package.json`, imagen Docker), el README, "Acerca de" del panel, la página provisional y el fabricante del DLNA. El copyright es "LinkFast S.A. and Arcanist contributors" (el código aportado es de sus autores: DCO sin CLA). El usuario crea bibliotecas a partir de sus carpetas y las consume desde todos sus dispositivos. Compite con [mStream](https://github.com/IrosTheBeggar/mStream) y quiere superarlo.
 
 - **Siempre self-hosted:** Windows (instalador, servicio y tray), Linux, Docker y NAS (Synology primero). **No existe un Arcanist en la nube.**
 - **Ultimate Cloud** es un servicio comercial aparte que hace de "Arcanist en la nube" y es compatible con él. Los clientes Ultimate (Ultimate Web Player, Ultimate Desktop y los futuros móviles) hablan con ambos, así que **el contrato de API debe mantenerse estable y versionado**.

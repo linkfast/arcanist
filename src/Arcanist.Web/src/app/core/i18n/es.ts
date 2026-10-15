@@ -309,6 +309,7 @@ export const es: Dictionary = {
     noLibrariesHelp: 'Añade las carpetas donde está tu música para empezar.',
     sourceCode: 'Código fuente',
     license: 'Software libre bajo la licencia AGPL-3.0-or-later.',
+    madeBy: 'Un producto open source de LinkFast.',
   },
   duplicates: {
     title: 'Posibles duplicados',

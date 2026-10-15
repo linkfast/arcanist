@@ -14,9 +14,9 @@ internal static class DlnaDescriptions
             <deviceType>{Ssdp.MediaServer}</deviceType>
             <dlna:X_DLNADOC>DMS-1.50</dlna:X_DLNADOC>
             <friendlyName>{SecurityElement.Escape(friendlyName)}</friendlyName>
-            <manufacturer>Arcanist</manufacturer>
+            <manufacturer>LinkFast S.A.</manufacturer>
             <manufacturerURL>{SecurityElement.Escape(sourceUrl ?? "https://github.com/linkfast/arcanist")}</manufacturerURL>
-            <modelDescription>Arcanist music server</modelDescription>
+            <modelDescription>Arcanist open source music server: your music library for TVs, speakers and players on the local network</modelDescription>
             <modelName>Arcanist</modelName>
             <modelNumber>{SecurityElement.Escape(version)}</modelNumber>
             <modelURL>{SecurityElement.Escape(sourceUrl ?? "https://github.com/linkfast/arcanist")}</modelURL>

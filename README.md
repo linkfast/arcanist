@@ -1,6 +1,6 @@
 # Arcanist
 
-Arcanist is a self-hosted music server: your own personal and family "Spotify". Point it at the folders where your music lives, and listen from every device at home or on the go — web, desktop, mobile, TV, and DLNA players.
+Arcanist is a self-hosted music server: your own personal and family "Spotify". It is an open source product of LinkFast. Point it at the folders where your music lives, and listen from every device at home or on the go — web, desktop, mobile, TV, and DLNA players.
 
 > **Status:** early development. Nothing here is ready for use yet.
 
@@ -105,7 +105,7 @@ Contributions are welcome. Every commit must be signed off under the [Developer 
 
 ## License
 
-Copyright (C) 2026 Arcanist Contributors.
+Copyright (C) 2026 LinkFast S.A. and Arcanist contributors. Arcanist is developed by LinkFast as open source; contributions keep their authors' copyright.
 
 Arcanist is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE).
 

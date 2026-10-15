@@ -45,6 +45,11 @@ RUN dotnet publish src/Arcanist.Core/Arcanist.Core.csproj -c Release -o /app --n
 RUN mkdir /data
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+LABEL org.opencontainers.image.title="Arcanist" \
+      org.opencontainers.image.description="Self-hosted music server, an open source product of LinkFast" \
+      org.opencontainers.image.vendor="LinkFast S.A." \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.source="https://github.com/linkfast/arcanist"
 WORKDIR /app
 COPY --from=server /app ./
 COPY --from=panel /src/Arcanist.Web/dist/arcanist-web/browser ./wwwroot/admin

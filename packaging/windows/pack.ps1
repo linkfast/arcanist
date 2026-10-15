@@ -68,7 +68,7 @@ dotnet vpk pack `
     --mainExe Arcanist.Tray.exe `
     --runtime win-x64 `
     --packTitle Arcanist `
-    --packAuthors "Arcanist Contributors" `
+    --packAuthors "LinkFast S.A." `
     --icon src/Arcanist.Tray/Assets/arcanist.ico `
     --shortcuts "Desktop,StartMenuRoot" `
     --outputDir $releases

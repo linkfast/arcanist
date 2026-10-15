@@ -301,6 +301,7 @@ export const en: Dictionary = {
     noLibrariesHelp: 'Add the folders that hold your music to get started.',
     sourceCode: 'Source code',
     license: 'Free software under the AGPL-3.0-or-later license.',
+    madeBy: 'An open source product of LinkFast.',
   },
   duplicates: {
     title: 'Possible duplicates',

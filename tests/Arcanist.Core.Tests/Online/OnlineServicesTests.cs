@@ -195,7 +195,7 @@ public sealed class OnlineServicesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AcoustId_waits_for_a_key()
+    public async Task AcoustId_uses_the_project_s_key_until_the_administrator_sets_their_own()
     {
         _online.Respond = Canned;
         await StartAsync(acoustIdKey: null);
@@ -204,16 +204,17 @@ public sealed class OnlineServicesTests : IAsyncLifetime
         var status = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/online-services", ArcanistFactory.Json, Cancel);
         var acoustId = status.GetProperty("services").EnumerateArray().Single(s => s.GetProperty("service").GetString() == "ACOUST_ID");
         Assert.True(acoustId.GetProperty("enabled").GetBoolean());
-        Assert.False(acoustId.GetProperty("ready").GetBoolean());
-        Assert.False(status.GetProperty("hasAcoustIdKey").GetBoolean());
+        Assert.True(acoustId.GetProperty("ready").GetBoolean());
+        Assert.True(status.GetProperty("hasAcoustIdKey").GetBoolean());
+        Assert.False(status.GetProperty("hasOwnAcoustIdKey").GetBoolean());
+        await WaitForOnlineServicesAsync();
+        var first = _online.Requests.First(r => r.RequestUri!.Host == "api.acoustid.org");
+        Assert.Contains($"client={OnlineOptions.ProjectAcoustIdKey}", _online.Bodies[first]);
 
         var withKey = await _admin.PutAsJsonAsync("/rest/v1/online-services/acoustid-key", new SetAcoustIdKeyInput("my-own-key"), Cancel);
         var updated = await withKey.Content.ReadFromJsonAsync<JsonElement>(Cancel);
         Assert.True(updated.GetProperty("hasOwnAcoustIdKey").GetBoolean());
-
-        await WaitForOnlineServicesAsync();
-        var request = _online.Requests.First(r => r.RequestUri!.Host == "api.acoustid.org");
-        Assert.Contains("client=my-own-key", _online.Bodies[request]);
+        Assert.Equal("my-own-key", await _factory.Services.GetRequiredService<Arcanist.Core.Online.OnlineSettings>().AcoustIdKeyAsync(Cancel));
     }
 
     [Fact]

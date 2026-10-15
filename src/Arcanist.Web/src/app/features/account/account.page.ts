@@ -249,6 +249,7 @@ type Session = SessionsResult['mySessions'][number];
         <div hlmCardContent class="grid gap-1 text-sm">
           @if (server(); as info) {
             <p>Arcanist {{ info.version }} · API v{{ info.apiVersion }}</p>
+            <p class="text-muted-foreground">{{ 'overview.madeBy' | t }}</p>
             <p class="text-muted-foreground">{{ 'overview.license' | t }}</p>
             @if (info.sourceUrl) {
               <a class="underline" [href]="info.sourceUrl" target="_blank" rel="noopener">{{

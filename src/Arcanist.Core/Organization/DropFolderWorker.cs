@@ -59,6 +59,7 @@ internal sealed class DropFolderWorker(
     IOptions<OrganizationOptions> options,
     TimeProvider time,
     DatabaseMaintenance maintenance,
+    IServiceProvider services,
     ILogger<DropFolderWorker> logger) : BackgroundService
 {
     /// <summary>Imported and discarded items are kept this long as history.</summary>
@@ -211,6 +212,9 @@ internal sealed class DropFolderWorker(
 
         logger.LogInformation("Importing {Count} files from {DropFolder}", ready.Count, folder.Path);
         var imported = await importer.ImportAsync(folder.Id, entries, ready, cancellationToken);
+        // Cloud Drop learns at once what became of its songs (off Cloud Drop, or kept there).
+        if (folder.Kind == DropFolderKind.UltimateCloudDrop)
+            services.GetService<Cloud.CloudDropWorker>()?.Wake();
         return (imported, unsettled);
     }
 

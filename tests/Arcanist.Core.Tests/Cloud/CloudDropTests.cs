@@ -22,15 +22,19 @@ public sealed class CloudDropTests : IAsyncDisposable
     private ArcanistFactory _factory = null!;
     private HttpClient _admin = null!;
     private string _sourceId = null!;
+    private FakeCloudEvents? _events;
 
-    private async Task StartAsync()
+    /// <param name="events">Ultimate Cloud's change notices; without them, Cloud Drop is looked at every second.</param>
+    private async Task StartAsync(FakeCloudEvents? events = null)
     {
+        _events = events;
         _factory = new ArcanistFactory(new Dictionary<string, string?>
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = FakeUltimateCloud.ApiUrl,
             ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
+            ["Arcanist:UltimateCloud:EventsUrl"] = events?.Url,
             ["Arcanist:Organization:StableSeconds"] = "0",
-            ["Arcanist:Organization:PollSeconds"] = "1",
+            ["Arcanist:Organization:PollSeconds"] = events is null ? "1" : "3600",
         }, services: services =>
         {
             _cloud.Register(services);
@@ -115,6 +119,40 @@ public sealed class CloudDropTests : IAsyncDisposable
         await _factory.Services.GetRequiredService<CloudDropWorker>().RunAsync(Cancel);
         await _factory.WaitForImportsAsync();
         Assert.Single(Music());
+    }
+
+    [Fact]
+    public async Task Ultimate_Cloud_s_notices_bring_new_songs_and_scan_watching_libraries_at_once()
+    {
+        await using var events = await FakeCloudEvents.StartAsync();
+        await StartAsync(events);
+        await WaitAsync(() => Task.FromResult(events.Subscribed), "The server did not subscribe to the notices");
+        var init = events.Inits.Last()!;
+        Assert.StartsWith("Bearer ", init["authorization"]!.GetValue<string>());
+        Assert.Equal("arcanist-server", init["clientApp"]!.GetValue<string>());
+
+        // Cloud Drop: no polling here (once an hour), the notice brings the song.
+        Assert.Equal(HttpStatusCode.Created, (await AddCloudDropFolderAsync("COPY")).StatusCode);
+        await Task.Delay(500, Cancel);
+        _cloud.AddDropTrack("drop-3", "Shoal", "Haze", "Low Tide", 3, AudioFixtures.Music(bpm: 90, seconds: 3, chordSeed: 3));
+        await events.PublishAsync("CLOUD_DROP", added: ["drop-3"]);
+        await WaitAsync(async () => (await FetchesAsync()).Any(f => f.CloudTrackId == "drop-3" && f.State == CloudDropFetchState.Kept), "The notice did not bring the song");
+
+        // The library: one that watches for changes is scanned after the notices settle.
+        var library = (await _admin.GraphQLAsync("mutation { addUltimateCloudLibrary(input: {collection: LIBRARY}) { libraries { libraryId } } }"))
+            .GetProperty("data").GetProperty("addUltimateCloudLibrary").GetProperty("libraries")[0].GetProperty("libraryId").GetString()!;
+        await _factory.WaitForScansAsync(_admin);
+        var update = await _admin.PutAsJsonAsync($"/rest/v1/libraries/{library}",
+            new Application.Libraries.UpdateLibraryInput("Ana's Ultimate Cloud", false, null, WatchForChanges: true), ArcanistFactory.Json, Cancel);
+        Assert.True(update.IsSuccessStatusCode, await update.Content.ReadAsStringAsync(Cancel));
+        async Task<int> ScansAsync() => (await _admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/scans", ArcanistFactory.Json, Cancel))!
+            .Count(j => j.GetProperty("libraryId").GetString() == library);
+        var before = await ScansAsync();
+        await events.PublishAsync("STANDARD", added: ["t9"]);
+        await events.PublishAsync("STANDARD", updated: ["t9"]);
+        await WaitAsync(async () => await ScansAsync() > before, "The notice did not scan the library");
+        await Task.Delay(UltimateCloudEvents.ScanDelay + TimeSpan.FromSeconds(1), Cancel);
+        Assert.Equal(before + 1, await ScansAsync());
     }
 
     public async ValueTask DisposeAsync()

@@ -32,6 +32,9 @@ public sealed class UltimateCloudOptions
 
     /// <summary>The key those tools are signed with (PEM); by default the one Arcanist ships (<see cref="UltimateAudioTool.PublicKey"/>).</summary>
     public string? ToolsPublicKey { get; set; }
+
+    /// <summary>Where the change notices are subscribed to (WebSocket); by default the API's URL.</summary>
+    public string? EventsUrl { get; set; }
 }
 
 /// <summary>A GraphQL error from Ultimate Cloud, with its code (<c>extensions.code</c>).</summary>

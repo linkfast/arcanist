@@ -103,6 +103,7 @@ builder.Services.AddScoped<FfmpegService>();
 builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<TrackMatchService>();
+builder.Services.AddSingleton<Arcanist.Core.Application.Listening.ListeningSignals>();
 builder.Services.Configure<Arcanist.Core.Application.Libraries.UploadOptions>(builder.Configuration.GetSection("Arcanist:Uploads"));
 builder.Services.AddScoped<Arcanist.Core.Application.Libraries.UploadService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.UploadScans>();

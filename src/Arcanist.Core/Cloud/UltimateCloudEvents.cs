@@ -31,6 +31,9 @@ public sealed class UltimateCloudEvents(
 {
     public const string Subscription = "subscription { cloudLibraryChanged { library added updated removed playlistsChanged } }";
 
+    /// <summary>The account's StarTracks changed (on another device, or here).</summary>
+    public const string StarsSubscription = "subscription { starTracksChanged { changedAt } }";
+
     /// <summary>A connection lasts this long, then is made again with a fresh token.</summary>
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(30);
 
@@ -80,6 +83,24 @@ public sealed class UltimateCloudEvents(
         }
     }
 
+    /// <summary>Ends the subscription when the account is gone or the extension is switched off.</summary>
+    private async Task CloseWhenUnlinkedAsync(CancellationTokenSource lifetime)
+    {
+        try
+        {
+            while (!lifetime.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), lifetime.Token);
+                if (link.Tier == CloudTier.None)
+                    await lifetime.CancelAsync();
+            }
+        }
+        catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException)
+        {
+            // The connection ended on its own.
+        }
+    }
+
     /// <summary><c>EventsUrl</c>, or the API's URL as a WebSocket one.</summary>
     private Uri? EventsUri()
     {
@@ -95,6 +116,7 @@ public sealed class UltimateCloudEvents(
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         lifetime.CancelAfter(Lifetime);
         var cancellationToken = lifetime.Token;
+        _ = CloseWhenUnlinkedAsync(lifetime);
 
         using var socket = new ClientWebSocket();
         socket.Options.AddSubProtocol("graphql-transport-ws");
@@ -122,6 +144,7 @@ public sealed class UltimateCloudEvents(
         }
 
         await SendAsync(socket, new { id = "library", type = "subscribe", payload = new { query = Subscription } }, cancellationToken);
+        await SendAsync(socket, new { id = "stars", type = "subscribe", payload = new { query = StarsSubscription } }, cancellationToken);
         Listening = true;
         logger.LogInformation("Listening to Ultimate Cloud's change notices");
 
@@ -136,6 +159,9 @@ public sealed class UltimateCloudEvents(
                         break;
                     case "next" when (message["payload"]?["data"]?["cloudLibraryChanged"]) is { } change:
                         await HandleAsync(change, cancellationToken);
+                        break;
+                    case "next" when (message["payload"]?["data"]?["starTracksChanged"] is not null):
+                        services.GetService<UltimateCloudReporter>()?.StarsChanged();
                         break;
                     case "error":
                     case "complete":

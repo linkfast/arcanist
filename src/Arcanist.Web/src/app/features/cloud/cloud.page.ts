@@ -9,24 +9,43 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
+import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
+import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   Capability,
   UltimateCloudCollection,
+  UltimateCloudMetricsQuery as MetricsResult,
+  UltimateCloudServicesInput,
   UltimateCloudStatusFieldsFragment as Status,
 } from '../../graphql/generated/graphql';
 import {
   AddUltimateCloudLibraryMutation,
   CancelUltimateCloudLinkMutation,
   RefreshUltimateCloudMutation,
+  SetExtensionEnabledMutation,
+  SetUltimateCloudServicesMutation,
   StartUltimateCloudLinkMutation,
+  UltimateCloudMetricsQuery,
   UltimateCloudQuery,
   UnlinkUltimateCloudMutation,
 } from '../../graphql/operations';
 import { BytesPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 import { qrPath } from '../../shared/invitation';
+
+type Metrics = MetricsResult['ultimateCloudMetrics'];
+type Service = keyof UltimateCloudServicesInput;
+
+const SERVICES: Service[] = [
+  'personalPlays',
+  'sharedPlays',
+  'albumPlaythroughs',
+  'starTracks',
+  'metrics',
+];
+const PERIODS = ['ThisMonth', 'ThisYear', 'AllTime'] as const;
 
 const ALL_CAPABILITIES: Capability[] = [
   'ULTIMATE_CLOUD_SOURCE',
@@ -51,6 +70,7 @@ const ALL_CAPABILITIES: Capability[] = [
     HlmCardImports,
     HlmProgressImports,
     HlmSpinnerImports,
+    HlmSwitchImports,
     TranslatePipe,
     BytesPipe,
     DateTimePipe,
@@ -62,8 +82,12 @@ export class CloudPage implements OnInit {
   protected readonly i18n = inject(I18n);
   private readonly gql = inject(Gql);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly enabledExtensions = inject(EnabledExtensions);
 
   protected readonly status = signal<Status | null>(null);
+  protected readonly metrics = signal<Metrics | null>(null);
+  protected readonly services = SERVICES;
+  protected readonly periods = PERIODS;
   protected readonly busy = signal(false);
   protected readonly confirmingUnlink = signal(false);
   protected readonly capabilities = ALL_CAPABILITIES;
@@ -129,13 +153,78 @@ export class CloudPage implements OnInit {
     }
   }
 
+  /** The account's statistics, when linked and shown; quietly absent when Ultimate Cloud cannot answer. */
+  private async loadMetrics(): Promise<void> {
+    const status = this.status();
+    if (!status?.enabled || status.state !== 'LINKED' || !status.plan || !status.services.metrics) {
+      this.metrics.set(null);
+      return;
+    }
+    try {
+      this.metrics.set((await this.gql.query(UltimateCloudMetricsQuery)).ultimateCloudMetrics);
+    } catch {
+      this.metrics.set(null);
+    }
+  }
+
+  protected async setEnabled(enabled: boolean): Promise<void> {
+    await this.run(async () => {
+      await this.gql.mutate(SetExtensionEnabledMutation, { id: 'ultimate-cloud', enabled });
+      await this.enabledExtensions.refresh();
+      await this.load();
+    });
+  }
+
+  protected async setService(service: Service, on: boolean): Promise<void> {
+    const current = this.status()?.services;
+    if (!current) return;
+    const input: UltimateCloudServicesInput = {
+      personalPlays: current.personalPlays,
+      sharedPlays: current.sharedPlays,
+      albumPlaythroughs: current.albumPlaythroughs,
+      starTracks: current.starTracks,
+      metrics: current.metrics,
+      [service]: on,
+    };
+    await this.run(async () =>
+      this.show(
+        (await this.gql.mutate(SetUltimateCloudServicesMutation, { input }))
+          .setUltimateCloudServices,
+      ),
+    );
+  }
+
+  /** The top of a kind (song, artist, album, genre) for a period, as one line. */
+  protected top(
+    kind: 'Song' | 'Artist' | 'Album' | 'Genre',
+    period: (typeof PERIODS)[number],
+  ): string | null {
+    const metrics = this.metrics() as Record<string, unknown> | null;
+    const value = metrics?.['top' + kind + period] as
+      { title?: string; artist?: string; genre?: string; playCount: number } | null | undefined;
+    if (!value) return null;
+    const name = kind === 'Artist' ? value.artist : kind === 'Genre' ? value.genre : value.title;
+    const by = kind === 'Song' || kind === 'Album' ? value.artist : null;
+    return by
+      ? this.i18n.t('cloud.metrics.entryBy', { name: name ?? '—', by, plays: value.playCount })
+      : this.i18n.t('cloud.metrics.entry', { name: name ?? '—', plays: value.playCount });
+  }
+
   /**
    * Follows a pending code until it is approved, refused or expires, and then until the plan is read (the server
    * reads it right after the approval).
    */
   private show(status: Status): void {
     const wasPending = this.status()?.state === 'PENDING';
+    const before = this.status();
     this.status.set(status);
+    if (
+      before?.state !== status.state ||
+      !before?.plan !== !status.plan ||
+      before?.services.metrics !== status.services.metrics ||
+      before?.enabled !== status.enabled
+    )
+      void this.loadMetrics();
     const follow =
       status.state === 'PENDING' ||
       (status.state === 'LINKED' && !status.plan && !status.errorCode);

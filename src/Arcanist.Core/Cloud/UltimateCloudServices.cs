@@ -24,6 +24,9 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddHostedService(provider => provider.GetRequiredService<CloudDropWorker>());
         services.AddSingleton<CloudSyncWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<CloudSyncWorker>());
+        services.AddSingleton<UltimateCloudServicesSettings>();
+        services.AddSingleton<UltimateCloudReporter>();
+        services.AddHostedService(provider => provider.GetRequiredService<UltimateCloudReporter>());
         services.AddSingleton<UltimateCloudStorage>();
         services.AddSingleton<ILibraryStorage>(provider => provider.GetRequiredService<UltimateCloudStorage>());
         // Audio lasts as long as the music: requests end with their cancellation, not with a timeout.

@@ -97,6 +97,60 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             if (query.Contains("library {"))
                 return Json(new { data = new { library = Tracks.Select(t => t.Payload).ToArray() } });
             var variables = JsonNode.Parse(body)!["variables"];
+            if (query.Contains("recordSharedPlays("))
+            {
+                foreach (var play in variables!["p"]!.AsArray())
+                    SharedPlays.Enqueue((play!["acoustId"]!.GetValue<string>(), play["title"]?.GetValue<string>(), play["playedAt"]?.GetValue<DateTime>()));
+                return Json(new { data = new { recordSharedPlays = variables["p"]!.AsArray().Count } });
+            }
+
+            if (query.Contains("recordPlay("))
+            {
+                Plays.Enqueue((variables!["a"]!.GetValue<string>(), variables["title"]?.GetValue<string>(), variables["at"]?.GetValue<DateTime>()));
+                return Json(new { data = new { recordPlay = true } });
+            }
+
+            if (query.Contains("recordAlbumPlaythrough("))
+            {
+                Playthroughs.Enqueue((variables!["artist"]!.GetValue<string>(), variables["album"]!.GetValue<string>()));
+                return Json(new { data = new { recordAlbumPlaythrough = true } });
+            }
+
+            if (query.Contains("addStarTracks(") || query.Contains("removeStarTracks("))
+            {
+                var ids = variables!["items"]!.AsArray().Select(i => i!["acoustId"]!.GetValue<string>()).ToList();
+                foreach (var id in ids)
+                {
+                    if (query.Contains("addStarTracks("))
+                        Stars[id] = true;
+                    else
+                        Stars.TryRemove(id, out _);
+                }
+
+                return Json(new { data = new Dictionary<string, object> { [query.Contains("addStarTracks(") ? "addStarTracks" : "removeStarTracks"] = ids.Count } });
+            }
+
+            if (query.Contains("starTracks {"))
+                return Json(new { data = new { starTracks = Stars.Keys.Select(id => new { acoustId = id }).ToArray() } });
+
+            if (query.Contains("myMusicMetrics"))
+            {
+                return Json(new
+                {
+                    data = new
+                    {
+                        myMusicMetrics = new
+                        {
+                            totalPlays = 42L,
+                            totalStreams = 7L,
+                            topSongAllTime = new { acoustId = "a-1", title = "Top Song", artist = "Top Artist", playCount = 9L },
+                            topArtistAllTime = new { artist = "Top Artist", playCount = 12L },
+                            topDecade = new { decadeStart = 1990, decadeEnd = 1999, playCount = 20L },
+                        },
+                    },
+                });
+            }
+
             if (query.Contains("myP2PNodes"))
             {
                 return Json(new
@@ -297,6 +351,18 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
           "  hash) echo '{\"audioHash\":\"abc123\"}' ;;\n" +
           "  *) echo '{\"error\":\"corrupt_file\",\"message\":\"bad\"}'; exit 1 ;;\n" +
           "esac\n");
+
+    /// <summary>The account's own plays (<c>recordPlay</c>): AcoustID, title and when.</summary>
+    public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt)> Plays { get; } = new();
+
+    /// <summary>Plays reported anonymously for the rankings (<c>recordSharedPlays</c>).</summary>
+    public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt)> SharedPlays { get; } = new();
+
+    /// <summary>Albums heard from start to finish (<c>recordAlbumPlaythrough</c>).</summary>
+    public ConcurrentQueue<(string Artist, string Album)> Playthroughs { get; } = new();
+
+    /// <summary>The account's StarTracks, by AcoustID.</summary>
+    public ConcurrentDictionary<string, bool> Stars { get; } = new();
 
     /// <summary>The account's library: what <c>library</c> describes, and the audio B2 serves.</summary>
     public List<(string Id, object Payload, byte[] Audio)> Tracks { get; } = [];

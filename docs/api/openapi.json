@@ -5071,6 +5071,58 @@
         }
       }
     },
+    "/rest/v1/ultimate-cloud/services": {
+      "put": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Chooses which of Ultimate Cloud\u0027s online services this server takes part in: plays for the statistics and rankings, albums heard whole, StarTracks, the account\u0027s statistics. Administrators only, with a recent authentication.",
+        "operationId": "SetUltimateCloudServices",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UltimateCloudServicesInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ultimate-cloud/metrics": {
+      "get": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "The linked account\u0027s listening statistics as Ultimate Cloud counts them. Administrators only.",
+        "operationId": "UltimateCloudMetrics",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/ultimate-cloud/syncs": {
       "get": {
         "tags": [
@@ -6600,6 +6652,138 @@
           },
           "newPassword": {
             "type": "string"
+          }
+        }
+      },
+      "CloudAlbumRanking": {
+        "required": [
+          "title",
+          "artist",
+          "playCount"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CloudArtistRanking": {
+        "required": [
+          "artist",
+          "playCount"
+        ],
+        "type": "object",
+        "properties": {
+          "artist": {
+            "type": "string"
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CloudDecadeRanking": {
+        "required": [
+          "decadeStart",
+          "decadeEnd",
+          "playCount"
+        ],
+        "type": "object",
+        "properties": {
+          "decadeStart": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "decadeEnd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CloudGenreRanking": {
+        "required": [
+          "genre",
+          "playCount"
+        ],
+        "type": "object",
+        "properties": {
+          "genre": {
+            "type": "string"
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CloudSongRanking": {
+        "required": [
+          "acoustId",
+          "title",
+          "artist",
+          "playCount"
+        ],
+        "type": "object",
+        "properties": {
+          "acoustId": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "playCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -12996,6 +13180,185 @@
           "LINKED"
         ]
       },
+      "UltimateCloudMetrics": {
+        "required": [
+          "totalPlays",
+          "totalStreams",
+          "mostStreamedSong",
+          "topSongThisMonth",
+          "topSongThisYear",
+          "topSongAllTime",
+          "topArtistThisMonth",
+          "topArtistThisYear",
+          "topArtistAllTime",
+          "topAlbumThisMonth",
+          "topAlbumThisYear",
+          "topAlbumAllTime",
+          "topGenreThisMonth",
+          "topGenreThisYear",
+          "topGenreAllTime",
+          "topDecade"
+        ],
+        "type": "object",
+        "properties": {
+          "totalPlays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "totalStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "mostStreamedSong": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudSongRanking"
+              }
+            ]
+          },
+          "topSongThisMonth": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudSongRanking"
+              }
+            ]
+          },
+          "topSongThisYear": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudSongRanking"
+              }
+            ]
+          },
+          "topSongAllTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudSongRanking"
+              }
+            ]
+          },
+          "topArtistThisMonth": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudArtistRanking"
+              }
+            ]
+          },
+          "topArtistThisYear": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudArtistRanking"
+              }
+            ]
+          },
+          "topArtistAllTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudArtistRanking"
+              }
+            ]
+          },
+          "topAlbumThisMonth": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudAlbumRanking"
+              }
+            ]
+          },
+          "topAlbumThisYear": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudAlbumRanking"
+              }
+            ]
+          },
+          "topAlbumAllTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudAlbumRanking"
+              }
+            ]
+          },
+          "topGenreThisMonth": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudGenreRanking"
+              }
+            ]
+          },
+          "topGenreThisYear": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudGenreRanking"
+              }
+            ]
+          },
+          "topGenreAllTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudGenreRanking"
+              }
+            ]
+          },
+          "topDecade": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CloudDecadeRanking"
+              }
+            ]
+          }
+        }
+      },
       "UltimateCloudPendingLink": {
         "required": [
           "userCode",
@@ -13073,6 +13436,60 @@
           }
         }
       },
+      "UltimateCloudServices": {
+        "required": [
+          "personalPlays",
+          "sharedPlays",
+          "albumPlaythroughs",
+          "starTracks",
+          "metrics"
+        ],
+        "type": "object",
+        "properties": {
+          "personalPlays": {
+            "type": "boolean"
+          },
+          "sharedPlays": {
+            "type": "boolean"
+          },
+          "albumPlaythroughs": {
+            "type": "boolean"
+          },
+          "starTracks": {
+            "type": "boolean"
+          },
+          "metrics": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UltimateCloudServicesInput": {
+        "required": [
+          "personalPlays",
+          "sharedPlays",
+          "albumPlaythroughs",
+          "starTracks",
+          "metrics"
+        ],
+        "type": "object",
+        "properties": {
+          "personalPlays": {
+            "type": "boolean"
+          },
+          "sharedPlays": {
+            "type": "boolean"
+          },
+          "albumPlaythroughs": {
+            "type": "boolean"
+          },
+          "starTracks": {
+            "type": "boolean"
+          },
+          "metrics": {
+            "type": "boolean"
+          }
+        }
+      },
       "UltimateCloudStatus": {
         "required": [
           "state",
@@ -13085,7 +13502,9 @@
           "capabilities",
           "errorCode",
           "libraries",
-          "audioTool"
+          "audioTool",
+          "enabled",
+          "services"
         ],
         "type": "object",
         "properties": {
@@ -13154,6 +13573,12 @@
           },
           "audioTool": {
             "$ref": "#/components/schemas/UltimateCloudTool"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "services": {
+            "$ref": "#/components/schemas/UltimateCloudServices"
           }
         }
       },

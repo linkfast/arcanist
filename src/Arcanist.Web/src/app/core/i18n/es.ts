@@ -531,7 +531,8 @@ export const es: Dictionary = {
     RUN_SCANS: 'Lanzar y cancelar escaneos.',
     DOWNLOAD: 'Descargar los archivos originales.',
     VIEW_ALL_STATS: 'Ver las estadísticas de todos los usuarios.',
-    UPLOAD: 'Añadir música a las bibliotecas a las que tiene acceso, desde las apps (por ejemplo, al migrar la biblioteca de Ultimate Desktop).',
+    UPLOAD:
+      'Añadir música a las bibliotecas a las que tiene acceso, desde las apps (por ejemplo, al migrar la biblioteca de Ultimate Desktop).',
   },
   account: {
     appPasswords: {
@@ -783,6 +784,8 @@ export const es: Dictionary = {
       mstream: 'La API de mStream, para las apps de mStream.',
       subsonic:
         'La API de Subsonic y OpenSubsonic, para apps como Symfonium, DSub, Feishin o Amperfy.',
+      'ultimate-cloud':
+        'Ultimate Cloud de LinkFast: sus bibliotecas y Cloud Drop, la sincronización, las bibliotecas en S3, la conexión transparente y sus servicios en línea.',
     },
     title: 'Extensiones',
     subtitle: 'Reproductores web y extensiones del servidor.',
@@ -1004,6 +1007,54 @@ export const es: Dictionary = {
       title: 'Herramienta de audio',
       installed: 'ultimate-audio {version}, firmada por Ultimate',
       pending: 'Se instalará al comprobar el plan',
+    },
+    extension: {
+      enabled: 'Ultimate Cloud',
+      onHelp:
+        'Todo lo que funciona con Ultimate Cloud: sus bibliotecas y Cloud Drop, la sincronización, las bibliotecas en S3, la conexión transparente y sus servicios en línea. Desactívalo si no piensas usar Ultimate Cloud.',
+      offHelp:
+        'Desactivado: este servidor nunca contacta con Ultimate Cloud, sus bibliotecas se ocultan y las funciones de su plan se apagan. Al activarlo de nuevo vuelve todo, con la cuenta todavía vinculada.',
+    },
+    services: {
+      title: 'Servicios en línea',
+      description:
+        'Lo que este servidor comparte con Ultimate Cloud. Solo participan las canciones identificadas con AcoustID.',
+      personalPlays: {
+        name: 'Mis reproducciones',
+        help: 'Las reproducciones del administrador que vinculó la cuenta cuentan como suyas: sus estadísticas y los rankings.',
+      },
+      sharedPlays: {
+        name: 'Las de los demás, de forma anónima',
+        help: 'Alimentan los rankings de Ultimate Cloud sin decir quién escuchó: nunca las estadísticas de nadie.',
+      },
+      albumPlaythroughs: {
+        name: 'Álbumes escuchados enteros',
+        help: 'Un álbum escuchado de la primera canción a la última, en orden, cuenta en los rankings de álbumes.',
+      },
+      starTracks: {
+        name: 'StarTracks',
+        help: 'Tus estrellas aquí y tus StarTracks en las apps Ultimate son las mismas: poner o quitar una en un lado lo hace en el otro.',
+      },
+      metrics: {
+        name: 'Mis estadísticas',
+        help: 'Muestra abajo lo que escuchas según Ultimate Cloud, desde todas las apps Ultimate y este servidor.',
+      },
+    },
+    metrics: {
+      title: 'Lo que escuchas en Ultimate',
+      totals: '{plays} reproducciones, {streams} de ellas en streaming desde Ultimate Cloud',
+      ThisMonth: 'Este mes',
+      ThisYear: 'Este año',
+      AllTime: 'Siempre',
+      kind: {
+        Song: 'Canción',
+        Artist: 'Artista',
+        Album: 'Álbum',
+        Genre: 'Género',
+      },
+      entry: '{name} · {plays}',
+      entryBy: '{name} — {by} · {plays}',
+      decade: 'Tu década: {start}–{end} ({plays} reproducciones)',
     },
     tier: {
       NONE: 'Sin cuenta',
@@ -1478,6 +1529,8 @@ export const es: Dictionary = {
     mstream_admin_required:
       'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
     dlna_disabled: 'DLNA está desactivado.',
+    cloud_disabled: 'Ultimate Cloud está desactivado.',
+    cloud_service_off: 'Ese servicio de Ultimate Cloud está desactivado.',
     renderer_unreachable: 'El dispositivo no responde: puede estar apagado o fuera de la red.',
     renderer_failed: 'El dispositivo rechazó la orden.',
     nothing_queued: 'Arcanist no tiene nada en cola en ese dispositivo.',

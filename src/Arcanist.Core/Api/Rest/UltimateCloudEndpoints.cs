@@ -35,6 +35,15 @@ public static class UltimateCloudEndpoints
             .WithName("RefreshUltimateCloud")
             .WithSummary("Reads the account's plan again now. Administrators only.");
 
+        cloud.MapPut("/services", (UltimateCloudServicesInput input, UltimateCloudService service, CancellationToken ct) => service.SetServicesAsync(input, ct))
+            .WithName("SetUltimateCloudServices")
+            .WithSummary("Chooses which of Ultimate Cloud's online services this server takes part in: plays for the statistics and rankings, " +
+                         "albums heard whole, StarTracks, the account's statistics. Administrators only, with a recent authentication.");
+
+        cloud.MapGet("/metrics", (UltimateCloudService service, CancellationToken ct) => service.MetricsAsync(ct))
+            .WithName("UltimateCloudMetrics")
+            .WithSummary("The linked account's listening statistics as Ultimate Cloud counts them. Administrators only.");
+
         cloud.MapGet("/syncs", (CloudSyncService service, CancellationToken ct) => service.ListAsync(ct))
             .WithName("CloudSyncs")
             .WithSummary("How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only.");

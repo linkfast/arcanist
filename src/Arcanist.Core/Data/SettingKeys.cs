@@ -56,4 +56,13 @@ public static class SettingKeys
 
     /// <summary>The id this server uses as its device in Ultimate Cloud, created once.</summary>
     public const string UltimateCloudDeviceId = "ultimateCloud.deviceId";
+
+    /// <summary>Which of Ultimate Cloud's online services this server takes part in (<c>UltimateCloudServicesConfig</c>).</summary>
+    public const string UltimateCloudServices = "ultimateCloud.services";
+
+    /// <summary>The last play event reported to Ultimate Cloud (plays are sent from there on).</summary>
+    public const string UltimateCloudPlaysCursor = "ultimateCloud.playsCursor";
+
+    /// <summary>The StarTracks this server and the account last agreed on (AcoustIDs), to merge changes from both sides.</summary>
+    public const string UltimateCloudStars = "ultimateCloud.stars";
 }

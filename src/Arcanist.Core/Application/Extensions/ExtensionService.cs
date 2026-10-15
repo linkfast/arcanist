@@ -110,6 +110,7 @@ public sealed class ExtensionService(
         }
 
         await settings.SetAsync(new Dictionary<string, object?> { [ExtensionHost.EnabledKey(id)] = enabled }, cancellationToken);
+        host.OnEnabledChanged(id);
         return ToModel(Current().Single(e => e.Manifest.Id == id));
     }
 

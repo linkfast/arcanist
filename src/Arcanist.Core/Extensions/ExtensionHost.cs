@@ -15,6 +15,9 @@ namespace Arcanist.Core.Extensions;
 internal interface IBuiltInExtension : IArcanistExtension
 {
     ExtensionManifest Manifest { get; }
+
+    /// <summary>Whether it runs until an administrator switches it off (most start off).</summary>
+    bool EnabledByDefault => false;
 }
 
 /// <summary>What became of an extension at startup.</summary>
@@ -47,6 +50,9 @@ public sealed class ExtensionRegistration(ExtensionManifest manifest, bool built
 
     internal IArcanistExtension? Instance { get; set; }
 
+    /// <summary>On when nothing in the configuration says otherwise (built-in ones that say so).</summary>
+    internal bool EnabledByDefault { get; init; }
+
     internal ExtensionContext? Context { get; set; }
 }
 
@@ -78,7 +84,12 @@ public sealed class ExtensionHost
     public ExtensionRegistration? Find(string id) => _extensions.FirstOrDefault(e => e.Manifest.Id == id);
 
     /// <summary>Whether the extension is enabled in the current configuration (it may need a restart to apply).</summary>
-    public bool IsEnabled(string id) => _configuration.GetValue<bool>(EnabledKey(id));
+    public bool IsEnabled(string id) => _configuration.GetValue<bool?>(EnabledKey(id)) ?? Find(id)?.EnabledByDefault ?? false;
+
+    /// <summary>Raised when an administrator switches an extension on or off, with its id.</summary>
+    public event Action<string>? EnabledChanged;
+
+    internal void OnEnabledChanged(string id) => EnabledChanged?.Invoke(id);
 
     public static string EnabledKey(string id) => $"Arcanist:Extensions:{id}:Enabled";
 
@@ -96,6 +107,7 @@ public sealed class ExtensionHost
             {
                 Instance = extension,
                 Status = ExtensionStatus.Running,
+                EnabledByDefault = extension.EnabledByDefault,
             });
         }
 

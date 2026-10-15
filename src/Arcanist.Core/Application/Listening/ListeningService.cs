@@ -16,6 +16,7 @@ public sealed class ListeningService(
     AccessGuard guard,
     CatalogService catalog,
     RatingSettings ratings,
+    ListeningSignals signals,
     TimeProvider time)
 {
     public const int DefaultPageSize = 50;
@@ -70,6 +71,7 @@ public sealed class ListeningService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        signals.OnRated(access.UserId);
         return await catalog.TrackAsync(trackId, cancellationToken);
     }
 
@@ -82,6 +84,7 @@ public sealed class ListeningService(
 
         await EnsureVisibleAsync(access, trackId, cancellationToken);
         await db.TrackRatings.Where(r => r.UserId == access.UserId && r.TrackId == trackId && r.Rating == 5).ExecuteDeleteAsync(cancellationToken);
+        signals.OnRated(access.UserId);
         return await catalog.TrackAsync(trackId, cancellationToken);
     }
 
@@ -192,6 +195,7 @@ public sealed class ListeningService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        signals.OnPlayed();
         return new RecordedPlay(play.Id, counted, skipped);
     }
 
@@ -277,6 +281,8 @@ public sealed class ListeningService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        if (added > 0)
+            signals.OnRated(access.UserId);
         return new ListeningImportResult(added, raised, ignored);
     }
 

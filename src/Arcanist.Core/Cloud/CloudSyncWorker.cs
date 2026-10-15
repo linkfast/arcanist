@@ -85,7 +85,7 @@ public sealed class CloudSyncWorker(
 
     private async Task<Guid?> NextAsync(CancellationToken cancellationToken)
     {
-        if (!databases.IsConfigured || !setup.CurrentValue.Completed)
+        if (!databases.IsConfigured || !setup.CurrentValue.Completed || !capabilities.IsEnabled(Capability.CloudSync))
             return null;
         var due = time.GetUtcNow().UtcDateTime - Interval;
         return await DbAsync(db => db.LibraryCloudSyncs.AsNoTracking()

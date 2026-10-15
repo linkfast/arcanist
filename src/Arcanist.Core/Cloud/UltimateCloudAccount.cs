@@ -27,9 +27,15 @@ public sealed class UltimateCloudAccount(
     IOptionsMonitor<SetupOptions> setup,
     IOptionsMonitor<UltimateCloudOptions> options,
     DatabaseMaintenance maintenance,
+    Extensions.ExtensionHost extensions,
     TimeProvider time,
     ILogger<UltimateCloudAccount> logger) : BackgroundService, ICloudLinkState
 {
+    private bool? _wasEnabled;
+
+    /// <summary>The Ultimate Cloud extension is on: while it is off, nothing contacts Ultimate Cloud and the tier is none.</summary>
+    public bool Enabled => extensions.IsEnabled(Extensions.UltimateCloud.UltimateCloudExtension.Id);
+
     private readonly SemaphoreSlim _wake = new(0);
     private readonly Lock _lock = new();
     private CloudPlanSnapshot? _plan;
@@ -50,7 +56,7 @@ public sealed class UltimateCloudAccount(
     {
         get
         {
-            if (_plan is not { } plan || ErrorCode == ErrorCodes.CloudLinkExpired
+            if (!Enabled || _plan is not { } plan || ErrorCode == ErrorCodes.CloudLinkExpired
                                       || time.GetUtcNow().UtcDateTime - plan.CheckedAt > options.CurrentValue.OfflineGrace)
                 return CloudTier.None;
             return plan.Plan == "Cloud" ? CloudTier.Paid : CloudTier.Free;
@@ -60,6 +66,8 @@ public sealed class UltimateCloudAccount(
     /// <summary>Starts linking: returns the code to approve, and waits for the approval in the background.</summary>
     public async Task<CloudLinkRequest> StartLinkAsync(Guid? linkedBy, CancellationToken cancellationToken)
     {
+        if (!Enabled)
+            throw new ArcanistException.Conflict(ErrorCodes.CloudDisabled);
         if (!IsConfigured)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotConfigured);
         CancelLink();
@@ -142,6 +150,8 @@ public sealed class UltimateCloudAccount(
     /// <summary>Checks the plan now.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
+        if (!Enabled)
+            return;
         if (await auth.LinkAsync(cancellationToken) is null)
         {
             _plan = null;
@@ -226,6 +236,12 @@ public sealed class UltimateCloudAccount(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        extensions.EnabledChanged += id =>
+        {
+            if (id == Extensions.UltimateCloud.UltimateCloudExtension.Id)
+                Wake();
+        };
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -235,8 +251,17 @@ public sealed class UltimateCloudAccount(
                     using (await maintenance.WorkAsync(stoppingToken))
                     {
                         _plan ??= await settings.GetAsync<CloudPlanSnapshot?>(SettingKeys.UltimateCloudPlan, null, stoppingToken);
-                        if (IsConfigured)
+                        var enabled = Enabled;
+                        if (enabled && IsConfigured)
                             await RefreshAsync(stoppingToken);
+                        else if (!enabled && _wasEnabled != false)
+                        {
+                            // Switched off: the devices trusted through the account are not any more.
+                            CancelLink();
+                            await ConnectAsync(stoppingToken);
+                        }
+
+                        _wasEnabled = enabled;
                     }
                 }
             }

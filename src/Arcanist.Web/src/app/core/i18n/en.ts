@@ -525,7 +525,8 @@ export const en: Dictionary = {
     RUN_SCANS: 'Start and cancel scans.',
     DOWNLOAD: 'Download the original files.',
     VIEW_ALL_STATS: "See every user's statistics.",
-    UPLOAD: 'Add music to the libraries they can access, from apps (for example, migrating Ultimate Desktop’s library).',
+    UPLOAD:
+      'Add music to the libraries they can access, from apps (for example, migrating Ultimate Desktop’s library).',
   },
   account: {
     appPasswords: {
@@ -776,6 +777,8 @@ export const en: Dictionary = {
       mstream: 'The mStream API, for the mStream apps.',
       subsonic:
         'The Subsonic and OpenSubsonic API, for apps such as Symfonium, DSub, Feishin or Amperfy.',
+      'ultimate-cloud':
+        'Ultimate Cloud by LinkFast: its libraries and Cloud Drop, syncing, S3 libraries, the seamless connection and its online services.',
     },
     title: 'Extensions',
     subtitle: 'Web players and server extensions.',
@@ -996,6 +999,54 @@ export const en: Dictionary = {
       title: 'Audio tool',
       installed: 'ultimate-audio {version}, signed by Ultimate',
       pending: 'Installed when the plan is checked',
+    },
+    extension: {
+      enabled: 'Ultimate Cloud',
+      onHelp:
+        'Everything that works with Ultimate Cloud: its libraries and Cloud Drop, syncing, S3 libraries, the seamless connection and its online services. Switch it off if you do not plan to use Ultimate Cloud.',
+      offHelp:
+        'Off: this server never contacts Ultimate Cloud, its libraries are hidden and the features of its plan are off. Switching it on again brings everything back, with the account still linked.',
+    },
+    services: {
+      title: 'Online services',
+      description:
+        'What this server shares with Ultimate Cloud. Only songs identified by AcoustID take part.',
+      personalPlays: {
+        name: 'My plays',
+        help: 'The plays of the administrator who linked the account count as theirs: their statistics, and the rankings.',
+      },
+      sharedPlays: {
+        name: 'Everyone else’s plays, anonymously',
+        help: 'They feed Ultimate Cloud’s rankings without saying who listened: never anyone’s statistics.',
+      },
+      albumPlaythroughs: {
+        name: 'Albums heard whole',
+        help: 'An album listened to from the first song to the last, in order, counts in the album rankings.',
+      },
+      starTracks: {
+        name: 'StarTracks',
+        help: 'Your stars here and your StarTracks in the Ultimate apps are the same: starring or unstarring on either side does it on the other.',
+      },
+      metrics: {
+        name: 'My statistics',
+        help: 'Shows below your listening as Ultimate Cloud counts it, from every Ultimate app and this server.',
+      },
+    },
+    metrics: {
+      title: 'Your listening in Ultimate',
+      totals: '{plays} plays, {streams} of them streamed from Ultimate Cloud',
+      ThisMonth: 'This month',
+      ThisYear: 'This year',
+      AllTime: 'All time',
+      kind: {
+        Song: 'Song',
+        Artist: 'Artist',
+        Album: 'Album',
+        Genre: 'Genre',
+      },
+      entry: '{name} · {plays}',
+      entryBy: '{name} — {by} · {plays}',
+      decade: 'Your decade: {start}–{end} ({plays} plays)',
     },
     tier: {
       NONE: 'No account',
@@ -1457,6 +1508,8 @@ export const en: Dictionary = {
     mstream_admin_required:
       'An mStream administrator account is needed, with its admin API unlocked.',
     dlna_disabled: 'DLNA is off.',
+    cloud_disabled: 'Ultimate Cloud is switched off.',
+    cloud_service_off: 'That Ultimate Cloud service is switched off.',
     renderer_unreachable: 'The device does not answer: it may be off or gone from the network.',
     renderer_failed: 'The device refused the request.',
     nothing_queued: 'Arcanist has nothing queued on that device.',

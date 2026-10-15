@@ -83,6 +83,12 @@ public static class ErrorCodes
     public const string MstreamAdminRequired = "mstream_admin_required";
     /// <summary>The DLNA extension is off.</summary>
     public const string DlnaDisabled = "dlna_disabled";
+
+    /// <summary>The Ultimate Cloud extension is switched off.</summary>
+    public const string CloudDisabled = "cloud_disabled";
+
+    /// <summary>That Ultimate Cloud online service is switched off.</summary>
+    public const string CloudServiceOff = "cloud_service_off";
     /// <summary>The renderer did not answer: switched off or gone from the network.</summary>
     public const string RendererUnreachable = "renderer_unreachable";
     /// <summary>The renderer refused the request.</summary>

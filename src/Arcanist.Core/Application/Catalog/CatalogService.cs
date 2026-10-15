@@ -14,7 +14,12 @@ namespace Arcanist.Core.Application.Catalog;
 /// files is present in a library the caller can access, and albums and artists are visible through such tracks.
 /// Lists use keyset pagination, which stays fast and stable while scans add music.
 /// </summary>
-public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, StreamTokens streamTokens, Listening.RatingSettings ratings)
+public sealed class CatalogService(
+    ArcanistDbContext db,
+    AccessGuard guard,
+    StreamTokens streamTokens,
+    Listening.RatingSettings ratings,
+    Core.Extensions.ExtensionHost extensions)
 {
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 500;
@@ -160,6 +165,9 @@ public sealed class CatalogService(ArcanistDbContext db, AccessGuard guard, Stre
     internal IQueryable<MediaFile> VisibleFiles(UserAccess access)
     {
         var files = db.MediaFiles.Where(f => f.MissingSince == null);
+        // Ultimate Cloud's libraries cannot be played while its extension is off: they are not shown either.
+        if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id))
+            files = files.Where(f => f.LibrarySource.Kind != LibrarySourceKind.UltimateCloud);
         if (access.IsAdmin)
             return files;
 

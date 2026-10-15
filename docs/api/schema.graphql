@@ -104,6 +104,8 @@ type Query {
   search(query: String!, first: Int): SearchResults!
   "The linked Ultimate Cloud account, its plan and what it enables. Administrators only."
   ultimateCloud: UltimateCloudStatus!
+  "The linked account's listening statistics as Ultimate Cloud counts them. Administrators only."
+  ultimateCloudMetrics: UltimateCloudMetrics!
   "How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only."
   cloudSyncs: [LibraryCloudSyncState!]!
   "Public description of the server. Does not require authentication."
@@ -1210,6 +1212,8 @@ type UltimateCloudStatus {
   errorCode: String
   libraries: [UltimateCloudLibrary!]!
   audioTool: UltimateCloudTool!
+  enabled: Boolean!
+  services: UltimateCloudServices!
 }
 
 enum UltimateCloudLinkState {
@@ -1263,6 +1267,62 @@ enum UltimateCloudCollection {
 type UltimateCloudTool {
   version: String
   errorCode: String
+}
+
+type UltimateCloudServices {
+  personalPlays: Boolean!
+  sharedPlays: Boolean!
+  albumPlaythroughs: Boolean!
+  starTracks: Boolean!
+  metrics: Boolean!
+}
+
+type UltimateCloudMetrics {
+  totalPlays: Long!
+  totalStreams: Long!
+  mostStreamedSong: CloudSongRanking
+  topSongThisMonth: CloudSongRanking
+  topSongThisYear: CloudSongRanking
+  topSongAllTime: CloudSongRanking
+  topArtistThisMonth: CloudArtistRanking
+  topArtistThisYear: CloudArtistRanking
+  topArtistAllTime: CloudArtistRanking
+  topAlbumThisMonth: CloudAlbumRanking
+  topAlbumThisYear: CloudAlbumRanking
+  topAlbumAllTime: CloudAlbumRanking
+  topGenreThisMonth: CloudGenreRanking
+  topGenreThisYear: CloudGenreRanking
+  topGenreAllTime: CloudGenreRanking
+  topDecade: CloudDecadeRanking
+}
+
+type CloudSongRanking {
+  acoustId: String!
+  title: String
+  artist: String
+  playCount: Long!
+}
+
+type CloudArtistRanking {
+  artist: String!
+  playCount: Long!
+}
+
+type CloudAlbumRanking {
+  title: String!
+  artist: String!
+  playCount: Long!
+}
+
+type CloudGenreRanking {
+  genre: String!
+  playCount: Long!
+}
+
+type CloudDecadeRanking {
+  decadeStart: Int!
+  decadeEnd: Int!
+  playCount: Long!
 }
 
 type LibraryCloudSyncState {
@@ -1517,6 +1577,8 @@ type Mutation {
   setLibraryCloudSync(libraryId: ID!, input: SetLibraryCloudSyncInput!): LibraryCloudSyncState!
   "Syncs a library with Ultimate Cloud now (otherwise every 6 hours). Administrators only."
   syncLibraryWithCloud(libraryId: ID!): LibraryCloudSyncState!
+  "Chooses which of Ultimate Cloud's online services this server takes part in: plays for the statistics and rankings, albums heard whole, StarTracks, the account's statistics. Administrators only, with a recent authentication."
+  setUltimateCloudServices(input: UltimateCloudServicesInput!): UltimateCloudStatus!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
   "Requires MANAGE_USERS and a recent authentication."
@@ -1846,6 +1908,14 @@ input AddUltimateCloudLibraryInput {
 input SetLibraryCloudSyncInput {
   mode: CloudSyncMode!
   downloadSourceId: ID
+}
+
+input UltimateCloudServicesInput {
+  personalPlays: Boolean!
+  sharedPlays: Boolean!
+  albumPlaythroughs: Boolean!
+  starTracks: Boolean!
+  metrics: Boolean!
 }
 
 input CreateUserInput {

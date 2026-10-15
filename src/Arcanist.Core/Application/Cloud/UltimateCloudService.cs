@@ -59,6 +59,7 @@ public sealed record UltimateCloudTool(string? Version, string? ErrorCode);
 /// <param name="Account">The account's user name or email.</param>
 /// <param name="OwnerFirstName">The account owner's first name, which names its libraries ("Ana's Ultimate Cloud").</param>
 /// <param name="ErrorCode">The last problem: <c>cloud_unreachable</c>, <c>cloud_link_expired</c> (link again), <c>cloud_link_denied</c>…</param>
+/// <param name="Enabled">The Ultimate Cloud extension is on; while it is off nothing contacts Ultimate Cloud.</param>
 public sealed record UltimateCloudStatus(
     UltimateCloudLinkState State,
     string? Account,
@@ -70,7 +71,9 @@ public sealed record UltimateCloudStatus(
     IReadOnlyList<Capability> Capabilities,
     string? ErrorCode,
     IReadOnlyList<UltimateCloudLibrary> Libraries,
-    UltimateCloudTool AudioTool);
+    UltimateCloudTool AudioTool,
+    bool Enabled,
+    UltimateCloudServices Services);
 
 /// <summary>Linking the server to an Ultimate Cloud account. Administrators only; linking and unlinking need a recent authentication.</summary>
 public sealed class UltimateCloudService(
@@ -82,7 +85,10 @@ public sealed class UltimateCloudService(
     ScanCoordinator scans,
     UserAccessCache accessCache,
     SettingsStore settings,
-    UltimateAudioTool tool)
+    UltimateAudioTool tool,
+    UltimateCloudServicesSettings services,
+    UltimateCloudClient client,
+    UltimateCloudReporter reporter)
 {
     public async Task<UltimateCloudStatus> StatusAsync(CancellationToken cancellationToken)
     {
@@ -119,6 +125,7 @@ public sealed class UltimateCloudService(
     public async Task<UltimateCloudStatus> RefreshAsync(CancellationToken cancellationToken)
     {
         guard.Admin();
+        RequireEnabled();
         await account.RefreshAsync(cancellationToken);
         return await CurrentAsync(cancellationToken);
     }
@@ -131,6 +138,7 @@ public sealed class UltimateCloudService(
     {
         var actor = guard.Admin();
         guard.RecentAuthentication();
+        RequireEnabled();
         if (!capabilities.IsEnabled(Capability.UltimateCloudSource) || await auth.LinkAsync(cancellationToken) is not { } link)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
 
@@ -206,6 +214,65 @@ public sealed class UltimateCloudService(
                 Enum.TryParse<UltimateCloudCollection>(s.Location, out var collection) ? collection : UltimateCloudCollection.Library))
             .OrderBy(l => l.Name)
             .ToList(),
-            new UltimateCloudTool(tool.Version, link is null ? null : tool.ErrorCode));
+            new UltimateCloudTool(tool.Version, link is null ? null : tool.ErrorCode),
+            account.Enabled,
+            await ServicesAsync(cancellationToken));
+    }
+
+    private async Task<UltimateCloudServices> ServicesAsync(CancellationToken cancellationToken)
+    {
+        var config = await services.GetAsync(cancellationToken);
+        return new UltimateCloudServices(config.PersonalPlays, config.SharedPlays, config.AlbumPlaythroughs, config.StarTracks, config.Metrics);
+    }
+
+    /// <summary>Chooses which online services this server takes part in. Administrators only, with a recent authentication.</summary>
+    public async Task<UltimateCloudStatus> SetServicesAsync(UltimateCloudServicesInput input, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        await services.SetAsync(new UltimateCloudServicesConfig(input.PersonalPlays, input.SharedPlays, input.AlbumPlaythroughs, input.StarTracks, input.Metrics),
+            cancellationToken);
+        reporter.StarsChanged();
+        return await CurrentAsync(cancellationToken);
+    }
+
+    /// <summary>The linked account's listening statistics, as Ultimate Cloud counts them. Administrators only.</summary>
+    public async Task<UltimateCloudMetrics> MetricsAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        RequireEnabled();
+        if (!(await services.GetAsync(cancellationToken)).Metrics)
+            throw new ArcanistException.Conflict(ErrorCodes.CloudServiceOff);
+        if (await auth.LinkAsync(cancellationToken) is null)
+            throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
+
+        const string song = "{ acoustId title artist playCount }";
+        const string artist = "{ artist playCount }";
+        const string album = "{ title artist playCount }";
+        const string genre = "{ genre playCount }";
+        try
+        {
+            var data = await client.SendAsync(
+                "query Metrics { myMusicMetrics { totalPlays totalStreams mostStreamedSong " + song
+                + " topSongThisMonth " + song + " topSongThisYear " + song + " topSongAllTime " + song
+                + " topArtistThisMonth " + artist + " topArtistThisYear " + artist + " topArtistAllTime " + artist
+                + " topAlbumThisMonth " + album + " topAlbumThisYear " + album + " topAlbumAllTime " + album
+                + " topGenreThisMonth " + genre + " topGenreThisYear " + genre + " topGenreAllTime " + genre
+                + " topDecade { decadeStart decadeEnd playCount } } }", null, cancellationToken);
+            return System.Text.Json.JsonSerializer.Deserialize<UltimateCloudMetrics>(data["myMusicMetrics"], MetricsJson)
+                   ?? throw new ArcanistException.Conflict(ErrorCodes.CloudUnreachable);
+        }
+        catch (UltimateCloudException e)
+        {
+            throw new ArcanistException.Conflict(e.Code);
+        }
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions MetricsJson = new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    private void RequireEnabled()
+    {
+        if (!account.Enabled)
+            throw new ArcanistException.Conflict(ErrorCodes.CloudDisabled);
     }
 }

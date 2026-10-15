@@ -1481,6 +1481,90 @@ export const UltimateCloudStatusFields = graphql(`
       version
       errorCode
     }
+    enabled
+    services {
+      personalPlays
+      sharedPlays
+      albumPlaythroughs
+      starTracks
+      metrics
+    }
+  }
+`);
+
+export const SetUltimateCloudServicesMutation = graphql(`
+  mutation SetUltimateCloudServices($input: UltimateCloudServicesInput!) {
+    setUltimateCloudServices(input: $input) {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
+export const UltimateCloudMetricsQuery = graphql(`
+  query UltimateCloudMetrics {
+    ultimateCloudMetrics {
+      totalPlays
+      totalStreams
+      topSongThisMonth {
+        title
+        artist
+        playCount
+      }
+      topSongThisYear {
+        title
+        artist
+        playCount
+      }
+      topSongAllTime {
+        title
+        artist
+        playCount
+      }
+      topArtistThisMonth {
+        artist
+        playCount
+      }
+      topArtistThisYear {
+        artist
+        playCount
+      }
+      topArtistAllTime {
+        artist
+        playCount
+      }
+      topAlbumThisMonth {
+        title
+        artist
+        playCount
+      }
+      topAlbumThisYear {
+        title
+        artist
+        playCount
+      }
+      topAlbumAllTime {
+        title
+        artist
+        playCount
+      }
+      topGenreThisMonth {
+        genre
+        playCount
+      }
+      topGenreThisYear {
+        genre
+        playCount
+      }
+      topGenreAllTime {
+        genre
+        playCount
+      }
+      topDecade {
+        decadeStart
+        decadeEnd
+        playCount
+      }
+    }
   }
 `);
 

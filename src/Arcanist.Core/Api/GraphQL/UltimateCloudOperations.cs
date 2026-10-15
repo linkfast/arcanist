@@ -11,6 +11,11 @@ public sealed partial class Query
     public static Task<UltimateCloudStatus> UltimateCloud([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
         cloud.StatusAsync(cancellationToken);
 
+    [Name("ultimateCloudMetrics")]
+    [Description("The linked account's listening statistics as Ultimate Cloud counts them. Administrators only.")]
+    public static Task<UltimateCloudMetrics> UltimateCloudMetrics([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
+        cloud.MetricsAsync(cancellationToken);
+
     [Name("cloudSyncs")]
     [Description("How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only.")]
     public static Task<IReadOnlyList<LibraryCloudSyncState>> CloudSyncs([FromServices] CloudSyncService sync, CancellationToken cancellationToken) =>
@@ -50,6 +55,11 @@ public sealed partial class Mutation
     [Description("Syncs a library with Ultimate Cloud now (otherwise every 6 hours). Administrators only.")]
     public static Task<LibraryCloudSyncState> SyncLibraryWithCloud([Id] Guid libraryId, [FromServices] CloudSyncService sync, CancellationToken cancellationToken) =>
         sync.SyncNowAsync(libraryId, cancellationToken);
+
+    [Name("setUltimateCloudServices")]
+    [Description("Chooses which of Ultimate Cloud's online services this server takes part in: plays for the statistics and rankings, albums heard whole, StarTracks, the account's statistics. Administrators only, with a recent authentication.")]
+    public static Task<UltimateCloudStatus> SetUltimateCloudServices(UltimateCloudServicesInput input, [FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
+        cloud.SetServicesAsync(input, cancellationToken);
 
     [Name("refreshUltimateCloud")]
     [Description("Reads the account's plan again now. Administrators only.")]

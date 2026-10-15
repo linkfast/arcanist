@@ -58,6 +58,7 @@ internal sealed class DropFolderWorker(
     IOptionsMonitor<SetupOptions> setup,
     IOptions<OrganizationOptions> options,
     TimeProvider time,
+    DatabaseMaintenance maintenance,
     ILogger<DropFolderWorker> logger) : BackgroundService
 {
     /// <summary>Imported and discarded items are kept this long as history.</summary>
@@ -83,10 +84,13 @@ internal sealed class DropFolderWorker(
             {
                 try
                 {
-                    var unsettled = await RunOnceAsync(stoppingToken);
-                    if (unsettled > 0)
-                        wait = TimeSpan.FromSeconds(Math.Clamp(options.Value.StableSeconds, 1, options.Value.PollSeconds));
-                    await MaintainAsync(stoppingToken);
+                    using (await maintenance.WorkAsync(stoppingToken))
+                    {
+                        var unsettled = await RunOnceAsync(stoppingToken);
+                        if (unsettled > 0)
+                            wait = TimeSpan.FromSeconds(Math.Clamp(options.Value.StableSeconds, 1, options.Value.PollSeconds));
+                        await MaintainAsync(stoppingToken);
+                    }
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {

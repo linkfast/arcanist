@@ -5,6 +5,7 @@ import {
   lucideCast,
   lucideChartColumn,
   lucideCopy,
+  lucideDatabase,
   lucideExternalLink,
   lucideHouse,
   lucideInbox,
@@ -38,6 +39,7 @@ import { LanguageSelect } from '../shared/language-select';
       lucideCast,
       lucideChartColumn,
       lucideCopy,
+      lucideDatabase,
       lucideHouse,
       lucideInbox,
       lucidePuzzle,
@@ -153,6 +155,12 @@ export class Shell {
         path: '/extensions',
         label: 'nav.extensions',
         icon: 'lucidePuzzle',
+        visible: this.auth.isAdmin(),
+      },
+      {
+        path: '/database',
+        label: 'nav.database',
+        icon: 'lucideDatabase',
         visible: this.auth.isAdmin(),
       },
       {

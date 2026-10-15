@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador), 7 (DLNA) y 8 (red P2P) completas. Pendiente:
+Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador), 7 (DLNA), 8 (red P2P) y 9 (migrador a PostgreSQL) completas. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
 - De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`). La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
 - De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (necesita la clave del proyecto).
 - De la F7: probar DLNA con dispositivos reales (televisores Samsung/LG, Kodi, VLC, BubbleUPnP, altavoces) y con varias interfaces de red.
 - De la F8: probar la red P2P con los relays reales de n0 entre redes distintas (los tests usan el modo `Local`), los bindings de Swift y Kotlin en apps reales (solo se generaron), el QR con cámaras reales, e integrarla en Ultimate Desktop (el NuGet `Arcanist.P2P` del plan inicial no existe todavía).
+- De la F9: medir la migración con una biblioteca grande (cientos de miles de filas) y, si hace falta, copiar con `COPY` binario de Npgsql en lugar de lotes de EF. La CLI del migrador queda para el final, como el resto de la CLI.
 - De la F6: probar Subsonic y mStream con apps reales (Symfonium, DSub, Feishin, Amperfy, mStream Music) y el importador con una instalación real de mStream 5 y 6 (también el hash PBKDF2: no hay vector de prueba publicado).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-Siguiente: Fase 9, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Siguiente: Fase 10, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, que sigue a `origin` = `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
@@ -346,6 +347,11 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **Copias:** si el dueño permite descargas, `copyReceivedShare` (`ShareCopier`, una a la vez, en memoria) trae los originales a una carpeta local con su ruta (bajo una carpeta con el nombre de la biblioteca compartida), sin sobrescribir, y escanea esa biblioteca: la copia se une a la misma pista por `ContentHash`.
   - **Estadísticas y actividad:** `P2PTraffic` mide cada segundo (tasa actual, pico, segundos conectado) y suma cada minuto a `P2PPeer`; `P2PActivityLog` escribe en segundo plano (90 días, 20.000 entradas).
   - Panel: página **Red P2P** (admins: nodo y ajustes, servidores con los que se comparte, dispositivos, bibliotecas recibidas, actividad) y **Mis dispositivos** en Mi cuenta (QR con `qrcode-generator`, dibujado como un path SVG). Tests: `P2PTests` con dos servidores reales (`UseKestrel`) en modo `Local`.
+- **Migración a PostgreSQL (implementado):** `Data/DatabaseMigrator.cs`, `Data/DatabaseMaintenance.cs` y `Application/Database/`. Página **Base de datos** del panel.
+  - **Modo mantenimiento** (`DatabaseMaintenance`): el trabajo en segundo plano (escaneos, análisis, servicios en línea, carpetas de entrada, organización, vigilancia, importación de mStream, reproducciones de DLNA, tráfico y actividad P2P, copias de compartidas) y cada petición se ejecutan como *unidades de trabajo* (`WorkAsync`). Al entrar en mantenimiento las nuevas esperan y se deja terminar las que corren (máx. 1 min; si no, `busy` y no pasa nada); después la BD queda *congelada*: `MaintenanceInterceptor` (en todos los contextos del factory, no en los del migrador ni del setup) rechaza cualquier escritura. `MaintenanceMiddleware` responde 503 `maintenance` a todo salvo `/health`, `/admin/**` y `GET /rest/v1/maintenance` (anónimo, para seguir el progreso); streams, WebSockets, DLNA y carátulas no cuentan como unidades (solo leen y duran mucho). **Todo trabajo nuevo que escriba en la BD debe ir dentro de `WorkAsync`.**
+  - **`DatabaseMigrator`:** solo SQLite → PostgreSQL. Comprueba (en `DatabaseService`) que la BD no venga del entorno, que no haya escaneos u organizaciones en curso ni copias de compartidas, que PostgreSQL responda y que esté vacía (puede no existir: la crea la migración). Entonces, en segundo plano: mantenimiento, migraciones y `FullTextSearch` en PostgreSQL, copia de cada tabla en orden de claves foráneas (entidades sin seguimiento por lotes de 1000, mismas claves; el modelo no tiene propiedades sombra ni valores generados), comparación de filas por tabla, ajuste `database.previousSqlite` en la nueva BD, `arcanist.json` con el nuevo proveedor (el factory lo lee en cada contexto, sin reiniciar), `SqliteConnection.ClearAllPools()` y fin del mantenimiento. Si algo falla, el servidor sigue con SQLite (que nunca se toca) y se vacía lo copiado. Las sesiones se copian: nadie tiene que volver a iniciar sesión.
+  - **El archivo anterior:** mientras exista `database.previousSqlite`, el panel muestra su ruta y tamaño y pregunta si dejarlo, moverlo (sin sobrescribir; con sus `-wal`/`-shm`) o borrarlo (`resolvePreviousSqlite`, con step-up).
+  - Tests: `MigrationTests` (PostgreSQL de Testcontainers; se omiten sin Docker) migra un servidor con catálogo, valoraciones y playlists y sigue usándolo con la misma sesión.
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.
@@ -393,7 +399,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **F6:** ecosistema (completada): reproductores web instalables desde zip o URL, SDK de extensiones con carga aislada, contraseñas de aplicación, Subsonic/OpenSubsonic y mStream como extensiones integradas, e importador de mStream desde su carpeta o su servidor (también desde el asistente).
 - **F7:** DLNA (completada): servidor DLNA/UPnP con SSDP propio, solo en la red local y solo con las bibliotecas publicadas, árbol configurable desde el panel, formatos sin pérdida primero (original, FLAC, LPCM) y MP3 con ffmpeg, y "reproducir en" renderers con cola en el servidor.
 - **F8:** red P2P (completada): crate `arcanist-p2p` sobre iroh con C ABI y bindings uniffi, acceso remoto emparejando dispositivos con QR, bibliotecas compartidas entre servidores en streaming (y descarga si el dueño la permite), reglas y límites por peer y globales, estadísticas y actividad, y su sección en el panel.
-- **F9:** migrador SQLite → PostgreSQL con UI.
+- **F9:** migrador SQLite → PostgreSQL con UI (completada): página Base de datos, prueba de conexión, migración en modo mantenimiento con progreso, verificación por tabla, cambio sin reiniciar y decisión sobre el archivo SQLite anterior.
 - **F10:** integración con Ultimate Cloud.
 
 ## Decisiones abiertas
@@ -407,6 +413,11 @@ Decididas en la F3:
 - **ffmpeg no se empaqueta:** se detecta en el sistema o en la ruta configurada (también desde el asistente), y el panel ofrece descargarlo si falta.
 - **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
 - **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
+
+Decididas para la F9 (con el usuario):
+- **Solo de SQLite a PostgreSQL.**
+- **En modo mantenimiento:** se pausan las escrituras y la API responde 503 mientras se copia y se verifica; al terminar se cambia a PostgreSQL.
+- **El archivo SQLite lo decide el administrador al terminar:** el panel le muestra su ubicación y tamaño y le pregunta si dejarlo, moverlo a otra carpeta o borrarlo.
 
 Decididas para la F8 (con el usuario):
 - **Las dos cosas:** acceso remoto al propio servidor sin abrir puertos (emparejar con QR o ticket) y compartir bibliotecas entre servidores Arcanist ("Biblioteca de X"). Incluye la crate `arcanist-p2p` para .NET y los bindings uniffi para móviles.

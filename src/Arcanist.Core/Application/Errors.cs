@@ -109,6 +109,16 @@ public static class ErrorCodes
     public const string TooManyStreams = "too_many_streams";
     /// <summary>The owner of those files does not allow downloading them.</summary>
     public const string DownloadNotAllowed = "download_not_allowed";
+    /// <summary>The server is in maintenance (its database is being migrated): try again in a moment.</summary>
+    public const string Maintenance = "maintenance";
+    /// <summary>Work in progress (scans, organizing, imports, copies) must finish first.</summary>
+    public const string Busy = "busy";
+    /// <summary>The database is PostgreSQL already.</summary>
+    public const string AlreadyPostgres = "already_postgres";
+    /// <summary>The copied data does not match the original: nothing was switched.</summary>
+    public const string VerificationFailed = "verification_failed";
+    /// <summary>Copying the data failed; the server keeps its database.</summary>
+    public const string MigrationFailed = "migration_failed";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>
@@ -152,6 +162,9 @@ public abstract class ArcanistException(string code, int statusCode) : Exception
     public sealed class NotFound() : ArcanistException(ErrorCodes.NotFound, StatusCodes.Status404NotFound);
 
     public sealed class Conflict(string code) : ArcanistException(code, StatusCodes.Status409Conflict);
+
+    /// <summary>The server cannot do it right now (maintenance).</summary>
+    public sealed class Unavailable(string code) : ArcanistException(code, StatusCodes.Status503ServiceUnavailable);
 
     public sealed class Invalid(ValidationErrors errors) : ArcanistException(ErrorCodes.ValidationFailed, StatusCodes.Status400BadRequest)
     {

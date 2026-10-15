@@ -116,6 +116,7 @@ internal sealed class ScanWorker(
     IArcanistDbContextFactory databases,
     IOptions<SetupOptions> setup,
     TimeProvider time,
+    DatabaseMaintenance maintenance,
     ILogger<ScanWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -127,6 +128,8 @@ internal sealed class ScanWorker(
 
         await foreach (var jobId in coordinator.Queue.ReadAllAsync(stoppingToken))
         {
+            // A queued scan waits while the database is migrated.
+            using var work = await maintenance.WorkAsync(stoppingToken);
             var token = coordinator.BeginRun(jobId, stoppingToken);
             try
             {

@@ -35,12 +35,16 @@ public sealed class ShareCopier(
     ScanCoordinator scans,
     LibraryLocks locks,
     ArcanistPaths paths,
+    DatabaseMaintenance maintenance,
     ILogger<ShareCopier> logger) : BackgroundService
 {
     private readonly Channel<(Guid RemoteId, Guid SourceId)> _queue = Channel.CreateUnbounded<(Guid, Guid)>();
     private readonly ConcurrentDictionary<Guid, ShareCopyProgress> _progress = new();
 
     public ShareCopyProgress? Progress(Guid remoteId) => _progress.GetValueOrDefault(remoteId);
+
+    /// <summary>A copy is queued or running.</summary>
+    public bool IsBusy => _progress.Values.Any(p => p.Status is ShareCopyStatus.Queued or ShareCopyStatus.Running);
 
     /// <returns>False when a copy of that share is already queued or running.</returns>
     public bool Enqueue(Guid remoteId, Guid targetSourceId)
@@ -60,6 +64,7 @@ public sealed class ShareCopier(
             {
                 try
                 {
+                    using var work = await maintenance.WorkAsync(stoppingToken);
                     await CopyAsync(remoteId, sourceId, stoppingToken);
                 }
                 catch (Exception e) when (e is not OperationCanceledException || !stoppingToken.IsCancellationRequested)

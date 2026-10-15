@@ -78,6 +78,7 @@ internal sealed class EnrichmentWorker(
     IOptionsMonitor<SetupOptions> setup,
     IOptionsMonitor<OnlineOptions> options,
     TimeProvider time,
+    DatabaseMaintenance maintenance,
     ILogger<EnrichmentWorker> logger) : BackgroundService, IObserver<AnalysisProgress>
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromMinutes(10);
@@ -114,7 +115,8 @@ internal sealed class EnrichmentWorker(
             TimeSpan delay;
             try
             {
-                delay = await StepAsync(service, gate, stoppingToken);
+                using (await maintenance.WorkAsync(stoppingToken))
+                    delay = await StepAsync(service, gate, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

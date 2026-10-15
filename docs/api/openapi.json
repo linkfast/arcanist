@@ -1025,6 +1025,27 @@
         }
       }
     },
+    "/rest/v1/maintenance": {
+      "get": {
+        "tags": [
+          "Database"
+        ],
+        "summary": "Whether the server is in maintenance (migrating its database) and how far it got. Anyone can ask, also during maintenance.",
+        "operationId": "MaintenanceState",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/stream/{trackId}": {
       "get": {
         "tags": [
@@ -4500,6 +4521,120 @@
         }
       }
     },
+    "/rest/v1/database": {
+      "get": {
+        "tags": [
+          "Database"
+        ],
+        "summary": "The server\u0027s database, the last migration and the SQLite file it left. Administrators only.",
+        "operationId": "Database",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/database/test": {
+      "post": {
+        "tags": [
+          "Database"
+        ],
+        "summary": "Checks that PostgreSQL answers with a connection string. Administrators only.",
+        "operationId": "TestPostgresConnection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostgresConnectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseTestResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/database/migrate": {
+      "post": {
+        "tags": [
+          "Database"
+        ],
+        "summary": "Copies everything to an empty PostgreSQL database with the server in maintenance, then switches to it. Administrators only, with a recent authentication.",
+        "operationId": "MigrateToPostgres",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostgresConnectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/database/previous-sqlite": {
+      "post": {
+        "tags": [
+          "Database"
+        ],
+        "summary": "Keeps, moves or deletes the SQLite file a migration left. Administrators only, with a recent authentication.",
+        "operationId": "ResolvePreviousSqlite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolvePreviousSqliteInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -5983,12 +6118,119 @@
           }
         }
       },
+      "DatabaseMigration": {
+        "required": [
+          "phase",
+          "tables",
+          "rows",
+          "copied",
+          "errorCode",
+          "startedAt",
+          "finishedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "phase": {
+            "$ref": "#/components/schemas/MigrationPhase"
+          },
+          "tables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MigrationTable"
+            }
+          },
+          "rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "copied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "DatabaseProvider": {
         "enum": [
           "SQLITE",
           "POSTGRES",
           null
         ]
+      },
+      "DatabaseStatus": {
+        "required": [
+          "provider",
+          "lockedByEnvironment",
+          "location",
+          "sizeBytes",
+          "migration",
+          "previousSqlite"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/DatabaseProvider"
+          },
+          "lockedByEnvironment": {
+            "type": "boolean"
+          },
+          "location": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "migration": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DatabaseMigration"
+              }
+            ]
+          },
+          "previousSqlite": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PreviousSqliteFile"
+              }
+            ]
+          }
+        }
       },
       "DatabaseTestResult": {
         "required": [
@@ -7620,6 +7862,34 @@
           null
         ]
       },
+      "MaintenanceState": {
+        "required": [
+          "active",
+          "phase",
+          "percent"
+        ],
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "phase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "MergeDuplicateInput": {
         "required": [
           "keepTrackId"
@@ -7629,6 +7899,46 @@
           "keepTrackId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "MigrationPhase": {
+        "enum": [
+          "PAUSING",
+          "CREATING_SCHEMA",
+          "COPYING",
+          "VERIFYING",
+          "SWITCHING",
+          "COMPLETED",
+          "FAILED"
+        ]
+      },
+      "MigrationTable": {
+        "required": [
+          "name",
+          "rows",
+          "copied"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "copied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -9304,6 +9614,53 @@
           }
         }
       },
+      "PostgresConnectionInput": {
+        "required": [
+          "connectionString"
+        ],
+        "type": "object",
+        "properties": {
+          "connectionString": {
+            "type": "string"
+          }
+        }
+      },
+      "PreviousSqliteAction": {
+        "enum": [
+          "KEEP",
+          "MOVE",
+          "DELETE"
+        ]
+      },
+      "PreviousSqliteFile": {
+        "required": [
+          "path",
+          "sizeBytes",
+          "exists",
+          "migratedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "exists": {
+            "type": "boolean"
+          },
+          "migratedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "RatedTrack": {
         "required": [
           "track",
@@ -9536,6 +9893,24 @@
         "properties": {
           "newPassword": {
             "type": "string"
+          }
+        }
+      },
+      "ResolvePreviousSqliteInput": {
+        "required": [
+          "action",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PreviousSqliteAction"
+          },
+          "folder": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11207,6 +11582,9 @@
     },
     {
       "name": "Discovery"
+    },
+    {
+      "name": "Database"
     },
     {
       "name": "Media"

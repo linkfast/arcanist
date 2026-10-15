@@ -33,6 +33,7 @@ internal sealed class MstreamImportWorker(
     MstreamImportSignal signal,
     TimeProvider time,
     IOptionsMonitor<Setup.SetupOptions> setup,
+    DatabaseMaintenance maintenance,
     ILogger<MstreamImportWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,7 +42,10 @@ internal sealed class MstreamImportWorker(
         {
             try
             {
-                if (await RunNextAsync(stoppingToken))
+                bool finished;
+                using (await maintenance.WorkAsync(stoppingToken))
+                    finished = await RunNextAsync(stoppingToken);
+                if (finished)
                     continue;
                 // Nothing to do yet: check again soon (scans finishing are not signalled).
                 await signal.WaitAsync(TimeSpan.FromSeconds(2), stoppingToken);
@@ -125,6 +129,7 @@ internal sealed class MstreamServerSignIn(
     IArcanistDbContextFactory databases,
     MstreamServerClient client,
     MstreamImporter importer,
+    DatabaseMaintenance maintenance,
     ILogger<MstreamServerSignIn> logger) : IExternalSignIn
 {
     public async Task<bool> VerifyAsync(User user, string password, CancellationToken cancellationToken)
@@ -164,6 +169,7 @@ internal sealed class MstreamServerSignIn(
         try
         {
             var content = await client.ReadUserAsync(server, token, CancellationToken.None);
+            using var work = await maintenance.WorkAsync(CancellationToken.None);
             await using var db = databases.CreateDbContext();
             var counts = await importer.ApplyAsync(db, userId, content, vpaths, CancellationToken.None);
             await db.MstreamImports.Where(i => i.Id == importId).ExecuteUpdateAsync(s => s

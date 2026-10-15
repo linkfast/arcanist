@@ -75,6 +75,7 @@ public sealed class P2PTraffic(
     P2PPeerDirectory peers,
     P2PActivityLog activity,
     IArcanistDbContextFactory databases,
+    DatabaseMaintenance maintenance,
     TimeProvider time,
     ILogger<P2PTraffic> logger) : BackgroundService
 {
@@ -180,6 +181,7 @@ public sealed class P2PTraffic(
             return;
         try
         {
+            using var work = await maintenance.WorkAsync(cancellationToken);
             await using var db = databases.CreateDbContext();
             foreach (var (nodeId, traffic) in _byNode)
             {

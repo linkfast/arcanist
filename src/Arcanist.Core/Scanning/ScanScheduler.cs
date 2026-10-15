@@ -15,6 +15,7 @@ internal sealed class ScanScheduler(
     IArcanistDbContextFactory databases,
     IOptionsMonitor<SetupOptions> setup,
     TimeProvider time,
+    DatabaseMaintenance maintenance,
     ILogger<ScanScheduler> logger) : BackgroundService
 {
     public static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(1);
@@ -29,7 +30,8 @@ internal sealed class ScanScheduler(
 
             try
             {
-                await QueueDueScansAsync(stoppingToken);
+                using (await maintenance.WorkAsync(stoppingToken))
+                    await QueueDueScansAsync(stoppingToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

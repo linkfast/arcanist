@@ -58,6 +58,11 @@ Clients show their own messages, keyed by error code; never display server text.
 
 The codes are listed in `src/Arcanist.Core/Application/Errors.cs`.
 
+While an administrator moves the server to another database, everything answers `503` with `code: "maintenance"`
+and a `Retry-After` header, for a few minutes at most. `GET /rest/v1/maintenance` (no sign-in needed, also during
+it) says whether it is going on and how far it got (`{"active": true, "phase": "copying", "percent": 40}`): show
+that the server is busy, and retry. The session survives it.
+
 ## Browsing the catalog
 
 `artists`, `albums` and `tracks` return pages: `{ items, nextCursor, totalCount }`. Ask for `first` items (default

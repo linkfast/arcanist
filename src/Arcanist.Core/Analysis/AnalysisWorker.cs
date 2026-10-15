@@ -41,6 +41,7 @@ internal sealed class AnalysisWorker(
     IOptionsMonitor<SetupOptions> setup,
     IOptionsMonitor<AnalysisOptions> options,
     TimeProvider time,
+    DatabaseMaintenance maintenance,
     ILogger<AnalysisWorker> logger) : BackgroundService, IObserver<Application.Scanning.ScanJob>
 {
     private static readonly TimeSpan IdleDelay = TimeSpan.FromMinutes(10);
@@ -69,7 +70,8 @@ internal sealed class AnalysisWorker(
             TimeSpan delay;
             try
             {
-                delay = await RunOnceAsync(stoppingToken);
+                using (await maintenance.WorkAsync(stoppingToken))
+                    delay = await RunOnceAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

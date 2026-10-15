@@ -16,6 +16,8 @@ type Query {
   trackLyrics(trackId: ID!): TrackLyrics!
   "Overview of a track's audio for seek bars, from its best copy or the given file. not_found until the copy is analyzed."
   trackWaveform(trackId: ID!, fileId: ID): Waveform!
+  "The server's database, the last migration and the SQLite file it left. Administrators only."
+  database: DatabaseStatus!
   "The user's home page: recently played and added albums, mixes, most played, starred tracks, albums to rediscover or never played, and playlists. Empty sections are left out."
   home: Home!
   "Mixes made for the user from their favorite artists, genres and decades, their favorites and music they never played. They change once a day."
@@ -278,6 +280,53 @@ type Waveform {
   fileId: ID!
   durationMs: Int!
   peaks: [Int!]!
+}
+
+type DatabaseStatus {
+  provider: DatabaseProvider!
+  lockedByEnvironment: Boolean!
+  location: String!
+  sizeBytes: Long
+  migration: DatabaseMigration
+  previousSqlite: PreviousSqliteFile
+}
+
+enum DatabaseProvider {
+  SQLITE
+  POSTGRES
+}
+
+type DatabaseMigration {
+  phase: MigrationPhase!
+  tables: [MigrationTable!]!
+  rows: Long!
+  copied: Long!
+  errorCode: String
+  startedAt: DateTime!
+  finishedAt: DateTime
+}
+
+enum MigrationPhase {
+  PAUSING
+  CREATING_SCHEMA
+  COPYING
+  VERIFYING
+  SWITCHING
+  COMPLETED
+  FAILED
+}
+
+type MigrationTable {
+  name: String!
+  rows: Long!
+  copied: Long!
+}
+
+type PreviousSqliteFile {
+  path: String!
+  sizeBytes: Long!
+  exists: Boolean!
+  migratedAt: DateTime!
 }
 
 type Home {
@@ -1081,6 +1130,12 @@ type Mutation {
   createAppPassword(name: String!): CreatedAppPassword!
   "Revokes one of the user's app passwords."
   deleteAppPassword(id: ID!): Boolean!
+  "Checks that PostgreSQL answers with a connection string. Administrators only."
+  testPostgresConnection(connectionString: String!): DatabaseTestResult!
+  "Copies everything to an empty PostgreSQL database with the server in maintenance, then switches to it. Administrators only, with a recent authentication."
+  migrateToPostgres(connectionString: String!): DatabaseStatus!
+  "Keeps, moves or deletes the SQLite file a migration left. Administrators only, with a recent authentication."
+  resolvePreviousSqlite(input: ResolvePreviousSqliteInput!): DatabaseStatus!
   "Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication."
   setDlnaSettings(input: DlnaSettingsInput!): DlnaStatus!
   "Adds a renderer by the URL of its UPnP description, for networks where it is not found by itself. Administrators only."
@@ -1213,6 +1268,22 @@ type Mutation {
 type CreatedAppPassword {
   appPassword: AppPassword!
   secret: String!
+}
+
+type DatabaseTestResult {
+  success: Boolean!
+  error: String
+}
+
+input ResolvePreviousSqliteInput {
+  action: PreviousSqliteAction!
+  folder: String
+}
+
+enum PreviousSqliteAction {
+  KEEP
+  MOVE
+  DELETE
 }
 
 input DlnaSettingsInput {

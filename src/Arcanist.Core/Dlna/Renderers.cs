@@ -272,6 +272,7 @@ internal sealed class RendererSessions(
     RendererRegistry registry,
     IServiceScopeFactory scopes,
     TimeProvider time,
+    Data.DatabaseMaintenance maintenance,
     ILogger<RendererSessions> logger) : BackgroundService
 {
     private readonly ConcurrentDictionary<string, RendererSession> _sessions = new();
@@ -352,7 +353,9 @@ internal sealed class RendererSessions(
                 {
                     try
                     {
-                        await FollowAsync(session, stoppingToken);
+                        // Plays are recorded as tracks end: not while the database is migrated.
+                        using (await maintenance.WorkAsync(stoppingToken))
+                            await FollowAsync(session, stoppingToken);
                         session.Failures = 0;
                     }
                     catch (ArcanistException)

@@ -139,6 +139,8 @@ app.UseP2PGate();
 // Then, so everything after sees the real client address behind trusted reverse proxies.
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
+// While the database is migrated, requests wait or get 503; otherwise each one counts as work maintenance waits for.
+app.UseMiddleware<MaintenanceMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // Logs the path without the query string, which will carry stream tokens. Health checks are polled by launchers

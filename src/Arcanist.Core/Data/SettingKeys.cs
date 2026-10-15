@@ -38,4 +38,7 @@ public static class SettingKeys
 
     /// <summary>P2P network: on or off, relay, name and global limits (<c>P2PConfig</c>).</summary>
     public const string P2P = "p2p.settings";
+
+    /// <summary>The SQLite file left by a migration to PostgreSQL, until the administrator decides about it.</summary>
+    public const string PreviousSqlite = "database.previousSqlite";
 }

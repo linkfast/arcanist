@@ -23,6 +23,7 @@ export const es: Dictionary = {
     close: 'Cerrar',
   },
   nav: {
+    database: 'Base de datos',
     network: 'Red P2P',
     dlna: 'DLNA',
     extensions: 'Extensiones',
@@ -737,6 +738,74 @@ export const es: Dictionary = {
       PREVIOUS: 'Anterior',
     },
   },
+  database: {
+    title: 'Base de datos',
+    subtitle:
+      'Dónde guarda Arcanist su catálogo, usuarios y ajustes, y cómo pasar de SQLite a PostgreSQL.',
+    current: {
+      title: 'Base de datos actual',
+      provider: 'Tipo',
+      locked: 'Configurada por el entorno',
+      location: 'Ubicación',
+      size: 'Tamaño',
+      migrated: 'Migrada',
+    },
+    migrate: {
+      title: 'Migrar a PostgreSQL',
+      description:
+        'Copia todo (bibliotecas, usuarios, valoraciones, playlists, ajustes…) a PostgreSQL y el servidor pasa a usarlo, sin reiniciar.',
+      connectionHelp:
+        'De una base de datos vacía (o que aún no existe: se crea). El usuario necesita permiso para crear tablas.',
+      locked:
+        'La base de datos está fijada por la configuración del servidor (por ejemplo, variables de entorno de Docker): cámbiala allí.',
+      notes: {
+        maintenance:
+          'Mientras dure, el servidor está en mantenimiento: no se puede escuchar música ni usar la API (unos minutos en bibliotecas grandes).',
+        empty: 'Antes deben terminar los escaneos y organizaciones en curso.',
+        safe: 'SQLite no se modifica: si algo falla, el servidor sigue con SQLite como si nada.',
+      },
+      start: 'Migrar ahora',
+      confirmTitle: '¿Migrar a PostgreSQL?',
+      confirmHelp:
+        'El servidor entrará en mantenimiento hasta que termine. Al acabar usará PostgreSQL y te preguntaremos qué hacer con el archivo de SQLite.',
+      progressTitle: 'Migración a PostgreSQL',
+      maintenance:
+        'El servidor está en mantenimiento. No cierres esta página si quieres ver el resultado.',
+      failed: 'La migración no se completó: el servidor sigue con SQLite.',
+      done: 'El servidor ya usa PostgreSQL',
+      copied: '{rows} filas de {tables} tablas copiadas {when}',
+      phase: {
+        pausing: 'Esperando a que termine lo que está en curso…',
+        schema: 'Creando las tablas en PostgreSQL…',
+        copying: 'Copiando los datos…',
+        verifying: 'Comprobando la copia…',
+        switching: 'Cambiando a PostgreSQL…',
+      },
+    },
+    previous: {
+      title: 'El archivo de SQLite anterior',
+      description:
+        'El servidor ya no lo usa. Puedes conservarlo como copia de seguridad, llevarlo a otra carpeta o borrarlo.',
+      file: 'Archivo',
+      gone: 'Ya no está en esa ubicación',
+      folder: 'Carpeta de destino',
+      KEEP: {
+        name: 'Dejarlo donde está',
+        help: 'No se toca. Podrás borrarlo a mano cuando quieras.',
+      },
+      MOVE: {
+        name: 'Moverlo a otra carpeta',
+        help: 'Por ejemplo, a la de tus copias de seguridad. Nunca se sobrescribe otro archivo.',
+      },
+      DELETE: { name: 'Borrarlo', help: 'Se elimina para siempre. Tus datos están en PostgreSQL.' },
+      confirm: { KEEP: 'Dejarlo', MOVE: 'Moverlo', DELETE: 'Borrarlo' },
+      done: {
+        KEEP: 'El archivo se queda donde está',
+        MOVE: 'Archivo movido',
+        DELETE: 'Archivo borrado',
+      },
+    },
+  },
   network: {
     title: 'Red P2P',
     subtitle:
@@ -952,6 +1021,13 @@ export const es: Dictionary = {
     },
   },
   errors: {
+    maintenance:
+      'El servidor está en mantenimiento (migrando su base de datos). Inténtalo en unos minutos.',
+    busy: 'Hay trabajo en curso (escaneos, organización, copias): espera a que termine.',
+    already_postgres: 'La base de datos ya es PostgreSQL.',
+    verification_failed: 'La copia no coincide con el original: el servidor sigue con SQLite.',
+    migration_failed:
+      'La migración falló: el servidor sigue con SQLite. Revisa el registro del servidor.',
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',
     network: 'No se puede contactar con el servidor.',
     unauthorized: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',

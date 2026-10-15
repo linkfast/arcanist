@@ -1254,3 +1254,64 @@ export const CopyReceivedShareMutation = graphql(`
     }
   }
 `);
+
+export const DatabaseStatusFields = graphql(`
+  fragment DatabaseStatusFields on DatabaseStatus {
+    provider
+    lockedByEnvironment
+    location
+    sizeBytes
+    migration {
+      phase
+      tables {
+        name
+        rows
+        copied
+      }
+      rows
+      copied
+      errorCode
+      startedAt
+      finishedAt
+    }
+    previousSqlite {
+      path
+      sizeBytes
+      exists
+      migratedAt
+    }
+  }
+`);
+
+export const DatabaseQuery = graphql(`
+  query Database {
+    database {
+      ...DatabaseStatusFields
+    }
+  }
+`);
+
+export const TestPostgresConnectionMutation = graphql(`
+  mutation TestPostgresConnection($connectionString: String!) {
+    testPostgresConnection(connectionString: $connectionString) {
+      success
+      error
+    }
+  }
+`);
+
+export const MigrateToPostgresMutation = graphql(`
+  mutation MigrateToPostgres($connectionString: String!) {
+    migrateToPostgres(connectionString: $connectionString) {
+      ...DatabaseStatusFields
+    }
+  }
+`);
+
+export const ResolvePreviousSqliteMutation = graphql(`
+  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {
+    resolvePreviousSqlite(input: $input) {
+      ...DatabaseStatusFields
+    }
+  }
+`);

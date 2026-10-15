@@ -31,6 +31,7 @@ internal sealed class OrganizeWorker(
     IArcanistDbContextFactory databases,
     IOptions<SetupOptions> setup,
     TimeProvider time,
+    DatabaseMaintenance maintenance,
     ILogger<OrganizeWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -43,6 +44,7 @@ internal sealed class OrganizeWorker(
         {
             try
             {
+                using var work = await maintenance.WorkAsync(stoppingToken);
                 if (undo)
                 {
                     await organizer.UndoAsync(runId, stoppingToken);
@@ -95,6 +97,7 @@ internal sealed class LibraryWatcher(
     IOptionsMonitor<SetupOptions> setup,
     IOptions<OrganizationOptions> options,
     TimeProvider time,
+    DatabaseMaintenance maintenance,
     ILogger<LibraryWatcher> logger) : BackgroundService
 {
     private static readonly TimeSpan Tick = TimeSpan.FromSeconds(1);
@@ -113,6 +116,7 @@ internal sealed class LibraryWatcher(
                 {
                     try
                     {
+                        using var work = await maintenance.WorkAsync(stoppingToken);
                         if (time.GetUtcNow() - refreshed >= TimeSpan.FromSeconds(options.Value.PollSeconds))
                         {
                             await RefreshAsync(stoppingToken);

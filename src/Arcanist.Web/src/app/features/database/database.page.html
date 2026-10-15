@@ -1,0 +1,247 @@
+<header class="mb-6">
+  <h1 class="text-2xl font-semibold">{{ 'database.title' | t }}</h1>
+  <p class="text-sm text-muted-foreground">{{ 'database.subtitle' | t }}</p>
+</header>
+
+<div class="grid grid-cols-[minmax(0,1fr)] gap-6">
+  @if (maintenance()?.active || (migration() && migration()?.phase !== 'COMPLETED')) {
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'database.migrate.progressTitle' | t }}</h2>
+        <p hlmCardDescription>
+          @if (maintenance()?.active) {
+            {{ 'database.migrate.phase.' + (maintenance()?.phase ?? 'pausing') | t }}
+          } @else if (migration()?.phase === 'FAILED') {
+            {{ 'database.migrate.failed' | t }}
+          } @else {
+            {{ 'database.migrate.phase.' + phaseKey() | t }}
+          }
+        </p>
+      </div>
+      <div hlmCardContent class="grid gap-3">
+        @if (maintenance()?.active) {
+          <div class="flex items-center gap-2 text-sm">
+            <hlm-spinner class="size-4" />
+            {{ 'database.migrate.maintenance' | t }}
+          </div>
+          <hlm-progress [value]="percent()"><hlm-progress-indicator /></hlm-progress>
+          @if (percent() !== null) {
+            <p class="text-xs text-muted-foreground">{{ percent() }} %</p>
+          }
+        }
+        @if (migration(); as current) {
+          @if (current.errorCode) {
+            <div hlmAlert variant="destructive">
+              <p hlmAlertDescription>{{ i18n.error(current.errorCode) }}</p>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  @if (status(); as current) {
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'database.current.title' | t }}</h2>
+      </div>
+      <dl hlmCardContent class="grid gap-2 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
+        <dt class="text-muted-foreground">{{ 'database.current.provider' | t }}</dt>
+        <dd>
+          {{ current.provider === 'SQLITE' ? 'SQLite' : 'PostgreSQL' }}
+          @if (current.lockedByEnvironment) {
+            <span hlmBadge variant="outline" class="ml-2">{{ 'database.current.locked' | t }}</span>
+          }
+        </dd>
+        <dt class="text-muted-foreground">{{ 'database.current.location' | t }}</dt>
+        <dd class="font-mono text-xs break-all">{{ current.location }}</dd>
+        @if (current.sizeBytes !== null && current.sizeBytes !== undefined) {
+          <dt class="text-muted-foreground">{{ 'database.current.size' | t }}</dt>
+          <dd>{{ current.sizeBytes | bytes }}</dd>
+        }
+        @if (migration(); as done) {
+          @if (done.phase === 'COMPLETED') {
+            <dt class="text-muted-foreground">{{ 'database.current.migrated' | t }}</dt>
+            <dd [title]="done.finishedAt ?? '' | dateTime">
+              {{
+                'database.migrate.copied'
+                  | t
+                    : {
+                        rows: (done.copied | count),
+                        tables: done.tables.length,
+                        when: (done.finishedAt ?? '' | relativeTime),
+                      }
+              }}
+            </dd>
+          }
+        }
+      </dl>
+    </section>
+
+    @if (current.previousSqlite; as previous) {
+      <section hlmCard>
+        <div hlmCardHeader>
+          <h2 hlmCardTitle>{{ 'database.previous.title' | t }}</h2>
+          <p hlmCardDescription>{{ 'database.previous.description' | t }}</p>
+        </div>
+        <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-4">
+          <dl class="grid gap-2 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
+            <dt class="text-muted-foreground">{{ 'database.previous.file' | t }}</dt>
+            <dd class="font-mono text-xs break-all">{{ previous.path }}</dd>
+            <dt class="text-muted-foreground">{{ 'database.current.size' | t }}</dt>
+            <dd>
+              @if (previous.exists) {
+                {{ previous.sizeBytes | bytes }}
+              } @else {
+                {{ 'database.previous.gone' | t }}
+              }
+            </dd>
+          </dl>
+          <hlm-radio-group class="grid gap-2" name="action" [(ngModel)]="action">
+            @for (option of ['KEEP', 'MOVE', 'DELETE']; track option) {
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio [value]="option" class="mt-0.5"
+                  ><hlm-radio-indicator indicator
+                /></hlm-radio>
+                <span class="grid gap-0.5">
+                  <span class="font-medium">{{ 'database.previous.' + option + '.name' | t }}</span>
+                  <span class="text-xs text-muted-foreground">{{
+                    'database.previous.' + option + '.help' | t
+                  }}</span>
+                </span>
+              </label>
+            }
+          </hlm-radio-group>
+          @if (action === 'MOVE') {
+            <hlm-field>
+              <label hlmFieldLabel for="move-folder">{{ 'database.previous.folder' | t }}</label>
+              <div class="flex gap-2">
+                <input
+                  hlmInput
+                  id="move-folder"
+                  name="folder"
+                  class="min-w-0 flex-1 font-mono text-xs"
+                  [(ngModel)]="folder"
+                />
+                <button hlmBtn variant="outline" type="button" (click)="picking.set(true)">
+                  {{ 'mstream.browse' | t }}
+                </button>
+              </div>
+            </hlm-field>
+          }
+          <button
+            hlmBtn
+            type="button"
+            class="justify-self-start"
+            [variant]="action === 'DELETE' ? 'destructive' : 'default'"
+            [disabled]="busy() || (action === 'MOVE' && !folder.trim())"
+            (click)="resolve()"
+          >
+            {{ 'database.previous.confirm.' + action | t }}
+          </button>
+        </div>
+      </section>
+    }
+
+    @if (current.provider === 'SQLITE' && !maintenance()?.active) {
+      <section hlmCard>
+        <div hlmCardHeader>
+          <h2 hlmCardTitle>{{ 'database.migrate.title' | t }}</h2>
+          <p hlmCardDescription>{{ 'database.migrate.description' | t }}</p>
+        </div>
+        <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-4">
+          <div hlmAlert>
+            <p hlmAlertTitle>{{ 'setup.database.whenTitle' | t }}</p>
+            <p hlmAlertDescription>{{ 'setup.database.whenHelp' | t }}</p>
+          </div>
+          @if (current.lockedByEnvironment) {
+            <p class="text-sm text-muted-foreground">{{ 'database.migrate.locked' | t }}</p>
+          } @else {
+            <hlm-field>
+              <label hlmFieldLabel for="pg-connection">{{
+                'setup.database.connectionString' | t
+              }}</label>
+              <input
+                hlmInput
+                id="pg-connection"
+                name="connection"
+                class="font-mono text-xs"
+                autocomplete="off"
+                placeholder="Host=localhost;Database=arcanist;Username=arcanist;Password=…"
+                [(ngModel)]="connectionString"
+                (ngModelChange)="test.set(null)"
+              />
+              <p hlmFieldDescription>{{ 'database.migrate.connectionHelp' | t }}</p>
+            </hlm-field>
+            <div class="flex flex-wrap items-center gap-3">
+              <button
+                hlmBtn
+                variant="outline"
+                type="button"
+                [disabled]="busy() || !connectionString.trim()"
+                (click)="testConnection()"
+              >
+                {{ 'setup.database.test' | t }}
+              </button>
+              @if (test(); as result) {
+                @if (result.success) {
+                  <span class="text-sm text-green-600">{{ 'setup.database.ok' | t }}</span>
+                } @else {
+                  <span class="text-sm break-all text-destructive">{{ result.error }}</span>
+                }
+              }
+            </div>
+            <ul class="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              <li>{{ 'database.migrate.notes.maintenance' | t }}</li>
+              <li>{{ 'database.migrate.notes.empty' | t }}</li>
+              <li>{{ 'database.migrate.notes.safe' | t }}</li>
+            </ul>
+            <button
+              hlmBtn
+              type="button"
+              class="justify-self-start"
+              [disabled]="busy() || !test()?.success"
+              (click)="confirming.set(true)"
+            >
+              {{ 'database.migrate.start' | t }}
+            </button>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>
+
+<hlm-alert-dialog [state]="confirming() ? 'open' : 'closed'" (closed)="confirming.set(false)">
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    <hlm-alert-dialog-header>
+      <h3 hlmAlertDialogTitle>{{ 'database.migrate.confirmTitle' | t }}</h3>
+      <p hlmAlertDialogDescription>{{ 'database.migrate.confirmHelp' | t }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel type="button" (click)="confirming.set(false)">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button hlmAlertDialogAction type="button" (click)="migrate()">
+        {{ 'database.migrate.start' | t }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>
+
+<hlm-dialog [state]="picking() ? 'open' : 'closed'" (closed)="picking.set(false)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="w-[min(36rem,calc(100vw-2rem))] sm:max-w-xl"
+  >
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'folderPicker.title' | t }}</h3>
+    </hlm-dialog-header>
+    <app-folder-picker
+      [load]="loadDirectories"
+      [create]="createDirectory"
+      (picked)="picked($event)"
+      (cancelled)="picking.set(false)"
+    />
+  </hlm-dialog-content>
+</hlm-dialog>

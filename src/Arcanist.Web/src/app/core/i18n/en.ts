@@ -23,6 +23,7 @@ export const en: Dictionary = {
     close: 'Close',
   },
   nav: {
+    database: 'Database',
     network: 'P2P network',
     dlna: 'DLNA',
     extensions: 'Extensions',
@@ -733,6 +734,69 @@ export const en: Dictionary = {
       PREVIOUS: 'Previous',
     },
   },
+  database: {
+    title: 'Database',
+    subtitle:
+      'Where Arcanist keeps its catalog, users and settings, and moving from SQLite to PostgreSQL.',
+    current: {
+      title: 'Current database',
+      provider: 'Type',
+      locked: 'Set by the environment',
+      location: 'Location',
+      size: 'Size',
+      migrated: 'Migrated',
+    },
+    migrate: {
+      title: 'Migrate to PostgreSQL',
+      description:
+        'Copies everything (libraries, users, ratings, playlists, settings…) to PostgreSQL, and the server uses it from then on, without restarting.',
+      connectionHelp:
+        'Of an empty database (or one that does not exist yet: it is created). The user must be allowed to create tables.',
+      locked:
+        'The database is set by the server’s configuration (Docker environment variables, for example): change it there.',
+      notes: {
+        maintenance:
+          'Meanwhile the server is in maintenance: no music, no API (a few minutes for large libraries).',
+        empty: 'Scans and organizing in progress must finish first.',
+        safe: 'SQLite is not changed: if anything fails, the server goes on with SQLite as before.',
+      },
+      start: 'Migrate now',
+      confirmTitle: 'Migrate to PostgreSQL?',
+      confirmHelp:
+        'The server goes into maintenance until it finishes. Then it uses PostgreSQL, and you will be asked what to do with the SQLite file.',
+      progressTitle: 'Migration to PostgreSQL',
+      maintenance: 'The server is in maintenance. Keep this page open to see the result.',
+      failed: 'The migration did not complete: the server goes on with SQLite.',
+      done: 'The server now uses PostgreSQL',
+      copied: '{rows} rows of {tables} tables copied {when}',
+      phase: {
+        pausing: 'Waiting for work in progress to finish…',
+        schema: 'Creating the tables in PostgreSQL…',
+        copying: 'Copying the data…',
+        verifying: 'Checking the copy…',
+        switching: 'Switching to PostgreSQL…',
+      },
+    },
+    previous: {
+      title: 'The previous SQLite file',
+      description:
+        'The server no longer uses it. You can keep it as a backup, move it to another folder or delete it.',
+      file: 'File',
+      gone: 'It is no longer there',
+      folder: 'Destination folder',
+      KEEP: {
+        name: 'Leave it where it is',
+        help: 'Nothing changes. You can delete it by hand whenever you like.',
+      },
+      MOVE: {
+        name: 'Move it to another folder',
+        help: 'To your backups folder, for example. Another file is never overwritten.',
+      },
+      DELETE: { name: 'Delete it', help: 'It is gone for good. Your data is in PostgreSQL.' },
+      confirm: { KEEP: 'Leave it', MOVE: 'Move it', DELETE: 'Delete it' },
+      done: { KEEP: 'The file stays where it is', MOVE: 'File moved', DELETE: 'File deleted' },
+    },
+  },
   network: {
     title: 'P2P network',
     subtitle:
@@ -944,6 +1008,12 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    maintenance:
+      'The server is in maintenance (migrating its database). Try again in a few minutes.',
+    busy: 'Work is in progress (scans, organizing, copies): wait for it to finish.',
+    already_postgres: 'The database is PostgreSQL already.',
+    verification_failed: 'The copy does not match the original: the server goes on with SQLite.',
+    migration_failed: 'The migration failed: the server goes on with SQLite. Check the server log.',
     unexpected: 'Something went wrong. Please try again.',
     network: 'Cannot reach the server.',
     unauthorized: 'Your session has expired. Please sign in again.',

@@ -121,6 +121,11 @@ type Documents = {
     "\n  mutation RevokeNetworkPeer($id: ID!) {\n    revokeNetworkPeer(id: $id) {\n      ...NetworkPeerFields\n    }\n  }\n": typeof types.RevokeNetworkPeerDocument,
     "\n  mutation AcceptShare($link: String!) {\n    acceptShare(link: $link) {\n      ...ReceivedShareFields\n    }\n  }\n": typeof types.AcceptShareDocument,
     "\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": typeof types.CopyReceivedShareDocument,
+    "\n  fragment DatabaseStatusFields on DatabaseStatus {\n    provider\n    lockedByEnvironment\n    location\n    sizeBytes\n    migration {\n      phase\n      tables {\n        name\n        rows\n        copied\n      }\n      rows\n      copied\n      errorCode\n      startedAt\n      finishedAt\n    }\n    previousSqlite {\n      path\n      sizeBytes\n      exists\n      migratedAt\n    }\n  }\n": typeof types.DatabaseStatusFieldsFragmentDoc,
+    "\n  query Database {\n    database {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.DatabaseDocument,
+    "\n  mutation TestPostgresConnection($connectionString: String!) {\n    testPostgresConnection(connectionString: $connectionString) {\n      success\n      error\n    }\n  }\n": typeof types.TestPostgresConnectionDocument,
+    "\n  mutation MigrateToPostgres($connectionString: String!) {\n    migrateToPostgres(connectionString: $connectionString) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.MigrateToPostgresDocument,
+    "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.ResolvePreviousSqliteDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -230,6 +235,11 @@ const documents: Documents = {
     "\n  mutation RevokeNetworkPeer($id: ID!) {\n    revokeNetworkPeer(id: $id) {\n      ...NetworkPeerFields\n    }\n  }\n": types.RevokeNetworkPeerDocument,
     "\n  mutation AcceptShare($link: String!) {\n    acceptShare(link: $link) {\n      ...ReceivedShareFields\n    }\n  }\n": types.AcceptShareDocument,
     "\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": types.CopyReceivedShareDocument,
+    "\n  fragment DatabaseStatusFields on DatabaseStatus {\n    provider\n    lockedByEnvironment\n    location\n    sizeBytes\n    migration {\n      phase\n      tables {\n        name\n        rows\n        copied\n      }\n      rows\n      copied\n      errorCode\n      startedAt\n      finishedAt\n    }\n    previousSqlite {\n      path\n      sizeBytes\n      exists\n      migratedAt\n    }\n  }\n": types.DatabaseStatusFieldsFragmentDoc,
+    "\n  query Database {\n    database {\n      ...DatabaseStatusFields\n    }\n  }\n": types.DatabaseDocument,
+    "\n  mutation TestPostgresConnection($connectionString: String!) {\n    testPostgresConnection(connectionString: $connectionString) {\n      success\n      error\n    }\n  }\n": types.TestPostgresConnectionDocument,
+    "\n  mutation MigrateToPostgres($connectionString: String!) {\n    migrateToPostgres(connectionString: $connectionString) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.MigrateToPostgresDocument,
+    "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.ResolvePreviousSqliteDocument,
 };
 
 /**
@@ -674,6 +684,26 @@ export function graphql(source: "\n  mutation AcceptShare($link: String!) {\n   
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n"): (typeof documents)["\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment DatabaseStatusFields on DatabaseStatus {\n    provider\n    lockedByEnvironment\n    location\n    sizeBytes\n    migration {\n      phase\n      tables {\n        name\n        rows\n        copied\n      }\n      rows\n      copied\n      errorCode\n      startedAt\n      finishedAt\n    }\n    previousSqlite {\n      path\n      sizeBytes\n      exists\n      migratedAt\n    }\n  }\n"): (typeof documents)["\n  fragment DatabaseStatusFields on DatabaseStatus {\n    provider\n    lockedByEnvironment\n    location\n    sizeBytes\n    migration {\n      phase\n      tables {\n        name\n        rows\n        copied\n      }\n      rows\n      copied\n      errorCode\n      startedAt\n      finishedAt\n    }\n    previousSqlite {\n      path\n      sizeBytes\n      exists\n      migratedAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Database {\n    database {\n      ...DatabaseStatusFields\n    }\n  }\n"): (typeof documents)["\n  query Database {\n    database {\n      ...DatabaseStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation TestPostgresConnection($connectionString: String!) {\n    testPostgresConnection(connectionString: $connectionString) {\n      success\n      error\n    }\n  }\n"): (typeof documents)["\n  mutation TestPostgresConnection($connectionString: String!) {\n    testPostgresConnection(connectionString: $connectionString) {\n      success\n      error\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation MigrateToPostgres($connectionString: String!) {\n    migrateToPostgres(connectionString: $connectionString) {\n      ...DatabaseStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation MigrateToPostgres($connectionString: String!) {\n    migrateToPostgres(connectionString: $connectionString) {\n      ...DatabaseStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

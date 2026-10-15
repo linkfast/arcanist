@@ -74,7 +74,8 @@ public sealed class P2PPeerDirectory(IArcanistDbContextFactory databases, TimePr
 /// The activity log: entries are queued and written in the background every second, so logging never slows a
 /// request. Entries older than 90 days, or beyond the newest 20,000, are removed every hour.
 /// </summary>
-public sealed class P2PActivityLog(IArcanistDbContextFactory databases, TimeProvider time, ILogger<P2PActivityLog> logger) : BackgroundService
+public sealed class P2PActivityLog(IArcanistDbContextFactory databases, DatabaseMaintenance maintenance, TimeProvider time, ILogger<P2PActivityLog> logger)
+    : BackgroundService
 {
     private const int Keep = 20_000;
     private static readonly TimeSpan Retention = TimeSpan.FromDays(90);
@@ -125,6 +126,7 @@ public sealed class P2PActivityLog(IArcanistDbContextFactory databases, TimeProv
             {
                 try
                 {
+                    using var work = await maintenance.WorkAsync(stoppingToken);
                     await FlushAsync(stoppingToken);
                     if (++tick % 3600 == 0)
                         await PurgeAsync(stoppingToken);

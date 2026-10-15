@@ -2,8 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Arcanist.Core.Data;
+using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Scanning;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.Extensions;
 
@@ -103,6 +107,15 @@ public sealed class MstreamTests : IAsyncLifetime
     [Fact]
     public async Task Apps_browse_the_library_and_its_folders()
     {
+        // A measured tempo has decimals; mStream apps read it as a whole number.
+        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
+        {
+            var hash = await db.MediaFiles.Where(f => f.RelativePath.EndsWith("01.wav") && f.RelativePath.Contains("First"))
+                .Select(f => f.ContentHash).SingleAsync(Cancel);
+            db.AudioAnalyses.Add(new AudioAnalysis { ContentHash = hash, State = AnalysisState.Analyzed, AnalyzedAt = DateTime.UtcNow, Bpm = 105.1f, BpmConfidence = 0.9f });
+            await db.SaveChangesAsync(Cancel);
+        }
+
         var artists = await GetAsync("/api/v1/db/artists");
         Assert.Equal(["The Band", "Zed"], artists.GetProperty("artists").EnumerateArray().Select(a => a.GetString()));
 
@@ -119,6 +132,7 @@ public sealed class MstreamTests : IAsyncLifetime
             metadata.GetProperty("track").GetInt32(), metadata.GetProperty("genres")[0].GetString()));
         Assert.Equal(JsonValueKind.Null, metadata.GetProperty("rating").ValueKind);
         Assert.True(metadata.GetProperty("duration").GetDouble() > 0);
+        Assert.Equal("105", metadata.GetProperty("bpm").GetRawText());
 
         var single = await PostAsync("/api/v1/db/metadata", new { filepath = "Music/Zed/01.wav" });
         Assert.Equal("Alone", single.GetProperty("metadata").GetProperty("title").GetString());

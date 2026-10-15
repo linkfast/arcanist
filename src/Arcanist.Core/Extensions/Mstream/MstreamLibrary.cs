@@ -188,7 +188,8 @@ internal sealed class MstreamLibrary(MstreamCall call)
             ["artists"] = new JsonArray(primary.Select(name => (JsonNode?)name).ToArray()),
             ["duration"] = Math.Round(track.DurationMs / 1000.0, 3),
             ["genres"] = new JsonArray(track.Genres.Select(name => (JsonNode?)name).ToArray()),
-            ["bpm"] = track.Bpm,
+            // mStream gives the tempo as a whole number, and its apps read it as one.
+            ["bpm"] = track.Bpm is { } bpm ? (int)Math.Round(bpm) : null,
             ["musical-key"] = track.Key?.Notation,
             ["has-lyrics"] = track.HasLyrics,
         };

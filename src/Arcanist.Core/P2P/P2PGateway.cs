@@ -17,9 +17,12 @@ public interface IP2PConnectionFeature
 {
     /// <summary>The remote node's id, as lowercase hex.</summary>
     string NodeId { get; }
+
+    /// <summary>It came through the mStream apps' tunnel (quick connect), not Arcanist's.</summary>
+    bool Mstream { get; }
 }
 
-internal sealed record P2PConnectionFeature(string NodeId) : IP2PConnectionFeature;
+internal sealed record P2PConnectionFeature(string NodeId, bool Mstream = false) : IP2PConnectionFeature;
 
 /// <summary>
 /// Recognizes connections the P2P node opens to the server: on loopback, they start with a preamble holding this
@@ -41,9 +44,10 @@ internal static class P2PConnections
 
         var keys = services.GetRequiredService<P2PKeys>();
         string? nodeId;
+        bool mstream;
         try
         {
-            nodeId = await ReadPreambleAsync(context.Transport.Input, keys.Preamble, context.ConnectionClosed);
+            (nodeId, mstream) = await ReadPreambleAsync(context.Transport.Input, keys.Preamble, context.ConnectionClosed);
         }
         catch (OperationCanceledException) when (context.ConnectionClosed.IsCancellationRequested)
         {
@@ -63,7 +67,7 @@ internal static class P2PConnections
 
         var traffic = services.GetRequiredService<P2PTraffic>();
         var peer = traffic.For(nodeId);
-        context.Features.Set<IP2PConnectionFeature>(new P2PConnectionFeature(nodeId));
+        context.Features.Set<IP2PConnectionFeature>(new P2PConnectionFeature(nodeId, mstream));
         var original = context.Transport;
         var stream = new MeteredStream(new DuplexPipeStream(original), traffic, peer);
         context.Transport = new DuplexPipe(PipeReader.Create(stream), PipeWriter.Create(stream));
@@ -80,38 +84,40 @@ internal static class P2PConnections
     }
 
     /// <summary>
-    /// The node id of a tunnelled connection; null for any other connection (left unread); "" for a preamble with
-    /// the wrong secret.
+    /// The node id of a tunnelled connection, and whether it came through mStream's tunnel; a null id for any other
+    /// connection (left unread); "" for a preamble with the wrong secret.
     /// </summary>
-    internal static async Task<string?> ReadPreambleAsync(PipeReader input, byte[] secret, CancellationToken cancellationToken)
+    internal static async Task<(string? NodeId, bool Mstream)> ReadPreambleAsync(PipeReader input, byte[] secret, CancellationToken cancellationToken)
     {
-        var magic = PreambleMagic;
         while (true)
         {
             var result = await input.ReadAsync(cancellationToken);
             var buffer = result.Buffer;
-            var compare = (int)Math.Min(buffer.Length, magic.Length);
+            var compare = (int)Math.Min(buffer.Length, PreambleMagic.Length);
             var start = new byte[compare];
             buffer.Slice(0, compare).CopyTo(start);
-            if (!magic.AsSpan(0, compare).SequenceEqual(start))
+            var arcanist = PreambleMagic.AsSpan(0, compare).SequenceEqual(start);
+            var mstream = MstreamPreambleMagic.AsSpan(0, compare).SequenceEqual(start);
+            if (!arcanist && !mstream)
             {
                 input.AdvanceTo(buffer.Start);
-                return null;
+                return (null, false);
             }
 
             if (buffer.Length >= PreambleLength)
             {
                 var preamble = buffer.Slice(0, PreambleLength).ToArray();
                 input.AdvanceTo(buffer.GetPosition(PreambleLength));
+                var isMstream = MstreamPreambleMagic.AsSpan().SequenceEqual(preamble.AsSpan(0, 16));
                 return CryptographicOperations.FixedTimeEquals(preamble.AsSpan(16, 32), secret)
-                    ? Convert.ToHexStringLower(preamble.AsSpan(48, 32))
-                    : "";
+                    ? (Convert.ToHexStringLower(preamble.AsSpan(48, 32)), isMstream)
+                    : ("", false);
             }
 
             if (result.IsCompleted)
             {
                 input.AdvanceTo(buffer.Start);
-                return null;
+                return (null, false);
             }
 
             input.AdvanceTo(buffer.Start, buffer.End);
@@ -120,6 +126,9 @@ internal static class P2PConnections
 
     /// <summary>Mirrors <c>PREAMBLE_MAGIC</c> in <c>lib.rs</c>.</summary>
     internal static readonly byte[] PreambleMagic = "ARCANIST-P2P/1\r\n"u8.ToArray();
+
+    /// <summary>Mirrors <c>MSTREAM_PREAMBLE_MAGIC</c> in <c>lib.rs</c>.</summary>
+    internal static readonly byte[] MstreamPreambleMagic = "ARCANIST-MST/1\r\n"u8.ToArray();
 
     internal const int PreambleLength = 16 + 32 + 32;
 
@@ -176,6 +185,9 @@ internal sealed class P2PGateMiddleware(RequestDelegate next)
     public const string JoinPath = "/rest/v1/p2p/join";
     public const string PeerApiPrefix = "/rest/v1/peer";
 
+    /// <summary>What the mStream apps reach through their tunnel: the mStream extension's routes.</summary>
+    private static readonly string[] MstreamPrefixes = ["/api", "/media", "/album-art", "/transcode"];
+
     public async Task InvokeAsync(HttpContext context, P2PPeerDirectory directory, P2PSettings settings, P2PTraffic traffic, P2PActivityLog activity,
         IArcanistDbContextFactory databases, TimeProvider time)
     {
@@ -191,6 +203,22 @@ internal sealed class P2PGateMiddleware(RequestDelegate next)
         context.Request.Headers.Remove("Forwarded");
 
         var path = context.Request.Path;
+        if (connection.Mstream)
+        {
+            // mStream's quick connect: the secret opened the tunnel; behind it, only mStream's routes, with their
+            // own sign-in, and only while the quick connect is on.
+            var tunnels = context.RequestServices.GetService<IAppTunnels>();
+            if (tunnels is null || !await tunnels.MstreamAllowedAsync(context.RequestAborted)
+                                || !MstreamPrefixes.Any(p => path.StartsWithSegments(p, StringComparison.OrdinalIgnoreCase)))
+            {
+                await Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound).ExecuteAsync(context);
+                return;
+            }
+
+            await next(context);
+            return;
+        }
+
         if (path.Equals(PairPath, StringComparison.OrdinalIgnoreCase) || path.Equals(JoinPath, StringComparison.OrdinalIgnoreCase)
                                                                       || path.Equals("/health", StringComparison.OrdinalIgnoreCase))
         {

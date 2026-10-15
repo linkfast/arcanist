@@ -11,7 +11,8 @@ namespace Arcanist.Core.Extensions.Mstream;
 /// The apps' functions an administrator turned off. Kept this way round so every function is on until turned off,
 /// also those a later version of Arcanist adds.
 /// </param>
-public sealed record MstreamConfig(int StarThreshold, bool PasswordSignIn, IReadOnlyList<MstreamFeature> Off)
+/// <param name="QuickConnect">The apps may connect through the P2P network by scanning a code (<see cref="MstreamQuickConnect"/>).</param>
+public sealed record MstreamConfig(int StarThreshold, bool PasswordSignIn, IReadOnlyList<MstreamFeature> Off, bool QuickConnect = false)
 {
     public static readonly MstreamConfig Default = new(1, false, []);
 

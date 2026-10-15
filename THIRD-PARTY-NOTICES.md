@@ -67,7 +67,7 @@ license. All of them are permissive or MPL-2.0:
 
 | Component | License |
 |---|---|
-| iroh, iroh-base, iroh-relay, iroh-dns, noq (QUIC) and the other n0 crates | MIT OR Apache-2.0 |
+| iroh, iroh-base, iroh-relay, iroh-dns, iroh-tickets, noq (QUIC) and the other n0 crates | MIT OR Apache-2.0 |
 | tokio, rustls, hyper, the RustCrypto crates and most other dependencies | MIT / Apache-2.0 / MIT OR Apache-2.0 |
 | ring | Apache-2.0 AND ISC |
 | uniffi and its crates (mobile bindings only), attohttpc (port mapping) | MPL-2.0 |

@@ -7,6 +7,8 @@ public static class MstreamServiceCollectionExtensions
     {
         services.AddSingleton<MstreamSettings>();
         services.AddSingleton<MstreamNowPlaying>();
+        services.AddSingleton<MstreamQuickConnect>();
+        services.AddSingleton<P2P.IAppTunnels>(provider => provider.GetRequiredService<MstreamQuickConnect>());
         services.AddScoped<Application.Mstream.MstreamService>();
         return services;
     }

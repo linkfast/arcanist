@@ -796,6 +796,9 @@ type MstreamStatus {
   starThreshold: Int!
   passwordSignIn: Boolean!
   features: [MstreamFeature!]!
+  quickConnect: Boolean!
+  p2pEnabled: Boolean!
+  pairingCode: String
 }
 
 enum MstreamFeature {
@@ -1381,6 +1384,8 @@ type Mutation {
   importMstream(input: ImportMstreamInput!): MstreamImportJob!
   "Changes how the mStream extension behaves with the mStream apps. Administrators only, with a recent authentication."
   setMstreamSettings(input: MstreamSettingsInput!): MstreamStatus!
+  "A new pairing code for the mStream apps' quick connect: apps that scanned the old one are disconnected. Administrators only, with a recent authentication."
+  rotateMstreamQuickConnect: MstreamStatus!
   "Turns online services on or off. They send only fingerprints, identifiers and artist, album and track names. Requires MANAGE_SETTINGS."
   setOnlineServices(input: SetOnlineServicesInput!): OnlineServicesStatus!
   "Uses your own AcoustID application key instead of the project's; null or empty goes back to the project's. Requires MANAGE_SETTINGS."
@@ -1619,6 +1624,7 @@ input MstreamSettingsInput {
   starThreshold: Int!
   passwordSignIn: Boolean!
   features: [MstreamFeature!]!
+  quickConnect: Boolean!
 }
 
 input SetOnlineServicesInput {

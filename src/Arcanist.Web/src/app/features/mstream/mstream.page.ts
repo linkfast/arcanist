@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -16,7 +16,12 @@ import type {
   MstreamStatusFieldsFragment as Status,
   RatingMode,
 } from '../../graphql/generated/graphql';
-import { MstreamQuery, SetMstreamSettingsMutation } from '../../graphql/operations';
+import {
+  MstreamQuery,
+  RotateMstreamQuickConnectMutation,
+  SetMstreamSettingsMutation,
+} from '../../graphql/operations';
+import { qrPath } from '../../shared/invitation';
 
 /** The apps' own functions Arcanist offers, in the order the page lists them. */
 const Features: MstreamFeature[] = ['WAVEFORM', 'STATS', 'SIMILAR', 'SCAN_STATUS'];
@@ -67,7 +72,9 @@ const Unavailable = [
           </div>
           <div hlmCardContent class="grid gap-3">
             <hlm-field>
-              <label hlmFieldLabel for="starThreshold">{{ 'mstreamPage.ratings.threshold' | t }}</label>
+              <label hlmFieldLabel for="starThreshold">{{
+                'mstreamPage.ratings.threshold' | t
+              }}</label>
               <select
                 hlmNativeSelect
                 id="starThreshold"
@@ -123,6 +130,73 @@ const Unavailable = [
 
         <section hlmCard>
           <div hlmCardHeader>
+            <h2 hlmCardTitle>{{ 'mstreamPage.quickConnect.title' | t }}</h2>
+            <p hlmCardDescription>{{ 'mstreamPage.quickConnect.description' | t }}</p>
+          </div>
+          <div hlmCardContent class="grid gap-3">
+            <label class="flex items-center gap-2 text-sm">
+              <hlm-switch
+                [checked]="quickConnect"
+                [disabled]="!current.p2pEnabled && !quickConnect"
+                (checkedChange)="quickConnect = $event"
+              />
+              {{ 'mstreamPage.quickConnect.enabled' | t }}
+            </label>
+            @if (!current.p2pEnabled) {
+              <p class="text-xs text-muted-foreground">
+                {{ 'mstreamPage.quickConnect.needsP2p' | t }}
+                <a routerLink="/network" class="underline">{{ 'nav.network' | t }}</a>
+              </p>
+            }
+            @if (current.pairingCode; as code) {
+              @if (qr(); as image) {
+                <svg
+                  class="size-56 justify-self-center rounded-md bg-white p-2"
+                  role="img"
+                  [attr.aria-label]="'mstreamPage.quickConnect.qr' | t"
+                  [attr.viewBox]="'0 0 ' + image.size + ' ' + image.size"
+                  shape-rendering="crispEdges"
+                >
+                  <path [attr.d]="image.path" fill="#000" />
+                </svg>
+              }
+              <p class="text-xs text-muted-foreground">{{ 'mstreamPage.quickConnect.scan' | t }}</p>
+              <div class="flex gap-2">
+                <input
+                  class="min-w-0 flex-1 rounded-md border bg-transparent px-3 py-1.5 font-mono text-xs"
+                  readonly
+                  [attr.aria-label]="'mstreamPage.quickConnect.code' | t"
+                  [value]="code"
+                />
+                <button hlmBtn variant="outline" size="sm" type="button" (click)="copy(code)">
+                  {{ 'invitation.copy' | t }}
+                </button>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="rotate()"
+                >
+                  {{ 'mstreamPage.quickConnect.rotate' | t }}
+                </button>
+                <span class="text-xs text-muted-foreground">{{
+                  'mstreamPage.quickConnect.rotateHelp' | t
+                }}</span>
+              </div>
+            } @else if (current.quickConnect && current.p2pEnabled) {
+              <p class="text-xs text-muted-foreground">
+                {{ 'mstreamPage.quickConnect.starting' | t }}
+              </p>
+            }
+          </div>
+        </section>
+
+        <section hlmCard>
+          <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'mstreamPage.features.title' | t }}</h2>
             <p hlmCardDescription>{{ 'mstreamPage.features.description' | t }}</p>
           </div>
@@ -135,7 +209,9 @@ const Unavailable = [
                   (checkedChange)="toggle(feature, $event)"
                 />
                 <span class="grid gap-0.5">
-                  <span class="font-medium">{{ 'mstreamPage.features.' + feature + '.name' | t }}</span>
+                  <span class="font-medium">{{
+                    'mstreamPage.features.' + feature + '.name' | t
+                  }}</span>
                   <span class="text-xs text-muted-foreground">{{
                     'mstreamPage.features.' + feature + '.help' | t
                   }}</span>
@@ -163,7 +239,9 @@ const Unavailable = [
                   {{ 'mstreamPage.unavailable.' + feature + '.name' | t }}
                   <span hlmBadge variant="outline">{{ 'mstreamPage.unavailable.badge' | t }}</span>
                 </span>
-                <span class="text-xs">{{ 'mstreamPage.unavailable.' + feature + '.help' | t }}</span>
+                <span class="text-xs">{{
+                  'mstreamPage.unavailable.' + feature + '.help' | t
+                }}</span>
               </div>
             }
           </div>
@@ -184,6 +262,11 @@ export class MstreamPage implements OnInit {
   protected readonly busy = signal(false);
   protected starThreshold = 1;
   protected passwordSignIn = false;
+  protected quickConnect = false;
+  protected readonly qr = computed(() => {
+    const code = this.status()?.pairingCode;
+    return code ? qrPath(code) : null;
+  });
 
   async ngOnInit(): Promise<void> {
     try {
@@ -209,6 +292,7 @@ export class MstreamPage implements OnInit {
           starThreshold: Number(this.starThreshold),
           passwordSignIn: this.passwordSignIn,
           features: this.enabled(),
+          quickConnect: this.quickConnect,
         },
       });
       this.apply(result.setMstreamSettings);
@@ -221,10 +305,34 @@ export class MstreamPage implements OnInit {
     }
   }
 
+  protected async rotate(): Promise<void> {
+    this.busy.set(true);
+    try {
+      this.apply(
+        (await this.gql.mutate(RotateMstreamQuickConnectMutation, {})).rotateMstreamQuickConnect,
+      );
+      toast.success(this.i18n.t('mstreamPage.quickConnect.rotated'));
+    } catch (error) {
+      toast.error(this.i18n.error(ApiError.from(error).code));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async copy(code: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success(this.i18n.t('invitation.copied'));
+    } catch {
+      toast.error(this.i18n.t('invitation.copyFailed'));
+    }
+  }
+
   private apply(status: Status): void {
     this.status.set(status);
     this.starThreshold = status.starThreshold;
     this.passwordSignIn = status.passwordSignIn;
+    this.quickConnect = status.quickConnect;
     this.enabled.set([...status.features]);
   }
 }

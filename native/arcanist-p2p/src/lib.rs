@@ -7,6 +7,9 @@
 //!   each node may do (pairing, shares, limits). Nothing here interprets HTTP.
 //! - **Connect.** A local port that tunnels each TCP connection to a remote node, so the server (or an app) talks
 //!   HTTP to another Arcanist as if it were local.
+//! - **mStream's quick connect.** When given its secret, the node also speaks the mStream apps' tunnel
+//!   (`mstream/tunnel/2`): the first stream must carry that secret, and every stream after it goes to the HTTP port
+//!   like Arcanist's own, with a preamble that marks it as mStream's.
 //!
 //! The C ABI for .NET is in [`ffi`]; the Swift and Kotlin bindings for the mobile apps, in `mobile` (feature
 //! `mobile`).
@@ -39,6 +42,12 @@ pub const ALPN: &[u8] = b"arcanist/tunnel/1";
 pub const PREAMBLE_MAGIC: &[u8; 16] = b"ARCANIST-P2P/1\r\n";
 pub const PREAMBLE_LENGTH: usize = 16 + 32 + 32;
 
+/// The mStream apps' tunnel (their pairing code, `mstr1:`, names this node and the connect secret).
+pub const MSTREAM_ALPN: &[u8] = b"mstream/tunnel/2";
+
+/// Starts the preamble of a connection that came through mStream's tunnel; the rest is as in [`PREAMBLE_MAGIC`].
+pub const MSTREAM_PREAMBLE_MAGIC: &[u8; 16] = b"ARCANIST-MST/1\r\n";
+
 /// How a node reaches others when there is no direct path.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -66,6 +75,9 @@ pub struct Config {
     pub preamble_secret: Option<String>,
     /// The UDP port to bind; any when None.
     pub bind_port: Option<u16>,
+    /// The secret of mStream's quick connect, in hex (32 bytes): with it (and a forward port), the node also accepts
+    /// the mStream apps' tunnel.
+    pub mstream_secret: Option<String>,
 }
 
 /// How to reach a node: its id and, when known, its relay and direct addresses. Serialized as JSON in tickets.
@@ -106,6 +118,8 @@ impl Ticket {
 pub struct Info {
     pub id: String,
     pub ticket: Ticket,
+    /// The same address as iroh's own ticket (`endpoint…`), as other iroh apps (mStream's) read it.
+    pub endpoint_ticket: String,
     /// The home relay, and whether the node is connected to it.
     pub relay: Option<String>,
     pub relay_connected: bool,
@@ -175,26 +189,67 @@ impl ProtocolHandler for Tunnel {
     async fn accept(&self, connection: Connection) -> Result<(), AcceptError> {
         let remote = connection.remote_id();
         self.peers.opened(remote);
-        loop {
-            let Ok((send, recv)) = connection.accept_bi().await else { break };
-            let tunnel = self.clone();
-            tokio::spawn(async move {
-                let Ok(mut tcp) = TcpStream::connect((Ipv4Addr::LOCALHOST, tunnel.port)).await else { return };
-                let _ = tcp.set_nodelay(true);
-                let mut preamble = Vec::with_capacity(PREAMBLE_LENGTH);
-                preamble.extend_from_slice(PREAMBLE_MAGIC);
-                preamble.extend_from_slice(&tunnel.secret);
-                preamble.extend_from_slice(remote.as_bytes());
-                if tcp.write_all(&preamble).await.is_err() {
-                    return;
-                }
-                let mut stream = tokio::io::join(recv, send);
-                let _ = tokio::io::copy_bidirectional(&mut tcp, &mut stream).await;
-            });
-        }
+        forward_streams(&connection, self.port, PREAMBLE_MAGIC, self.secret, remote).await;
         self.peers.closed(remote);
         Ok(())
     }
+}
+
+/// mStream's tunnel: the first stream carries the connect secret (answered `OK` or `NO`); after it, each stream is a
+/// connection to the HTTP port, as in Arcanist's own tunnel.
+#[derive(Debug, Clone)]
+struct MstreamTunnel {
+    port: u16,
+    preamble_secret: [u8; 32],
+    connect_secret: [u8; 32],
+    peers: Arc<Peers>,
+}
+
+impl ProtocolHandler for MstreamTunnel {
+    async fn accept(&self, connection: Connection) -> Result<(), AcceptError> {
+        let remote = connection.remote_id();
+        let Ok((mut send, mut recv)) = connection.accept_bi().await else { return Ok(()) };
+        let offered = tokio::time::timeout(Duration::from_secs(10), recv.read_to_end(64)).await;
+        let allowed = matches!(&offered, Ok(Ok(bytes)) if fixed_time_eq(bytes, &self.connect_secret));
+        let _ = send.write_all(if allowed { b"OK" } else { b"NO" }).await;
+        let _ = send.finish();
+        if !allowed {
+            // Let the answer reach the app before the connection goes.
+            let _ = tokio::time::timeout(Duration::from_secs(2), send.stopped()).await;
+            connection.close(1u32.into(), b"secret");
+            return Ok(());
+        }
+
+        self.peers.opened(remote);
+        forward_streams(&connection, self.port, MSTREAM_PREAMBLE_MAGIC, self.preamble_secret, remote).await;
+        self.peers.closed(remote);
+        Ok(())
+    }
+}
+
+/// Carries every stream the remote node opens to the HTTP port, each after a preamble naming it.
+async fn forward_streams(connection: &Connection, port: u16, magic: &'static [u8; 16], secret: [u8; 32], remote: EndpointId) {
+    loop {
+        let Ok((send, recv)) = connection.accept_bi().await else { break };
+        tokio::spawn(async move {
+            let Ok(mut tcp) = TcpStream::connect((Ipv4Addr::LOCALHOST, port)).await else { return };
+            let _ = tcp.set_nodelay(true);
+            let mut preamble = Vec::with_capacity(PREAMBLE_LENGTH);
+            preamble.extend_from_slice(magic);
+            preamble.extend_from_slice(&secret);
+            preamble.extend_from_slice(remote.as_bytes());
+            if tcp.write_all(&preamble).await.is_err() {
+                return;
+            }
+            let mut stream = tokio::io::join(recv, send);
+            let _ = tokio::io::copy_bidirectional(&mut tcp, &mut stream).await;
+        });
+    }
+}
+
+/// Compares two secrets in the same time whatever they hold.
+fn fixed_time_eq(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |difference, (x, y)| difference | (x ^ y)) == 0
 }
 
 /// A local port tunnelling to a remote node.
@@ -240,6 +295,10 @@ impl Node {
         if let Some(port) = config.forward_port {
             let secret = parse_secret(config.preamble_secret.as_deref())?;
             router = router.accept(ALPN, Tunnel { port, secret, peers: peers.clone() });
+            if let Some(connect) = config.mstream_secret.as_deref() {
+                let connect_secret = parse_secret(Some(connect)).map_err(|_| Error::new("invalid_mstream_secret"))?;
+                router = router.accept(MSTREAM_ALPN, MstreamTunnel { port, preamble_secret: secret, connect_secret, peers: peers.clone() });
+            }
         }
         Ok(Self { router: router.spawn(), peers, forwards: Mutex::new(HashMap::new()) })
     }
@@ -258,6 +317,7 @@ impl Node {
         Info {
             id: endpoint.id().to_string(),
             ticket: Ticket::from_addr(&endpoint.addr()),
+            endpoint_ticket: iroh_tickets::endpoint::EndpointTicket::new(endpoint.addr()).to_string(),
             relay: home.as_ref().map(|h| h.url().to_string()),
             relay_connected: home.as_ref().is_some_and(|h| h.is_connected()),
             connected: self.peers.ids(),

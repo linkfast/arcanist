@@ -81,7 +81,10 @@ public sealed class P2PKeys(ArcanistPaths paths)
 }
 
 /// <summary>What the node is doing, for the panel.</summary>
-public sealed record P2PNodeState(bool Running, string? ErrorCode, string? NodeId, NodeTicket? Ticket, string? Relay, bool RelayConnected, IReadOnlyList<string> Connected);
+/// <param name="EndpointTicket">The node's address as iroh's own ticket (<c>endpoint…</c>), as mStream's pairing code carries it.</param>
+public sealed record P2PNodeState(
+    bool Running, string? ErrorCode, string? NodeId, NodeTicket? Ticket, string? Relay, bool RelayConnected, IReadOnlyList<string> Connected,
+    string? EndpointTicket = null);
 
 /// <summary>
 /// Runs the native node while P2P is on: started once the server listens (tunnels need its HTTP port) and
@@ -93,6 +96,7 @@ public sealed class P2PNode(
     IOptionsMonitor<P2POptions> options,
     IServer server,
     IHostApplicationLifetime lifetime,
+    IServiceProvider services,
     ILogger<P2PNode> logger) : BackgroundService
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -101,6 +105,9 @@ public sealed class P2PNode(
     private NativeP2P.Node? _node;
     private NodeConfig? _running;
     private string? _error;
+
+    /// <summary>Applies the settings now and waits until the node runs with them.</summary>
+    public Task ApplyNowAsync(CancellationToken cancellationToken) => ApplyAsync(cancellationToken);
 
     /// <summary>Applies new settings now.</summary>
     public void Changed()
@@ -121,7 +128,7 @@ public sealed class P2PNode(
             try
             {
                 var info = node.Info();
-                return new P2PNodeState(true, null, info.Id, info.Ticket, info.Relay, info.RelayConnected, info.Connected);
+                return new P2PNodeState(true, null, info.Id, info.Ticket, info.Relay, info.RelayConnected, info.Connected, info.EndpointTicket);
             }
             catch (Exception e) when (e is P2PException or ObjectDisposedException)
             {
@@ -211,7 +218,8 @@ public sealed class P2PNode(
     private async Task ApplyAsync(CancellationToken cancellationToken)
     {
         var config = await settings.GetAsync(cancellationToken);
-        var wanted = config.Enabled && NativeP2P.IsAvailable ? Desired(config) : null;
+        var mstream = services.GetService<IAppTunnels>() is { } tunnels ? await tunnels.MstreamSecretAsync(cancellationToken) : null;
+        var wanted = config.Enabled && NativeP2P.IsAvailable ? Desired(config, mstream) : null;
 
         await _gate.WaitAsync(cancellationToken);
         try
@@ -242,12 +250,12 @@ public sealed class P2PNode(
         }
     }
 
-    private NodeConfig Desired(P2PConfig config)
+    private NodeConfig Desired(P2PConfig config, string? mstreamSecret)
     {
         var relay = options.CurrentValue.Relay ?? config.Relay;
         var url = relay == P2PRelay.Custom ? config.RelayUrl : null;
         return new NodeConfig(relay, url, HttpPort(),
-            Convert.ToHexStringLower(keys.Preamble), options.CurrentValue.BindPort);
+            Convert.ToHexStringLower(keys.Preamble), options.CurrentValue.BindPort, mstreamSecret);
     }
 
     /// <summary><see cref="P2POptions.Port"/>, or the first http address the server listens on.</summary>

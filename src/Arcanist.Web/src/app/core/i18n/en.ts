@@ -48,6 +48,20 @@ export const en: Dictionary = {
       warning:
         'The user’s password will travel with every sign-in of the app: use HTTPS. An app password can be revoked without changing the main one. Once Arcanist has a second factor, users who turn it on will still need an app password.',
     },
+    quickConnect: {
+      title: 'Quick connect',
+      description:
+        'The mStream apps connect by scanning a code, through the P2P network: no open ports, no server address to know. Then they sign in as usual.',
+      enabled: 'Allow quick connect',
+      needsP2p: 'It needs the P2P network on. Turn it on in',
+      qr: 'Quick connect code',
+      scan: 'In the mStream app, choose to connect with a code and scan it (or paste the text).',
+      code: 'Connect code',
+      rotate: 'Change the code',
+      rotateHelp: 'Apps using the old one are disconnected and must scan the new one.',
+      rotated: 'Code changed',
+      starting: 'The P2P network is starting; the code shows in a few seconds.',
+    },
     features: {
       title: 'The apps’ functions',
       description:

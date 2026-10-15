@@ -4063,6 +4063,27 @@
         }
       }
     },
+    "/rest/v1/mstream/quick-connect/rotate": {
+      "post": {
+        "tags": [
+          "mStream"
+        ],
+        "summary": "A new pairing code for the mStream apps\u0027 quick connect: apps that scanned the old one are disconnected. Administrators only, with a recent authentication.",
+        "operationId": "RotateMstreamQuickConnect",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/p2p": {
       "get": {
         "tags": [
@@ -9330,6 +9351,10 @@
             "items": {
               "$ref": "#/components/schemas/MstreamFeature"
             }
+          },
+          "quickConnect": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -9338,7 +9363,10 @@
           "enabled",
           "starThreshold",
           "passwordSignIn",
-          "features"
+          "features",
+          "quickConnect",
+          "p2pEnabled",
+          "pairingCode"
         ],
         "type": "object",
         "properties": {
@@ -9361,6 +9389,18 @@
             "items": {
               "$ref": "#/components/schemas/MstreamFeature"
             }
+          },
+          "quickConnect": {
+            "type": "boolean"
+          },
+          "p2pEnabled": {
+            "type": "boolean"
+          },
+          "pairingCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

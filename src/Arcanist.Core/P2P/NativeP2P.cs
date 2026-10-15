@@ -156,7 +156,8 @@ public enum P2PRelay
     Local,
 }
 
-internal sealed record NodeConfig(P2PRelay Relay, string? RelayUrl, int? ForwardPort, string? PreambleSecret, int? BindPort);
+/// <param name="MstreamSecret">With it, the node also speaks the mStream apps' tunnel (quick connect).</param>
+internal sealed record NodeConfig(P2PRelay Relay, string? RelayUrl, int? ForwardPort, string? PreambleSecret, int? BindPort, string? MstreamSecret = null);
 
 /// <summary>How to reach a node: its id and its known addresses. Serialized as in tickets.</summary>
 public sealed record NodeTicket(string Id, IReadOnlyList<string>? Relays = null, IReadOnlyList<string>? Addrs = null);
@@ -167,6 +168,7 @@ internal sealed record NodeInfo(
     string? Relay,
     bool RelayConnected,
     IReadOnlyList<string> Connected,
-    IReadOnlyList<NodeTunnel> Tunnels);
+    IReadOnlyList<NodeTunnel> Tunnels,
+    string? EndpointTicket = null);
 
 internal sealed record NodeTunnel(int Port, string Id);

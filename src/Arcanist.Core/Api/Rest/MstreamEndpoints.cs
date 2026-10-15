@@ -17,6 +17,11 @@ public static class MstreamEndpoints
             .WithName("SetMstreamSettings")
             .WithSummary("Changes how the mStream extension behaves with the mStream apps. Administrators only, with a recent authentication.");
 
+        mstream.MapPost("/quick-connect/rotate", (MstreamService service, CancellationToken ct) => service.RotateQuickConnectAsync(ct))
+            .WithName("RotateMstreamQuickConnect")
+            .WithSummary("A new pairing code for the mStream apps' quick connect: apps that scanned the old one are disconnected. " +
+                         "Administrators only, with a recent authentication.");
+
         return rest;
     }
 }

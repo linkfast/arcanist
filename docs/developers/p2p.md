@@ -76,6 +76,17 @@ When the server is linked to an Ultimate Cloud account (any plan), apps of that 
    as the `node` of an invitation link. `connect(ticket)` and sign in as usual, through n0's relays (or the
    server's own, if its administrator runs one).
 
+## mStream apps: quick connect
+
+With the mStream extension's quick connect on (the panel's mStream page, which needs the P2P network), the server also
+speaks the mStream apps' tunnel, as mStream describes it in its `docs/iroh-pairing-code.md`:
+
+- The pairing code is `mstr1:` + base64url of `{"t": "<iroh EndpointTicket>", "s": "<base64 of a 32-byte secret>"}`.
+- The app dials ALPN `mstream/tunnel/2`, writes the secret on its first stream and reads `OK` (or `NO`); after that,
+  each stream is one HTTP connection to the server.
+- Behind the tunnel only mStream's routes answer (`/api`, `/media`, `/album-art`, `/transcode`), with their own
+  sign-in. Changing the code (a new secret) disconnects every app that had the old one.
+
 ## What can go wrong
 
 Through the P2P network, besides the usual errors:

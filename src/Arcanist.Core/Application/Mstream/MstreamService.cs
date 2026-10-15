@@ -41,18 +41,52 @@ public enum MstreamFeature
 /// </param>
 /// <param name="PasswordSignIn">The apps may also sign in with the user's own password, not only with app passwords.</param>
 /// <param name="Features">The apps' own functions that are on.</param>
-public sealed record MstreamStatus(bool Enabled, int StarThreshold, bool PasswordSignIn, IReadOnlyList<MstreamFeature> Features);
+/// <param name="QuickConnect">The apps may connect through the P2P network by scanning <paramref name="PairingCode"/>.</param>
+/// <param name="P2pEnabled">The P2P network is on: the quick connect needs it.</param>
+/// <param name="PairingCode">
+/// What the apps scan (<c>mstr1:…</c>), as text or a QR code: the server's P2P address and the secret that opens the
+/// tunnel. Null while the quick connect is off or the P2P node is not running.
+/// </param>
+public sealed record MstreamStatus(
+    bool Enabled,
+    int StarThreshold,
+    bool PasswordSignIn,
+    IReadOnlyList<MstreamFeature> Features,
+    bool QuickConnect,
+    bool P2pEnabled,
+    string? PairingCode);
 
-public sealed record MstreamSettingsInput(int StarThreshold, bool PasswordSignIn, IReadOnlyList<MstreamFeature> Features);
+/// <param name="QuickConnect">Let the apps connect through the P2P network by scanning a code; needs the P2P network (<c>p2p_disabled</c>).</param>
+public sealed record MstreamSettingsInput(int StarThreshold, bool PasswordSignIn, IReadOnlyList<MstreamFeature> Features, bool QuickConnect = false);
 
 /// <summary>How the mStream extension behaves with the mStream apps. Administrators only.</summary>
-public sealed class MstreamService(AccessGuard guard, ExtensionHost extensions, MstreamSettings settings)
+public sealed class MstreamService(
+    AccessGuard guard,
+    ExtensionHost extensions,
+    MstreamSettings settings,
+    MstreamQuickConnect quickConnect,
+    Core.P2P.P2PSettings p2p,
+    Core.P2P.P2PNode node)
 {
     public async Task<MstreamStatus> StatusAsync(CancellationToken cancellationToken)
     {
         guard.Admin();
         var config = await settings.GetAsync(cancellationToken);
-        return new MstreamStatus(extensions.IsEnabled(MstreamExtension.Id), config.StarThreshold, config.PasswordSignIn, config.Features);
+        return new MstreamStatus(extensions.IsEnabled(MstreamExtension.Id), config.StarThreshold, config.PasswordSignIn, config.Features,
+            config.QuickConnect, (await p2p.GetAsync(cancellationToken)).Enabled, await quickConnect.PairingCodeAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// A new pairing code: apps that scanned the old one are disconnected and must scan the new one. Administrators
+    /// only, with a recent authentication.
+    /// </summary>
+    public async Task<MstreamStatus> RotateQuickConnectAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        await quickConnect.RotateAsync(cancellationToken);
+        await node.ApplyNowAsync(cancellationToken);
+        return await StatusAsync(cancellationToken);
     }
 
     /// <summary>Changes take effect at once; tokens given with the user's password stop working when that sign-in is turned off.</summary>
@@ -66,10 +100,16 @@ public sealed class MstreamService(AccessGuard guard, ExtensionHost extensions, 
         var features = (input.Features ?? []).Distinct().ToList();
         if (features.Any(f => !Enum.IsDefined(f)))
             errors.Add("features", ErrorCodes.InvalidFormat);
+        if (input.QuickConnect && !(await p2p.GetAsync(cancellationToken)).Enabled)
+            errors.Add("quickConnect", ErrorCodes.P2PDisabled);
         errors.ThrowIfAny();
 
         var off = Enum.GetValues<MstreamFeature>().Where(f => !features.Contains(f)).ToList();
-        await settings.SetAsync(new MstreamConfig(input.StarThreshold, input.PasswordSignIn, off), cancellationToken);
+        var config = new MstreamConfig(input.StarThreshold, input.PasswordSignIn, off, input.QuickConnect);
+        var quickConnectChanged = (await settings.GetAsync(cancellationToken)).QuickConnect != config.QuickConnect;
+        await settings.SetAsync(config, cancellationToken);
+        if (quickConnectChanged)
+            await node.ApplyNowAsync(cancellationToken);
         return await StatusAsync(cancellationToken);
     }
 }

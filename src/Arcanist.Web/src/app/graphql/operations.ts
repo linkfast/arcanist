@@ -1054,6 +1054,9 @@ export const MstreamStatusFields = graphql(`
     starThreshold
     passwordSignIn
     features
+    quickConnect
+    p2pEnabled
+    pairingCode
   }
 `);
 
@@ -1071,6 +1074,14 @@ export const MstreamQuery = graphql(`
 export const SetMstreamSettingsMutation = graphql(`
   mutation SetMstreamSettings($input: MstreamSettingsInput!) {
     setMstreamSettings(input: $input) {
+      ...MstreamStatusFields
+    }
+  }
+`);
+
+export const RotateMstreamQuickConnectMutation = graphql(`
+  mutation RotateMstreamQuickConnect {
+    rotateMstreamQuickConnect {
       ...MstreamStatusFields
     }
   }

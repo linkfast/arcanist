@@ -414,6 +414,11 @@ Decididas en la F3:
 - **Servicios en línea opcionales** (MusicBrainz, AcoustID, Cover Art Archive, LRCLib): el asistente pregunta por cada uno y en instalaciones existentes empiezan desactivados. Funcionan en segundo plano a 1 petición/s, con su estado visible en el panel. Solo se envían huellas, MBIDs y artista/título; nunca rutas ni usuarios.
 - **AcoustID usa una clave de aplicación del proyecto** (también obligatoria para consultar, no solo para enviar), que el admin puede sustituir por la suya. Mientras el proyecto no la registre, AcoustID queda desactivado.
 
+Decididas para la F10 (con el usuario):
+- **Contra la API real de Ultimate Cloud**, que aporta el usuario (contrato o repositorio de UltimateCloudServer).
+- **Vincular la cuenta con código de dispositivo:** el panel muestra un código y un enlace y el admin lo aprueba en la web de Ultimate Cloud; Arcanist nunca ve su contraseña.
+- **Todo entra:** vincular la cuenta y leer su tier (capacidades), Ultimate Cloud como fuente de biblioteca (gratis), sincronización con Ultimate Cloud y bibliotecas en S3 (pago), y conexión iroh transparente con el relay de Ultimate (pago).
+
 Decididas para la F9 (con el usuario):
 - **Solo de SQLite a PostgreSQL.**
 - **En modo mantenimiento:** se pausan las escrituras y la API responde 503 mientras se copia y se verifica; al terminar se cambia a PostgreSQL.

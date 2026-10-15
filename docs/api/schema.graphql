@@ -906,6 +906,22 @@ type ReceivedShare {
   online: Boolean!
   createdAt: DateTime!
   lastContactAt: DateTime
+  copy: ShareCopyProgress
+}
+
+type ShareCopyProgress {
+  status: ShareCopyStatus!
+  total: Int!
+  copied: Int!
+  skipped: Int!
+  errorCode: String
+}
+
+enum ShareCopyStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
 }
 
 type P2PActivityEntry {
@@ -1155,6 +1171,8 @@ type Mutation {
   updateNetworkPeer(input: UpdateNetworkPeerInput!): NetworkPeer!
   "Ends a peer's access at once. Users revoke their own devices; administrators, any peer."
   revokeNetworkPeer(id: ID!): NetworkPeer!
+  "Copies a received share's files into a folder of one of this server's libraries, when its owner allows downloads. Runs in the background; its progress shows in the share. Administrators only, with a recent authentication."
+  copyReceivedShare(input: CopyReceivedShareInput!): ReceivedShare!
   "Accepts another server's share with its invitation link: its libraries become one library here, scanned at once (nothing is downloaded: the music streams from that server). Administrators only, with a recent authentication."
   acceptShare(link: String!): ReceivedShare!
   createPlaylist(input: CreatePlaylistInput!): Playlist!
@@ -1379,6 +1397,11 @@ input UpdateNetworkPeerInput {
   rules: PeerRulesInput!
   libraryIds: [ID!]
   expiresAt: DateTime
+}
+
+input CopyReceivedShareInput {
+  shareId: ID!
+  targetSourceId: ID!
 }
 
 input CreatePlaylistInput {

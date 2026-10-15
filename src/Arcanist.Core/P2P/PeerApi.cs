@@ -91,8 +91,11 @@ public sealed class PeerApi(IArcanistDbContextFactory databases, P2PSettings set
             files.Count > PageSize ? page[^1].Id : null);
     }
 
-    /// <summary>The file a peer path names, if it is shared with the peer.</summary>
-    public async Task<MediaFile?> FindAsync(P2PPeerSnapshot peer, string path, int cueTrack, CancellationToken cancellationToken)
+    /// <summary>
+    /// The file a peer path names, if it is shared with the peer. With <paramref name="cueTrack"/> null, any row of the
+    /// path (a whole file split by a cue sheet, for downloads).
+    /// </summary>
+    public async Task<MediaFile?> FindAsync(P2PPeerSnapshot peer, string path, int? cueTrack, CancellationToken cancellationToken)
     {
         await using var db = databases.CreateDbContext();
         var prefixes = await PrefixesAsync(db, peer, cancellationToken);
@@ -101,9 +104,11 @@ public sealed class PeerApi(IArcanistDbContextFactory databases, P2PSettings set
             if (!path.StartsWith(prefix + "/", StringComparison.Ordinal))
                 continue;
             var relative = path[(prefix.Length + 1)..];
-            return await db.MediaFiles.AsNoTracking().SingleOrDefaultAsync(
-                f => f.LibrarySourceId == sourceId && f.RelativePath == relative && f.CueTrack == cueTrack && f.MissingSince == null,
-                cancellationToken);
+            return await db.MediaFiles.AsNoTracking()
+                .Where(f => f.LibrarySourceId == sourceId && f.RelativePath == relative && f.MissingSince == null
+                            && (cueTrack == null || f.CueTrack == cueTrack))
+                .OrderBy(f => f.CueTrack)
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
         return null;

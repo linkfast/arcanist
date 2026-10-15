@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador) y 7 (DLNA) completas. Pendiente:
+Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador), 7 (DLNA) y 8 (red P2P) completas. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
 - De la F3: registrar la clave de AcoustID del proyecto (`OnlineOptions.ProjectAcoustIdKey`). La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
 - De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (necesita la clave del proyecto).
 - De la F7: probar DLNA con dispositivos reales (televisores Samsung/LG, Kodi, VLC, BubbleUPnP, altavoces) y con varias interfaces de red.
+- De la F8: probar la red P2P con los relays reales de n0 entre redes distintas (los tests usan el modo `Local`), los bindings de Swift y Kotlin en apps reales (solo se generaron), el QR con cámaras reales, e integrarla en Ultimate Desktop (el NuGet `Arcanist.P2P` del plan inicial no existe todavía).
 - De la F6: probar Subsonic y mStream con apps reales (Symfonium, DSub, Feishin, Amperfy, mStream Music) y el importador con una instalación real de mStream 5 y 6 (también el hash PBKDF2: no hay vector de prueba publicado).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-Siguiente: Fase 8, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Siguiente: Fase 9, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
-Git en la rama `main`, sin remoto todavía; el repositorio público será `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology ya apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
+Git en la rama `main`, que sigue a `origin` = `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 
 **Todos los commits llevan `Signed-off-by`** (`git commit -s`): el proyecto usa DCO (ver `CONTRIBUTING.md`).
 
@@ -30,6 +31,7 @@ src/Arcanist.Extensibility/  SDK de extensiones (IArcanistExtension, manifiesto)
 src/Arcanist.Web/             panel de administración: Angular 22 + Tailwind v4 + spartan-ng (paquete npm `arcanist-web`)
 src/Arcanist.Tray/            app de bandeja para Windows (Avalonia 12 + Velopack), net10.0-windows
 native/arcanist-audio/        crate Rust de análisis de audio (Symphonia), con C ABI para .NET
+native/arcanist-p2p/          crate Rust de la red P2P (iroh), con C ABI para .NET y bindings uniffi para móviles
 tests/                        Arcanist.Core.Tests, Arcanist.Tray.Tests y Arcanist.TestExtension (extensión de prueba)
 packaging/                    instalador de Windows, tarballs y unidad systemd de Linux, paquete Synology (spksrc)
 .github/workflows/            ci.yml y release.yml
@@ -37,10 +39,11 @@ packaging/                    instalador de Windows, tarballs y unidad systemd d
 
 `Arcanist.Web` **no está en la solución `.slnx`** (Angular no es un proyecto MSBuild); se construye y prueba por separado con npm.
 
-**Crate nativa** (`native/arcanist-audio`, Rust 1.85+ por la edición 2024):
-- `dotnet build` del servidor ejecuta `cargo build --release` si hay Rust (incremental, target `BuildNativeAudio` del csproj) y copia `arcanist_audio.dll`/`libarcanist_audio.so` a la salida. Sin Rust ni librería precompilada, avisa y el servidor funciona sin análisis.
-- Para otros RID: `packaging/native/build.sh <rid>` deja la librería en `artifacts/native/<rid>/`, de donde la toma `dotnet publish -r <rid>`. Linux usa cargo-zigbuild con glibc 2.27 (`pip install cargo-zigbuild ziglang`).
-- `cargo test --release --manifest-path native/arcanist-audio/Cargo.toml` para sus tests. Ejemplos de diagnóstico: `cargo run --release --example analyze -- <archivos>` (análisis y velocidad) y `--example compare -- <referencia> <archivos>` (similitud de huellas).
+**Crates nativas** (`native/arcanist-audio` y `native/arcanist-p2p`, Rust 1.85+ por la edición 2024):
+- `dotnet build` del servidor ejecuta `cargo build --release` de las dos si hay Rust (incremental, target `BuildNative` del csproj, que recorre los ítems `NativeCrate`) y copia `arcanist_audio`/`arcanist_p2p` (`.dll`/`lib*.so`/`lib*.dylib`) a la salida. Sin Rust ni librerías precompiladas, avisa y el servidor funciona sin análisis ni red P2P. `-p:SkipNativeBuild=true` (o el antiguo `SkipNativeAudioBuild`) no llama a cargo.
+- Para otros RID: `packaging/native/build.sh <rid>` deja las dos librerías en `artifacts/native/<rid>/`, de donde las toma `dotnet publish -r <rid>`. Linux usa cargo-zigbuild con glibc 2.27 (`pip install cargo-zigbuild ziglang`).
+- `cargo test --release --manifest-path native/<crate>/Cargo.toml` para sus tests. Los de la P2P conectan dos nodos en esta máquina sin salir a internet.
+- Bindings móviles: `cargo build --release --features mobile` y `cargo run --features bindgen --bin uniffi-bindgen -- generate --library <librería> --language kotlin --language swift --out-dir <dir>` (ver `docs/developers/p2p.md`). La raíz tiene un `.gitignore` de .NET que ignora `bin/`: por eso el binario de bindgen vive en `native/arcanist-p2p/bindgen/`. Ejemplos de diagnóstico: `cargo run --release --example analyze -- <archivos>` (análisis y velocidad) y `--example compare -- <referencia> <archivos>` (similitud de huellas).
 - Los pánicos se capturan en la frontera FFI: un archivo corrupto nunca tumba el servidor. **No poner `panic = "abort"`.**
 
 **Core (.NET)**, desde la raíz:
@@ -334,6 +337,15 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
   - **Formatos** (`DlnaFormats`): cada ítem ofrece primero el original, luego FLAC y LPCM (`TranscodeProfile.Lpcm`, 16 bits a 44,1 kHz, interno: no está en `TranscodeFormat`) si es sin pérdida, y MP3. Los originales admiten Range (`DLNA.ORG_OP=01`); las conversiones, `TimeSeekRange.dlna.org` (`OP=10`). Todo pasa por `MediaResponses`, así que también servirá las bibliotecas en la nube (F10).
   - **"Reproducir en"** (`RendererRegistry`, `RendererControl`, `RendererSessions`): renderers por SSDP o añadidos por URL; el formato se elige con su `GetProtocolInfo`. Cada renderer tiene una cola en memoria; se le da la siguiente pista con `SetNextAVTransportURI` cuando la admite y un bucle de 1 s detecta el final, avanza y registra la reproducción para el usuario (`ListeningService.RecordPlayAsync(UserAccess, …)`). Los renderers piden el audio con `/ext/dlna/play/<token>/…`, una concesión de Data Protection de 7 días para esa pista y ese usuario.
   - Panel: página DLNA (activar, nombre, bibliotecas, secciones ordenables, renderers con controles y "reproducir un álbum"). Guía en `docs/developers/README.md`.
+- **Red P2P (implementado):** `native/arcanist-p2p`, `P2P/` y `Application/P2P/`. Ajustes `p2p.settings` (`P2PConfig`), apagada por defecto. Guía pública en `docs/developers/p2p.md`.
+  - **Crate** (iroh 1.3, ALPN `arcanist/tunnel/1`): con relays de n0 (por defecto, con su búsqueda de direcciones), un relay propio, solo directo, o `Local` (sin nada externo: tests y `Arcanist:P2P:Relay`). *Servir*: cada stream entrante se lleva al puerto HTTP del servidor en loopback precedido de un preámbulo de 80 bytes (`ARCANIST-P2P/1\r\n` + secreto del proceso + id del nodo remoto). *Conectar*: abre un puerto local que tunela a otro nodo y se reconecta solo. C ABI (`ffi.rs`, sin pánicos que crucen) y uniffi (`mobile.rs`, feature `mobile`) con `parse_invitation`.
+  - **Servidor:** `P2PNode` arranca el nodo con la clave de `<datos>/keys/p2p-node.key` (el id nunca cambia) cuando el servidor ya escucha, y lo rehace al cambiar los ajustes. `P2PConnections` (middleware de conexión de Kestrel en todos los endpoints) lee el preámbulo solo en conexiones de loopback, sin consumir nada si no lo es; con secreto erróneo aborta. Envuelve el transporte en `MeteredStream` (cuenta bytes y aplica los límites de ancho de banda con `TokenBucket`, del peer y global).
+  - **`P2PGateMiddleware`, antes de `UseForwardedHeaders`:** la petición tunelada recibe una IP de `100::/64` derivada del nodo (ni local ni proxy de confianza: el rate limit va por nodo, el setup pide código y DLNA no responde) y pierde las cabeceras `X-Forwarded-*`. Los handshakes (`/rest/v1/p2p/pair`, `/join`) y `/health` están abiertos a cualquier nodo; lo demás exige un peer (`P2PPeerDirectory`, en memoria, recargado al cambiar) no revocado ni caducado. Los dispositivos usan la API normal (inician sesión); los servidores solo `/rest/v1/peer/**`. Las peticiones de audio cuentan contra `MaxStreams` (429 `too_many_streams`) y se registran en la actividad.
+  - **Peers** (`P2PPeer`: `Device` de un usuario o `Server`, con `P2PRules`: descargas, bitrate máximo, ancho de banda, streams; caducidad y revocación inmediata). Invitaciones de un solo uso (`P2PInvitation`, solo el hash del token): `arcanist://p2p?kind=device|share&node=<ticket base64url>&token=…&name=…` (`P2PLinks`); 30 min para dispositivos, 7 días para servidores. `MediaResponses` aplica las reglas del peer: sin descargas si no se permiten y bitrate máximo en streams.
+  - **Compartir bibliotecas:** el que comparte sirve la API de peers (`PeerApi`: `info`, `files` paginado con los metadatos de su catálogo, `stream` con sus reglas, `artwork`), con rutas prefijadas por el nombre de la biblioteca. El que recibe guarda un `P2PRemote` y una biblioteca con una fuente `LibrarySourceKind.Peer` (ubicación = id del remoto, `VisibleToAll` falso). `PeerStorage` implementa `IDescribedStorage`: el escáner (`ScanDescribedAsync`) cataloga lo descrito sin descargar nada (solo carátulas) y marca desaparecidos solo si la fuente respondió; un 403 del otro lado la marca `Revoked`. El análisis salta los archivos de peers. Al reproducir, `PeerStreaming` reenvía la petición (Range, formato, bitrate, offset) al dueño y retransmite su respuesta; `StreamService` prefiere las copias locales.
+  - **Copias:** si el dueño permite descargas, `copyReceivedShare` (`ShareCopier`, una a la vez, en memoria) trae los originales a una carpeta local con su ruta (bajo una carpeta con el nombre de la biblioteca compartida), sin sobrescribir, y escanea esa biblioteca: la copia se une a la misma pista por `ContentHash`.
+  - **Estadísticas y actividad:** `P2PTraffic` mide cada segundo (tasa actual, pico, segundos conectado) y suma cada minuto a `P2PPeer`; `P2PActivityLog` escribe en segundo plano (90 días, 20.000 entradas).
+  - Panel: página **Red P2P** (admins: nodo y ajustes, servidores con los que se comparte, dispositivos, bibliotecas recibidas, actividad) y **Mis dispositivos** en Mi cuenta (QR con `qrcode-generator`, dibujado como un path SVG). Tests: `P2PTests` con dos servidores reales (`UseKestrel`) en modo `Local`.
 - **Permisos:** `Role` (Admin/User) + flags de permisos + `LibraryAccess(UserId, LibraryId)` por usuario y biblioteca. Los permisos se leen de la BD, no del JWT.
 - **Capacidades:** `ICapabilityService`. Lo local siempre está activo. `UltimateCloudSource` requiere una cuenta gratuita; `CloudSync`, `ThirdPartyStorage` y `CloudConnect` requieren tier de pago.
 - **Setup (implementado):** `Setup/` y `Api/Rest/SetupEndpoints.cs`.
@@ -380,7 +392,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". E
 - **F5:** experiencia de usuario (completada): valoraciones con modo de servidor (cinco estrellas o una), reproducciones informadas por los reproductores con historial y estadísticas (también del servidor en el panel), playlists públicas y colaborativas, búsqueda de texto completo por proveedor, e inicio, mixes y páginas de artista como API para los reproductores.
 - **F6:** ecosistema (completada): reproductores web instalables desde zip o URL, SDK de extensiones con carga aislada, contraseñas de aplicación, Subsonic/OpenSubsonic y mStream como extensiones integradas, e importador de mStream desde su carpeta o su servidor (también desde el asistente).
 - **F7:** DLNA (completada): servidor DLNA/UPnP con SSDP propio, solo en la red local y solo con las bibliotecas publicadas, árbol configurable desde el panel, formatos sin pérdida primero (original, FLAC, LPCM) y MP3 con ffmpeg, y "reproducir en" renderers con cola en el servidor.
-- **F8:** red P2P iroh (crate Rust `arcanist-p2p` con C ABI para .NET y uniffi para móviles) y su sección en el admin.
+- **F8:** red P2P (completada): crate `arcanist-p2p` sobre iroh con C ABI y bindings uniffi, acceso remoto emparejando dispositivos con QR, bibliotecas compartidas entre servidores en streaming (y descarga si el dueño la permite), reglas y límites por peer y globales, estadísticas y actividad, y su sección en el panel.
 - **F9:** migrador SQLite → PostgreSQL con UI.
 - **F10:** integración con Ultimate Cloud.
 

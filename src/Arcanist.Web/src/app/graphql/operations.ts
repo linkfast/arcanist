@@ -1079,3 +1079,178 @@ export const DlnaAlbumTracksQuery = graphql(`
     }
   }
 `);
+
+export const P2PStatusFields = graphql(`
+  fragment P2PStatusFields on P2PStatus {
+    enabled
+    available
+    running
+    errorCode
+    nodeId
+    name
+    customName
+    relay
+    relayUrl
+    homeRelay
+    relayConnected
+    bandwidthKbps
+    maxStreams
+    connectedPeers
+    activeStreams
+    currentBytesPerSecond
+    peakBytesPerSecond
+  }
+`);
+
+export const NetworkPeerFields = graphql(`
+  fragment NetworkPeerFields on NetworkPeer {
+    id
+    kind
+    name
+    nodeId
+    userId
+    userName
+    rules {
+      allowDownload
+      maxBitRate
+      bandwidthKbps
+      maxStreams
+    }
+    libraryIds
+    createdAt
+    expiresAt
+    revokedAt
+    lastSeenAt
+    online
+    activeStreams
+    bytesSent
+    bytesReceived
+    currentBytesPerSecond
+    averageBytesPerSecond
+    peakBytesPerSecond
+    streams
+  }
+`);
+
+export const ReceivedShareFields = graphql(`
+  fragment ReceivedShareFields on ReceivedShare {
+    id
+    name
+    nodeId
+    libraryId
+    rules {
+      allowDownload
+      maxBitRate
+      bandwidthKbps
+      maxStreams
+    }
+    active
+    online
+    createdAt
+    lastContactAt
+    copy {
+      status
+      total
+      copied
+      skipped
+      errorCode
+    }
+  }
+`);
+
+export const NetworkQuery = graphql(`
+  query Network {
+    p2pStatus {
+      ...P2PStatusFields
+    }
+    networkPeers {
+      ...NetworkPeerFields
+    }
+    receivedShares {
+      ...ReceivedShareFields
+    }
+    p2pActivity(limit: 50) {
+      id
+      at
+      kind
+      peerId
+      peerName
+      detail
+    }
+    libraries {
+      id
+      name
+      sources {
+        id
+        kind
+        location
+      }
+    }
+  }
+`);
+
+export const MyDevicesQuery = graphql(`
+  query MyDevices {
+    networkPeers(kind: DEVICE) {
+      ...NetworkPeerFields
+    }
+  }
+`);
+
+export const SetP2PSettingsMutation = graphql(`
+  mutation SetP2PSettings($input: P2PSettingsInput!) {
+    setP2pSettings(input: $input) {
+      ...P2PStatusFields
+    }
+  }
+`);
+
+export const CreateDeviceInvitationMutation = graphql(`
+  mutation CreateDeviceInvitation($input: CreateDeviceInvitationInput!) {
+    createDeviceInvitation(input: $input) {
+      link
+      expiresAt
+    }
+  }
+`);
+
+export const CreateShareInvitationMutation = graphql(`
+  mutation CreateShareInvitation($input: CreateShareInvitationInput!) {
+    createShareInvitation(input: $input) {
+      link
+      expiresAt
+    }
+  }
+`);
+
+export const UpdateNetworkPeerMutation = graphql(`
+  mutation UpdateNetworkPeer($input: UpdateNetworkPeerInput!) {
+    updateNetworkPeer(input: $input) {
+      ...NetworkPeerFields
+    }
+  }
+`);
+
+export const RevokeNetworkPeerMutation = graphql(`
+  mutation RevokeNetworkPeer($id: ID!) {
+    revokeNetworkPeer(id: $id) {
+      ...NetworkPeerFields
+    }
+  }
+`);
+
+export const AcceptShareMutation = graphql(`
+  mutation AcceptShare($link: String!) {
+    acceptShare(link: $link) {
+      ...ReceivedShareFields
+    }
+  }
+`);
+
+export const CopyReceivedShareMutation = graphql(`
+  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {
+    copyReceivedShare(input: $input) {
+      ...ReceivedShareFields
+    }
+  }
+`);

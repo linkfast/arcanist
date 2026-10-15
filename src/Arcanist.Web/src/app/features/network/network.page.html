@@ -1,0 +1,616 @@
+<header class="mb-6">
+  <h1 class="text-2xl font-semibold">{{ 'network.title' | t }}</h1>
+  <p class="text-sm text-muted-foreground">{{ 'network.subtitle' | t }}</p>
+</header>
+
+@if (!status()) {
+  <div class="flex justify-center py-8"><hlm-spinner /></div>
+}
+
+@if (status(); as current) {
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-6">
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'network.node.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'network.node.description' | t }}</p>
+      </div>
+      <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-5">
+        @if (!current.available) {
+          <div hlmAlert variant="destructive">
+            <p hlmAlertDescription>{{ i18n.error('p2p_unavailable') }}</p>
+          </div>
+        }
+
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          @if (current.running) {
+            <span hlmBadge variant="secondary">{{ 'network.node.running' | t }}</span>
+            @if (current.relay !== 'DIRECT') {
+              <span hlmBadge [variant]="current.relayConnected ? 'secondary' : 'outline'">{{
+                (current.relayConnected
+                  ? 'network.node.relayConnected'
+                  : 'network.node.relayPending'
+                ) | t
+              }}</span>
+            }
+          } @else {
+            <span hlmBadge variant="outline">{{ 'network.node.stopped' | t }}</span>
+          }
+          @if (current.errorCode) {
+            <span class="text-destructive">{{ i18n.error(current.errorCode) }}</span>
+          }
+        </div>
+
+        @if (current.nodeId) {
+          <dl class="grid gap-2 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
+            <dt class="text-muted-foreground">{{ 'network.node.id' | t }}</dt>
+            <dd class="font-mono text-xs break-all">{{ current.nodeId }}</dd>
+            @if (current.homeRelay) {
+              <dt class="text-muted-foreground">{{ 'network.node.homeRelay' | t }}</dt>
+              <dd class="text-xs break-all">{{ current.homeRelay }}</dd>
+            }
+            <dt class="text-muted-foreground">{{ 'network.node.now' | t }}</dt>
+            <dd>
+              {{
+                'network.node.traffic'
+                  | t
+                    : {
+                        peers: current.connectedPeers,
+                        streams: current.activeStreams,
+                        rate: (current.currentBytesPerSecond | bytes),
+                        peak: (current.peakBytesPerSecond | bytes),
+                      }
+              }}
+            </dd>
+          </dl>
+        }
+
+        @if (settings; as form) {
+          <form class="grid gap-4" (ngSubmit)="saveSettings()">
+            <label class="flex items-center gap-2 text-sm">
+              <hlm-switch [checked]="form.enabled" (checkedChange)="form.enabled = $event" />
+              {{ 'network.node.enabled' | t }}
+            </label>
+            <hlm-field>
+              <label hlmFieldLabel for="p2p-name">{{ 'network.node.name' | t }}</label>
+              <input
+                hlmInput
+                id="p2p-name"
+                name="name"
+                [placeholder]="current.name"
+                [(ngModel)]="form.name"
+              />
+            </hlm-field>
+            <hlm-field>
+              <span hlmFieldLabel>{{ 'network.relay.title' | t }}</span>
+              <hlm-radio-group class="grid gap-2" name="relay" [(ngModel)]="form.relay">
+                @for (relay of relays; track relay) {
+                  <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                    <hlm-radio [value]="relay" class="mt-0.5"
+                      ><hlm-radio-indicator indicator
+                    /></hlm-radio>
+                    <span class="grid gap-0.5">
+                      <span class="font-medium">{{ 'network.relay.' + relay + '.name' | t }}</span>
+                      <span class="text-xs text-muted-foreground">{{
+                        'network.relay.' + relay + '.help' | t
+                      }}</span>
+                    </span>
+                  </label>
+                }
+              </hlm-radio-group>
+            </hlm-field>
+            @if (form.relay === 'CUSTOM') {
+              <hlm-field>
+                <label hlmFieldLabel for="p2p-relay">{{ 'network.relay.url' | t }}</label>
+                <input
+                  hlmInput
+                  id="p2p-relay"
+                  name="relayUrl"
+                  type="url"
+                  placeholder="https://relay.example.com"
+                  [(ngModel)]="form.relayUrl"
+                />
+              </hlm-field>
+            }
+            <div class="grid gap-3 sm:grid-cols-2">
+              <hlm-field>
+                <label hlmFieldLabel for="p2p-bandwidth">{{ 'network.node.bandwidth' | t }}</label>
+                <input
+                  hlmInput
+                  id="p2p-bandwidth"
+                  name="bandwidth"
+                  inputmode="numeric"
+                  [placeholder]="'network.noLimit' | t"
+                  [(ngModel)]="form.bandwidthKbps"
+                />
+              </hlm-field>
+              <hlm-field>
+                <label hlmFieldLabel for="p2p-streams">{{ 'network.node.maxStreams' | t }}</label>
+                <input
+                  hlmInput
+                  id="p2p-streams"
+                  name="streams"
+                  inputmode="numeric"
+                  [placeholder]="'network.noLimit' | t"
+                  [(ngModel)]="form.maxStreams"
+                />
+              </hlm-field>
+            </div>
+            <button hlmBtn type="submit" class="justify-self-start" [disabled]="busy()">
+              @if (busy()) {
+                <hlm-spinner class="size-4" />
+              }
+              {{ 'common.save' | t }}
+            </button>
+          </form>
+        }
+      </div>
+    </section>
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'network.servers.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'network.servers.description' | t }}</p>
+        <div hlmCardAction>
+          <button
+            hlmBtn
+            size="sm"
+            type="button"
+            class="gap-1"
+            [disabled]="!current.running"
+            (click)="openShare()"
+          >
+            <ng-icon name="lucidePlus" />
+            {{ 'network.servers.invite' | t }}
+          </button>
+        </div>
+      </div>
+      <div hlmCardContent>
+        <ng-container
+          *ngTemplateOutlet="
+            peerList;
+            context: { $implicit: servers(), empty: 'network.servers.empty' }
+          "
+        />
+      </div>
+    </section>
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'network.devices.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'network.devices.description' | t }}</p>
+        <div hlmCardAction>
+          <button
+            hlmBtn
+            size="sm"
+            variant="outline"
+            type="button"
+            class="gap-1"
+            [disabled]="!current.running"
+            (click)="pairing.set({ name: '' })"
+          >
+            <ng-icon name="lucidePlus" />
+            {{ 'devices.pair' | t }}
+          </button>
+        </div>
+      </div>
+      <div hlmCardContent>
+        <ng-container
+          *ngTemplateOutlet="
+            peerList;
+            context: { $implicit: devices(), empty: 'network.devices.empty' }
+          "
+        />
+      </div>
+    </section>
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'network.received.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'network.received.description' | t }}</p>
+        <div hlmCardAction>
+          <button
+            hlmBtn
+            size="sm"
+            variant="outline"
+            type="button"
+            class="gap-1"
+            [disabled]="!current.running"
+            (click)="accepting.set({ link: '' })"
+          >
+            <ng-icon name="lucidePlus" />
+            {{ 'network.received.accept' | t }}
+          </button>
+        </div>
+      </div>
+      <ul hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-2">
+        @for (share of shares(); track share.id) {
+          <li class="grid gap-1 rounded-md border p-3 text-sm">
+            <p class="flex flex-wrap items-center gap-2">
+              <span class="font-medium">{{ share.name }}</span>
+              @if (!share.active) {
+                <span hlmBadge variant="destructive">{{ 'network.received.revoked' | t }}</span>
+              } @else if (share.online) {
+                <span hlmBadge variant="secondary">{{ 'network.online' | t }}</span>
+              }
+            </p>
+            <p class="text-xs text-muted-foreground">
+              {{ 'network.received.library' | t: { library: libraryName(share.libraryId) } }}
+              · {{ rulesSummary(share.rules) }}
+            </p>
+            @if (share.lastContactAt) {
+              <p class="text-xs text-muted-foreground" [title]="share.lastContactAt | dateTime">
+                {{ 'network.lastContact' | t: { when: (share.lastContactAt | relativeTime) } }}
+              </p>
+            }
+            @if (share.copy; as copy) {
+              <p class="flex items-center gap-2 text-xs text-muted-foreground">
+                @if (copy.status === 'QUEUED' || copy.status === 'RUNNING') {
+                  <hlm-spinner class="size-3" />
+                }
+                {{
+                  'network.received.copy.' + copy.status
+                    | t: { copied: copy.copied, skipped: copy.skipped, total: copy.total }
+                }}
+                @if (copy.errorCode) {
+                  <span class="text-destructive">{{ i18n.error(copy.errorCode) }}</span>
+                }
+              </p>
+            }
+            @if (share.active && share.rules.allowDownload) {
+              <button
+                hlmBtn
+                variant="outline"
+                size="sm"
+                type="button"
+                class="justify-self-start"
+                [disabled]="
+                  busy() ||
+                  copyTargets().length === 0 ||
+                  share.copy?.status === 'QUEUED' ||
+                  share.copy?.status === 'RUNNING'
+                "
+                (click)="openCopy(share)"
+              >
+                {{ 'network.received.copyButton' | t }}
+              </button>
+            }
+          </li>
+        } @empty {
+          <li class="text-sm text-muted-foreground">{{ 'network.received.empty' | t }}</li>
+        }
+      </ul>
+    </section>
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'network.activity.title' | t }}</h2>
+      </div>
+      <ul hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-1 text-sm">
+        @for (entry of activity(); track entry.id) {
+          <li class="flex flex-wrap items-baseline gap-x-2">
+            <span class="text-xs text-muted-foreground" [title]="entry.at | dateTime">{{
+              entry.at | relativeTime
+            }}</span>
+            <span>
+              {{ 'network.activity.' + entry.kind | t: { peer: entry.peerName } }}
+              @if (entry.detail && entry.kind !== 'JOINED') {
+                <span class="text-muted-foreground">
+                  · {{ entry.kind === 'REFUSED' ? i18n.error(entry.detail) : entry.detail }}</span
+                >
+              }
+            </span>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground">{{ 'network.activity.empty' | t }}</li>
+        }
+      </ul>
+    </section>
+  </div>
+}
+
+<ng-template #peerList let-peers let-empty="empty">
+  <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+    @for (peer of peers; track peer.id) {
+      <li class="flex items-start justify-between gap-3 rounded-md border p-3 text-sm">
+        <div class="grid min-w-0 gap-1">
+          <p class="flex flex-wrap items-center gap-2">
+            <span class="font-medium">{{ peer.name }}</span>
+            @if (peer.userName) {
+              <span class="text-xs text-muted-foreground">{{ peer.userName }}</span>
+            }
+            @if (peer.revokedAt) {
+              <span hlmBadge variant="destructive">{{ 'network.revoked' | t }}</span>
+            } @else if (peer.online) {
+              <span hlmBadge variant="secondary">{{ 'network.online' | t }}</span>
+            }
+          </p>
+          <p class="text-xs text-muted-foreground">
+            {{ rulesSummary(peer.rules) }}
+            @if (peer.kind === 'SERVER') {
+              ·
+              {{
+                'network.servers.libraries'
+                  | t: { count: peer.libraryIds.length, names: peerLibraries(peer) }
+              }}
+            }
+            @if (peer.expiresAt) {
+              · {{ 'network.until' | t: { when: (peer.expiresAt | dateTime) } }}
+            }
+          </p>
+          <p class="text-xs text-muted-foreground">
+            {{
+              'network.stats'
+                | t
+                  : {
+                      sent: (peer.bytesSent | bytes),
+                      average: (peer.averageBytesPerSecond | bytes),
+                      peak: (peer.peakBytesPerSecond | bytes),
+                      streams: (peer.streams | count),
+                      active: peer.activeStreams,
+                    }
+            }}
+            @if (peer.lastSeenAt) {
+              · {{ 'network.lastSeen' | t: { when: (peer.lastSeenAt | relativeTime) } }}
+            }
+          </p>
+        </div>
+        @if (!peer.revokedAt) {
+          <div class="flex shrink-0 gap-1">
+            <button
+              hlmBtn
+              variant="ghost"
+              size="icon"
+              type="button"
+              [attr.aria-label]="'common.edit' | t"
+              (click)="openEdit(peer)"
+            >
+              <ng-icon name="lucidePencil" />
+            </button>
+            <button
+              hlmBtn
+              variant="ghost"
+              size="icon"
+              type="button"
+              [attr.aria-label]="'network.revoke' | t"
+              (click)="revoking.set(peer)"
+            >
+              <ng-icon name="lucideShieldOff" />
+            </button>
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="text-sm text-muted-foreground">{{ empty | t }}</li>
+    }
+  </ul>
+</ng-template>
+
+<hlm-dialog [state]="sharing() ? 'open' : 'closed'" (closed)="sharing.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100vh-2rem)] w-[min(36rem,calc(100vw-2rem))] overflow-y-auto"
+  >
+    @if (sharing(); as form) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'network.servers.invite' | t }}</h3>
+        <p hlmDialogDescription>{{ 'network.servers.inviteHelp' | t }}</p>
+      </hlm-dialog-header>
+      <form class="grid gap-4" (ngSubmit)="createShare()">
+        <hlm-field>
+          <label hlmFieldLabel for="share-name">{{ 'network.servers.name' | t }}</label>
+          <input
+            hlmInput
+            id="share-name"
+            name="name"
+            [placeholder]="'network.servers.namePlaceholder' | t"
+            [(ngModel)]="form.name"
+          />
+        </hlm-field>
+        <div class="grid gap-2">
+          <span class="text-sm font-medium">{{ 'network.servers.choose' | t }}</span>
+          @for (library of shareable(); track library.id) {
+            <label class="flex items-center gap-2 text-sm">
+              <hlm-checkbox
+                [checked]="form.libraryIds.includes(library.id)"
+                (checkedChange)="form.libraryIds = toggle(form.libraryIds, library.id, $event)"
+              />
+              {{ library.name }}
+            </label>
+          }
+        </div>
+        <app-peer-rules id="share" [form]="form.rules" />
+        <hlm-field>
+          <label hlmFieldLabel for="share-until">{{ 'network.accessUntil' | t }}</label>
+          <input hlmInput id="share-until" name="until" type="date" [(ngModel)]="form.expiresOn" />
+          <p hlmFieldDescription>{{ 'network.accessUntilHelp' | t }}</p>
+        </hlm-field>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="ghost" type="button" (click)="sharing.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button
+            hlmBtn
+            type="submit"
+            [disabled]="busy() || !form.name.trim() || form.libraryIds.length === 0"
+          >
+            {{ 'network.servers.create' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="editing() ? 'open' : 'closed'" (closed)="editing.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100vh-2rem)] w-[min(36rem,calc(100vw-2rem))] overflow-y-auto"
+  >
+    @if (editing(); as form) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'network.edit' | t: { name: form.peer.name } }}</h3>
+      </hlm-dialog-header>
+      <form class="grid gap-4" (ngSubmit)="saveEdit()">
+        <hlm-field>
+          <label hlmFieldLabel for="edit-name">{{ 'network.servers.name' | t }}</label>
+          <input hlmInput id="edit-name" name="name" [(ngModel)]="form.name" />
+        </hlm-field>
+        @if (form.peer.kind === 'SERVER') {
+          <div class="grid gap-2">
+            <span class="text-sm font-medium">{{ 'network.servers.choose' | t }}</span>
+            @for (library of shareable(); track library.id) {
+              <label class="flex items-center gap-2 text-sm">
+                <hlm-checkbox
+                  [checked]="form.libraryIds.includes(library.id)"
+                  (checkedChange)="form.libraryIds = toggle(form.libraryIds, library.id, $event)"
+                />
+                {{ library.name }}
+              </label>
+            }
+          </div>
+        }
+        <app-peer-rules id="edit" [form]="form.rules" />
+        <hlm-field>
+          <label hlmFieldLabel for="edit-until">{{ 'network.accessUntil' | t }}</label>
+          <input hlmInput id="edit-until" name="until" type="date" [(ngModel)]="form.expiresOn" />
+        </hlm-field>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="ghost" type="button" (click)="editing.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button hlmBtn type="submit" [disabled]="busy() || !form.name.trim()">
+            {{ 'common.save' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="pairing() ? 'open' : 'closed'" (closed)="pairing.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(28rem,calc(100vw-2rem))]">
+    @if (pairing(); as form) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'devices.pair' | t }}</h3>
+        <p hlmDialogDescription>{{ 'devices.pairHelp' | t }}</p>
+      </hlm-dialog-header>
+      <form class="grid gap-4" (ngSubmit)="createDeviceInvitation()">
+        <hlm-field>
+          <label hlmFieldLabel for="device-name">{{ 'devices.name' | t }}</label>
+          <input
+            hlmInput
+            id="device-name"
+            name="name"
+            [placeholder]="'devices.namePlaceholder' | t"
+            [(ngModel)]="form.name"
+          />
+        </hlm-field>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="ghost" type="button" (click)="pairing.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button hlmBtn type="submit" [disabled]="busy()">{{ 'devices.create' | t }}</button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="accepting() ? 'open' : 'closed'" (closed)="accepting.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(32rem,calc(100vw-2rem))]">
+    @if (accepting(); as form) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'network.received.accept' | t }}</h3>
+        <p hlmDialogDescription>{{ 'network.received.acceptHelp' | t }}</p>
+      </hlm-dialog-header>
+      <form class="grid gap-4" (ngSubmit)="acceptShare()">
+        <textarea
+          hlmInput
+          name="link"
+          rows="4"
+          class="min-h-24 font-mono text-xs"
+          placeholder="arcanist://p2p?kind=share&…"
+          [attr.aria-label]="'invitation.link' | t"
+          [(ngModel)]="form.link"
+        ></textarea>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="ghost" type="button" (click)="accepting.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button hlmBtn type="submit" [disabled]="busy() || !form.link.trim()">
+            @if (busy()) {
+              <hlm-spinner class="size-4" />
+            }
+            {{ 'network.received.accept' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="copying() ? 'open' : 'closed'" (closed)="copying.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(32rem,calc(100vw-2rem))]">
+    @if (copying(); as form) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'network.received.copyButton' | t }}</h3>
+        <p hlmDialogDescription>
+          {{ 'network.received.copyHelp' | t: { name: form.share.name } }}
+        </p>
+      </hlm-dialog-header>
+      <form class="grid gap-4" (ngSubmit)="copyShare()">
+        <hlm-field>
+          <label hlmFieldLabel for="copy-target">{{ 'network.received.copyTarget' | t }}</label>
+          <hlm-native-select
+            id="copy-target"
+            [value]="form.sourceId"
+            (change)="form.sourceId = $any($event.target).value"
+          >
+            @for (target of copyTargets(); track target.id) {
+              <option hlmNativeSelectOption [value]="target.id">{{ target.label }}</option>
+            }
+          </hlm-native-select>
+        </hlm-field>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="ghost" type="button" (click)="copying.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button hlmBtn type="submit" [disabled]="busy() || !form.sourceId">
+            {{ 'network.received.copyStart' | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="invitation() ? 'open' : 'closed'" (closed)="invitation.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(28rem,calc(100vw-2rem))]">
+    @if (invitation(); as created) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'invitation.title' | t }}</h3>
+        <p hlmDialogDescription>
+          {{ (created.qr ? 'invitation.deviceHelp' : 'invitation.serverHelp') | t }}
+        </p>
+      </hlm-dialog-header>
+      <app-invitation [link]="created.link" [expiresAt]="created.expiresAt" [showQr]="created.qr" />
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-alert-dialog [state]="revoking() ? 'open' : 'closed'" (closed)="revoking.set(null)">
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    <hlm-alert-dialog-header>
+      <h3 hlmAlertDialogTitle>{{ 'network.revokeTitle' | t: { name: revoking()?.name ?? '' } }}</h3>
+      <p hlmAlertDialogDescription>{{ 'network.revokeHelp' | t }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel type="button" (click)="revoking.set(null)">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button hlmAlertDialogAction type="button" (click)="revoke()">
+        {{ 'network.revoke' | t }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

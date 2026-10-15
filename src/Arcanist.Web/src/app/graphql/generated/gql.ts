@@ -109,6 +109,18 @@ type Documents = {
     "\n  mutation SetDlnaRendererVolume($rendererId: String!, $volume: Int!) {\n    setDlnaRendererVolume(rendererId: $rendererId, volume: $volume) {\n      ...DlnaRendererStateFields\n    }\n  }\n": typeof types.SetDlnaRendererVolumeDocument,
     "\n  query DlnaAlbumSearch($search: String!) {\n    albums(search: $search, first: 8) {\n      items {\n        id\n        title\n        artist {\n          name\n        }\n      }\n    }\n  }\n": typeof types.DlnaAlbumSearchDocument,
     "\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n": typeof types.DlnaAlbumTracksDocument,
+    "\n  fragment P2PStatusFields on P2PStatus {\n    enabled\n    available\n    running\n    errorCode\n    nodeId\n    name\n    customName\n    relay\n    relayUrl\n    homeRelay\n    relayConnected\n    bandwidthKbps\n    maxStreams\n    connectedPeers\n    activeStreams\n    currentBytesPerSecond\n    peakBytesPerSecond\n  }\n": typeof types.P2PStatusFieldsFragmentDoc,
+    "\n  fragment NetworkPeerFields on NetworkPeer {\n    id\n    kind\n    name\n    nodeId\n    userId\n    userName\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    libraryIds\n    createdAt\n    expiresAt\n    revokedAt\n    lastSeenAt\n    online\n    activeStreams\n    bytesSent\n    bytesReceived\n    currentBytesPerSecond\n    averageBytesPerSecond\n    peakBytesPerSecond\n    streams\n  }\n": typeof types.NetworkPeerFieldsFragmentDoc,
+    "\n  fragment ReceivedShareFields on ReceivedShare {\n    id\n    name\n    nodeId\n    libraryId\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    active\n    online\n    createdAt\n    lastContactAt\n    copy {\n      status\n      total\n      copied\n      skipped\n      errorCode\n    }\n  }\n": typeof types.ReceivedShareFieldsFragmentDoc,
+    "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    p2pActivity(limit: 50) {\n      id\n      at\n      kind\n      peerId\n      peerName\n      detail\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": typeof types.NetworkDocument,
+    "\n  query MyDevices {\n    networkPeers(kind: DEVICE) {\n      ...NetworkPeerFields\n    }\n  }\n": typeof types.MyDevicesDocument,
+    "\n  mutation SetP2PSettings($input: P2PSettingsInput!) {\n    setP2pSettings(input: $input) {\n      ...P2PStatusFields\n    }\n  }\n": typeof types.SetP2PSettingsDocument,
+    "\n  mutation CreateDeviceInvitation($input: CreateDeviceInvitationInput!) {\n    createDeviceInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": typeof types.CreateDeviceInvitationDocument,
+    "\n  mutation CreateShareInvitation($input: CreateShareInvitationInput!) {\n    createShareInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": typeof types.CreateShareInvitationDocument,
+    "\n  mutation UpdateNetworkPeer($input: UpdateNetworkPeerInput!) {\n    updateNetworkPeer(input: $input) {\n      ...NetworkPeerFields\n    }\n  }\n": typeof types.UpdateNetworkPeerDocument,
+    "\n  mutation RevokeNetworkPeer($id: ID!) {\n    revokeNetworkPeer(id: $id) {\n      ...NetworkPeerFields\n    }\n  }\n": typeof types.RevokeNetworkPeerDocument,
+    "\n  mutation AcceptShare($link: String!) {\n    acceptShare(link: $link) {\n      ...ReceivedShareFields\n    }\n  }\n": typeof types.AcceptShareDocument,
+    "\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": typeof types.CopyReceivedShareDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -206,6 +218,18 @@ const documents: Documents = {
     "\n  mutation SetDlnaRendererVolume($rendererId: String!, $volume: Int!) {\n    setDlnaRendererVolume(rendererId: $rendererId, volume: $volume) {\n      ...DlnaRendererStateFields\n    }\n  }\n": types.SetDlnaRendererVolumeDocument,
     "\n  query DlnaAlbumSearch($search: String!) {\n    albums(search: $search, first: 8) {\n      items {\n        id\n        title\n        artist {\n          name\n        }\n      }\n    }\n  }\n": types.DlnaAlbumSearchDocument,
     "\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n": types.DlnaAlbumTracksDocument,
+    "\n  fragment P2PStatusFields on P2PStatus {\n    enabled\n    available\n    running\n    errorCode\n    nodeId\n    name\n    customName\n    relay\n    relayUrl\n    homeRelay\n    relayConnected\n    bandwidthKbps\n    maxStreams\n    connectedPeers\n    activeStreams\n    currentBytesPerSecond\n    peakBytesPerSecond\n  }\n": types.P2PStatusFieldsFragmentDoc,
+    "\n  fragment NetworkPeerFields on NetworkPeer {\n    id\n    kind\n    name\n    nodeId\n    userId\n    userName\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    libraryIds\n    createdAt\n    expiresAt\n    revokedAt\n    lastSeenAt\n    online\n    activeStreams\n    bytesSent\n    bytesReceived\n    currentBytesPerSecond\n    averageBytesPerSecond\n    peakBytesPerSecond\n    streams\n  }\n": types.NetworkPeerFieldsFragmentDoc,
+    "\n  fragment ReceivedShareFields on ReceivedShare {\n    id\n    name\n    nodeId\n    libraryId\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    active\n    online\n    createdAt\n    lastContactAt\n    copy {\n      status\n      total\n      copied\n      skipped\n      errorCode\n    }\n  }\n": types.ReceivedShareFieldsFragmentDoc,
+    "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    p2pActivity(limit: 50) {\n      id\n      at\n      kind\n      peerId\n      peerName\n      detail\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": types.NetworkDocument,
+    "\n  query MyDevices {\n    networkPeers(kind: DEVICE) {\n      ...NetworkPeerFields\n    }\n  }\n": types.MyDevicesDocument,
+    "\n  mutation SetP2PSettings($input: P2PSettingsInput!) {\n    setP2pSettings(input: $input) {\n      ...P2PStatusFields\n    }\n  }\n": types.SetP2PSettingsDocument,
+    "\n  mutation CreateDeviceInvitation($input: CreateDeviceInvitationInput!) {\n    createDeviceInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": types.CreateDeviceInvitationDocument,
+    "\n  mutation CreateShareInvitation($input: CreateShareInvitationInput!) {\n    createShareInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": types.CreateShareInvitationDocument,
+    "\n  mutation UpdateNetworkPeer($input: UpdateNetworkPeerInput!) {\n    updateNetworkPeer(input: $input) {\n      ...NetworkPeerFields\n    }\n  }\n": types.UpdateNetworkPeerDocument,
+    "\n  mutation RevokeNetworkPeer($id: ID!) {\n    revokeNetworkPeer(id: $id) {\n      ...NetworkPeerFields\n    }\n  }\n": types.RevokeNetworkPeerDocument,
+    "\n  mutation AcceptShare($link: String!) {\n    acceptShare(link: $link) {\n      ...ReceivedShareFields\n    }\n  }\n": types.AcceptShareDocument,
+    "\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": types.CopyReceivedShareDocument,
 };
 
 /**
@@ -602,6 +626,54 @@ export function graphql(source: "\n  query DlnaAlbumSearch($search: String!) {\n
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n"): (typeof documents)["\n  query DlnaAlbumTracks($albumId: ID!) {\n    tracks(albumId: $albumId) {\n      items {\n        id\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment P2PStatusFields on P2PStatus {\n    enabled\n    available\n    running\n    errorCode\n    nodeId\n    name\n    customName\n    relay\n    relayUrl\n    homeRelay\n    relayConnected\n    bandwidthKbps\n    maxStreams\n    connectedPeers\n    activeStreams\n    currentBytesPerSecond\n    peakBytesPerSecond\n  }\n"): (typeof documents)["\n  fragment P2PStatusFields on P2PStatus {\n    enabled\n    available\n    running\n    errorCode\n    nodeId\n    name\n    customName\n    relay\n    relayUrl\n    homeRelay\n    relayConnected\n    bandwidthKbps\n    maxStreams\n    connectedPeers\n    activeStreams\n    currentBytesPerSecond\n    peakBytesPerSecond\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment NetworkPeerFields on NetworkPeer {\n    id\n    kind\n    name\n    nodeId\n    userId\n    userName\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    libraryIds\n    createdAt\n    expiresAt\n    revokedAt\n    lastSeenAt\n    online\n    activeStreams\n    bytesSent\n    bytesReceived\n    currentBytesPerSecond\n    averageBytesPerSecond\n    peakBytesPerSecond\n    streams\n  }\n"): (typeof documents)["\n  fragment NetworkPeerFields on NetworkPeer {\n    id\n    kind\n    name\n    nodeId\n    userId\n    userName\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    libraryIds\n    createdAt\n    expiresAt\n    revokedAt\n    lastSeenAt\n    online\n    activeStreams\n    bytesSent\n    bytesReceived\n    currentBytesPerSecond\n    averageBytesPerSecond\n    peakBytesPerSecond\n    streams\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment ReceivedShareFields on ReceivedShare {\n    id\n    name\n    nodeId\n    libraryId\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    active\n    online\n    createdAt\n    lastContactAt\n    copy {\n      status\n      total\n      copied\n      skipped\n      errorCode\n    }\n  }\n"): (typeof documents)["\n  fragment ReceivedShareFields on ReceivedShare {\n    id\n    name\n    nodeId\n    libraryId\n    rules {\n      allowDownload\n      maxBitRate\n      bandwidthKbps\n      maxStreams\n    }\n    active\n    online\n    createdAt\n    lastContactAt\n    copy {\n      status\n      total\n      copied\n      skipped\n      errorCode\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    p2pActivity(limit: 50) {\n      id\n      at\n      kind\n      peerId\n      peerName\n      detail\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n"): (typeof documents)["\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    p2pActivity(limit: 50) {\n      id\n      at\n      kind\n      peerId\n      peerName\n      detail\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MyDevices {\n    networkPeers(kind: DEVICE) {\n      ...NetworkPeerFields\n    }\n  }\n"): (typeof documents)["\n  query MyDevices {\n    networkPeers(kind: DEVICE) {\n      ...NetworkPeerFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetP2PSettings($input: P2PSettingsInput!) {\n    setP2pSettings(input: $input) {\n      ...P2PStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetP2PSettings($input: P2PSettingsInput!) {\n    setP2pSettings(input: $input) {\n      ...P2PStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateDeviceInvitation($input: CreateDeviceInvitationInput!) {\n    createDeviceInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n"): (typeof documents)["\n  mutation CreateDeviceInvitation($input: CreateDeviceInvitationInput!) {\n    createDeviceInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateShareInvitation($input: CreateShareInvitationInput!) {\n    createShareInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n"): (typeof documents)["\n  mutation CreateShareInvitation($input: CreateShareInvitationInput!) {\n    createShareInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UpdateNetworkPeer($input: UpdateNetworkPeerInput!) {\n    updateNetworkPeer(input: $input) {\n      ...NetworkPeerFields\n    }\n  }\n"): (typeof documents)["\n  mutation UpdateNetworkPeer($input: UpdateNetworkPeerInput!) {\n    updateNetworkPeer(input: $input) {\n      ...NetworkPeerFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RevokeNetworkPeer($id: ID!) {\n    revokeNetworkPeer(id: $id) {\n      ...NetworkPeerFields\n    }\n  }\n"): (typeof documents)["\n  mutation RevokeNetworkPeer($id: ID!) {\n    revokeNetworkPeer(id: $id) {\n      ...NetworkPeerFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AcceptShare($link: String!) {\n    acceptShare(link: $link) {\n      ...ReceivedShareFields\n    }\n  }\n"): (typeof documents)["\n  mutation AcceptShare($link: String!) {\n    acceptShare(link: $link) {\n      ...ReceivedShareFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n"): (typeof documents)["\n  mutation CopyReceivedShare($input: CopyReceivedShareInput!) {\n    copyReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

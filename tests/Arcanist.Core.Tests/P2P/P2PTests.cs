@@ -211,6 +211,55 @@ public sealed class P2PTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task A_share_whose_owner_allows_downloads_can_be_copied_into_a_local_library()
+    {
+        Assert.SkipUnless(NativeP2P.IsAvailable, "The P2P library is not built for this platform.");
+        var music = Music(("Zed/01.wav", new FixtureTags("Alone", "Zed", "Solo", "Zed", TrackNumber: 1)));
+        var owner = await StartServerAsync(new SetupLibrary("Música", [music]));
+        await owner.Factory.WaitForScansAsync(owner.Admin);
+        var copies = Directory.CreateTempSubdirectory("arcanist-p2p-copies-").FullName;
+        _folders.Add(copies);
+        var receiver = await StartServerAsync(new SetupLibrary("Mine", [copies]));
+        var ownerLibrary = (await owner.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))![0]
+            .GetProperty("id").GetGuid();
+
+        var (link, _) = Local(await InviteAsync(owner.Admin, "/rest/v1/p2p/invitations/share",
+            new CreateShareInvitationInput("Luis", [ownerLibrary], new PeerRulesInput(true, null, null, null), null)), owner.NodePort);
+        var share = await (await receiver.Admin.PostAsJsonAsync("/rest/v1/p2p/shares", new AcceptShareInput(link), ArcanistFactory.Json, Cancel))
+            .Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        await receiver.Factory.WaitForScansAsync(receiver.Admin);
+        var mine = (await receiver.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))!
+            .Single(l => l.GetProperty("name").GetString() == "Mine");
+        var target = mine.GetProperty("sources")[0].GetProperty("id").GetString();
+
+        var started = await receiver.Admin.PostAsJsonAsync($"/rest/v1/p2p/shares/{share.GetProperty("id").GetString()}/copy",
+            new { targetSourceId = target }, ArcanistFactory.Json, Cancel);
+        Assert.True(started.IsSuccessStatusCode, await started.Content.ReadAsStringAsync(Cancel));
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        JsonElement copy;
+        while (true)
+        {
+            copy = Assert.Single((await receiver.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/p2p/shares", ArcanistFactory.Json, Cancel))!)
+                .GetProperty("copy");
+            if (copy.GetProperty("status").GetString() is "COMPLETED" or "FAILED")
+                break;
+            Assert.True(DateTime.UtcNow < deadline, "The copy did not finish in time.");
+            await Task.Delay(100, Cancel);
+        }
+
+        Assert.Equal(("COMPLETED", 1, 1), (copy.GetProperty("status").GetString(), copy.GetProperty("total").GetInt32(), copy.GetProperty("copied").GetInt32()));
+        // The original, under a folder named after the shared library.
+        Assert.Equal(await File.ReadAllBytesAsync(Path.Combine(music, "Zed", "01.wav"), Cancel),
+            await File.ReadAllBytesAsync(Path.Combine(copies, "Música", "Zed", "01.wav"), Cancel));
+
+        // The copy is the same audio: one track, now with a local copy, which plays first.
+        await receiver.Factory.WaitForScansAsync(receiver.Admin);
+        var track = Assert.Single((await receiver.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel))
+            .GetProperty("items").EnumerateArray());
+        Assert.Equal(2, track.GetProperty("files").GetArrayLength());
+    }
+
+    [Fact]
     public async Task Links_round_trip_and_tunnelled_requests_get_an_untrusted_address()
     {
         var ticket = new NodeTicket(new string('a', 64), ["https://relay.example/"], ["192.0.2.1:1234"]);

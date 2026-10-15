@@ -54,6 +54,11 @@ public sealed partial class Mutation
     public static Task<NetworkPeer> RevokeNetworkPeer([Id] Guid id, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
         p2p.RevokePeerAsync(id, cancellationToken);
 
+    [Name("copyReceivedShare")]
+    [Description("Copies a received share's files into a folder of one of this server's libraries, when its owner allows downloads. Runs in the background; its progress shows in the share. Administrators only, with a recent authentication.")]
+    public static Task<ReceivedShare> CopyReceivedShare(CopyReceivedShareInput input, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
+        p2p.CopyShareAsync(input, cancellationToken);
+
     [Name("acceptShare")]
     [Description("Accepts another server's share with its invitation link: its libraries become one library here, scanned at once (nothing is downloaded: the music streams from that server). Administrators only, with a recent authentication.")]
     public static Task<ReceivedShare> AcceptShare(string link, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>

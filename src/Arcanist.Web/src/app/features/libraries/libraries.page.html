@@ -78,10 +78,14 @@
             <ul class="grid gap-1">
               @for (source of library.sources; track source.id) {
                 <li class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5">
-                  <span class="truncate font-mono text-xs" [title]="source.location">{{
-                    source.location
-                  }}</span>
-                  @if (canManage()) {
+                  @if (source.kind === 'PEER') {
+                    <span class="truncate text-xs">{{ 'libraries.sharedByPeer' | t }}</span>
+                  } @else {
+                    <span class="truncate font-mono text-xs" [title]="source.location">{{
+                      source.location
+                    }}</span>
+                  }
+                  @if (canManage() && source.kind !== 'PEER') {
                     <button
                       hlmBtn
                       variant="ghost"
@@ -200,7 +204,7 @@
               </button>
             }
           }
-          @if (canManage()) {
+          @if (canManage() && !isShared(library)) {
             <button
               hlmBtn
               variant="ghost"

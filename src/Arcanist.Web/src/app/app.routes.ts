@@ -68,6 +68,11 @@ export const routes: Routes = [
           import('./features/extensions/extensions.page').then((m) => m.ExtensionsPage),
       },
       {
+        path: 'network',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/network/network.page').then((m) => m.NetworkPage),
+      },
+      {
         path: 'dlna',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/dlna/dlna.page').then((m) => m.DlnaPage),

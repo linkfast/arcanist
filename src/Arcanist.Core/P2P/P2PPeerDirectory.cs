@@ -92,17 +92,27 @@ public sealed class P2PActivityLog(IArcanistDbContextFactory databases, TimeProv
             Detail = detail is { Length: > 500 } ? detail[..500] : detail,
         });
 
-    /// <summary>Writes what is queued now (tests, and before reading the log).</summary>
+    private readonly SemaphoreSlim _flushing = new(1, 1);
+
+    /// <summary>Writes what is queued now (before reading the log), after any write in progress.</summary>
     public async Task FlushAsync(CancellationToken cancellationToken)
     {
-        var batch = new List<P2PActivity>();
-        while (_queue.Reader.TryRead(out var entry))
-            batch.Add(entry);
-        if (batch.Count == 0 || !databases.IsConfigured)
-            return;
-        await using var db = databases.CreateDbContext();
-        db.P2PActivities.AddRange(batch);
-        await db.SaveChangesAsync(cancellationToken);
+        await _flushing.WaitAsync(cancellationToken);
+        try
+        {
+            var batch = new List<P2PActivity>();
+            while (_queue.Reader.TryRead(out var entry))
+                batch.Add(entry);
+            if (batch.Count == 0 || !databases.IsConfigured)
+                return;
+            await using var db = databases.CreateDbContext();
+            db.P2PActivities.AddRange(batch);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            _flushing.Release();
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

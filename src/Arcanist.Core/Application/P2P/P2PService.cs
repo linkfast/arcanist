@@ -114,7 +114,13 @@ public sealed record UpdateNetworkPeerInput(Guid Id, string Name, PeerRulesInput
 /// <param name="Rules">What the other server allows.</param>
 /// <param name="Active">False once the other server revoked the share or it expired.</param>
 /// <param name="Online">There is a connection to the other server now.</param>
-public sealed record ReceivedShare(Guid Id, string Name, string NodeId, Guid LibraryId, PeerRules Rules, bool Active, bool Online, DateTime CreatedAt, DateTime? LastContactAt);
+/// <param name="Copy">The last copy into a library of this server, since the server started.</param>
+public sealed record ReceivedShare(
+    Guid Id, string Name, string NodeId, Guid LibraryId, PeerRules Rules, bool Active, bool Online, DateTime CreatedAt, DateTime? LastContactAt,
+    ShareCopyProgress? Copy);
+
+/// <param name="TargetSourceId">The library folder the files are copied into, keeping their paths.</param>
+public sealed record CopyReceivedShareInput(Guid ShareId, Guid TargetSourceId);
 
 public sealed record P2PActivityEntry(Guid Id, DateTime At, P2PActivityKind Kind, Guid? PeerId, string PeerName, string? Detail);
 
@@ -370,6 +376,25 @@ public sealed class P2PService(
         return ToModel(remote, Node.State.Connected.ToHashSet(StringComparer.Ordinal));
     }
 
+    public async Task<ReceivedShare> CopyShareAsync(CopyReceivedShareInput input, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        var remote = await db.P2PRemotes.AsNoTracking().SingleOrDefaultAsync(r => r.Id == input.ShareId, cancellationToken)
+                     ?? throw new ArcanistException.NotFound();
+        if (!remote.Rules.AllowDownload)
+            throw new ArcanistException.Forbidden(ErrorCodes.DownloadNotAllowed);
+        var target = await db.LibrarySources.AsNoTracking().SingleOrDefaultAsync(s => s.Id == input.TargetSourceId, cancellationToken);
+        var storages = services.GetRequiredService<Storage.ILibraryStorageResolver>();
+        if (target is null || target.Kind == LibrarySourceKind.Peer)
+            throw ArcanistException.Field("targetSourceId", ErrorCodes.NotFound);
+        if (!await storages.For(target.Kind).CanWriteAsync(Storage.StorageLocation.From(target), cancellationToken))
+            throw ArcanistException.Field("targetSourceId", ErrorCodes.AccessDenied);
+
+        services.GetRequiredService<ShareCopier>().Enqueue(remote.Id, target.Id);
+        return ToModel(remote, Node.State.Connected.ToHashSet(StringComparer.Ordinal));
+    }
+
     public async Task<IReadOnlyList<P2PActivityEntry>> ActivityAsync(Guid? peerId, int? limit, CancellationToken cancellationToken)
     {
         guard.Admin();
@@ -547,10 +572,11 @@ public sealed class P2PService(
             seconds > 0 ? sent / seconds : 0, Math.Max(peer.PeakBytesPerSecond, traffic?.Peak ?? 0), streams);
     }
 
-    private static ReceivedShare ToModel(P2PRemote remote, IReadOnlySet<string> connected) => new(
+    private ReceivedShare ToModel(P2PRemote remote, IReadOnlySet<string> connected) => new(
         remote.Id, remote.Name, remote.NodeId, remote.LibraryId,
         new PeerRules(remote.Rules.AllowDownload, remote.Rules.MaxBitRate, remote.Rules.BandwidthKbps, remote.Rules.MaxStreams),
-        remote.Status == P2PRemoteStatus.Active, connected.Contains(remote.NodeId), remote.CreatedAt, remote.LastContactAt);
+        remote.Status == P2PRemoteStatus.Active, connected.Contains(remote.NodeId), remote.CreatedAt, remote.LastContactAt,
+        services.GetRequiredService<ShareCopier>().Progress(remote.Id));
 
     private static P2PRelayMode ToMode(P2PRelay relay) => relay switch
     {

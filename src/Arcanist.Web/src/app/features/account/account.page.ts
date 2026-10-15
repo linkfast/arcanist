@@ -24,6 +24,7 @@ import {
   RevokeMySessionMutation,
   ServerInfoQuery,
 } from '../../graphql/operations';
+import { MyDevices } from './my-devices';
 import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
 type Session = SessionsResult['mySessions'][number];
@@ -40,6 +41,7 @@ type Session = SessionsResult['mySessions'][number];
     TranslatePipe,
     DateTimePipe,
     RelativeTimePipe,
+    MyDevices,
   ],
   template: `
     <header class="mb-6">
@@ -237,6 +239,8 @@ type Session = SessionsResult['mySessions'][number];
           </ul>
         </div>
       </section>
+
+      <app-my-devices />
 
       <section hlmCard>
         <div hlmCardHeader>

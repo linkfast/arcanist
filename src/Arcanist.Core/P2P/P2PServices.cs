@@ -20,6 +20,8 @@ public static class P2PServiceCollectionExtensions
         services.AddSingleton<PeerClient>();
         services.AddSingleton<PeerApi>();
         services.AddSingleton<ILibraryStorage, PeerStorage>();
+        services.AddSingleton<ShareCopier>();
+        services.AddHostedService(provider => provider.GetRequiredService<ShareCopier>());
         // Streams last as long as the music: requests end with their cancellation, not with a timeout.
         services.AddHttpClient(PeerClient.HttpClientName, client => client.Timeout = Timeout.InfiniteTimeSpan);
         services.AddScoped<Application.P2P.P2PService>();

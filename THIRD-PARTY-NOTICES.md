@@ -44,6 +44,7 @@ GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr
 | ng-icons (`@ng-icons/core`) | MIT |
 | Lucide icons (`@ng-icons/lucide`) | ISC |
 | tslib | 0BSD |
+| qrcode-generator (QR codes of P2P invitations) | MIT |
 
 ## Native audio library (`native/arcanist-audio`, shipped with the server)
 

@@ -4128,6 +4128,48 @@
         }
       }
     },
+    "/rest/v1/p2p/shares/{id}/copy": {
+      "post": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Copies a received share\u0027s files into a folder of one of this server\u0027s libraries, when its owner allows downloads. Runs in the background; its progress shows in the share. Administrators only, with a recent authentication.",
+        "operationId": "CopyReceivedShare",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopyReceivedShareInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceivedShare"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/p2p/activity": {
       "get": {
         "tags": [
@@ -5715,6 +5757,23 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CopyReceivedShareInput": {
+        "required": [
+          "shareId",
+          "targetSourceId"
+        ],
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetSourceId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -9348,7 +9407,8 @@
           "active",
           "online",
           "createdAt",
-          "lastContactAt"
+          "lastContactAt",
+          "copy"
         ],
         "type": "object",
         "properties": {
@@ -9385,6 +9445,16 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "copy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ShareCopyProgress"
+              }
+            ]
           }
         }
       },
@@ -10309,6 +10379,59 @@
             }
           }
         }
+      },
+      "ShareCopyProgress": {
+        "required": [
+          "status",
+          "total",
+          "copied",
+          "skipped",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ShareCopyStatus"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "copied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skipped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ShareCopyStatus": {
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "COMPLETED",
+          "FAILED"
+        ]
       },
       "StarTrackInput": {
         "required": [

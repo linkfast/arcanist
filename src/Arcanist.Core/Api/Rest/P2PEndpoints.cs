@@ -62,6 +62,12 @@ public static class P2PEndpoints
             .WithSummary("Accepts another server's share with its invitation link: its libraries become one library here, scanned at once " +
                          "(nothing is downloaded: the music streams from that server). Administrators only, with a recent authentication.");
 
+        p2p.MapPost("/shares/{id:guid}/copy", (Guid id, CopyReceivedShareInput input, P2PService service, CancellationToken ct) =>
+                service.CopyShareAsync(input with { ShareId = id }, ct))
+            .WithName("CopyReceivedShare")
+            .WithSummary("Copies a received share's files into a folder of one of this server's libraries, when its owner allows downloads. " +
+                         "Runs in the background; its progress shows in the share. Administrators only, with a recent authentication.");
+
         p2p.MapGet("/activity", (Guid? peerId, int? limit, P2PService service, CancellationToken ct) => service.ActivityAsync(peerId, limit, ct))
             .WithName("P2pActivity")
             .WithSummary("What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only.");
@@ -98,7 +104,8 @@ public static class P2PEndpoints
                 double? timeOffset, PeerApi api, P2PActivityLog activity, CancellationToken ct) =>
             {
                 var caller = Caller(context);
-                var file = await api.FindAsync(caller, path, cue ?? 0, ct);
+                // A download is of the whole file, also when a cue sheet splits it into tracks.
+                var file = await api.FindAsync(caller, path, download == true && cue is null ? null : cue ?? 0, ct);
                 if (file is null)
                     return Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound);
                 TranscodeProfile? profile = null;

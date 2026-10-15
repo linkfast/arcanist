@@ -243,6 +243,11 @@ routes fall back to their entry page; API paths and the prefixes `/api`, `/media
 `/shared` and `/ext` are reserved and never reach them. Administrators install players from the admin panel: see
 [Packaging a web player](frontends.md).
 
+## Reaching the server from anywhere
+
+Servers with the P2P network on can be reached without opening ports: a device pairs once with a QR code and then
+talks to the server through a local port, with the same API. See [p2p.md](p2p.md).
+
 ## Playing to DLNA devices
 
 When an administrator switches DLNA on, players can send music to speakers and TVs on the server's local network:

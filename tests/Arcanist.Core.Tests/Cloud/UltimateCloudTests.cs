@@ -368,13 +368,14 @@ public sealed class UltimateCloudTests : IAsyncDisposable
     private readonly FakeUltimateCloud _cloud = new();
     private ArcanistFactory _factory = null!;
 
-    private async Task<HttpClient> StartAsync(bool configured = true)
+    private async Task<HttpClient> StartAsync(bool configured = true, bool dlna = false)
     {
         _factory = new ArcanistFactory(new Dictionary<string, string?>
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = configured ? FakeUltimateCloud.ApiUrl : null,
             ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
             ["Arcanist:UltimateCloud:ToolsPublicKey"] = _cloud.ToolKey.ExportSubjectPublicKeyInfoPem(),
+            ["Arcanist:Extensions:dlna:Enabled"] = dlna ? "true" : null,
         }, services: _cloud.Register);
         await _factory.CompleteSetupAsync();
         return await _factory.CreateAuthenticatedClientAsync();
@@ -565,6 +566,44 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         await _factory.WaitForScansAsync(admin);
         Assert.Equal(2, (await admin.GraphQLAsync("query { tracks(first: 10) { totalCount } }"))
             .GetProperty("data").GetProperty("tracks").GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task Dlna_devices_browse_an_Ultimate_Cloud_library_by_artist_and_album()
+    {
+        var audio = Enumerable.Range(0, 1000).Select(i => (byte)i).ToArray();
+        _cloud.AddTrack("t2", "Undertow", "Haze", "Low Tide", 2, audio);
+        _cloud.AddTrack("t1", "Drift", "Haze", "Low Tide", 1, audio);
+        var admin = await StartAsync(dlna: true);
+        await admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }");
+        _cloud.Approve = true;
+        await WaitForStateAsync(admin, "LINKED");
+        var libraryId = (await admin.GraphQLAsync("mutation { addUltimateCloudLibrary(input: {collection: LIBRARY}) { libraries { libraryId } } }"))
+            .GetProperty("data").GetProperty("addUltimateCloudLibrary").GetProperty("libraries")[0].GetProperty("libraryId").GetString();
+        await _factory.WaitForScansAsync(admin);
+        var published = await admin.PutAsJsonAsync("/rest/v1/dlna/settings",
+            new { friendlyName = (string?)null, libraryIds = new[] { libraryId }, sections = new[] { "FOLDERS" } }, ArcanistFactory.Json, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, published.StatusCode);
+
+        var lan = _factory.CreateRemoteClient("192.168.1.20");
+        async Task<List<(string Id, string Title)>> BrowseAsync(string objectId)
+        {
+            var body = "<?xml version=\"1.0\"?><s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body><u:Browse xmlns:u=\"urn:schemas-upnp-org:service:ContentDirectory:1\"><ObjectID>" + System.Net.WebUtility.HtmlEncode(objectId) + "</ObjectID><BrowseFlag>BrowseDirectChildren</BrowseFlag><Filter>*</Filter><StartingIndex>0</StartingIndex><RequestedCount>0</RequestedCount><SortCriteria></SortCriteria></u:Browse></s:Body></s:Envelope>";
+            var response = await lan.PostAsync("/ext/dlna/content-directory/control", new StringContent(body, Encoding.UTF8, "text/xml"), TestContext.Current.CancellationToken);
+            var text = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.True(response.IsSuccessStatusCode, text);
+            var result = System.Xml.Linq.XDocument.Parse(text).Descendants().Single(e => e.Name.LocalName == "Result").Value;
+            return System.Xml.Linq.XElement.Parse(result).Elements()
+                .Select(e => (e.Attribute("id")!.Value, e.Elements().Single(c => c.Name.LocalName == "title").Value)).ToList();
+        }
+
+        // Ultimate Cloud names its files by id: the folders come from what it says about each song.
+        var root = Assert.Single(await BrowseAsync("folders"));
+        var artist = Assert.Single(await BrowseAsync(root.Id));
+        Assert.Equal("Haze", artist.Title);
+        var album = Assert.Single(await BrowseAsync(artist.Id));
+        Assert.Equal("Low Tide (2020)", album.Title);
+        Assert.Equal(["Drift", "Undertow"], (await BrowseAsync(album.Id)).Select(s => s.Title));
     }
 
     [Fact]

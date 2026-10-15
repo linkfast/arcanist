@@ -257,21 +257,58 @@ internal sealed class DlnaLibrary(
         return roots;
     }
 
-    /// <summary>A folder of a library folder: its subfolders first, then its audio files, from the catalog.</summary>
+    /// <summary>A file as the folder tree shows it: where it is, and its place among the files of its folder.</summary>
+    private sealed record FolderFile(Guid Id, Guid TrackId, string RelativePath, int CueTrack, string Order);
+
+    /// <summary>
+    /// A folder of a library folder: its subfolders first, then its audio files, from the catalog. Ultimate Cloud keeps
+    /// no folders (its files are named by id), so its tree is built from what Ultimate Cloud says about each song:
+    /// album artist, album, then the songs in disc and track order.
+    /// </summary>
     private async Task<(IReadOnlyList<DidlObject> Children, int Total)> FolderAsync(string id, string rest, int start, int count, CancellationToken cancellationToken)
     {
         var (sourceId, path) = ParseFolder(rest);
         var prefix = path.Length == 0 ? "" : path + "/";
-        var files = await catalog.VisibleFiles(access).AsNoTracking()
-            .Where(f => f.LibrarySourceId == sourceId && f.RelativePath.StartsWith(prefix))
-            .Select(f => new { f.Id, f.TrackId, f.RelativePath, f.CueTrack })
-            .ToListAsync(cancellationToken);
+        var visible = catalog.VisibleFiles(access).AsNoTracking().Where(f => f.LibrarySourceId == sourceId);
+        List<FolderFile> files;
+        if (await db.LibrarySources.AnyAsync(s => s.Id == sourceId && s.Kind == LibrarySourceKind.UltimateCloud, cancellationToken))
+        {
+            var described = await visible
+                .Select(f => new
+                {
+                    f.Id,
+                    f.TrackId,
+                    f.Track.Title,
+                    f.Track.DiscNumber,
+                    f.Track.TrackNumber,
+                    Album = f.Track.Album.Title,
+                    f.Track.Album.Year,
+                    Artist = f.Track.Album.AlbumArtist.Name,
+                })
+                .ToListAsync(cancellationToken);
+            files = described.Select(f => new FolderFile(
+                    f.Id,
+                    f.TrackId,
+                    $"{Segment(f.Artist)}/{Segment(f.Year is { } year ? $"{f.Album} ({year})" : f.Album)}/{Segment(f.Title)}",
+                    0,
+                    $"{(f.DiscNumber ?? 0):D3}-{(f.TrackNumber ?? 0):D4}-{f.Title}"))
+                .ToList();
+        }
+        else
+        {
+            files = (await visible.Where(f => f.RelativePath.StartsWith(prefix))
+                    .Select(f => new { f.Id, f.TrackId, f.RelativePath, f.CueTrack })
+                    .ToListAsync(cancellationToken))
+                .Select(f => new FolderFile(f.Id, f.TrackId, f.RelativePath, f.CueTrack, f.RelativePath))
+                .ToList();
+        }
+
         files = files.Where(f => f.RelativePath.StartsWith(prefix, StringComparison.Ordinal)).ToList();
 
         var folders = files.Select(f => f.RelativePath[prefix.Length..]).Where(r => r.Contains('/'))
             .Select(r => r[..r.IndexOf('/')]).Distinct().Order(StringComparer.OrdinalIgnoreCase).ToList();
         var here = files.Where(f => !f.RelativePath[prefix.Length..].Contains('/'))
-            .OrderBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase).ThenBy(f => f.CueTrack).ToList();
+            .OrderBy(f => f.Order, StringComparer.OrdinalIgnoreCase).ThenBy(f => f.CueTrack).ToList();
         var total = folders.Count + here.Count;
         if (count <= 0)
             return ([], total);
@@ -366,6 +403,9 @@ internal sealed class DlnaLibrary(
 
     private static Guid ParseId(string value) =>
         Guid.TryParse(value, out var id) ? id : throw new UpnpException(701, "No such object");
+
+    /// <summary>A name as one level of a folder tree: never empty, and without the separator.</summary>
+    private static string Segment(string? name) => string.IsNullOrWhiteSpace(name) ? "—" : name.Trim().Replace('/', '∕');
 
     public static string FolderId(Guid sourceId, string path) =>
         path.Length == 0 ? $"folder/{sourceId:N}" : $"folder/{sourceId:N}/{WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(path))}";

@@ -418,6 +418,11 @@ Decididas para la F10 (con el usuario):
 - **Contra la API real de Ultimate Cloud**, que aporta el usuario (contrato o repositorio de UltimateCloudServer).
 - **Vincular la cuenta con código de dispositivo:** el panel muestra un código y un enlace y el admin lo aprueba en la web de Ultimate Cloud; Arcanist nunca ve su contraseña.
 - **Todo entra:** vincular la cuenta y leer su tier (capacidades), Ultimate Cloud como fuente de biblioteca (gratis), sincronización con Ultimate Cloud y bibliotecas en S3 (pago), y conexión iroh transparente con el relay de Ultimate (pago).
+- **Planes:** cualquier cuenta vinculada (Standard, Pro o Cloud) usa Ultimate Cloud como fuente; solo el plan **Cloud** (suscripción activa) desbloquea sincronización, S3 e iroh transparente.
+- **El lado de Ultimate también lo hace Claude, en UltimateCloudServer** (registro de nodos iroh, relay de pago, `X-Client-App` de Arcanist, extensión).
+- **Sincronización configurable por biblioteca** en la sección Bibliotecas: subir, bajar o en ambos sentidos.
+- **Hash de audio y limpieza de etiquetas compatibles con Ultimate** (código propietario de UltimateDesktop) van en una **extensión de Arcanist** que vive en el repositorio de UltimateCloudServer; Ultimate Cloud la sirve firmada y Arcanist la instala sola al vincular la cuenta. Ese código nunca entra en este repositorio.
+- **El cliente de Keycloak para el código de dispositivo lo crea el usuario** (`auth.linkfast.io`, realm `infra-clients`); hasta entonces se prueba contra un emisor OIDC local.
 
 Decididas para la F9 (con el usuario):
 - **Solo de SQLite a PostgreSQL.**

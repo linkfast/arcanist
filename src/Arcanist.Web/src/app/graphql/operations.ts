@@ -1202,6 +1202,7 @@ export const NetworkPeerFields = graphql(`
   fragment NetworkPeerFields on NetworkPeer {
     id
     kind
+    source
     name
     nodeId
     userId
@@ -1258,6 +1259,9 @@ export const NetworkQuery = graphql(`
   query Network {
     p2pStatus {
       ...P2PStatusFields
+    }
+    serverInfo {
+      capabilities
     }
     networkPeers {
       ...NetworkPeerFields

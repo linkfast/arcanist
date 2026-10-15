@@ -64,6 +64,18 @@ arcanist://p2p?kind=device&node=<ticket>&token=<token>&name=<server name>
 Later, connect with the kept ticket: there is no need to pair again. A server's node id never changes; its
 addresses may, and the n0 relay finds it by its id alone.
 
+## Without pairing: Ultimate Cloud accounts
+
+When the server is linked to an Ultimate Cloud account with the **Cloud plan**, apps of that account need no QR code:
+
+1. Register the app's own node in Ultimate Cloud: `registerP2PNode(nodeId, kind: DEVICE, name, ticket)` (with the
+   `X-Device-Id` and `X-Client-App` headers every Ultimate client sends). The server trusts the account's devices
+   within the hour (an administrator can force it with "Check the plan"), and stops trusting them when they leave
+   the account or the plan ends.
+2. Find the account's servers with `myP2PNodes`: entries of kind `SERVER` carry a `ticket`, the same base64url JSON
+   as the `node` of an invitation link. `connect(ticket)` and sign in as usual.
+3. `p2pRelay` gives Ultimate's relay, which only lets in nodes of Cloud accounts; n0's work too.
+
 ## What can go wrong
 
 Through the P2P network, besides the usual errors:

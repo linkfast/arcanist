@@ -14,6 +14,7 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddSingleton<ICloudLinkState>(provider => provider.GetRequiredService<UltimateCloudAccount>());
         services.AddHostedService(provider => provider.GetRequiredService<UltimateCloudAccount>());
         services.AddHttpClient(UltimateCloudClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.AddSingleton<UltimateCloudConnect>();
         services.AddSingleton<UltimateAudioTool>();
         services.AddSingleton<IUltimateAudio>(provider => provider.GetRequiredService<UltimateAudioTool>());
         services.AddSingleton<CloudSyncWorker>();

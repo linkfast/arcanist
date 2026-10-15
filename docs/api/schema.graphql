@@ -977,11 +977,13 @@ enum P2PRelayMode {
   N0
   CUSTOM
   DIRECT
+  ULTIMATE
 }
 
 type NetworkPeer {
   id: ID!
   kind: P2PPeerKind!
+  source: P2PPeerSource!
   name: String!
   nodeId: String!
   userId: ID
@@ -1005,6 +1007,11 @@ type NetworkPeer {
 enum P2PPeerKind {
   DEVICE
   SERVER
+}
+
+enum P2PPeerSource {
+  PAIRING
+  ULTIMATE_CLOUD
 }
 
 type PeerRules {

@@ -21,6 +21,7 @@ public sealed class UltimateCloudAccount(
     UltimateCloudAuth auth,
     UltimateCloudClient client,
     UltimateAudioTool tool,
+    IServiceProvider services,
     SettingsStore settings,
     IArcanistDbContextFactory databases,
     IOptionsMonitor<SetupOptions> setup,
@@ -57,7 +58,7 @@ public sealed class UltimateCloudAccount(
     }
 
     /// <summary>Starts linking: returns the code to approve, and waits for the approval in the background.</summary>
-    public async Task<CloudLinkRequest> StartLinkAsync(CancellationToken cancellationToken)
+    public async Task<CloudLinkRequest> StartLinkAsync(Guid? linkedBy, CancellationToken cancellationToken)
     {
         if (!IsConfigured)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotConfigured);
@@ -84,6 +85,8 @@ public sealed class UltimateCloudAccount(
                 using (await maintenance.WorkAsync(cancel.Token))
                     link = await auth.WaitForApprovalAsync(started.DeviceCode, started.Interval, started.Request.ExpiresAt, cancel.Token);
                 logger.LogInformation("Linked to Ultimate Cloud as {Account}", link.UserName ?? link.Email ?? link.Subject);
+                if (linkedBy is { } userId)
+                    await auth.SetLinkedByAsync(userId, CancellationToken.None);
                 lock (_lock)
                 {
                     if (_pending?.Cancel == cancel)
@@ -133,6 +136,7 @@ public sealed class UltimateCloudAccount(
         _plan = null;
         ErrorCode = null;
         await settings.SetAsync<CloudPlanSnapshot?>(SettingKeys.UltimateCloudPlan, null, cancellationToken);
+        await ConnectAsync(cancellationToken);
     }
 
     /// <summary>Checks the plan now.</summary>
@@ -162,12 +166,27 @@ public sealed class UltimateCloudAccount(
             await settings.SetAsync(SettingKeys.UltimateCloudPlan, _plan, cancellationToken);
             // Installed with the account, and updated when Ultimate Cloud serves a new version.
             await tool.EnsureAsync(cancellationToken);
+            await ConnectAsync(cancellationToken);
         }
         catch (UltimateCloudException e)
         {
             // Unreachable: the last known plan holds for a while. Expired: linking again is needed.
+            await ConnectAsync(cancellationToken);
             ErrorCode = e.Code;
             logger.LogWarning("The Ultimate Cloud plan could not be checked: {Error} ({Message})", e.Code, e.Message);
+        }
+    }
+
+    /// <summary>Registers the node and trusts the account's devices (or forgets them without the Cloud plan).</summary>
+    private async Task ConnectAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await services.GetRequiredService<UltimateCloudConnect>().SyncAsync(cancellationToken);
+        }
+        catch (UltimateCloudException e)
+        {
+            logger.LogWarning("The P2P connection through Ultimate Cloud could not be updated: {Error}", e.Code);
         }
     }
 

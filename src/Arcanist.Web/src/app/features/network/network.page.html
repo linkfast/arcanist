@@ -85,7 +85,12 @@
               <hlm-radio-group class="grid gap-2" name="relay" [(ngModel)]="form.relay">
                 @for (relay of relays; track relay) {
                   <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                    <hlm-radio [value]="relay" class="mt-0.5"
+                    <hlm-radio
+                      [value]="relay"
+                      class="mt-0.5"
+                      [disabled]="
+                        relay === 'ULTIMATE' && !ultimateAvailable() && form.relay !== 'ULTIMATE'
+                      "
                       ><hlm-radio-indicator indicator
                     /></hlm-radio>
                     <span class="grid gap-0.5">
@@ -315,6 +320,11 @@
         <div class="grid min-w-0 gap-1">
           <p class="flex flex-wrap items-center gap-2">
             <span class="font-medium">{{ peer.name }}</span>
+            @if (peer.source === 'ULTIMATE_CLOUD') {
+              <span hlmBadge variant="secondary" [title]="'network.fromUltimateHelp' | t">{{
+                'network.fromUltimate' | t
+              }}</span>
+            }
             @if (peer.userName) {
               <span class="text-xs text-muted-foreground">{{ peer.userName }}</span>
             }

@@ -25,6 +25,9 @@ public enum P2PRelayMode
 
     /// <summary>Direct connections only. Some networks will not connect.</summary>
     Direct,
+
+    /// <summary>Ultimate's relay, with the Cloud plan of the linked Ultimate Cloud account (n0's while it is not available).</summary>
+    Ultimate,
 }
 
 /// <summary>The P2P network: whether it runs, how, and what goes through it now.</summary>
@@ -74,9 +77,11 @@ public sealed record PeerRulesInput(bool AllowDownload, int? MaxBitRate, int? Ba
 /// <param name="Online">It has a connection open now.</param>
 /// <param name="AverageBytesPerSecond">What it received on average while connected.</param>
 /// <param name="Streams">Audio streams it started.</param>
+/// <param name="Source">Paired with an invitation, or a device of the linked Ultimate Cloud account (Cloud plan).</param>
 public sealed record NetworkPeer(
     Guid Id,
     P2PPeerKind Kind,
+    P2PPeerSource Source,
     string Name,
     string NodeId,
     Guid? UserId,
@@ -180,6 +185,8 @@ public sealed class P2PService(
         if (name is { Length: > NameMaxLength })
             errors.Add("name", ErrorCodes.InvalidFormat);
         var relayUrl = string.IsNullOrWhiteSpace(input.RelayUrl) ? null : input.RelayUrl.Trim();
+        if (input.Relay == P2PRelayMode.Ultimate && !services.GetRequiredService<Capabilities.ICapabilityService>().IsEnabled(Capabilities.Capability.CloudConnect))
+            errors.Add("relay", ErrorCodes.CloudConnectUnavailable);
         if (input.Relay == P2PRelayMode.Custom
             && !(Uri.TryCreate(relayUrl, UriKind.Absolute, out var relay) && relay.Scheme is "https" or "http"))
         {
@@ -192,6 +199,8 @@ public sealed class P2PService(
 
         await Settings.SetAsync(new P2PConfig(input.Enabled, FromMode(input.Relay), relayUrl, name, input.BandwidthKbps, input.MaxStreams), cancellationToken);
         Node.Changed();
+        // Registers the node in Ultimate Cloud, or forgets the account's devices, as the network turns on or off.
+        services.GetRequiredService<Core.Cloud.UltimateCloudAccount>().Wake();
         return await StatusAsync(cancellationToken);
     }
 
@@ -451,6 +460,7 @@ public sealed class P2PService(
         }
 
         peer.Name = name;
+        peer.Source = P2PPeerSource.Pairing;
         peer.Rules = invitation.Rules;
         peer.ExpiresAt = invitation.AccessExpiresAt;
         peer.RevokedAt = null;
@@ -565,7 +575,7 @@ public sealed class P2PService(
         var received = peer.BytesReceived + (traffic is null ? 0 : traffic.BytesReceived - traffic.SavedReceived);
         var seconds = peer.ConnectedSeconds + (traffic is null ? 0 : Interlocked.Read(ref traffic.ConnectedSeconds) - traffic.SavedSeconds);
         var streams = peer.Streams + (traffic is null ? 0 : Interlocked.Read(ref traffic.StreamsStarted) - traffic.SavedStreams);
-        return new NetworkPeer(peer.Id, peer.Kind, peer.Name, peer.NodeId, peer.UserId, peer.User?.UserName,
+        return new NetworkPeer(peer.Id, peer.Kind, peer.Source, peer.Name, peer.NodeId, peer.UserId, peer.User?.UserName,
             new PeerRules(peer.Rules.AllowDownload, peer.Rules.MaxBitRate, peer.Rules.BandwidthKbps, peer.Rules.MaxStreams),
             peer.Libraries.Select(l => l.LibraryId).ToList(), peer.CreatedAt, peer.ExpiresAt, peer.RevokedAt, peer.LastSeenAt,
             traffic?.OpenConnections > 0, traffic?.ActiveStreams ?? 0, sent, received, traffic?.CurrentRate ?? 0,
@@ -582,6 +592,7 @@ public sealed class P2PService(
     {
         P2PRelay.Custom => P2PRelayMode.Custom,
         P2PRelay.Direct or P2PRelay.Local => P2PRelayMode.Direct,
+        P2PRelay.Ultimate => P2PRelayMode.Ultimate,
         _ => P2PRelayMode.N0,
     };
 
@@ -589,6 +600,7 @@ public sealed class P2PService(
     {
         P2PRelayMode.Custom => P2PRelay.Custom,
         P2PRelayMode.Direct => P2PRelay.Direct,
+        P2PRelayMode.Ultimate => P2PRelay.Ultimate,
         _ => P2PRelay.N0,
     };
 

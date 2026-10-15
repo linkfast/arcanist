@@ -9,6 +9,15 @@ public enum P2PPeerKind
     Server,
 }
 
+public enum P2PPeerSource
+{
+    /// <summary>Paired with an invitation (a QR code or a link).</summary>
+    Pairing,
+
+    /// <summary>A device of the linked Ultimate Cloud account (Cloud plan): trusted while it is registered there.</summary>
+    UltimateCloud,
+}
+
 /// <summary>What a peer may do and how much it may use. Null limits mean none (the global ones still apply).</summary>
 public sealed class P2PRules
 {
@@ -42,6 +51,9 @@ public sealed class P2PPeer : Entity
     public Guid? UserId { get; init; }
 
     public User? User { get; init; }
+
+    /// <summary>How it came to be trusted.</summary>
+    public P2PPeerSource Source { get; set; }
 
     public P2PRules Rules { get; set; } = new();
 

@@ -990,6 +990,10 @@ export const en: Dictionary = {
         name: 'n0 public relays (recommended)',
         help: 'Works behind any router. Traffic stays end-to-end encrypted: the relay only sees that two nodes connect.',
       },
+      ULTIMATE: {
+        name: 'Ultimate’s relay',
+        help: 'With the Cloud plan on the linked Ultimate Cloud account. When it is not available, n0’s are used.',
+      },
       CUSTOM: {
         name: 'My own relay',
         help: 'An iroh-relay you run.',
@@ -999,6 +1003,9 @@ export const en: Dictionary = {
         help: 'No relay. Some networks will not connect.',
       },
     },
+    fromUltimate: 'Ultimate Cloud',
+    fromUltimateHelp:
+      'A device of your Ultimate Cloud account (Cloud plan): it connects without pairing, and stops when it leaves the account.',
     rules: {
       allowDownload: 'Allow downloads',
       allowDownloadHelp:
@@ -1230,6 +1237,8 @@ export const en: Dictionary = {
     cloud_tool_unsupported:
       'There is no audio tool for this platform, or it needs a newer version of Arcanist.',
     cloud_tool_missing: 'Ultimate’s audio tool is not installed.',
+    cloud_connect_unavailable:
+      'Ultimate’s relay and connecting without pairing need the Cloud plan.',
     cloud_sync_unavailable: 'Syncing with Ultimate Cloud needs the Cloud plan.',
     cloud_sync_download_taken:
       'Another library already downloads from Ultimate Cloud: only one can, or both would get everything.',

@@ -229,6 +229,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<P2PPeer>(peer =>
         {
             peer.Property(p => p.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            peer.Property(p => p.Source).HasConversion<string>().HasMaxLength(EnumLength);
             peer.Property(p => p.NodeId).HasMaxLength(64);
             peer.Property(p => p.Name).HasMaxLength(NameLength);
             peer.HasIndex(p => p.NodeId).IsUnique();

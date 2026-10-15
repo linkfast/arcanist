@@ -92,7 +92,7 @@ public sealed class UltimateCloudService(
     {
         guard.Admin();
         guard.RecentAuthentication();
-        await account.StartLinkAsync(cancellationToken);
+        await account.StartLinkAsync(guard.Authenticated().UserId, cancellationToken);
         return await CurrentAsync(cancellationToken);
     }
 

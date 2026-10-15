@@ -1192,6 +1192,11 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<long>("Streams")
                         .HasColumnType("bigint");
 

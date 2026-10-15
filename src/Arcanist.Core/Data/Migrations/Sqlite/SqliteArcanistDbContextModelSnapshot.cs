@@ -1187,6 +1187,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("Streams")
                         .HasColumnType("INTEGER");
 

@@ -97,6 +97,31 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             if (query.Contains("library {"))
                 return Json(new { data = new { library = Tracks.Select(t => t.Payload).ToArray() } });
             var variables = JsonNode.Parse(body)!["variables"];
+            if (query.Contains("myP2PNodes"))
+            {
+                var cloud = Plan == "Cloud";
+                return Json(new
+                {
+                    data = new
+                    {
+                        p2pRelay = cloud && RelayUrl is not null ? new { url = RelayUrl } : null,
+                        myP2PNodes = cloud
+                            ? DeviceNodes.Select(d => new { nodeId = d.Key, kind = "DEVICE", name = d.Value })
+                                .Concat(RegisteredNodes.Select(n => new { nodeId = n.Key, kind = "SERVER", name = n.Value })).ToArray()
+                            : [],
+                    },
+                });
+            }
+
+            if (query.Contains("registerP2PNode"))
+            {
+                if (Plan != "Cloud")
+                    return Json(new { errors = new[] { new { message = "Needs the Cloud plan.", extensions = new { code = "PLAN_REQUIRED" } } } });
+                RegisteredNodes[variables!["n"]!.GetValue<string>()] = variables["name"]!.GetValue<string>();
+                RegisteredTickets.Enqueue(variables["t"]?.GetValue<string>());
+                return Json(new { data = new { registerP2PNode = new { nodeId = variables["n"]!.GetValue<string>() } } });
+            }
+
             if (query.Contains("checkCloudFile"))
             {
                 var hash = variables!["h"]!.GetValue<string>();
@@ -287,6 +312,17 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
     /// <summary>What reached B2, by file name.</summary>
     public ConcurrentDictionary<string, byte[]> Uploaded { get; } = new();
+
+    /// <summary>The account's devices with an iroh node (node id → name).</summary>
+    public ConcurrentDictionary<string, string> DeviceNodes { get; } = new();
+
+    /// <summary>Servers that registered their node (node id → name), and the tickets they gave.</summary>
+    public ConcurrentDictionary<string, string> RegisteredNodes { get; } = new();
+
+    public ConcurrentQueue<string?> RegisteredTickets { get; } = new();
+
+    /// <summary>Ultimate's relay, for Cloud accounts.</summary>
+    public string? RelayUrl { get; set; } = "https://relay.ultimate.test/";
 
     /// <summary>The account's storage is full.</summary>
     public bool Full { get; set; }

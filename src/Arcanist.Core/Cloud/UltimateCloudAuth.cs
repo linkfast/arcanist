@@ -10,7 +10,8 @@ using Microsoft.Extensions.Options;
 namespace Arcanist.Core.Cloud;
 
 /// <summary>The linked account as stored: who it is, and its refresh token protected with Data Protection.</summary>
-public sealed record StoredCloudLink(string Subject, string? UserName, string? Email, DateTime LinkedAt, string ProtectedRefreshToken);
+/// <param name="LinkedByUserId">The administrator who linked it: the account's devices are theirs on this server.</param>
+public sealed record StoredCloudLink(string Subject, string? UserName, string? Email, DateTime LinkedAt, string ProtectedRefreshToken, Guid? LinkedByUserId = null);
 
 /// <summary>A device authorization in progress: what the administrator types (or opens) on Ultimate Cloud's site.</summary>
 public sealed record CloudLinkRequest(string UserCode, string VerificationUri, string? VerificationUriComplete, DateTime ExpiresAt);
@@ -183,6 +184,15 @@ public sealed class UltimateCloudAuth(
         }
     }
 
+    /// <summary>Records who linked the account.</summary>
+    public async Task SetLinkedByAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        if (await LinkAsync(cancellationToken) is not { } link || link.LinkedByUserId == userId)
+            return;
+        _link = link with { LinkedByUserId = userId };
+        await settings.SetAsync(SettingKeys.UltimateCloudLink, _link, cancellationToken);
+    }
+
     /// <summary>Forgets the account, and tells Ultimate Cloud to end the session (best effort).</summary>
     public async Task UnlinkAsync(CancellationToken cancellationToken)
     {
@@ -231,7 +241,8 @@ public sealed class UltimateCloudAuth(
             claims?["preferred_username"]?.GetValue<string>() ?? current?.UserName,
             claims?["email"]?.GetValue<string>() ?? current?.Email,
             current?.LinkedAt ?? time.GetUtcNow().UtcDateTime,
-            refresh is null ? current?.ProtectedRefreshToken ?? throw new UltimateCloudException(ErrorCodes.CloudLinkUnsupported) : _protector.Protect(refresh));
+            refresh is null ? current?.ProtectedRefreshToken ?? throw new UltimateCloudException(ErrorCodes.CloudLinkUnsupported) : _protector.Protect(refresh),
+            current?.LinkedByUserId);
         if (link != current)
         {
             await settings.SetAsync(SettingKeys.UltimateCloudLink, link, cancellationToken);

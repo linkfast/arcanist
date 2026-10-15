@@ -9309,6 +9309,7 @@
         "required": [
           "id",
           "kind",
+          "source",
           "name",
           "nodeId",
           "userId",
@@ -9336,6 +9337,9 @@
           },
           "kind": {
             "$ref": "#/components/schemas/P2PPeerKind"
+          },
+          "source": {
+            "$ref": "#/components/schemas/P2PPeerSource"
           },
           "name": {
             "type": "string"
@@ -9804,11 +9808,18 @@
           "SERVER"
         ]
       },
+      "P2PPeerSource": {
+        "enum": [
+          "PAIRING",
+          "ULTIMATE_CLOUD"
+        ]
+      },
       "P2PRelayMode": {
         "enum": [
           "N0",
           "CUSTOM",
-          "DIRECT"
+          "DIRECT",
+          "ULTIMATE"
         ]
       },
       "P2PRules": {

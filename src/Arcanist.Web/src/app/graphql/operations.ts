@@ -1432,6 +1432,10 @@ export const UltimateCloudStatusFields = graphql(`
       name
       collection
     }
+    audioTool {
+      version
+      errorCode
+    }
   }
 `);
 

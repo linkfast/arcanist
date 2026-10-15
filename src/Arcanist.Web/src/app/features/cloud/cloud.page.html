@@ -127,6 +127,18 @@
                 <dt class="text-muted-foreground">{{ 'cloud.plan.checked' | t }}</dt>
                 <dd [title]="plan.checkedAt | dateTime">{{ plan.checkedAt | relativeTime }}</dd>
               }
+              <dt class="text-muted-foreground">{{ 'cloud.tool.title' | t }}</dt>
+              <dd>
+                @if (current.audioTool.version; as version) {
+                  {{ 'cloud.tool.installed' | t: { version } }}
+                } @else if (current.audioTool.errorCode) {
+                  <span class="text-destructive">{{
+                    i18n.error(current.audioTool.errorCode)
+                  }}</span>
+                } @else {
+                  <span class="text-muted-foreground">{{ 'cloud.tool.pending' | t }}</span>
+                }
+              </dd>
             </dl>
             <div class="flex flex-wrap gap-2">
               <button

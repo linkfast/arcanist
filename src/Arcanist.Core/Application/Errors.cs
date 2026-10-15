@@ -139,6 +139,14 @@ public static class ErrorCodes
     public const string CloudLinkExpired = "cloud_link_expired";
     /// <summary>The account refused to link this server.</summary>
     public const string CloudLinkDenied = "cloud_link_denied";
+    /// <summary>Ultimate Cloud serves no ultimate-audio tool yet.</summary>
+    public const string CloudToolUnavailable = "cloud_tool_unavailable";
+    /// <summary>The ultimate-audio tool Ultimate Cloud served is not signed by Ultimate, or was altered: it was not installed.</summary>
+    public const string CloudToolInvalid = "cloud_tool_invalid";
+    /// <summary>There is no ultimate-audio for this platform, or it speaks a protocol this version of Arcanist does not.</summary>
+    public const string CloudToolUnsupported = "cloud_tool_unsupported";
+    /// <summary>The ultimate-audio tool is not installed.</summary>
+    public const string CloudToolMissing = "cloud_tool_missing";
     /// <summary>Ultimate Cloud's sign-in does not offer linking with a code for this server.</summary>
     public const string CloudLinkUnsupported = "cloud_link_unsupported";
 }

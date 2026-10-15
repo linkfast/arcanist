@@ -12005,7 +12005,8 @@
           "tier",
           "capabilities",
           "errorCode",
-          "libraries"
+          "libraries",
+          "audioTool"
         ],
         "type": "object",
         "properties": {
@@ -12065,6 +12066,30 @@
             "items": {
               "$ref": "#/components/schemas/UltimateCloudLibrary"
             }
+          },
+          "audioTool": {
+            "$ref": "#/components/schemas/UltimateCloudTool"
+          }
+        }
+      },
+      "UltimateCloudTool": {
+        "required": [
+          "version",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

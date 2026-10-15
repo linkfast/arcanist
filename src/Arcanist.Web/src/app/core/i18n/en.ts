@@ -803,6 +803,11 @@ export const en: Dictionary = {
         help: 'The music you drop into Cloud Drop, apart from your library.',
       },
     },
+    tool: {
+      title: 'Audio tool',
+      installed: 'ultimate-audio {version}, signed by Ultimate',
+      pending: 'Installed when the plan is checked',
+    },
     tier: {
       NONE: 'No account',
       FREE: 'Free',
@@ -1170,6 +1175,12 @@ export const en: Dictionary = {
     already_postgres: 'The database is PostgreSQL already.',
     verification_failed: 'The copy does not match the original: the server goes on with SQLite.',
     migration_failed: 'The migration failed: the server goes on with SQLite. Check the server log.',
+    cloud_tool_unavailable: 'Ultimate Cloud does not offer the audio tool yet.',
+    cloud_tool_invalid:
+      'The audio tool received is not signed by Ultimate, or was altered: it was not installed.',
+    cloud_tool_unsupported:
+      'There is no audio tool for this platform, or it needs a newer version of Arcanist.',
+    cloud_tool_missing: 'Ultimate’s audio tool is not installed.',
     cloud_not_configured: 'This server has no Ultimate Cloud address configured.',
     cloud_not_linked: 'No Ultimate Cloud account is linked.',
     cloud_unreachable: 'Ultimate Cloud cannot be reached. It will be tried again.',

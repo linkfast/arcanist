@@ -1132,6 +1132,7 @@ type UltimateCloudStatus {
   capabilities: [Capability!]!
   errorCode: String
   libraries: [UltimateCloudLibrary!]!
+  audioTool: UltimateCloudTool!
 }
 
 enum UltimateCloudLinkState {
@@ -1180,6 +1181,11 @@ type UltimateCloudLibrary {
 enum UltimateCloudCollection {
   LIBRARY
   CLOUD_DROP
+}
+
+type UltimateCloudTool {
+  version: String
+  errorCode: String
 }
 
 type ServerInfo {

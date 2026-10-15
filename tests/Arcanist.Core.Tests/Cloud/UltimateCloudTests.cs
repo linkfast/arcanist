@@ -124,6 +124,37 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             });
         }
 
+        // The tools Ultimate Cloud signs for Arcanist servers.
+        if (url == "https://cloud.test/arcanist/tools/manifest")
+        {
+            if (!ServeTool)
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            var manifest = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+            {
+                tool = "ultimate-audio",
+                version = "1.0.0",
+                protocol = 1,
+                files = new[]
+                {
+                    new
+                    {
+                        rid = UltimateAudioTool.Platform ?? "none",
+                        name = ToolName,
+                        size = (long)ToolBytes.Length,
+                        sha256 = TamperTool ? new string('0', 64) : Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(ToolBytes)),
+                    },
+                },
+            }));
+            var signer = SignWithOtherKey ? System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256) : ToolKey;
+            return Json(new { manifest = Convert.ToBase64String(manifest), signature = Convert.ToBase64String(signer.SignData(manifest, System.Security.Cryptography.HashAlgorithmName.SHA256)) });
+        }
+
+        if (url == $"https://cloud.test/arcanist/tools/files/{ToolName}")
+        {
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(ToolBytes) };
+        }
+
         // Backblaze B2: the tracks' audio (with Range) and covers.
         if (url.StartsWith(FilesBase + "/file/bucket/", StringComparison.Ordinal))
         {
@@ -149,6 +180,30 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     }
 
     public const string FilesBase = "https://f000.backblazeb2.test";
+
+    /// <summary>The key the fake signs its tools with; Arcanist is told to trust it.</summary>
+    public System.Security.Cryptography.ECDsa ToolKey { get; } = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+
+    public bool ServeTool { get; set; }
+
+    public bool SignWithOtherKey { get; set; }
+
+    public bool TamperTool { get; set; }
+
+    /// <summary>A stand-in for ultimate-audio: a script that answers version and hash, and fails the rest.</summary>
+    public static string ToolName => OperatingSystem.IsWindows() ? "ultimate-audio-test.cmd" : "ultimate-audio-test";
+
+    public static byte[] ToolBytes { get; } = Encoding.ASCII.GetBytes(OperatingSystem.IsWindows()
+        ? "@echo off\r\n" +
+          "if \"%1\"==\"version\" (echo {\"tool\":\"ultimate-audio\",\"version\":\"1.0.0\",\"protocol\":1}& exit /b 0)\r\n" +
+          "if \"%1\"==\"hash\" (echo {\"audioHash\":\"abc123\"}& exit /b 0)\r\n" +
+          "echo {\"error\":\"corrupt_file\",\"message\":\"bad\"}\r\nexit /b 1\r\n"
+        : "#!/bin/sh\n" +
+          "case \"$1\" in\n" +
+          "  version) echo '{\"tool\":\"ultimate-audio\",\"version\":\"1.0.0\",\"protocol\":1}' ;;\n" +
+          "  hash) echo '{\"audioHash\":\"abc123\"}' ;;\n" +
+          "  *) echo '{\"error\":\"corrupt_file\",\"message\":\"bad\"}'; exit 1 ;;\n" +
+          "esac\n");
 
     /// <summary>The account's library: what <c>library</c> describes, and the audio B2 serves.</summary>
     public List<(string Id, object Payload, byte[] Audio)> Tracks { get; } = [];
@@ -208,6 +263,7 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = configured ? FakeUltimateCloud.ApiUrl : null,
             ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
+            ["Arcanist:UltimateCloud:ToolsPublicKey"] = _cloud.ToolKey.ExportSubjectPublicKeyInfoPem(),
         }, services: _cloud.Register);
         await _factory.CompleteSetupAsync();
         return await _factory.CreateAuthenticatedClientAsync();
@@ -227,6 +283,22 @@ public sealed class UltimateCloudTests : IAsyncDisposable
                 return status;
             if (DateTime.UtcNow > deadline)
                 Assert.Fail($"Still {status}");
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+    }
+
+    /// <summary>The audio tool is installed right after the plan is read.</summary>
+    private static async Task<JsonElement> WaitForToolAsync(HttpClient admin)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (true)
+        {
+            var tool = (await admin.GraphQLAsync("query { ultimateCloud { audioTool { version errorCode } } }"))
+                .GetProperty("data").GetProperty("ultimateCloud").GetProperty("audioTool");
+            if (tool.GetProperty("version").ValueKind != JsonValueKind.Null || tool.GetProperty("errorCode").ValueKind != JsonValueKind.Null)
+                return tool;
+            if (DateTime.UtcNow > deadline)
+                Assert.Fail($"Still {tool}");
             await Task.Delay(50, TestContext.Current.CancellationToken);
         }
     }
@@ -372,6 +444,46 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         await _factory.WaitForScansAsync(admin);
         Assert.Equal(2, (await admin.GraphQLAsync("query { tracks(first: 10) { totalCount } }"))
             .GetProperty("data").GetProperty("tracks").GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task The_audio_tool_comes_with_the_account_and_runs_as_a_separate_program()
+    {
+        _cloud.ServeTool = true;
+        var admin = await StartAsync();
+        await admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }");
+        _cloud.Approve = true;
+        await WaitForStateAsync(admin, "LINKED");
+
+        var tool = await WaitForToolAsync(admin);
+        Assert.Equal("1.0.0", tool.GetProperty("version").GetString());
+        Assert.Equal(JsonValueKind.Null, tool.GetProperty("errorCode").ValueKind);
+        Assert.True(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
+
+        var audio = _factory.Services.GetRequiredService<UltimateAudioTool>();
+        Assert.Equal("abc123", await audio.HashAsync(Path.Combine(_factory.DataPath, "anything.flac"), TestContext.Current.CancellationToken));
+        var failure = await Assert.ThrowsAsync<UltimateCloudException>(() =>
+            audio.StripAsync("in.flac", "out.flac", TestContext.Current.CancellationToken));
+        Assert.Equal("tool:corrupt_file", failure.Code);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task A_tool_not_signed_by_Ultimate_or_altered_is_not_installed(bool otherKey, bool tampered)
+    {
+        (_cloud.ServeTool, _cloud.SignWithOtherKey, _cloud.TamperTool) = (true, otherKey, tampered);
+        var admin = await StartAsync();
+        await admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }");
+        _cloud.Approve = true;
+        await WaitForStateAsync(admin, "LINKED");
+
+        var tool = await WaitForToolAsync(admin);
+        Assert.Equal(JsonValueKind.Null, tool.GetProperty("version").ValueKind);
+        Assert.Equal("cloud_tool_invalid", tool.GetProperty("errorCode").GetString());
+        Assert.False(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
+        await Assert.ThrowsAsync<UltimateCloudException>(() => _factory.Services.GetRequiredService<UltimateAudioTool>()
+            .HashAsync("x.flac", TestContext.Current.CancellationToken));
     }
 
     [Fact]

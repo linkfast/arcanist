@@ -20,6 +20,7 @@ public sealed record CloudPlanSnapshot(string Plan, string CloudStatus, bool Fea
 public sealed class UltimateCloudAccount(
     UltimateCloudAuth auth,
     UltimateCloudClient client,
+    UltimateAudioTool tool,
     SettingsStore settings,
     IArcanistDbContextFactory databases,
     IOptionsMonitor<SetupOptions> setup,
@@ -159,6 +160,8 @@ public sealed class UltimateCloudAccount(
                 time.GetUtcNow().UtcDateTime);
             ErrorCode = null;
             await settings.SetAsync(SettingKeys.UltimateCloudPlan, _plan, cancellationToken);
+            // Installed with the account, and updated when Ultimate Cloud serves a new version.
+            await tool.EnsureAsync(cancellationToken);
         }
         catch (UltimateCloudException e)
         {

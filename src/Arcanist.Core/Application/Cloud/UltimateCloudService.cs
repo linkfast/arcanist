@@ -50,6 +50,11 @@ public sealed record UltimateCloudLibrary(Guid LibraryId, string Name, UltimateC
 /// <param name="Name">The library's name; by default, "Ultimate Cloud" (or "Cloud Drop").</param>
 public sealed record AddUltimateCloudLibraryInput(UltimateCloudCollection Collection, string? Name);
 
+/// <summary>ultimate-audio, the tool Ultimate Cloud serves for syncing (audio hashes and tags as Ultimate clients handle them).</summary>
+/// <param name="Version">The installed version; null while it is not installed.</param>
+/// <param name="ErrorCode">Why the last install or update failed.</param>
+public sealed record UltimateCloudTool(string? Version, string? ErrorCode);
+
 /// <summary>The Ultimate Cloud account linked to this server, and what it enables.</summary>
 /// <param name="Account">The account's user name or email.</param>
 /// <param name="ErrorCode">The last problem: <c>cloud_unreachable</c>, <c>cloud_link_expired</c> (link again), <c>cloud_link_denied</c>…</param>
@@ -62,7 +67,8 @@ public sealed record UltimateCloudStatus(
     CloudTier Tier,
     IReadOnlyList<Capability> Capabilities,
     string? ErrorCode,
-    IReadOnlyList<UltimateCloudLibrary> Libraries);
+    IReadOnlyList<UltimateCloudLibrary> Libraries,
+    UltimateCloudTool AudioTool);
 
 /// <summary>Linking the server to an Ultimate Cloud account. Administrators only; linking and unlinking need a recent authentication.</summary>
 public sealed class UltimateCloudService(
@@ -72,7 +78,8 @@ public sealed class UltimateCloudService(
     UltimateCloudAuth auth,
     ICapabilityService capabilities,
     ScanCoordinator scans,
-    UserAccessCache accessCache)
+    UserAccessCache accessCache,
+    UltimateAudioTool tool)
 {
     public async Task<UltimateCloudStatus> StatusAsync(CancellationToken cancellationToken)
     {
@@ -177,6 +184,7 @@ public sealed class UltimateCloudService(
             .Select(s => new UltimateCloudLibrary(s.LibraryId, s.Name,
                 Enum.TryParse<UltimateCloudCollection>(s.Location, out var collection) ? collection : UltimateCloudCollection.Library))
             .OrderBy(l => l.Name)
-            .ToList());
+            .ToList(),
+            new UltimateCloudTool(tool.Version, link is null ? null : tool.ErrorCode));
     }
 }

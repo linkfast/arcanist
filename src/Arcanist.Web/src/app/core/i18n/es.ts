@@ -807,6 +807,11 @@ export const es: Dictionary = {
         help: 'La música que dejas en Cloud Drop, aparte de tu biblioteca.',
       },
     },
+    tool: {
+      title: 'Herramienta de audio',
+      installed: 'ultimate-audio {version}, firmada por Ultimate',
+      pending: 'Se instalará al comprobar el plan',
+    },
     tier: {
       NONE: 'Sin cuenta',
       FREE: 'Gratuito',
@@ -1184,6 +1189,12 @@ export const es: Dictionary = {
     verification_failed: 'La copia no coincide con el original: el servidor sigue con SQLite.',
     migration_failed:
       'La migración falló: el servidor sigue con SQLite. Revisa el registro del servidor.',
+    cloud_tool_unavailable: 'Ultimate Cloud aún no ofrece la herramienta de audio.',
+    cloud_tool_invalid:
+      'La herramienta de audio recibida no está firmada por Ultimate o fue alterada: no se instaló.',
+    cloud_tool_unsupported:
+      'No hay herramienta de audio para esta plataforma, o necesita una versión más nueva de Arcanist.',
+    cloud_tool_missing: 'La herramienta de audio de Ultimate no está instalada.',
     cloud_not_configured: 'Este servidor no tiene configurada la dirección de Ultimate Cloud.',
     cloud_not_linked: 'No hay ninguna cuenta de Ultimate Cloud vinculada.',
     cloud_unreachable: 'No se puede contactar con Ultimate Cloud. Se volverá a intentar.',

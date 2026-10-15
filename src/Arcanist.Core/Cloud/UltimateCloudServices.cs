@@ -14,6 +14,7 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddSingleton<ICloudLinkState>(provider => provider.GetRequiredService<UltimateCloudAccount>());
         services.AddHostedService(provider => provider.GetRequiredService<UltimateCloudAccount>());
         services.AddHttpClient(UltimateCloudClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.AddSingleton<UltimateAudioTool>();
         services.AddSingleton<UltimateCloudStorage>();
         services.AddSingleton<ILibraryStorage>(provider => provider.GetRequiredService<UltimateCloudStorage>());
         // Audio lasts as long as the music: requests end with their cancellation, not with a timeout.

@@ -16,7 +16,7 @@ public sealed class UltimateCloudOptions
     public string? ApiUrl { get; set; }
 
     /// <summary>The OpenID Connect issuer accounts sign in with (Keycloak realm).</summary>
-    public string Authority { get; set; } = "https://auth.linkfast.io/realms/infra-clients";
+    public string Authority { get; set; } = "https://auth.linkfast.io/realms/ultimate-dev";
 
     /// <summary>The public client with the device authorization grant enabled.</summary>
     public string ClientId { get; set; } = "arcanist";

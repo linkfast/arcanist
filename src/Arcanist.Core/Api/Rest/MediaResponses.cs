@@ -30,9 +30,20 @@ public static class MediaResponses
         var storages = context.RequestServices.GetRequiredService<ILibraryStorageResolver>();
         var transcoder = context.RequestServices.GetRequiredService<Transcoder>();
 
+        // Through the P2P network, the peer's rules apply: no downloads unless allowed, and a bit-rate cap on streams.
+        if (P2P.P2PRequest.Peer(context) is { } peer)
+        {
+            if (download && !peer.Rules.AllowDownload)
+                return Problems.Create(StatusCodes.Status403Forbidden, Application.ErrorCodes.DownloadNotAllowed);
+            if (!download && peer.Rules.MaxBitRate is { } peerCap)
+                maxBitRate = Math.Min(maxBitRate ?? peerCap, peerCap);
+        }
+
         var target = await streams.ResolveAsync(trackId, fileId, download, cancellationToken);
-        var storage = storages.For(target.Location.Kind);
         var offset = Math.Max(0, timeOffset ?? 0);
+        if (target.Location.Kind == Data.Entities.LibrarySourceKind.Peer)
+            return await P2P.PeerStreaming.ProxyAsync(context, target, download, requested, maxBitRate, offset, cancellationToken);
+        var storage = storages.For(target.Location.Kind);
 
         // A bit-rate cap the original already meets needs no conversion.
         var fits = requested is null && offset == 0 && maxBitRate is { } cap && target.BitRate is { } bitRate && bitRate <= cap;

@@ -33,6 +33,7 @@ using Arcanist.Core.Import.Mstream;
 using Arcanist.Core.Media;
 using Arcanist.Core.Online;
 using Arcanist.Core.Organization;
+using Arcanist.Core.P2P;
 using Arcanist.Core.Scanning;
 using Arcanist.Core.Storage;
 using Microsoft.AspNetCore.DataProtection;
@@ -122,6 +123,7 @@ builder.Services.AddOnlineServices(builder.Configuration);
 builder.Services.AddOrganization(builder.Configuration);
 builder.Services.AddMstreamImport();
 builder.Services.AddDlna(builder.Configuration);
+builder.Services.AddP2P(builder.Configuration);
 builder.Services.AddSingleton<ServerInfoService>();
 builder.Services.AddArcanistRest();
 builder.Services.AddArcanistGraphQL(builder.Environment);
@@ -132,7 +134,9 @@ builder.AddExtensions(paths);
 
 var app = builder.Build();
 
-// First, so everything after sees the real client address behind trusted reverse proxies.
+// Requests through the P2P network come from loopback but are anyone's: they get an untrusted address first.
+app.UseP2PGate();
+// Then, so everything after sees the real client address behind trusted reverse proxies.
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseMiddleware<SecurityHeadersMiddleware>();

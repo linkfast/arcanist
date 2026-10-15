@@ -43,6 +43,16 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<OrganizeMove> OrganizeMoves => Set<OrganizeMove>();
     public DbSet<AppPassword> AppPasswords => Set<AppPassword>();
     public DbSet<MstreamImport> MstreamImports => Set<MstreamImport>();
+
+    public DbSet<P2PPeer> P2PPeers => Set<P2PPeer>();
+
+    public DbSet<P2PPeerLibrary> P2PPeerLibraries => Set<P2PPeerLibrary>();
+
+    public DbSet<P2PInvitation> P2PInvitations => Set<P2PInvitation>();
+
+    public DbSet<P2PRemote> P2PRemotes => Set<P2PRemote>();
+
+    public DbSet<P2PActivity> P2PActivities => Set<P2PActivity>();
     public DbSet<TrackRating> TrackRatings => Set<TrackRating>();
     public DbSet<PlayEvent> PlayEvents => Set<PlayEvent>();
     public DbSet<TrackPlayStats> TrackPlayStats => Set<TrackPlayStats>();
@@ -155,6 +165,56 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             import.Property(i => i.Source).HasMaxLength(PathLength);
             import.Property(i => i.ErrorCode).HasMaxLength(64);
             import.HasIndex(i => i.Status);
+        });
+
+        modelBuilder.Entity<P2PPeer>(peer =>
+        {
+            peer.Property(p => p.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            peer.Property(p => p.NodeId).HasMaxLength(64);
+            peer.Property(p => p.Name).HasMaxLength(NameLength);
+            peer.HasIndex(p => p.NodeId).IsUnique();
+            peer.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+            peer.ComplexProperty(p => p.Rules);
+        });
+
+        modelBuilder.Entity<P2PPeerLibrary>(grant =>
+        {
+            grant.HasKey(g => new { g.PeerId, g.LibraryId });
+            grant.HasOne(g => g.Peer).WithMany(p => p.Libraries).HasForeignKey(g => g.PeerId).OnDelete(DeleteBehavior.Cascade);
+            grant.HasOne(g => g.Library).WithMany().HasForeignKey(g => g.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            grant.HasIndex(g => g.LibraryId);
+        });
+
+        modelBuilder.Entity<P2PInvitation>(invitation =>
+        {
+            invitation.Property(i => i.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            invitation.Property(i => i.Name).HasMaxLength(NameLength);
+            invitation.Property(i => i.TokenHash).HasMaxLength(64);
+            invitation.Property(i => i.LibraryIds).HasMaxLength(4000);
+            invitation.HasIndex(i => i.TokenHash).IsUnique();
+            invitation.HasIndex(i => i.ExpiresAt);
+            invitation.ComplexProperty(i => i.Rules);
+        });
+
+        modelBuilder.Entity<P2PRemote>(remote =>
+        {
+            remote.Property(r => r.NodeId).HasMaxLength(64);
+            remote.Property(r => r.Ticket).HasMaxLength(4000);
+            remote.Property(r => r.Name).HasMaxLength(NameLength);
+            remote.Property(r => r.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            remote.HasIndex(r => r.NodeId).IsUnique();
+            remote.HasOne(r => r.Library).WithMany().HasForeignKey(r => r.LibraryId).OnDelete(DeleteBehavior.Cascade);
+            remote.HasIndex(r => r.LibraryId).IsUnique();
+            remote.ComplexProperty(r => r.Rules);
+        });
+
+        modelBuilder.Entity<P2PActivity>(activity =>
+        {
+            activity.Property(a => a.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            activity.Property(a => a.PeerName).HasMaxLength(NameLength);
+            activity.Property(a => a.Detail).HasMaxLength(500);
+            activity.HasIndex(a => a.At);
+            activity.HasIndex(a => new { a.PeerId, a.At });
         });
 
         modelBuilder.Entity<TrackRating>(rating =>

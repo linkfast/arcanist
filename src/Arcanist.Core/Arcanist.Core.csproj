@@ -59,37 +59,43 @@
   </Target>
 
   <!--
-    Native audio analysis (native/arcanist-audio, Rust), shipped next to the server as arcanist_audio.dll,
-    libarcanist_audio.so or libarcanist_audio.dylib. Builds for this machine's platform run `cargo build` when
-    Rust is installed (incrementally); builds for other platforms use the library that packaging/native built
-    into artifacts/native/<rid>/. Without either, the server runs without audio analysis.
+    Native libraries in Rust, shipped next to the server: audio analysis (native/arcanist-audio) and the P2P network
+    (native/arcanist-p2p), as <name>.dll, lib<name>.so or lib<name>.dylib. Builds for this machine's platform run
+    `cargo build` when Rust is installed (incrementally); builds for other platforms use the libraries that
+    packaging/native built into artifacts/native/<rid>/. Without them, the server runs without that feature.
+    SkipNativeBuild (or the older SkipNativeAudioBuild) skips cargo.
   -->
   <PropertyGroup>
-    <NativeAudioCrate>$(MSBuildThisFileDirectory)../../native/arcanist-audio/</NativeAudioCrate>
-    <NativeAudioRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</NativeAudioRid>
-    <NativeAudioRid Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</NativeAudioRid>
-    <NativeAudioDir>$(MSBuildThisFileDirectory)../../artifacts/native/$(NativeAudioRid)/</NativeAudioDir>
-    <NativeAudioFile Condition="$(NativeAudioRid.StartsWith('win'))">arcanist_audio.dll</NativeAudioFile>
-    <NativeAudioFile Condition="$(NativeAudioRid.StartsWith('osx'))">libarcanist_audio.dylib</NativeAudioFile>
-    <NativeAudioFile Condition="'$(NativeAudioFile)' == ''">libarcanist_audio.so</NativeAudioFile>
+    <NativeRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</NativeRid>
+    <NativeRid Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</NativeRid>
+    <NativeDir>$(MSBuildThisFileDirectory)../../artifacts/native/$(NativeRid)/</NativeDir>
+    <NativeLibraryPrefix Condition="!$(NativeRid.StartsWith('win'))">lib</NativeLibraryPrefix>
+    <NativeLibraryExtension Condition="$(NativeRid.StartsWith('win'))">.dll</NativeLibraryExtension>
+    <NativeLibraryExtension Condition="$(NativeRid.StartsWith('osx'))">.dylib</NativeLibraryExtension>
+    <NativeLibraryExtension Condition="'$(NativeLibraryExtension)' == ''">.so</NativeLibraryExtension>
+    <SkipNativeBuild Condition="'$(SkipNativeAudioBuild)' == 'true'">true</SkipNativeBuild>
   </PropertyGroup>
 
   <ItemGroup>
-    <NativeAudioSource Include="$(NativeAudioCrate)src/**/*.rs;$(NativeAudioCrate)Cargo.toml;$(NativeAudioCrate)Cargo.lock" />
+    <NativeCrate Include="$(MSBuildThisFileDirectory)../../native/arcanist-audio/" Library="$(NativeLibraryPrefix)arcanist_audio$(NativeLibraryExtension)" Feature="audio analysis" />
+    <NativeCrate Include="$(MSBuildThisFileDirectory)../../native/arcanist-p2p/" Library="$(NativeLibraryPrefix)arcanist_p2p$(NativeLibraryExtension)" Feature="the P2P network" />
   </ItemGroup>
 
-  <Target Name="BuildNativeAudio" Condition="'$(NativeAudioRid)' == '$(NETCoreSdkRuntimeIdentifier)' And '$(SkipNativeAudioBuild)' != 'true'" Inputs="@(NativeAudioSource)" Outputs="$(NativeAudioDir)$(NativeAudioFile)">
+  <Target Name="BuildNative" Condition="'$(NativeRid)' == '$(NETCoreSdkRuntimeIdentifier)' And '$(SkipNativeBuild)' != 'true'" Inputs="%(NativeCrate.Identity)src/lib.rs;%(NativeCrate.Identity)Cargo.toml;%(NativeCrate.Identity)Cargo.lock;@(NativeSource)" Outputs="$(NativeDir)%(NativeCrate.Library)">
+    <ItemGroup>
+      <NativeSource Include="%(NativeCrate.Identity)src/**/*.rs" />
+    </ItemGroup>
     <Exec Command="cargo --version" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="CargoExitCode" />
     </Exec>
-    <Warning Condition="'$(CargoExitCode)' != '0' And !Exists('$(NativeAudioDir)$(NativeAudioFile)')" Text="Rust (cargo) is not installed, so the native audio library was not built: audio analysis will be unavailable." />
-    <Exec Condition="'$(CargoExitCode)' == '0'" Command="cargo build --release --manifest-path &quot;$(NativeAudioCrate)Cargo.toml&quot;" />
-    <Copy Condition="'$(CargoExitCode)' == '0'" SourceFiles="$(NativeAudioCrate)target/release/$(NativeAudioFile)" DestinationFolder="$(NativeAudioDir)" />
+    <Warning Condition="'$(CargoExitCode)' != '0' And !Exists('$(NativeDir)%(NativeCrate.Library)')" Text="Rust (cargo) is not installed, so %(NativeCrate.Library) was not built: %(NativeCrate.Feature) will be unavailable." />
+    <Exec Condition="'$(CargoExitCode)' == '0'" Command="cargo build --release --manifest-path &quot;%(NativeCrate.Identity)Cargo.toml&quot;" />
+    <Copy Condition="'$(CargoExitCode)' == '0'" SourceFiles="%(NativeCrate.Identity)target/release/%(NativeCrate.Library)" DestinationFolder="$(NativeDir)" />
   </Target>
 
-  <Target Name="IncludeNativeAudio" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildNativeAudio">
-    <ItemGroup Condition="Exists('$(NativeAudioDir)$(NativeAudioFile)')">
-      <None Include="$(NativeAudioDir)$(NativeAudioFile)" Link="$(NativeAudioFile)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  <Target Name="IncludeNative" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildNative">
+    <ItemGroup>
+      <None Include="$(NativeDir)%(NativeCrate.Library)" Condition="Exists('$(NativeDir)%(NativeCrate.Library)')" Link="%(NativeCrate.Library)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
 

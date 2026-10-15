@@ -89,6 +89,26 @@ public static class ErrorCodes
     public const string RendererFailed = "renderer_failed";
     /// <summary>Arcanist has no queue on that renderer.</summary>
     public const string NothingQueued = "nothing_queued";
+    /// <summary>The P2P network is off.</summary>
+    public const string P2PDisabled = "p2p_disabled";
+    /// <summary>The P2P library is missing for this platform, so the network cannot run.</summary>
+    public const string P2PUnavailable = "p2p_unavailable";
+    /// <summary>The P2P node could not open its UDP port.</summary>
+    public const string P2PBindFailed = "p2p_bind_failed";
+    /// <summary>The other node did not answer through the P2P network.</summary>
+    public const string PeerUnreachable = "peer_unreachable";
+    /// <summary>That node is not paired with this server.</summary>
+    public const string PeerUnknown = "peer_unknown";
+    /// <summary>The access of that node was revoked.</summary>
+    public const string PeerRevoked = "peer_revoked";
+    /// <summary>The access of that node ended.</summary>
+    public const string PeerExpired = "peer_expired";
+    /// <summary>The invitation is not valid, was used already or expired.</summary>
+    public const string InvitationInvalid = "invitation_invalid";
+    /// <summary>Too many audio streams at once for that peer, or for all peers.</summary>
+    public const string TooManyStreams = "too_many_streams";
+    /// <summary>The owner of those files does not allow downloading them.</summary>
+    public const string DownloadNotAllowed = "download_not_allowed";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

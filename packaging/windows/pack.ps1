@@ -49,9 +49,11 @@ if (-not $SkipPanel) {
 $panel = "src/Arcanist.Web/dist/arcanist-web/browser"
 if (-not (Test-Path "$panel/index.html")) { throw "The admin panel is not built ($panel)" }
 
-# Also builds the audio analysis library with cargo (win-x64 is the build machine's own platform).
+# Also builds the native libraries with cargo (win-x64 is the build machine's own platform).
 dotnet publish src/Arcanist.Core -c Release -r win-x64 --self-contained -p:Version=$Version -o "$app/server"
-if (-not (Test-Path "$app/server/arcanist_audio.dll")) { throw "The audio analysis library was not built (is Rust installed?)" }
+foreach ($library in "arcanist_audio.dll", "arcanist_p2p.dll") {
+    if (-not (Test-Path "$app/server/$library")) { throw "$library was not built (is Rust installed?)" }
+}
 Copy-Item $panel "$app/server/wwwroot/admin" -Recurse
 
 dotnet publish src/Arcanist.Tray -c Release -r win-x64 --self-contained -p:Version=$Version -o $app

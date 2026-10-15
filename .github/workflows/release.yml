@@ -106,7 +106,7 @@ jobs:
         with:
           name: panel
           path: src/Arcanist.Web/dist/arcanist-web/browser
-      # The native audio library is cross-built for glibc 2.27 with Zig.
+      # The native libraries are cross-built for glibc 2.27 with Zig.
       - run: pip install cargo-zigbuild ziglang
       - run: sh packaging/linux/pack.sh "$VERSION" --skip-panel
       - run: gh release upload "$TAG" artifacts/linux/*.tar.gz --clobber

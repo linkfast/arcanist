@@ -4,6 +4,7 @@ using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Arcanist.Core.Import.Mstream;
 
@@ -31,6 +32,7 @@ internal sealed class MstreamImportWorker(
     MstreamImporter importer,
     MstreamImportSignal signal,
     TimeProvider time,
+    IOptionsMonitor<Setup.SetupOptions> setup,
     ILogger<MstreamImportWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -59,8 +61,8 @@ internal sealed class MstreamImportWorker(
     /// <returns>Whether an import was finished.</returns>
     private async Task<bool> RunNextAsync(CancellationToken cancellationToken)
     {
-        // Before setup there is no database yet.
-        if (!databases.IsConfigured)
+        // Before setup there is no database yet, and while it runs the database is being created.
+        if (!databases.IsConfigured || !setup.CurrentValue.Completed)
             return false;
         await using var db = databases.CreateDbContext();
         var import = await db.MstreamImports

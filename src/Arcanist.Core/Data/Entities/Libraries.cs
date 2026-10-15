@@ -40,6 +40,12 @@ public enum LibrarySourceKind
 {
     /// <summary>A folder reachable through the file system, including mounted network shares.</summary>
     Local,
+
+    /// <summary>
+    /// Libraries another Arcanist server shares through the P2P network. The location is the <c>P2PRemote</c> id;
+    /// files are described by that server and streamed from it on demand.
+    /// </summary>
+    Peer,
 }
 
 /// <summary>A location whose audio files belong to a library. Always read through <c>ILibraryStorage</c>.</summary>

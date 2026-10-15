@@ -20,10 +20,11 @@ for arch in x64 arm64; do
     name="arcanist-$version-linux-$arch"
     dir="$out/$name"
     rm -rf "$dir"
-    # Audio analysis library (needs Rust and cargo-zigbuild, see packaging/native/build.sh).
-    [ -f "artifacts/native/linux-$arch/libarcanist_audio.so" ] || sh packaging/native/build.sh "linux-$arch"
+    # Native libraries: audio analysis and P2P (need Rust and cargo-zigbuild, see packaging/native/build.sh).
+    [ -f "artifacts/native/linux-$arch/libarcanist_audio.so" ] && [ -f "artifacts/native/linux-$arch/libarcanist_p2p.so" ] \
+        || sh packaging/native/build.sh "linux-$arch"
     dotnet publish src/Arcanist.Core -c Release -r "linux-$arch" --self-contained -p:Version="$version" \
-        -p:SkipNativeAudioBuild=true -o "$dir"
+        -p:SkipNativeBuild=true -o "$dir"
     # Debug symbols, mostly native ones from SkiaSharp, would double the download.
     find "$dir" -name '*.pdb' -delete
     mkdir -p "$dir/wwwroot"

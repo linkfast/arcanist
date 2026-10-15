@@ -133,6 +133,12 @@ public sealed class LibraryScanner(
             return;
         }
 
+        if (storage is IDescribedStorage described)
+        {
+            await ScanDescribedAsync(job, source, location, described, writer, counter, cancellationToken);
+            return;
+        }
+
         await using var db = databases.CreateDbContext();
         // Several rows per path when a cue sheet splits the file into tracks.
         var known = (await db.MediaFiles.AsNoTracking()
@@ -236,6 +242,102 @@ public sealed class LibraryScanner(
         foreach (var chunk in vanished.Chunk(UpdateChunk))
             await db.MediaFiles.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, now), cancellationToken);
         job.FilesMissing += vanished.Count;
+    }
+
+    /// <summary>
+    /// Catalogs the files a storage describes (another server's share): nothing is downloaded, only the artwork.
+    /// Incremental scans skip rows whose size and modification time did not change; full scans take every
+    /// description again (to pick up what the other server learned, such as MusicBrainz ids or lyrics).
+    /// </summary>
+    private async Task ScanDescribedAsync(
+        ScanJob job, LibrarySource source, StorageLocation location, IDescribedStorage storage, CatalogWriter writer,
+        ScanProgressTracker.Counter counter, CancellationToken cancellationToken)
+    {
+        await using var db = databases.CreateDbContext();
+        var known = (await db.MediaFiles.AsNoTracking()
+                .Where(f => f.LibrarySourceId == source.Id)
+                .Select(f => new KnownFile(f.Id, f.RelativePath, f.CueTrack, f.Size, f.ModifiedAt, f.MissingSince, f.ScannedAt))
+                .ToListAsync(cancellationToken))
+            .ToDictionary(f => (f.RelativePath, f.CueTrack));
+
+        var batchSize = Math.Max(1, options.Value.BatchSize);
+        var seen = new HashSet<(string, int)>();
+        var reappeared = new List<Guid>();
+        var artwork = new Dictionary<string, StoredArtwork?>(StringComparer.Ordinal);
+        var batch = new List<ScannedFile>(batchSize);
+        string? batchPath = null;
+        counter.Phase(ScanPhase.Reading);
+
+        try
+        {
+            await foreach (var file in storage.DescribeAsync(location, cancellationToken))
+            {
+                // The rows of one path stay in the same batch.
+                if (batch.Count >= batchSize && file.RelativePath != batchPath)
+                    await FlushAsync();
+                if (!seen.Add((file.RelativePath, file.CueTrack)))
+                    continue;
+                counter.Found(1);
+                var existing = known.GetValueOrDefault((file.RelativePath, file.CueTrack));
+                if (existing is not null && job.Kind == ScanKind.Incremental && existing.Size == file.Size
+                    && (existing.ModifiedAt - file.ModifiedAt).Duration() <= ModifiedTolerance)
+                {
+                    if (existing.MissingSince is not null)
+                        reappeared.Add(existing.Id);
+                    continue;
+                }
+
+                StoredArtwork? stored = null;
+                if (file.Artwork is { } id && !artwork.TryGetValue(id, out stored))
+                {
+                    var bytes = await storage.ReadArtworkAsync(location, id, cancellationToken);
+                    artwork[id] = stored = bytes is null ? null : artworkStore.Store(bytes);
+                }
+
+                counter.ToRead(1);
+                batch.Add(new ScannedFile(source.Id, existing?.Id, file.RelativePath, file.Size, file.ModifiedAt, file.ContentHash,
+                    file.Metadata with { EmbeddedPicture = null }, stored, file.CueTrack, file.StartMs, file.EndMs));
+                batchPath = file.RelativePath;
+            }
+
+            await FlushAsync();
+        }
+        catch (IOException e)
+        {
+            logger.LogWarning(e, "The share {Location} could not be described; skipped", source.Location);
+            job.ErrorCode = ErrorCodes.SourceUnavailable;
+            return;
+        }
+
+        if (seen.Count == 0 && known.Count > 0)
+        {
+            logger.LogWarning("The share {Location} looks empty but had {Count} files; treated as unavailable", source.Location, known.Count);
+            job.ErrorCode = ErrorCodes.SourceUnavailable;
+            return;
+        }
+
+        job.FilesSeen += seen.Select(f => f.Item1).Distinct().Count();
+        var now = Now();
+        foreach (var chunk in reappeared.Chunk(UpdateChunk))
+            await db.MediaFiles.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, (DateTime?)null), cancellationToken);
+        var vanished = known.Values.Where(f => f.MissingSince is null && !seen.Contains((f.RelativePath, f.CueTrack))).Select(f => f.Id).ToList();
+        foreach (var chunk in vanished.Chunk(UpdateChunk))
+            await db.MediaFiles.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, now), cancellationToken);
+        job.FilesMissing += vanished.Count;
+
+        async Task FlushAsync()
+        {
+            if (batch.Count == 0)
+                return;
+            var result = await writer.ApplyAsync(batch, cancellationToken);
+            await using (var indexDb = databases.CreateDbContext())
+                await SearchIndexer.RefreshAsync(indexDb, cancellationToken);
+            job.FilesAdded += result.Added;
+            job.FilesUpdated += result.Updated;
+            counter.Read(batch.Count);
+            batch.Clear();
+            events.Publish(job);
+        }
     }
 
     private async Task ReadAndWriteAsync(

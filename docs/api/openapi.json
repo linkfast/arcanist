@@ -3854,6 +3854,610 @@
         }
       }
     },
+    "/rest/v1/p2p": {
+      "get": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "The P2P network: whether it runs, this server\u0027s node id, its relay and what goes through it now. Administrators only.",
+        "operationId": "P2pStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/P2PStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/settings": {
+      "put": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Turns the P2P network on or off and sets its relay, the name peers see and the global limits. Administrators only, with a recent authentication.",
+        "operationId": "SetP2pSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/P2PSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/P2PStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/peers": {
+      "get": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Nodes allowed through the P2P network, with their rules and traffic: the caller\u0027s devices, or every peer for administrators.",
+        "operationId": "NetworkPeers",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NetworkPeer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/invitations/device": {
+      "post": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "An invitation to pair a device with the caller (or, for administrators, another user), valid 30 minutes. The app reads it (as a QR code) and pairs through the P2P network.",
+        "operationId": "CreateDeviceInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeviceInvitationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/P2PInvitationLink"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/invitations/share": {
+      "post": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "An invitation for another Arcanist server to receive libraries, with rules and an optional end, valid 7 days. Administrators only, with a recent authentication.",
+        "operationId": "CreateShareInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShareInvitationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/P2PInvitationLink"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/peers/{id}": {
+      "put": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Changes a peer\u0027s name, rules, end and (for a server) shared libraries. Administrators only, with a recent authentication.",
+        "operationId": "UpdateNetworkPeer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNetworkPeerInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkPeer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/peers/{id}/revoke": {
+      "post": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Ends a peer\u0027s access at once. Users revoke their own devices; administrators, any peer.",
+        "operationId": "RevokeNetworkPeer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkPeer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/shares": {
+      "get": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Libraries other servers share with this one, each shown here as a library. Administrators only.",
+        "operationId": "ReceivedShares",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReceivedShare"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Accepts another server\u0027s share with its invitation link: its libraries become one library here, scanned at once (nothing is downloaded: the music streams from that server). Administrators only, with a recent authentication.",
+        "operationId": "AcceptShare",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptShareInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceivedShare"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/activity": {
+      "get": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only.",
+        "operationId": "P2pActivity",
+        "parameters": [
+          {
+            "name": "peerId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/P2PActivityEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/pair": {
+      "post": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Pairs the calling device with the user of a device invitation. Only through the P2P network.",
+        "operationId": "PairDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PairDeviceResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/join": {
+      "post": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Accepts a share invitation for the calling server. Only through the P2P network, server to server.",
+        "operationId": "JoinShare",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinShareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerShareInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/peer/info": {
+      "get": {
+        "tags": [
+          "Peer"
+        ],
+        "summary": "Server to server: this server\u0027s name, the share\u0027s rules and libraries.",
+        "operationId": "PeerShareInfo",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerShareInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/peer/files": {
+      "get": {
+        "tags": [
+          "Peer"
+        ],
+        "summary": "Server to server: the shared files, described (tags, content hash, artwork), 500 at a time.",
+        "operationId": "PeerFiles",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerFilePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/peer/stream": {
+      "get": {
+        "tags": [
+          "Peer"
+        ],
+        "summary": "Server to server: a shared file\u0027s audio, under the share\u0027s rules (conversion, bit-rate cap, downloads).",
+        "operationId": "PeerStream",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cue",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxBitRate",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "timeOffset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Peer"
+        ],
+        "summary": "Server to server: a shared file\u0027s audio, under the share\u0027s rules (conversion, bit-rate cap, downloads).",
+        "operationId": "PeerStream",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cue",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxBitRate",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "timeOffset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/peer/artwork/{hash}": {
+      "get": {
+        "tags": [
+          "Peer"
+        ],
+        "summary": "Server to server: the original image of a shared track\u0027s artwork.",
+        "operationId": "PeerArtwork",
+        "parameters": [
+          {
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -4289,6 +4893,17 @@
                 "$ref": "#/components/schemas/ImportTagsInput"
               }
             ]
+          }
+        }
+      },
+      "AcceptShareInput": {
+        "required": [
+          "link"
+        ],
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string"
           }
         }
       },
@@ -4774,6 +5389,266 @@
           "PRODUCER"
         ]
       },
+      "AudioMetadata": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artists": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "featuredArtists": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "albumArtist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "composers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lyricists": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conductor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trackNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "discNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isCompilation": {
+            "type": "boolean"
+          },
+          "sortArtist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sortAlbumArtist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recordingMbid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "releaseMbid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "artistMbid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "albumArtistMbid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "replayGainTrackGain": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "replayGainTrackPeak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "replayGainAlbumGain": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "replayGainAlbumPeak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "format": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sampleRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bitDepth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "channels": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lyrics": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncedLyrics": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lyricsSource": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LyricsSource"
+              }
+            ]
+          },
+          "audioDataOffset": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "audioDataSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "embeddedPicture": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
+          }
+        }
+      },
       "Capability": {
         "enum": [
           "ULTIMATE_CLOUD_SOURCE",
@@ -4869,6 +5744,28 @@
           }
         }
       },
+      "CreateDeviceInvitationInput": {
+        "required": [
+          "name",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "CreateLibraryInput": {
         "required": [
           "name",
@@ -4946,6 +5843,37 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "CreateShareInvitationInput": {
+        "required": [
+          "name",
+          "libraryIds",
+          "rules",
+          "accessExpiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "libraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "rules": {
+            "$ref": "#/components/schemas/PeerRulesInput"
+          },
+          "accessExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -6185,6 +7113,21 @@
           }
         }
       },
+      "JoinShareRequest": {
+        "required": [
+          "token",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "KeyMode": {
         "enum": [
           "MAJOR",
@@ -6315,7 +7258,8 @@
       },
       "LibrarySourceKind": {
         "enum": [
-          "LOCAL"
+          "LOCAL",
+          "PEER"
         ]
       },
       "LibraryTotals": {
@@ -6613,7 +7557,8 @@
         "enum": [
           "SIDECAR",
           "EMBEDDED",
-          "ONLINE"
+          "ONLINE",
+          null
         ]
       },
       "MergeDuplicateInput": {
@@ -7034,6 +7979,153 @@
           }
         }
       },
+      "NetworkPeer": {
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "nodeId",
+          "userId",
+          "userName",
+          "rules",
+          "libraryIds",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastSeenAt",
+          "online",
+          "activeStreams",
+          "bytesSent",
+          "bytesReceived",
+          "currentBytesPerSecond",
+          "averageBytesPerSecond",
+          "peakBytesPerSecond",
+          "streams"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/P2PPeerKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rules": {
+            "$ref": "#/components/schemas/PeerRules"
+          },
+          "libraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "activeStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytesSent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "bytesReceived": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "currentBytesPerSecond": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "averageBytesPerSecond": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "peakBytesPerSecond": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "streams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "OnlineService": {
         "enum": [
           "MUSIC_BRAINZ",
@@ -7312,6 +8404,550 @@
           "UNDOING",
           "UNDONE"
         ]
+      },
+      "P2PActivityEntry": {
+        "required": [
+          "id",
+          "at",
+          "kind",
+          "peerId",
+          "peerName",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/P2PActivityKind"
+          },
+          "peerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "peerName": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "P2PActivityKind": {
+        "enum": [
+          "JOINED",
+          "CONNECTED",
+          "STREAMED",
+          "DOWNLOADED",
+          "REFUSED",
+          "CHANGED",
+          "REVOKED"
+        ]
+      },
+      "P2PInvitationLink": {
+        "required": [
+          "link",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "P2PPeerKind": {
+        "enum": [
+          "DEVICE",
+          "SERVER"
+        ]
+      },
+      "P2PRelayMode": {
+        "enum": [
+          "N0",
+          "CUSTOM",
+          "DIRECT"
+        ]
+      },
+      "P2PRules": {
+        "type": "object",
+        "properties": {
+          "allowDownload": {
+            "type": "boolean"
+          },
+          "maxBitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bandwidthKbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "P2PSettingsInput": {
+        "required": [
+          "enabled",
+          "relay",
+          "relayUrl",
+          "name",
+          "bandwidthKbps",
+          "maxStreams"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "relay": {
+            "$ref": "#/components/schemas/P2PRelayMode"
+          },
+          "relayUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bandwidthKbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "P2PStatus": {
+        "required": [
+          "enabled",
+          "available",
+          "running",
+          "errorCode",
+          "nodeId",
+          "name",
+          "customName",
+          "relay",
+          "relayUrl",
+          "homeRelay",
+          "relayConnected",
+          "bandwidthKbps",
+          "maxStreams",
+          "connectedPeers",
+          "activeStreams",
+          "currentBytesPerSecond",
+          "peakBytesPerSecond"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "running": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nodeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "customName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relay": {
+            "$ref": "#/components/schemas/P2PRelayMode"
+          },
+          "relayUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "homeRelay": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relayConnected": {
+            "type": "boolean"
+          },
+          "bandwidthKbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "connectedPeers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activeStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "currentBytesPerSecond": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "peakBytesPerSecond": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "PairDeviceRequest": {
+        "required": [
+          "token",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PairDeviceResult": {
+        "required": [
+          "serverName",
+          "peerId"
+        ],
+        "type": "object",
+        "properties": {
+          "serverName": {
+            "type": "string"
+          },
+          "peerId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PeerFile": {
+        "required": [
+          "id",
+          "path",
+          "cueTrack",
+          "startMs",
+          "endMs",
+          "size",
+          "modifiedAt",
+          "contentHash",
+          "artwork",
+          "metadata"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "cueTrack": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "startMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "endMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "contentHash": {
+            "type": "string"
+          },
+          "artwork": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/AudioMetadata"
+          }
+        }
+      },
+      "PeerFilePage": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PeerFile"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PeerLibrary": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PeerRules": {
+        "required": [
+          "allowDownload",
+          "maxBitRate",
+          "bandwidthKbps",
+          "maxStreams"
+        ],
+        "type": "object",
+        "properties": {
+          "allowDownload": {
+            "type": "boolean"
+          },
+          "maxBitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bandwidthKbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PeerRulesInput": {
+        "required": [
+          "allowDownload",
+          "maxBitRate",
+          "bandwidthKbps",
+          "maxStreams"
+        ],
+        "type": "object",
+        "properties": {
+          "allowDownload": {
+            "type": "boolean"
+          },
+          "maxBitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bandwidthKbps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxStreams": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PeerShareInfo": {
+        "required": [
+          "name",
+          "rules",
+          "libraries",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/P2PRules"
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PeerLibrary"
+            }
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
       },
       "Permission": {
         "enum": [
@@ -7699,6 +9335,56 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ReceivedShare": {
+        "required": [
+          "id",
+          "name",
+          "nodeId",
+          "libraryId",
+          "rules",
+          "active",
+          "online",
+          "createdAt",
+          "lastContactAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/PeerRules"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastContactAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -9087,6 +10773,45 @@
           }
         }
       },
+      "UpdateNetworkPeerInput": {
+        "required": [
+          "id",
+          "name",
+          "rules",
+          "libraryIds",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/PeerRulesInput"
+          },
+          "libraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "UpdatePlaylistInput": {
         "required": [
           "name",
@@ -9392,6 +11117,12 @@
     },
     {
       "name": "DLNA"
+    },
+    {
+      "name": "P2P"
+    },
+    {
+      "name": "Peer"
     },
     {
       "name": "Online services"

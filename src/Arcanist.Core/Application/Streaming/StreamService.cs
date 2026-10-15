@@ -20,12 +20,14 @@ public sealed record StreamTarget(
     int? BitRate,
     int DurationMs,
     int? StartMs,
-    int? EndMs);
+    int? EndMs,
+    int CueTrack = 0);
 
 public sealed class StreamService(AccessGuard guard, CatalogService catalog)
 {
     /// <summary>
-    /// Picks the file to play for a track: the requested one, or the best quality copy the caller can access.
+    /// Picks the file to play for a track: the requested one, or the best quality copy the caller can access, on
+    /// this server before one shared by another (which travels through the P2P network).
     /// Downloading the original requires the DOWNLOAD permission.
     /// </summary>
     public async Task<StreamTarget> ResolveAsync(Guid trackId, Guid? fileId, bool download, CancellationToken cancellationToken)
@@ -38,7 +40,8 @@ public sealed class StreamService(AccessGuard guard, CatalogService catalog)
 
         var file = await files.AsNoTracking()
             .Include(f => f.LibrarySource)
-            .OrderByDescending(f => f.BitDepth ?? 0).ThenByDescending(f => f.SampleRate ?? 0).ThenByDescending(f => f.BitRate ?? 0)
+            .OrderBy(f => f.LibrarySource.Kind == LibrarySourceKind.Peer ? 1 : 0)
+            .ThenByDescending(f => f.BitDepth ?? 0).ThenByDescending(f => f.SampleRate ?? 0).ThenByDescending(f => f.BitRate ?? 0)
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new ArcanistException.NotFound();
 
@@ -53,6 +56,7 @@ public sealed class StreamService(AccessGuard guard, CatalogService catalog)
             file.BitRate,
             file.DurationMs,
             file.StartMs,
-            file.EndMs);
+            file.EndMs,
+            file.CueTrack);
     }
 }

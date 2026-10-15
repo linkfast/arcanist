@@ -35,4 +35,7 @@ public static class SettingKeys
 
     /// <summary>The DLNA device's UUID, created once so devices keep recognizing the server.</summary>
     public const string DlnaDeviceId = "dlna.deviceId";
+
+    /// <summary>P2P network: on or off, relay, name and global limits (<c>P2PConfig</c>).</summary>
+    public const string P2P = "p2p.settings";
 }

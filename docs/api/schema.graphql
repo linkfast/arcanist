@@ -66,6 +66,14 @@ type Query {
   importItems(status: ImportStatus, dropFolderId: ID, first: Int): [ImportItem!]!
   "How many files of the drop folders are in each state. Requires MANAGE_LIBRARIES."
   importSummary: ImportSummary!
+  "The P2P network: whether it runs, this server's node id, its relay and what goes through it now. Administrators only."
+  p2pStatus: P2PStatus!
+  "Nodes allowed through the P2P network, with their rules and traffic: the caller's devices, or every peer for administrators."
+  networkPeers(kind: P2PPeerKind): [NetworkPeer!]!
+  "Libraries other servers share with this one, each shown here as a library. Administrators only."
+  receivedShares: [ReceivedShare!]!
+  "What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only."
+  p2pActivity(peerId: ID, limit: Int): [P2PActivityEntry!]!
   "The user's playlists, those they collaborate on and public ones, most recently changed first."
   playlists: [Playlist!]!
   "A playlist by id. Playlists the user cannot see are reported as not found."
@@ -475,6 +483,7 @@ type LibrarySource {
 
 enum LibrarySourceKind {
   LOCAL
+  PEER
 }
 
 type LibraryOrganization {
@@ -826,6 +835,98 @@ type ImportSummary {
   imported: Int!
 }
 
+type P2PStatus {
+  enabled: Boolean!
+  available: Boolean!
+  running: Boolean!
+  errorCode: String
+  nodeId: String
+  name: String!
+  customName: String
+  relay: P2PRelayMode!
+  relayUrl: String
+  homeRelay: String
+  relayConnected: Boolean!
+  bandwidthKbps: Int
+  maxStreams: Int
+  connectedPeers: Int!
+  activeStreams: Int!
+  currentBytesPerSecond: Long!
+  peakBytesPerSecond: Long!
+}
+
+enum P2PRelayMode {
+  N0
+  CUSTOM
+  DIRECT
+}
+
+type NetworkPeer {
+  id: ID!
+  kind: P2PPeerKind!
+  name: String!
+  nodeId: String!
+  userId: ID
+  userName: String
+  rules: PeerRules!
+  libraryIds: [ID!]!
+  createdAt: DateTime!
+  expiresAt: DateTime
+  revokedAt: DateTime
+  lastSeenAt: DateTime
+  online: Boolean!
+  activeStreams: Int!
+  bytesSent: Long!
+  bytesReceived: Long!
+  currentBytesPerSecond: Long!
+  averageBytesPerSecond: Long!
+  peakBytesPerSecond: Long!
+  streams: Long!
+}
+
+enum P2PPeerKind {
+  DEVICE
+  SERVER
+}
+
+type PeerRules {
+  allowDownload: Boolean!
+  maxBitRate: Int
+  bandwidthKbps: Int
+  maxStreams: Int
+}
+
+type ReceivedShare {
+  id: ID!
+  name: String!
+  nodeId: String!
+  libraryId: ID!
+  rules: PeerRules!
+  active: Boolean!
+  online: Boolean!
+  createdAt: DateTime!
+  lastContactAt: DateTime
+}
+
+type P2PActivityEntry {
+  id: ID!
+  at: DateTime!
+  kind: P2PActivityKind!
+  peerId: ID
+  peerName: String!
+  detail: String
+}
+
+enum P2PActivityKind {
+  JOINED
+  CONNECTED
+  STREAMED
+  DOWNLOADED
+  REFUSED
+  CHANGED
+  REVOKED
+}
+
 type PlaylistEntryPage {
   items: [PlaylistEntry!]!
   nextCursor: String
@@ -1044,6 +1145,18 @@ type Mutation {
   ignoreImportItem(id: ID!): ImportItem!
   "Moves a file to its drop folder's trash, from which it is deleted after a while. Requires MANAGE_LIBRARIES."
   discardImportItem(id: ID!): ImportItem!
+  "Turns the P2P network on or off and sets its relay, the name peers see and the global limits. Administrators only, with a recent authentication."
+  setP2pSettings(input: P2PSettingsInput!): P2PStatus!
+  "An invitation to pair a device with the caller (or, for administrators, another user), valid 30 minutes. The app reads it (as a QR code) and pairs through the P2P network."
+  createDeviceInvitation(input: CreateDeviceInvitationInput!): P2PInvitationLink!
+  "An invitation for another Arcanist server to receive libraries, with rules and an optional end, valid 7 days. Administrators only, with a recent authentication."
+  createShareInvitation(input: CreateShareInvitationInput!): P2PInvitationLink!
+  "Changes a peer's name, rules, end and (for a server) shared libraries. Administrators only, with a recent authentication."
+  updateNetworkPeer(input: UpdateNetworkPeerInput!): NetworkPeer!
+  "Ends a peer's access at once. Users revoke their own devices; administrators, any peer."
+  revokeNetworkPeer(id: ID!): NetworkPeer!
+  "Accepts another server's share with its invitation link: its libraries become one library here, scanned at once (nothing is downloaded: the music streams from that server). Administrators only, with a recent authentication."
+  acceptShare(link: String!): ReceivedShare!
   createPlaylist(input: CreatePlaylistInput!): Playlist!
   "Renames, describes and shares a playlist. Owner only."
   updatePlaylist(id: ID!, input: UpdatePlaylistInput!): Playlist!
@@ -1225,6 +1338,47 @@ input ImportTagsInput {
   trackNumber: Int
   discNumber: Int
   genre: String
+}
+
+input P2PSettingsInput {
+  enabled: Boolean!
+  relay: P2PRelayMode!
+  relayUrl: String
+  name: String
+  bandwidthKbps: Int
+  maxStreams: Int
+}
+
+type P2PInvitationLink {
+  link: String!
+  expiresAt: DateTime!
+}
+
+input CreateDeviceInvitationInput {
+  name: String
+  userId: ID
+}
+
+input CreateShareInvitationInput {
+  name: String!
+  libraryIds: [ID!]!
+  rules: PeerRulesInput!
+  accessExpiresAt: DateTime
+}
+
+input PeerRulesInput {
+  allowDownload: Boolean!
+  maxBitRate: Int
+  bandwidthKbps: Int
+  maxStreams: Int
+}
+
+input UpdateNetworkPeerInput {
+  id: ID!
+  name: String!
+  rules: PeerRulesInput!
+  libraryIds: [ID!]
+  expiresAt: DateTime
 }
 
 input CreatePlaylistInput {

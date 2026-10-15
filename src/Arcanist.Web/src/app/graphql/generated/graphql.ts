@@ -163,7 +163,8 @@ export type LibrarySourceInput = {
 };
 
 export type LibrarySourceKind =
-  | 'LOCAL';
+  | 'LOCAL'
+  | 'PEER';
 
 export type MstreamImportKind =
   | 'FOLDER'

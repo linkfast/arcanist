@@ -5,7 +5,7 @@
   </div>
   @if (canManage()) {
     <div class="flex flex-wrap gap-2">
-      @if (auth.isAdmin()) {
+      @if (auth.isAdmin() && cloudOn()) {
         <button
           hlmBtn
           variant="outline"
@@ -60,35 +60,44 @@
             <span hlmBadge [variant]="library.visibleToAll ? 'secondary' : 'outline'">
               {{ (library.visibleToAll ? 'libraries.everyone' : 'libraries.restricted') | t }}
             </span>
+            @if (library.disabled) {
+              <span hlmBadge variant="destructive">{{ 'libraries.disabled' | t }}</span>
+            }
           </h2>
-          <p hlmCardDescription>
-            @if (library.lastScanAt) {
-              {{ 'libraries.lastScan' | t }}
-              <span [title]="library.lastScanAt | dateTime">{{
-                library.lastScanAt | relativeTime
-              }}</span>
-            } @else {
-              {{ 'libraries.neverScanned' | t }}
-            }
-            @if (library.scanIntervalMinutes) {
-              · {{ intervalLabel(library.scanIntervalMinutes) }}
-            }
-            @if (library.watchForChanges) {
-              · {{ 'libraries.watching' | t }}
-            }
-          </p>
+          @if (library.disabled) {
+            <p hlmCardDescription>{{ 'libraries.disabledHelp' | t }}</p>
+          } @else {
+            <p hlmCardDescription>
+              @if (library.lastScanAt) {
+                {{ 'libraries.lastScan' | t }}
+                <span [title]="library.lastScanAt | dateTime">{{
+                  library.lastScanAt | relativeTime
+                }}</span>
+              } @else {
+                {{ 'libraries.neverScanned' | t }}
+              }
+              @if (library.scanIntervalMinutes) {
+                · {{ intervalLabel(library.scanIntervalMinutes) }}
+              }
+              @if (library.watchForChanges) {
+                · {{ 'libraries.watching' | t }}
+              }
+            </p>
+          }
           @if (canManage()) {
             <div hlmCardAction class="flex gap-1">
-              <button
-                hlmBtn
-                variant="ghost"
-                size="icon"
-                type="button"
-                [attr.aria-label]="'common.edit' | t"
-                (click)="openEdit(library)"
-              >
-                <ng-icon name="lucidePencil" />
-              </button>
+              @if (!library.disabled) {
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  [attr.aria-label]="'common.edit' | t"
+                  (click)="openEdit(library)"
+                >
+                  <ng-icon name="lucidePencil" />
+                </button>
+              }
               <button
                 hlmBtn
                 variant="ghost"
@@ -191,7 +200,7 @@
             </ul>
           }
 
-          @if (canSync(library)) {
+          @if (cloudOn() && canSync(library)) {
             <app-cloud-sync
               [libraryId]="library.id"
               [sources]="library.sources ?? []"
@@ -201,7 +210,7 @@
             />
           }
 
-          @if (job) {
+          @if (job && !library.disabled) {
             <div class="grid gap-2 text-sm">
               @if (isRunning(job)) {
                 <div class="flex items-center justify-between gap-2">
@@ -265,73 +274,75 @@
           }
         </div>
 
-        <div hlmCardFooter class="flex flex-wrap gap-2">
-          @if (canScan()) {
-            @if (isRunning(job)) {
-              <button
-                hlmBtn
-                variant="outline"
-                size="sm"
-                type="button"
-                [disabled]="busy()"
-                (click)="cancelScan(job!)"
-              >
-                {{ 'scan.cancel' | t }}
-              </button>
-            } @else {
-              <button
-                hlmBtn
-                size="sm"
-                type="button"
-                class="gap-1"
-                [disabled]="busy()"
-                (click)="scan(library, false)"
-              >
-                <ng-icon name="lucideRefreshCw" />
-                {{ 'scan.start' | t }}
-              </button>
-              <button
-                hlmBtn
-                variant="outline"
-                size="sm"
-                type="button"
-                [disabled]="busy()"
-                (click)="scan(library, true)"
-              >
-                {{ 'scan.full' | t }}
-              </button>
-            }
-          }
-          @if (canManage() && !isShared(library)) {
-            <button
-              hlmBtn
-              variant="ghost"
-              size="sm"
-              type="button"
-              class="gap-1"
-              (click)="organizing.set(library)"
-            >
-              <ng-icon name="lucideFolderTree" />
-              {{ 'organize.open' | t }}
-              @if (library.organization?.autoOrganize) {
-                <span hlmBadge variant="secondary">{{ 'organize.autoBadge' | t }}</span>
+        @if (!library.disabled) {
+          <div hlmCardFooter class="flex flex-wrap gap-2">
+            @if (canScan()) {
+              @if (isRunning(job)) {
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="cancelScan(job!)"
+                >
+                  {{ 'scan.cancel' | t }}
+                </button>
+              } @else {
+                <button
+                  hlmBtn
+                  size="sm"
+                  type="button"
+                  class="gap-1"
+                  [disabled]="busy()"
+                  (click)="scan(library, false)"
+                >
+                  <ng-icon name="lucideRefreshCw" />
+                  {{ 'scan.start' | t }}
+                </button>
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="scan(library, true)"
+                >
+                  {{ 'scan.full' | t }}
+                </button>
               }
-            </button>
-            @if (auth.isAdmin() && takesFolders(library)) {
+            }
+            @if (canManage() && !isShared(library)) {
               <button
                 hlmBtn
                 variant="ghost"
                 size="sm"
                 type="button"
                 class="gap-1"
-                (click)="picking.set({ libraryId: library.id })"
+                (click)="organizing.set(library)"
               >
-                <ng-icon name="lucideFolderPlus" />
-                {{ 'libraries.addFolder' | t }}
+                <ng-icon name="lucideFolderTree" />
+                {{ 'organize.open' | t }}
+                @if (library.organization?.autoOrganize) {
+                  <span hlmBadge variant="secondary">{{ 'organize.autoBadge' | t }}</span>
+                }
               </button>
+              @if (auth.isAdmin() && takesFolders(library)) {
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  class="gap-1"
+                  (click)="picking.set({ libraryId: library.id })"
+                >
+                  <ng-icon name="lucideFolderPlus" />
+                  {{ 'libraries.addFolder' | t }}
+                </button>
+              }
             }
-          }
-        </div>
+          </div>
+        }
       </section>
     }
   </div>

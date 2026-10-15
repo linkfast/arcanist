@@ -23,6 +23,7 @@ public sealed class OrganizationService(
     OrganizeQueue queue,
     ILibraryStorageResolver storages,
     LibraryWatchSignal watches,
+    Libraries.CloudLibraries cloud,
     TimeProvider time)
 {
     public const int PreviewMoves = 200;
@@ -154,8 +155,11 @@ public sealed class OrganizationService(
     private async Task<LibraryEntity> FindAsync(Guid libraryId, CancellationToken cancellationToken)
     {
         var access = guard.Permission(Permissions.ManageLibraries);
-        return await LibraryService.Visible(db, access).Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == libraryId, cancellationToken)
-               ?? throw new ArcanistException.NotFound();
+        var library = await LibraryService.Visible(db, access).Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == libraryId, cancellationToken)
+                      ?? throw new ArcanistException.NotFound();
+        if (cloud.IsDisabled(library.Sources.Select(s => s.Kind)))
+            throw new ArcanistException.Conflict(ErrorCodes.LibraryDisabled);
+        return library;
     }
 
     private static OrganizeRun ToModel(OrganizeRunEntity run) => new(

@@ -8,11 +8,13 @@
     <section hlmCard>
       <div hlmCardContent class="grid gap-2 pt-6">
         <label class="flex items-center gap-2 text-sm font-medium">
-          <hlm-switch
-            [checked]="current.enabled"
-            [disabled]="busy()"
-            (checkedChange)="setEnabled($event)"
-          />
+          @for (version of [switchVersion()]; track version) {
+            <hlm-switch
+              [checked]="current.enabled"
+              [disabled]="busy()"
+              (checkedChange)="setEnabled($event)"
+            />
+          }
           {{ 'cloud.extension.enabled' | t }}
         </label>
         <p class="text-xs text-muted-foreground">
@@ -350,6 +352,12 @@
     </div>
   }
 }
+
+<app-cloud-off-dialog
+  [open]="confirmingOff()"
+  (confirmed)="setEnabled(false, true)"
+  (cancelled)="keepOn()"
+/>
 
 <hlm-alert-dialog
   [state]="confirmingUnlink() ? 'open' : 'closed'"

@@ -165,9 +165,9 @@ public sealed class CatalogService(
     internal IQueryable<MediaFile> VisibleFiles(UserAccess access)
     {
         var files = db.MediaFiles.Where(f => f.MissingSince == null);
-        // Ultimate Cloud's libraries cannot be played while its extension is off: they are not shown either.
+        // Libraries in Ultimate Cloud or S3 are disabled while its extension is off: their tracks are not shown.
         if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id))
-            files = files.Where(f => f.LibrarySource.Kind != LibrarySourceKind.UltimateCloud);
+            files = files.Where(f => f.LibrarySource.Kind != LibrarySourceKind.UltimateCloud && f.LibrarySource.Kind != LibrarySourceKind.S3);
         if (access.IsAdmin)
             return files;
 

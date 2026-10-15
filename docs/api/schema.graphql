@@ -632,6 +632,7 @@ type Library {
   sources: [LibrarySource!]
   organization: LibraryOrganization
   canUpload: Boolean!
+  disabled: Boolean!
 }
 
 type LibrarySource {

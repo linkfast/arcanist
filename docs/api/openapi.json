@@ -8951,6 +8951,10 @@
           "canUpload": {
             "type": "boolean",
             "default": false
+          },
+          "disabled": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

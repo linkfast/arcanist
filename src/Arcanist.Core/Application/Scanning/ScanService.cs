@@ -34,7 +34,8 @@ public sealed class ScanService(
     AccessGuard guard,
     ScanCoordinator coordinator,
     ScanProgressTracker progress,
-    ScanEvents events)
+    ScanEvents events,
+    Libraries.CloudLibraries cloud)
 {
     public const int MaxJobs = 100;
 
@@ -42,6 +43,7 @@ public sealed class ScanService(
     {
         var access = guard.Permission(Permissions.RunScans);
         await EnsureVisibleAsync(access, libraryId, cancellationToken);
+        await cloud.EnsureEnabledAsync(db, libraryId, cancellationToken);
 
         var job = await coordinator.EnqueueAsync(libraryId, full ? ScanKind.Full : ScanKind.Incremental, access.UserId, cancellationToken);
         return ToModel(job);

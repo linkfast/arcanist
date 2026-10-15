@@ -409,6 +409,9 @@ export const en: Dictionary = {
       'Some formats (such as Opus or WMA) will be analyzed once ffmpeg is available.',
   },
   libraries: {
+    disabled: 'Disabled',
+    disabledHelp:
+      'Its music is in Ultimate Cloud or S3 and the Ultimate Cloud extension is off: it can only be deleted. Switch the extension on in Extensions to use it again.',
     sharedByPeer: 'Shared by another server through the P2P network',
     ultimateCloud: {
       Library: 'Your Ultimate Cloud library',
@@ -615,6 +618,7 @@ export const en: Dictionary = {
       convertsTo: 'converts to {format}',
       copies: 'copies (keeps the originals)',
       cloudDrop: 'Cloud Drop',
+      disabled: 'Disabled: needs Ultimate Cloud, which is off',
       uploadToCloud: 'Upload what gets identified to Ultimate Cloud',
       uploadToCloudHelp:
         'Once a song brought from Cloud Drop is in the library and identified (AcoustID or MusicBrainz, in Settings > Online services), it is uploaded to the linked account’s library with Arcanist’s description. What is not identified is not uploaded.',
@@ -1029,6 +1033,11 @@ export const en: Dictionary = {
         'Everything that works with Ultimate Cloud: its libraries and Cloud Drop, syncing, S3 libraries, the seamless connection and its online services. Switch it off if you do not plan to use Ultimate Cloud.',
       offHelp:
         'Off: this server never contacts Ultimate Cloud, its libraries are hidden and the features of its plan are off. Switching it on again brings everything back, with the account still linked.',
+      off: 'Switch off',
+      offTitle: 'Switch Ultimate Cloud off?',
+      offConfirm:
+        'Everything about Ultimate Cloud will be hidden: its page, Cloud Drop, syncing, S3 libraries and its online services. Libraries in Ultimate Cloud or S3 are disabled and can only be deleted. To bring it all back you will have to switch the extension on again in Extensions; the account stays linked.',
+      switchedOff: 'Ultimate Cloud is off. Switch it on again here, in Extensions.',
     },
     services: {
       title: 'Online services',
@@ -1533,6 +1542,7 @@ export const en: Dictionary = {
     dlna_disabled: 'DLNA is off.',
     cloud_disabled: 'Ultimate Cloud is switched off.',
     last_source: 'A local library keeps its folder: move it instead.',
+    library_disabled: 'This library needs Ultimate Cloud, which is switched off.',
     storage_conflict: 'A different file with the same name is already in the new folder.',
     cleanup_incomplete: 'Moved, but some files of the old folder could not be deleted.',
     cloud_service_off: 'That Ultimate Cloud service is switched off.',

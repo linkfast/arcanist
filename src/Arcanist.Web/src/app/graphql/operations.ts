@@ -64,6 +64,7 @@ export const LibrariesQuery = graphql(`
       watchForChanges
       createdAt
       lastScanAt
+      disabled
       sources {
         id
         kind

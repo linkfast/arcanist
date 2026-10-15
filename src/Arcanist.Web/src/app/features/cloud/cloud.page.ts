@@ -1,5 +1,5 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
@@ -12,6 +12,7 @@ import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
+import { CloudOffDialog } from '../../shared/cloud-off-dialog';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
@@ -71,6 +72,7 @@ const ALL_CAPABILITIES: Capability[] = [
     HlmProgressImports,
     HlmSpinnerImports,
     HlmSwitchImports,
+    CloudOffDialog,
     TranslatePipe,
     BytesPipe,
     DateTimePipe,
@@ -83,6 +85,10 @@ export class CloudPage implements OnInit {
   private readonly gql = inject(Gql);
   private readonly destroyRef = inject(DestroyRef);
   private readonly enabledExtensions = inject(EnabledExtensions);
+  private readonly router = inject(Router);
+  protected readonly confirmingOff = signal(false);
+  /** Remakes the switch, so it shows on again when switching off is cancelled. */
+  protected readonly switchVersion = signal(0);
 
   protected readonly status = signal<Status | null>(null);
   protected readonly metrics = signal<Metrics | null>(null);
@@ -167,12 +173,29 @@ export class CloudPage implements OnInit {
     }
   }
 
-  protected async setEnabled(enabled: boolean): Promise<void> {
+  protected async setEnabled(enabled: boolean, confirmed = false): Promise<void> {
+    if (!enabled && !confirmed) {
+      this.confirmingOff.set(true);
+      return;
+    }
+    this.confirmingOff.set(false);
     await this.run(async () => {
       await this.gql.mutate(SetExtensionEnabledMutation, { id: 'ultimate-cloud', enabled });
       await this.enabledExtensions.refresh();
+      if (!enabled) {
+        // Its page is gone from the menu: it is switched on again from Extensions.
+        toast.success(this.i18n.t('cloud.extension.switchedOff'));
+        await this.router.navigateByUrl('/extensions');
+        return;
+      }
       await this.load();
     });
+  }
+
+  protected keepOn(): void {
+    if (!this.confirmingOff()) return;
+    this.confirmingOff.set(false);
+    this.switchVersion.update((v) => v + 1);
   }
 
   protected async setService(service: Service, on: boolean): Promise<void> {

@@ -13,6 +13,7 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { firstValueFrom } from 'rxjs';
 import { ApiError } from '../../core/api/rest';
+import { CloudOffDialog } from '../../shared/cloud-off-dialog';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
@@ -47,6 +48,7 @@ interface PendingInstall {
 @Component({
   selector: 'app-extensions-page',
   imports: [
+    CloudOffDialog,
     FormsModule,
     NgTemplateOutlet,
     BrnAlertDialogContent,
@@ -191,11 +193,13 @@ interface PendingInstall {
                 </div>
                 <div class="flex items-center gap-3">
                   <label class="flex items-center gap-2 text-sm">
-                    <hlm-switch
-                      [checked]="extension.enabled"
-                      [disabled]="busy()"
-                      (checkedChange)="setEnabled(extension, $event)"
-                    />
+                    @for (version of [switchVersion()]; track version) {
+                      <hlm-switch
+                        [checked]="extension.enabled"
+                        [disabled]="busy()"
+                        (checkedChange)="setEnabled(extension, $event)"
+                      />
+                    }
                     {{ 'extensions.list.enabled' | t }}
                   </label>
                   @if (!extension.builtIn) {
@@ -257,6 +261,12 @@ interface PendingInstall {
         </div>
       </div>
     </ng-template>
+
+    <app-cloud-off-dialog
+      [open]="confirmingCloudOff() !== null"
+      (confirmed)="switchCloudOff()"
+      (cancelled)="keepCloudOn()"
+    />
 
     <hlm-alert-dialog [state]="pending() ? 'open' : 'closed'" (closed)="pending.set(null)">
       <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
@@ -350,7 +360,32 @@ export class ExtensionsPage implements OnInit {
     return this.run(() => this.gql.mutate(UninstallFrontendMutation, { id: frontend.id }));
   }
 
-  protected async setEnabled(extension: Extension, enabled: boolean): Promise<void> {
+  /** Ultimate Cloud waiting for the confirmation to be switched off. */
+  protected readonly confirmingCloudOff = signal<Extension | null>(null);
+  /** Remakes the switches, so one left on after a cancelled confirmation shows on again. */
+  protected readonly switchVersion = signal(0);
+
+  protected async switchCloudOff(): Promise<void> {
+    const extension = this.confirmingCloudOff();
+    this.confirmingCloudOff.set(null);
+    if (extension) await this.setEnabled(extension, false, true);
+  }
+
+  protected keepCloudOn(): void {
+    if (!this.confirmingCloudOff()) return;
+    this.confirmingCloudOff.set(null);
+    this.switchVersion.update((v) => v + 1);
+  }
+
+  protected async setEnabled(
+    extension: Extension,
+    enabled: boolean,
+    confirmed = false,
+  ): Promise<void> {
+    if (extension.id === 'ultimate-cloud' && !enabled && !confirmed) {
+      this.confirmingCloudOff.set(extension);
+      return;
+    }
     await this.run(async () => {
       const result = await this.gql.mutate(SetExtensionEnabledMutation, {
         id: extension.id,

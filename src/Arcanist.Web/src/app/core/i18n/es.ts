@@ -414,6 +414,9 @@ export const es: Dictionary = {
       'Algunos formatos (como Opus o WMA) se analizarán cuando ffmpeg esté disponible.',
   },
   libraries: {
+    disabled: 'Desactivada',
+    disabledHelp:
+      'Su música está en Ultimate Cloud o S3 y la extensión Ultimate Cloud está desactivada: solo se puede eliminar. Activa la extensión en Extensiones para volver a usarla.',
     sharedByPeer: 'Compartida por otro servidor a través de la red P2P',
     ultimateCloud: {
       Library: 'Tu biblioteca de Ultimate Cloud',
@@ -621,6 +624,7 @@ export const es: Dictionary = {
       convertsTo: 'convierte a {format}',
       copies: 'copia (deja los originales)',
       cloudDrop: 'Cloud Drop',
+      disabled: 'Desactivada: necesita Ultimate Cloud, que está apagado',
       uploadToCloud: 'Subir a Ultimate Cloud lo que se identifique',
       uploadToCloudHelp:
         'Cuando una canción traída de Cloud Drop ya está en la biblioteca e identificada (AcoustID o MusicBrainz, en Ajustes > Servicios en línea), se sube a la biblioteca de la cuenta vinculada con la descripción de Arcanist. Lo que no se identifica no se sube.',
@@ -1037,6 +1041,11 @@ export const es: Dictionary = {
         'Todo lo que funciona con Ultimate Cloud: sus bibliotecas y Cloud Drop, la sincronización, las bibliotecas en S3, la conexión transparente y sus servicios en línea. Desactívalo si no piensas usar Ultimate Cloud.',
       offHelp:
         'Desactivado: este servidor nunca contacta con Ultimate Cloud, sus bibliotecas se ocultan y las funciones de su plan se apagan. Al activarlo de nuevo vuelve todo, con la cuenta todavía vinculada.',
+      off: 'Desactivar',
+      offTitle: '¿Desactivar Ultimate Cloud?',
+      offConfirm:
+        'Se ocultará todo lo referente a Ultimate Cloud: su página, Cloud Drop, la sincronización, las bibliotecas en S3 y sus servicios en línea. Las bibliotecas en Ultimate Cloud o S3 quedan desactivadas y solo se pueden eliminar. Para recuperarlo tendrás que activar la extensión de nuevo en Extensiones; la cuenta sigue vinculada.',
+      switchedOff: 'Ultimate Cloud está desactivado. Actívalo de nuevo aquí, en Extensiones.',
     },
     services: {
       title: 'Servicios en línea',
@@ -1554,6 +1563,7 @@ export const es: Dictionary = {
     dlna_disabled: 'DLNA está desactivado.',
     cloud_disabled: 'Ultimate Cloud está desactivado.',
     last_source: 'Una biblioteca local conserva su carpeta: muévela en lugar de quitarla.',
+    library_disabled: 'Esta biblioteca necesita Ultimate Cloud, que está desactivado.',
     storage_conflict: 'En la carpeta nueva ya hay un archivo distinto con el mismo nombre.',
     cleanup_incomplete:
       'Movida, pero algunos archivos de la carpeta anterior no se pudieron borrar.',

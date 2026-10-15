@@ -185,7 +185,12 @@ export class Shell {
         icon: 'lucideNetwork',
         visible: this.auth.isAdmin(),
       },
-      { path: '/cloud', label: 'nav.cloud', icon: 'lucideCloud', visible: this.auth.isAdmin() },
+      {
+        path: '/cloud',
+        label: 'nav.cloud',
+        icon: 'lucideCloud',
+        visible: this.auth.isAdmin() && this.extensions.has('ultimate-cloud'),
+      },
       { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
       {
         path: '/mstream',

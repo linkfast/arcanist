@@ -25,6 +25,7 @@ import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
+import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
@@ -145,6 +146,18 @@ const REFRESH_MS = 5000;
 })
 export class ImportPage implements OnInit {
   protected readonly auth = inject(AuthService);
+  private readonly extensions = inject(EnabledExtensions);
+  /** The Ultimate Cloud extension is on: without it Cloud Drop is not offered. */
+  protected readonly cloudOn = computed(() => this.extensions.has('ultimate-cloud'));
+
+  /** A Cloud Drop folder with Ultimate Cloud off, or one into a disabled library: it can only be deleted. */
+  protected folderDisabled(folder: DropFolder): boolean {
+    if (folder.kind === 'ULTIMATE_CLOUD_DROP' && !this.cloudOn()) return true;
+    return this.libraries().some(
+      (library) =>
+        library.disabled && (library.sources ?? []).some((s) => s.id === folder.librarySourceId),
+    );
+  }
   private readonly gql = inject(Gql);
   protected readonly i18n = inject(I18n);
 
@@ -170,17 +183,19 @@ export class ImportPage implements OnInit {
    * Ultimate Cloud's or other servers' libraries, which are read only.
    */
   protected readonly targets = computed(() =>
-    this.libraries().flatMap((library) =>
-      (library.sources ?? [])
-        .filter((source) => source.kind === 'LOCAL' || source.kind === 'S3')
-        .map((source) => ({
-          id: source.id,
-          label:
-            (library.sources?.length ?? 0) > 1
-              ? `${library.name} — ${source.location}`
-              : library.name,
-        })),
-    ),
+    this.libraries()
+      .filter((library) => !library.disabled)
+      .flatMap((library) =>
+        (library.sources ?? [])
+          .filter((source) => source.kind === 'LOCAL' || source.kind === 'S3')
+          .map((source) => ({
+            id: source.id,
+            label:
+              (library.sources?.length ?? 0) > 1
+                ? `${library.name} — ${source.location}`
+                : library.name,
+          })),
+      ),
   );
 
   // Drop folder dialog

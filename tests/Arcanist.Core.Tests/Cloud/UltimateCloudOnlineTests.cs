@@ -180,6 +180,18 @@ public sealed class UltimateCloudOnlineTests : IAsyncDisposable
         Assert.Equal("NONE", (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, Cancel)).GetProperty("cloudTier").GetString());
         Assert.Equal("cloud_disabled", (await _admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }")).ErrorCode());
 
+        // Its library is disabled: it shows as such and can only be deleted.
+        var libraries = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel);
+        var cloudLibrary = libraries.EnumerateArray().Single(l => l.GetProperty("sources")[0].GetProperty("kind").GetString() == "ULTIMATE_CLOUD");
+        var musicLibrary = libraries.EnumerateArray().Single(l => l.GetProperty("sources")[0].GetProperty("kind").GetString() == "LOCAL");
+        Assert.True(cloudLibrary.GetProperty("disabled").GetBoolean());
+        Assert.False(musicLibrary.GetProperty("disabled").GetBoolean());
+        var cloudId = cloudLibrary.GetProperty("id").GetString();
+        var scan = await _admin.PostAsJsonAsync($"/rest/v1/libraries/{cloudId}/scans", new { full = false }, ArcanistFactory.Json, Cancel);
+        Assert.Contains("library_disabled", await scan.Content.ReadAsStringAsync(Cancel));
+        var rename = await _admin.PutAsJsonAsync($"/rest/v1/libraries/{cloudId}", new { name = "Renamed", visibleToAll = false, scanIntervalMinutes = (int?)null, watchForChanges = false }, ArcanistFactory.Json, Cancel);
+        Assert.Contains("library_disabled", await rename.Content.ReadAsStringAsync(Cancel));
+
         var calls = _cloud.Api.Count;
         await PlayAsync(_admin, "Opening", 1);
         await Reporter.RunAsync(Cancel);

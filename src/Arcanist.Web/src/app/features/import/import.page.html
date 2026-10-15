@@ -217,6 +217,11 @@
                     }
                   </span>
                   <span class="flex flex-wrap gap-1">
+                    @if (folderDisabled(folder)) {
+                      <span hlmBadge variant="destructive">{{
+                        'import.folders.disabled' | t
+                      }}</span>
+                    }
                     @if (!folder.enabled) {
                       <span hlmBadge variant="outline">{{ 'import.folders.paused' | t }}</span>
                     }
@@ -228,16 +233,18 @@
                   </span>
                 </div>
                 <div class="flex shrink-0 gap-1">
-                  <button
-                    hlmBtn
-                    variant="ghost"
-                    size="icon"
-                    type="button"
-                    [attr.aria-label]="'common.edit' | t"
-                    (click)="openEdit(folder)"
-                  >
-                    <ng-icon name="lucidePencil" />
-                  </button>
+                  @if (!folderDisabled(folder)) {
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      [attr.aria-label]="'common.edit' | t"
+                      (click)="openEdit(folder)"
+                    >
+                      <ng-icon name="lucidePencil" />
+                    </button>
+                  }
                   <button
                     hlmBtn
                     variant="ghost"
@@ -492,7 +499,7 @@
           </h3>
         </hlm-dialog-header>
 
-        @if (!current.id) {
+        @if (!current.id && cloudOn()) {
           <hlm-field>
             <label hlmFieldLabel>{{ 'import.folders.kind' | t }}</label>
             <hlm-native-select

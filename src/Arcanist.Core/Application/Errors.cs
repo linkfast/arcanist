@@ -90,6 +90,9 @@ public static class ErrorCodes
     /// <summary>A local library keeps its folder: it can be moved, not removed.</summary>
     public const string LastSource = "last_source";
 
+    /// <summary>The library's music is in Ultimate Cloud or S3 and the Ultimate Cloud extension is off: it can only be deleted.</summary>
+    public const string LibraryDisabled = "library_disabled";
+
     /// <summary>A different file with the same name is already where a file had to go.</summary>
     public const string StorageConflict = "storage_conflict";
 

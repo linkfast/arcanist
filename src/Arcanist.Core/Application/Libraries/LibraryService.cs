@@ -24,6 +24,7 @@ public sealed class LibraryService(
     ScanCoordinator scans,
     LibraryWatchSignal watches,
     LibraryMoves moves,
+    CloudLibraries cloud,
     Storage.ILibraryStorageResolver storages,
     TimeProvider time)
 {
@@ -37,7 +38,7 @@ public sealed class LibraryService(
             .OrderBy(l => l.Name)
             .ToListAsync(cancellationToken);
 
-        return libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries), access)).ToList();
+        return libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries), access, cloud)).ToList();
     }
 
     public async Task<Library> GetAsync(Guid id, CancellationToken cancellationToken)
@@ -46,7 +47,7 @@ public sealed class LibraryService(
         var library = await Visible(access).AsNoTracking().Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == id, cancellationToken)
                       ?? throw new ArcanistException.NotFound();
 
-        return library.ToModel(access.Has(Permissions.ManageLibraries), access);
+        return library.ToModel(access.Has(Permissions.ManageLibraries), access, cloud);
     }
 
     public async Task<Library> CreateAsync(CreateLibraryInput input, CancellationToken cancellationToken)
@@ -93,13 +94,14 @@ public sealed class LibraryService(
             watches.Refresh();
         await scans.EnqueueAsync(library.Id, ScanKind.Full, actor.UserId, cancellationToken);
 
-        return library.ToModel(includeSources: true, guard.Authenticated());
+        return library.ToModel(includeSources: true, guard.Authenticated(), cloud);
     }
 
     public async Task<Library> UpdateAsync(Guid id, UpdateLibraryInput input, CancellationToken cancellationToken)
     {
         var actor = guard.Permission(Permissions.ManageLibraries);
         var library = await FindManageableAsync(actor, id, cancellationToken);
+        await cloud.EnsureEnabledAsync(db, id, cancellationToken);
 
         var errors = new ValidationErrors();
         LibraryRules.ValidateName(input.Name, "name", errors);
@@ -122,7 +124,7 @@ public sealed class LibraryService(
         if (watchChanged)
             watches.Refresh();
 
-        return library.ToModel(includeSources: true, guard.Authenticated());
+        return library.ToModel(includeSources: true, guard.Authenticated(), cloud);
     }
 
     /// <summary>Removes the library and its files from the catalog. Files on disk are never touched.</summary>
@@ -286,7 +288,7 @@ public sealed class LibraryService(
     private async Task<Library> GetManagedAsync(Guid id, CancellationToken cancellationToken)
     {
         var library = await db.Libraries.AsNoTracking().Include(l => l.Sources).SingleAsync(l => l.Id == id, cancellationToken);
-        return library.ToModel(includeSources: true, guard.Authenticated());
+        return library.ToModel(includeSources: true, guard.Authenticated(), cloud);
     }
 
     private async Task EnsureUniqueNameAsync(string? name, Guid? exceptId, ValidationErrors errors, CancellationToken cancellationToken)

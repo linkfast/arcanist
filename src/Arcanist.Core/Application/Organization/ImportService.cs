@@ -122,6 +122,8 @@ public sealed class ImportService(
         var source = await db.LibrarySources.SingleOrDefaultAsync(s => s.Id == input.LibrarySourceId, cancellationToken);
         if (source is null)
             errors.Add("librarySourceId", ErrorCodes.NotFound);
+        else if (CloudLibraries.DependsOnCloud(source.Kind) && !services.GetRequiredService<CloudLibraries>().Enabled)
+            errors.Add("librarySourceId", ErrorCodes.LibraryDisabled);
         else if (!await storages.For(source.Kind).CanWriteAsync(StorageLocation.From(source), cancellationToken))
             errors.Add("librarySourceId", ErrorCodes.ReadOnly);
 

@@ -29,6 +29,7 @@ import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { ApiError } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
+import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
@@ -151,6 +152,9 @@ export class LibrariesPage implements OnInit {
   }
 
   protected readonly auth = inject(AuthService);
+  private readonly extensions = inject(EnabledExtensions);
+  /** The Ultimate Cloud extension is on: without it, nothing of Ultimate Cloud (S3 included) is offered. */
+  protected readonly cloudOn = computed(() => this.extensions.has('ultimate-cloud'));
   private readonly gql = inject(Gql);
   protected readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);

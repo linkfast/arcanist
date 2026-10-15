@@ -217,8 +217,10 @@ public sealed class DlnaImportTests : IAsyncDisposable
         await _factory.WaitForScansAsync(_admin);
         var titles = (await _admin.GraphQLAsync("query { tracks(first: 50) { items { title } } }"))
             .GetProperty("data").GetProperty("tracks").GetProperty("items").EnumerateArray().Select(t => t.GetProperty("title").GetString()).Order().ToList();
-        // Arcanist does not write tags into files: the untagged one is named after its file, as any untagged file.
-        Assert.Equal(["02 Beta", "Alpha", "Known"], titles);
+        // The untagged copy got the server's description as tags; the tagged one kept its own title.
+        Assert.Equal(["Alpha", "Beta", "Known"], titles);
+        var beta = new ATL.Track(Path.Combine(_music, "Band", "Pulse", "02 Beta.wav"));
+        Assert.Equal(("Beta", "Band", "Pulse", 2), (beta.Title, beta.Artist, beta.Album, beta.TrackNumber ?? 0));
 
         // Retrying walks the server again and only tries what is missing.
         var requestsBefore = _server.Requested.Count(p => p.StartsWith("/media/", StringComparison.Ordinal));

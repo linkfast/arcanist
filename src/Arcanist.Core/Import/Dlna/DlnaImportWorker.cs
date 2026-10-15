@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Arcanist.Core.Application;
+using Arcanist.Core.Application.Organization;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Dlna;
@@ -18,8 +19,9 @@ public sealed record DlnaContainerChoice(string Id, string Title);
 /// <summary>
 /// Copies music from DLNA/UPnP media servers into library folders, one import at a time and one file at a time:
 /// first it walks the chosen containers of the server (each piece of music once, however many views list it), then
-/// downloads each file (the original when the server offers it), skips audio the library has already, and places
-/// the rest where the library's template says, as organizing would, with the album's artwork when the file has none.
+/// downloads each file (the original when the server offers it), skips audio the library has already, writes the
+/// server's description into the tags the file lacks, and places the rest where the library's template says, as
+/// organizing would, with the album's artwork when the file has none.
 /// Imports interrupted by a restart go on where they were.
 /// </summary>
 internal sealed class DlnaImportWorker(
@@ -336,6 +338,29 @@ internal sealed class DlnaImportWorker(
                 return;
             }
 
+            // The server's description fills the gaps of the file's tags, in the copy, before it enters the library.
+            var missing = new ImportTagsInput(
+                metadata.Title is null ? item.Title : null,
+                metadata.Artists.Count == 0 ? item.Artist : null,
+                metadata.Album is null ? item.Album : null,
+                metadata.AlbumArtist is null ? item.AlbumArtist : null,
+                metadata.Year is null ? item.Year : null,
+                metadata.TrackNumber is null ? item.TrackNumber : null,
+                metadata.DiscNumber is null ? item.DiscNumber : null,
+                metadata.Genres.Count == 0 ? item.Genre : null);
+            if (missing != NoTags)
+            {
+                try
+                {
+                    TagWriter.Write(temporary, missing);
+                }
+                catch (Exception e) when (e is IOException or InvalidOperationException or NotSupportedException)
+                {
+                    // Some formats take no tags: the file is copied as it is.
+                    logger.LogDebug(e, "Could not write the server's tags into {Title}", item.Title);
+                }
+            }
+
             // What the file says first; the server's description fills the gaps.
             var album = metadata.Album ?? item.Album;
             var albumArtist = metadata.AlbumArtist ?? item.AlbumArtist;
@@ -538,6 +563,8 @@ internal sealed class DlnaImportWorker(
 
         return Task.CompletedTask;
     }
+
+    private static readonly ImportTagsInput NoTags = new(null, null, null, null, null, null, null, null);
 
     private static string AlbumKey(string? artist, string? album) =>
         TextNormalizer.Normalize(artist ?? "") + '\u001f' + TextNormalizer.Normalize(album ?? "");

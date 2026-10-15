@@ -5,8 +5,9 @@ using Arcanist.Core.Scanning;
 namespace Arcanist.Core.Organization;
 
 /// <summary>
-/// Writes tags with ATL.NET. Only used on files being imported from a drop folder: when an administrator completes
-/// their tags, and to carry tags over to a converted copy. Library files are never re-tagged.
+/// Writes tags with ATL.NET. Only used on files being imported, before they enter a library: when an administrator
+/// completes the tags of a dropped file, to carry tags over to a converted copy, and to fill the tags a file copied
+/// from a DLNA server lacks with the server's description. Library files are never re-tagged.
 /// </summary>
 internal static class TagWriter
 {

@@ -119,6 +119,16 @@ public static class ErrorCodes
     public const string VerificationFailed = "verification_failed";
     /// <summary>Copying the data failed; the server keeps its database.</summary>
     public const string MigrationFailed = "migration_failed";
+    /// <summary>The DLNA media server did not answer.</summary>
+    public const string DlnaServerUnreachable = "dlna_server_unreachable";
+    /// <summary>The address does not describe a DLNA/UPnP media server.</summary>
+    public const string NotMediaServer = "not_media_server";
+    /// <summary>The file could not be read as audio.</summary>
+    public const string Unreadable = "unreadable";
+    /// <summary>Only queued, copying or listing imports can be cancelled; only finished ones retried.</summary>
+    public const string ImportNotActive = "import_not_active";
+    /// <summary>The import stopped because of an unexpected error; see the server log.</summary>
+    public const string ImportFailed = "import_failed";
     /// <summary>This server has no Ultimate Cloud address configured.</summary>
     public const string CloudNotConfigured = "cloud_not_configured";
     /// <summary>No Ultimate Cloud account is linked.</summary>

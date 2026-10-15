@@ -915,6 +915,102 @@ export const MstreamImportsQuery = graphql(`
   }
 `);
 
+export const DlnaImportJobFields = graphql(`
+  fragment DlnaImportJobFields on DlnaImportJob {
+    id
+    serverName
+    folders
+    libraryId
+    libraryName
+    status
+    found
+    copied
+    duplicates
+    failed
+    copiedBytes
+    createdAt
+    finishedAt
+    errorCode
+    failures {
+      title
+      artist
+      album
+      reason
+    }
+  }
+`);
+
+export const DlnaImportsQuery = graphql(`
+  query DlnaImports {
+    dlnaImports {
+      ...DlnaImportJobFields
+    }
+  }
+`);
+
+export const DlnaMediaServersQuery = graphql(`
+  query DlnaMediaServers {
+    dlnaMediaServers {
+      id
+      name
+      manufacturer
+      model
+      location
+    }
+  }
+`);
+
+export const DlnaMediaServerQuery = graphql(`
+  query DlnaMediaServer($location: String!) {
+    dlnaMediaServer(location: $location) {
+      id
+      name
+      manufacturer
+      model
+      location
+    }
+  }
+`);
+
+export const BrowseDlnaMediaServerQuery = graphql(`
+  query BrowseDlnaMediaServer($location: String!, $folderId: String) {
+    browseDlnaMediaServer(location: $location, folderId: $folderId) {
+      id
+      tracks
+      truncated
+      folders {
+        id
+        title
+        childCount
+      }
+    }
+  }
+`);
+
+export const StartDlnaImportMutation = graphql(`
+  mutation StartDlnaImport($input: StartDlnaImportInput!) {
+    startDlnaImport(input: $input) {
+      ...DlnaImportJobFields
+    }
+  }
+`);
+
+export const CancelDlnaImportMutation = graphql(`
+  mutation CancelDlnaImport($id: ID!) {
+    cancelDlnaImport(id: $id) {
+      ...DlnaImportJobFields
+    }
+  }
+`);
+
+export const RetryDlnaImportMutation = graphql(`
+  mutation RetryDlnaImport($id: ID!) {
+    retryDlnaImport(id: $id) {
+      ...DlnaImportJobFields
+    }
+  }
+`);
+
 export const AnalyzeMstreamFolderMutation = graphql(`
   mutation AnalyzeMstreamFolder($folder: String!) {
     analyzeMstreamFolder(folder: $folder) {

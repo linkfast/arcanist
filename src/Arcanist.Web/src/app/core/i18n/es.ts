@@ -463,6 +463,7 @@ export const es: Dictionary = {
       title: 'Migrar desde otro servidor',
       help: 'Trae bibliotecas, usuarios, playlists, valoraciones y reproducciones de otro servidor de música. El otro servidor no se modifica.',
       mstream: 'Desde mStream',
+      dlna: 'Desde un servidor DLNA',
     },
     folders: {
       title: 'Carpetas de entrada',
@@ -1031,6 +1032,65 @@ export const es: Dictionary = {
       'Escanéalo con la app en el dispositivo. Después inicia sesión en la app como siempre.',
     serverHelp: 'Envía este enlace al administrador del otro servidor.',
   },
+  dlnaImport: {
+    title: 'Copiar desde un servidor DLNA',
+    subtitle:
+      'Trae la música de otro servidor de la red (MinimServer, Serviio, Universal Media Server, Twonky, un NAS…) a una biblioteca. El otro servidor no se modifica.',
+    servers: {
+      title: 'Servidores en la red',
+      search: 'Buscar de nuevo',
+      searching: 'Buscando servidores DLNA en la red…',
+      none: 'No se encontró ningún servidor. Comprueba que esté encendido y en la misma red, o escribe su dirección.',
+      byAddress: 'O escribe la dirección de su descripción',
+      byAddressHelp:
+        'Para servidores en otra red o que no responden a la búsqueda. Suele terminar en .xml; la indica el propio servidor.',
+      open: 'Abrir',
+    },
+    browse: {
+      change: 'Cambiar de servidor',
+      loading: 'Leyendo la carpeta…',
+      noFolders: 'No hay subcarpetas.',
+      tracksHere: '{count} canciones directamente en esta carpeta',
+      truncated: 'el servidor tiene más de las que se muestran',
+      selectThis: 'Seleccionar esta carpeta',
+      views:
+        'Los servidores muestran la misma música de varias formas (carpetas, álbumes, artistas…). Basta con elegir una: cada canción se copia una sola vez.',
+    },
+    selected: 'Carpetas elegidas',
+    destination: {
+      title: 'Copiar a',
+      existing: 'Una biblioteca existente',
+      new: 'Una biblioteca nueva',
+      name: 'Nombre de la biblioteca',
+      folder: 'Carpeta de la biblioteca en este servidor',
+    },
+    notes: {
+      originals:
+        'Se descargan los archivos originales; solo si el servidor no los ofrece se usa una versión convertida.',
+      template: 'Se colocan según la plantilla de la biblioteca, con la carátula del álbum.',
+      duplicates: 'Lo que la biblioteca ya tiene no se vuelve a copiar.',
+    },
+    start: 'Copiar',
+    startedToast: 'Copia iniciada',
+    status: {
+      QUEUED: 'En cola',
+      LISTING: 'Buscando música',
+      COPYING: 'Copiando',
+      COMPLETED: 'Completada',
+      FAILED: 'Fallida',
+      CANCELLED: 'Cancelada',
+    },
+    history: {
+      into: '{server} → {library}',
+      folders: 'Carpetas: {folders}',
+      listing: 'Buscando música en el servidor… ({found} encontradas)',
+      report:
+        '{copied} de {found} copiadas ({size}) · {duplicates} ya estaban · {failed} con errores',
+      failures: 'Ver las que fallaron ({count})',
+      cancel: 'Detener',
+      retry: 'Reintentar lo que falta',
+    },
+  },
   mstream: {
     title: 'Importar desde mStream',
     subtitle:
@@ -1111,6 +1171,12 @@ export const es: Dictionary = {
       'El acceso a Ultimate Cloud caducó o se revocó: vincula la cuenta de nuevo.',
     cloud_link_denied: 'Se rechazó el acceso desde Ultimate Cloud.',
     cloud_link_unsupported: 'Ultimate Cloud no permite vincular este servidor con un código.',
+    dlna_server_unreachable: 'El servidor DLNA no responde.',
+    not_media_server: 'Esa dirección no es la de un servidor DLNA/UPnP de medios.',
+    unreadable: 'El archivo no se pudo leer como audio.',
+    import_not_active: 'Esa importación no está en curso (o ya terminó).',
+    import_failed:
+      'La importación se detuvo por un error inesperado. Revisa el registro del servidor.',
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',
     network: 'No se puede contactar con el servidor.',
     unauthorized: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',

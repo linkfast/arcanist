@@ -460,6 +460,7 @@ export const en: Dictionary = {
       title: 'Migrate from another server',
       help: 'Bring libraries, users, playlists, ratings and plays from another music server. The other server is not changed.',
       mstream: 'From mStream',
+      dlna: 'From a DLNA server',
     },
     folders: {
       title: 'Drop folders',
@@ -1018,6 +1019,65 @@ export const en: Dictionary = {
     deviceHelp: 'Scan it with the app on the device. Then sign in to the app as usual.',
     serverHelp: 'Send this link to the other server’s administrator.',
   },
+  dlnaImport: {
+    title: 'Copy from a DLNA server',
+    subtitle:
+      'Brings the music of another server of the network (MinimServer, Serviio, Universal Media Server, Twonky, a NAS…) into a library. The other server is not changed.',
+    servers: {
+      title: 'Servers on the network',
+      search: 'Search again',
+      searching: 'Searching the network for DLNA servers…',
+      none: 'No server was found. Check that it is on and on the same network, or type its address.',
+      byAddress: 'Or type the address of its description',
+      byAddressHelp:
+        'For servers on another network or that do not answer the search. It usually ends in .xml; the server itself shows it.',
+      open: 'Open',
+    },
+    browse: {
+      change: 'Change server',
+      loading: 'Reading the folder…',
+      noFolders: 'No subfolders.',
+      tracksHere: '{count} songs directly in this folder',
+      truncated: 'the server has more than are shown',
+      selectThis: 'Select this folder',
+      views:
+        'Servers show the same music in several ways (folders, albums, artists…). Choosing one is enough: each song is copied once.',
+    },
+    selected: 'Chosen folders',
+    destination: {
+      title: 'Copy into',
+      existing: 'An existing library',
+      new: 'A new library',
+      name: 'Library name',
+      folder: 'Library folder on this server',
+    },
+    notes: {
+      originals:
+        'The original files are downloaded; a converted version is used only when the server does not offer them.',
+      template: 'They are placed as the library’s template says, with the album artwork.',
+      duplicates: 'What the library has already is not copied again.',
+    },
+    start: 'Copy',
+    startedToast: 'Copy started',
+    status: {
+      QUEUED: 'Queued',
+      LISTING: 'Finding music',
+      COPYING: 'Copying',
+      COMPLETED: 'Completed',
+      FAILED: 'Failed',
+      CANCELLED: 'Cancelled',
+    },
+    history: {
+      into: '{server} → {library}',
+      folders: 'Folders: {folders}',
+      listing: 'Finding music on the server… ({found} found)',
+      report:
+        '{copied} of {found} copied ({size}) · {duplicates} were there already · {failed} with errors',
+      failures: 'See the ones that failed ({count})',
+      cancel: 'Stop',
+      retry: 'Retry what is missing',
+    },
+  },
   mstream: {
     title: 'Import from mStream',
     subtitle:
@@ -1097,6 +1157,11 @@ export const en: Dictionary = {
       'The access to Ultimate Cloud expired or was revoked: link the account again.',
     cloud_link_denied: 'The access was refused on Ultimate Cloud.',
     cloud_link_unsupported: 'Ultimate Cloud does not allow linking this server with a code.',
+    dlna_server_unreachable: 'The DLNA server does not answer.',
+    not_media_server: 'That address is not the one of a DLNA/UPnP media server.',
+    unreadable: 'The file could not be read as audio.',
+    import_not_active: 'That import is not running (or finished already).',
+    import_failed: 'The import stopped because of an unexpected error. Check the server log.',
     unexpected: 'Something went wrong. Please try again.',
     network: 'Cannot reach the server.',
     unauthorized: 'Your session has expired. Please sign in again.',

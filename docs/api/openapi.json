@@ -4740,6 +4740,216 @@
         }
       }
     },
+    "/rest/v1/dlna-import/servers": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Searches the local networks for DLNA/UPnP media servers for a few seconds. Administrators only.",
+        "operationId": "DlnaMediaServers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DlnaMediaServer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna-import/server": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "The media server at a description URL, for servers the search does not find. Administrators only.",
+        "operationId": "DlnaMediaServer",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaMediaServer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna-import/browse": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "A folder of a media server (0 or none is the root): its subfolders and how much music it holds. Administrators only.",
+        "operationId": "BrowseDlnaMediaServer",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "folderId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaFolderContents"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna-import/imports": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "The latest copies from media servers and how far they got. Administrators only.",
+        "operationId": "DlnaImports",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DlnaImportJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Copies the music of folders of a media server into a library folder, in the background. Administrators only, with a recent authentication.",
+        "operationId": "StartDlnaImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartDlnaImportInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna-import/imports/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Stops a copy from a media server; what was copied stays. Administrators only.",
+        "operationId": "CancelDlnaImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna-import/imports/{id}/retry": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Walks the media server again and copies what is missing. Administrators only, with a recent authentication.",
+        "operationId": "RetryDlnaImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -6352,6 +6562,257 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "DlnaFolder": {
+        "required": [
+          "id",
+          "title",
+          "childCount"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "childCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DlnaFolderContents": {
+        "required": [
+          "id",
+          "folders",
+          "tracks",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "folders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DlnaFolder"
+            }
+          },
+          "tracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DlnaFolderInput": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "DlnaImportFailure": {
+        "required": [
+          "title",
+          "artist",
+          "album",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "DlnaImportJob": {
+        "required": [
+          "id",
+          "serverName",
+          "folders",
+          "libraryId",
+          "libraryName",
+          "status",
+          "found",
+          "copied",
+          "duplicates",
+          "failed",
+          "copiedBytes",
+          "createdAt",
+          "finishedAt",
+          "errorCode",
+          "failures"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serverName": {
+            "type": "string"
+          },
+          "folders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libraryName": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DlnaImportStatus"
+          },
+          "found": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "copied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duplicates": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "copiedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DlnaImportFailure"
+            }
+          }
+        }
+      },
+      "DlnaImportStatus": {
+        "enum": [
+          "QUEUED",
+          "LISTING",
+          "COPYING",
+          "COMPLETED",
+          "FAILED",
+          "CANCELLED"
+        ]
+      },
+      "DlnaMediaServer": {
+        "required": [
+          "id",
+          "name",
+          "manufacturer",
+          "model",
+          "location"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "location": {
+            "type": "string"
           }
         }
       },
@@ -10912,6 +11373,46 @@
           "COMPLETED",
           "FAILED"
         ]
+      },
+      "StartDlnaImportInput": {
+        "required": [
+          "location",
+          "folders",
+          "sourceId",
+          "newLibraryName",
+          "newLibraryPath"
+        ],
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string"
+          },
+          "folders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DlnaFolderInput"
+            }
+          },
+          "sourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "newLibraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "newLibraryPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "StarTrackInput": {
         "required": [

@@ -16,7 +16,108 @@
             <ng-icon name="lucideImport" />
             {{ 'import.migrate.mstream' | t }}
           </button>
+          <button hlmBtn variant="outline" type="button" class="gap-2" (click)="openDlna()">
+            <ng-icon name="lucideServer" />
+            {{ 'import.migrate.dlna' | t }}
+          </button>
         </div>
+        @if (dlnaImports().length > 0) {
+          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+            @for (job of dlnaImports(); track job.id) {
+              <li class="grid gap-2 rounded-md border p-3 text-sm">
+                <p class="flex flex-wrap items-center gap-2">
+                  <span hlmBadge variant="outline">DLNA</span>
+                  <span
+                    hlmBadge
+                    [variant]="job.status === 'FAILED' ? 'destructive' : 'secondary'"
+                    >{{ 'dlnaImport.status.' + job.status | t }}</span
+                  >
+                  <span class="min-w-0 font-medium break-all">{{
+                    'dlnaImport.history.into'
+                      | t: { server: job.serverName, library: job.libraryName }
+                  }}</span>
+                  <span class="text-xs text-muted-foreground" [title]="job.createdAt | dateTime">{{
+                    job.createdAt | relativeTime
+                  }}</span>
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{ 'dlnaImport.history.folders' | t: { folders: job.folders.join(', ') } }}
+                </p>
+                @if (job.status === 'LISTING' || job.status === 'QUEUED') {
+                  <p class="flex items-center gap-2 text-xs text-muted-foreground">
+                    <hlm-spinner class="size-3" />{{
+                      'dlnaImport.history.listing' | t: { found: job.found }
+                    }}
+                  </p>
+                } @else {
+                  @if (job.status === 'COPYING') {
+                    <hlm-progress [value]="dlnaPercent(job)"
+                      ><hlm-progress-indicator
+                    /></hlm-progress>
+                  }
+                  <p class="text-xs text-muted-foreground">
+                    {{
+                      'dlnaImport.history.report'
+                        | t
+                          : {
+                              copied: job.copied,
+                              found: job.found,
+                              duplicates: job.duplicates,
+                              failed: job.failed,
+                              size: (job.copiedBytes | bytes),
+                            }
+                    }}
+                  </p>
+                }
+                @if (job.errorCode) {
+                  <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
+                }
+                @if (job.failures.length > 0) {
+                  <details class="text-xs">
+                    <summary class="cursor-pointer text-muted-foreground">
+                      {{ 'dlnaImport.history.failures' | t: { count: job.failed } }}
+                    </summary>
+                    <ul class="mt-1 grid gap-0.5 pl-4">
+                      @for (failure of job.failures; track $index) {
+                        <li>
+                          {{ [failure.title, failure.artist, failure.album].join(' · ') }}
+                          <span class="text-muted-foreground"
+                            >— {{ i18n.error(failure.reason) }}</span
+                          >
+                        </li>
+                      }
+                    </ul>
+                  </details>
+                }
+                <div class="flex flex-wrap gap-2">
+                  @if (dlnaActive(job)) {
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      [disabled]="busy() === job.id"
+                      (click)="cancelDlna(job)"
+                    >
+                      {{ 'dlnaImport.history.cancel' | t }}
+                    </button>
+                  } @else if (job.failed > 0 || job.status !== 'COMPLETED') {
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      [disabled]="busy() === job.id"
+                      (click)="retryDlna(job)"
+                    >
+                      {{ 'dlnaImport.history.retry' | t }}
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
         @if (migrations().length > 0) {
           <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
             @for (job of migrations(); track job.id) {
@@ -310,6 +411,25 @@
     </div>
   </section>
 </div>
+
+<hlm-dialog [state]="dlnaOpen() ? 'open' : 'closed'" (closed)="dlnaOpen.set(false)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100vh-2rem)] w-[min(44rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    <hlm-dialog-header>
+      <h3 hlmDialogTitle>{{ 'dlnaImport.title' | t }}</h3>
+      <p hlmDialogDescription>{{ 'dlnaImport.subtitle' | t }}</p>
+    </hlm-dialog-header>
+    <app-dlna-import
+      [targets]="localTargets()"
+      [loadDirectories]="loadDirectories"
+      [createDirectory]="createDirectory"
+      (started)="dlnaStarted($event)"
+      (cancelled)="dlnaOpen.set(false)"
+    />
+  </hlm-dialog-content>
+</hlm-dialog>
 
 <!-- Drop folder -->
 <hlm-dialog [state]="migrating() ? 'open' : 'closed'" (closed)="migrating.set(null)">

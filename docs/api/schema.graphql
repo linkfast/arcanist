@@ -26,6 +26,14 @@ type Query {
   mix(id: String!): MixTracks!
   "Everything an artist page shows: top tracks, albums, albums the artist appears on, related artists and the artist's mix."
   artistOverview(id: ID!): ArtistOverview!
+  "Searches the local networks for DLNA/UPnP media servers for a few seconds. Administrators only."
+  dlnaMediaServers: [DlnaMediaServer!]!
+  "The media server at a description URL, for servers the search does not find. Administrators only."
+  dlnaMediaServer(location: String!): DlnaMediaServer!
+  "A folder of a media server (0 or none is the root): its subfolders and how much music it holds. Administrators only."
+  browseDlnaMediaServer(location: String!, folderId: String): DlnaFolderContents!
+  "The latest copies from media servers and how far they got. Administrators only."
+  dlnaImports: [DlnaImportJob!]!
   "The DLNA media server: whether it is on, what it publishes and the addresses devices find. Administrators only."
   dlna: DlnaStatus!
   "Devices on the local network Arcanist can play to (DLNA renderers); empty while DLNA is off."
@@ -411,6 +419,61 @@ type ArtistOverview {
   mix: Mix!
   playCount: Int!
   artworkId: ID
+}
+
+type DlnaMediaServer {
+  id: String!
+  name: String!
+  manufacturer: String
+  model: String
+  location: String!
+}
+
+type DlnaFolderContents {
+  id: String!
+  folders: [DlnaFolder!]!
+  tracks: Int!
+  truncated: Boolean!
+}
+
+type DlnaFolder {
+  id: String!
+  title: String!
+  childCount: Int
+}
+
+type DlnaImportJob {
+  id: ID!
+  serverName: String!
+  folders: [String!]!
+  libraryId: ID!
+  libraryName: String!
+  status: DlnaImportStatus!
+  found: Int!
+  copied: Int!
+  duplicates: Int!
+  failed: Int!
+  copiedBytes: Long!
+  createdAt: DateTime!
+  finishedAt: DateTime
+  errorCode: String
+  failures: [DlnaImportFailure!]!
+}
+
+enum DlnaImportStatus {
+  QUEUED
+  LISTING
+  COPYING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+type DlnaImportFailure {
+  title: String!
+  artist: String
+  album: String
+  reason: String!
 }
 
 type DlnaStatus {
@@ -1173,6 +1236,12 @@ type Mutation {
   migrateToPostgres(connectionString: String!): DatabaseStatus!
   "Keeps, moves or deletes the SQLite file a migration left. Administrators only, with a recent authentication."
   resolvePreviousSqlite(input: ResolvePreviousSqliteInput!): DatabaseStatus!
+  "Copies the music of folders of a media server into a library folder, in the background. Administrators only, with a recent authentication."
+  startDlnaImport(input: StartDlnaImportInput!): DlnaImportJob!
+  "Stops a copy from a media server; what was copied stays. Administrators only."
+  cancelDlnaImport(id: ID!): DlnaImportJob!
+  "Walks the media server again and copies what is missing. Administrators only, with a recent authentication."
+  retryDlnaImport(id: ID!): DlnaImportJob!
   "Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication."
   setDlnaSettings(input: DlnaSettingsInput!): DlnaStatus!
   "Adds a renderer by the URL of its UPnP description, for networks where it is not found by itself. Administrators only."
@@ -1329,6 +1398,19 @@ enum PreviousSqliteAction {
   KEEP
   MOVE
   DELETE
+}
+
+input StartDlnaImportInput {
+  location: String!
+  folders: [DlnaFolderInput!]!
+  sourceId: ID
+  newLibraryName: String
+  newLibraryPath: String
+}
+
+input DlnaFolderInput {
+  id: String!
+  title: String!
 }
 
 input DlnaSettingsInput {

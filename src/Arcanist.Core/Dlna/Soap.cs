@@ -62,10 +62,11 @@ internal static class Soap
     public static string Escape(string value) => new XText(value).ToString();
 
     /// <summary>Calls an action on a device and returns its output arguments.</summary>
-    /// <exception cref="ArcanistException">renderer_unreachable when the device does not answer, renderer_failed when it refuses.</exception>
+    /// <exception cref="ArcanistException"><paramref name="unreachable"/> when the device does not answer, <paramref name="failed"/>
+    /// when it refuses (by default those of renderers).</exception>
     public static async Task<Dictionary<string, string>> InvokeAsync(
         HttpClient client, Uri control, string serviceType, string action, IEnumerable<(string Name, string Value)> arguments,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, string unreachable = ErrorCodes.RendererUnreachable, string failed = ErrorCodes.RendererFailed)
     {
         var body = new StringBuilder()
             .Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
@@ -91,20 +92,20 @@ internal static class Soap
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            throw new ArcanistException.Conflict(ErrorCodes.RendererUnreachable);
+            throw new ArcanistException.Conflict(unreachable);
         }
 
         try
         {
             var document = XDocument.Parse(text);
             if (!response.IsSuccessStatusCode)
-                throw new ArcanistException.Conflict(ErrorCodes.RendererFailed);
+                throw new ArcanistException.Conflict(failed);
             var result = document.Root?.Element(Envelope + "Body")?.Elements().FirstOrDefault();
             return result?.Elements().GroupBy(e => e.Name.LocalName).ToDictionary(g => g.Key, g => g.First().Value) ?? [];
         }
         catch (XmlException)
         {
-            throw new ArcanistException.Conflict(ErrorCodes.RendererFailed);
+            throw new ArcanistException.Conflict(failed);
         }
     }
 }

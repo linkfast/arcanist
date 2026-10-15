@@ -44,6 +44,10 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<AppPassword> AppPasswords => Set<AppPassword>();
     public DbSet<MstreamImport> MstreamImports => Set<MstreamImport>();
 
+    public DbSet<DlnaImport> DlnaImports => Set<DlnaImport>();
+
+    public DbSet<DlnaImportItem> DlnaImportItems => Set<DlnaImportItem>();
+
     public DbSet<P2PPeer> P2PPeers => Set<P2PPeer>();
 
     public DbSet<P2PPeerLibrary> P2PPeerLibraries => Set<P2PPeerLibrary>();
@@ -165,6 +169,34 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             import.Property(i => i.Source).HasMaxLength(PathLength);
             import.Property(i => i.ErrorCode).HasMaxLength(64);
             import.HasIndex(i => i.Status);
+        });
+
+        modelBuilder.Entity<DlnaImport>(import =>
+        {
+            import.Property(i => i.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            import.Property(i => i.Location).HasMaxLength(PathLength);
+            import.Property(i => i.ServerName).HasMaxLength(NameLength);
+            import.Property(i => i.ErrorCode).HasMaxLength(64);
+            import.HasOne(i => i.LibrarySource).WithMany().HasForeignKey(i => i.LibrarySourceId).OnDelete(DeleteBehavior.Cascade);
+            import.HasMany(i => i.Items).WithOne().HasForeignKey(i => i.ImportId).OnDelete(DeleteBehavior.Cascade);
+            import.HasIndex(i => i.Status);
+        });
+
+        modelBuilder.Entity<DlnaImportItem>(item =>
+        {
+            item.Property(i => i.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            item.Property(i => i.ObjectId).HasMaxLength(PathLength);
+            item.Property(i => i.Url).HasMaxLength(PathLength);
+            item.Property(i => i.Extension).HasMaxLength(16);
+            item.Property(i => i.Title).HasMaxLength(NameLength);
+            item.Property(i => i.Artist).HasMaxLength(NameLength);
+            item.Property(i => i.AlbumArtist).HasMaxLength(NameLength);
+            item.Property(i => i.Album).HasMaxLength(NameLength);
+            item.Property(i => i.Genre).HasMaxLength(NameLength);
+            item.Property(i => i.ArtUrl).HasMaxLength(PathLength);
+            item.Property(i => i.Reason).HasMaxLength(64);
+            item.Property(i => i.DestinationPath).HasMaxLength(PathLength);
+            item.HasIndex(i => new { i.ImportId, i.Status });
         });
 
         modelBuilder.Entity<P2PPeer>(peer =>

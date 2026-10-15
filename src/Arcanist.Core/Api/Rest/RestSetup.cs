@@ -77,6 +77,7 @@ public static class RestSetup
         rest.MapP2PEndpoints();
         rest.MapDatabaseEndpoints();
         rest.MapUltimateCloudEndpoints();
+        rest.MapDlnaImportEndpoints();
         rest.MapOnlineEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();

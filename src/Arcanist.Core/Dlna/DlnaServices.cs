@@ -93,6 +93,19 @@ public static class DlnaServiceCollectionExtensions
         services.AddHostedService(provider => provider.GetRequiredService<SsdpService>());
         services.AddHttpClient(RendererRegistry.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(5));
         services.AddScoped<Application.Dlna.DlnaService>();
+
+        // Copying music from other media servers works with the DLNA extension off.
+        services.AddSingleton<MediaServerClient>();
+        services.AddSingleton<Import.Dlna.DlnaImportWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<Import.Dlna.DlnaImportWorker>());
+        services.AddHttpClient(MediaServerClient.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.MaxResponseContentBufferSize = 32 * 1024 * 1024;
+        });
+        // Streams last as long as the file: a slow server or a big file must not hit a timeout.
+        services.AddHttpClient(MediaServerClient.DownloadClientName, client => client.Timeout = TimeSpan.FromHours(2));
+        services.AddScoped<Application.Import.DlnaImportService>();
         return services;
     }
 }

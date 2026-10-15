@@ -4,6 +4,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideFolderPlus,
   lucideImport,
+  lucideServer,
   lucidePencil,
   lucidePlus,
   lucideTrash2,
@@ -20,6 +21,7 @@ import { HlmEmptyImports } from '@spartan-ng/helm/empty';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
+import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
@@ -27,6 +29,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
+  DlnaImportJobFieldsFragment as DlnaImportJob,
   DropFolderFieldsFragment as DropFolder,
   DuplicatePolicy,
   ImportItemFieldsFragment as ImportItem,
@@ -38,6 +41,9 @@ import type {
 } from '../../graphql/generated/graphql';
 import {
   AcceptImportItemMutation,
+  CancelDlnaImportMutation,
+  DlnaImportsQuery,
+  RetryDlnaImportMutation,
   CreateDropFolderMutation,
   DeleteDropFolderMutation,
   DiscardImportItemMutation,
@@ -61,6 +67,7 @@ import {
   MstreamImportForm,
   MstreamSourceInput,
 } from '../../shared/mstream-import';
+import { DlnaImportForm } from './dlna-import';
 
 type Library = LibrariesResult['libraries'][number];
 type Summary = ImportQueueQuery['importSummary'];
@@ -106,6 +113,7 @@ const REFRESH_MS = 5000;
     HlmFieldImports,
     HlmInputImports,
     HlmNativeSelectImports,
+    HlmProgressImports,
     HlmSwitchImports,
     HlmSpinnerImports,
     HlmEmptyImports,
@@ -116,9 +124,17 @@ const REFRESH_MS = 5000;
     DurationPipe,
     RelativeTimePipe,
     MstreamImportForm,
+    DlnaImportForm,
   ],
   providers: [
-    provideIcons({ lucidePlus, lucidePencil, lucideTrash2, lucideFolderPlus, lucideImport }),
+    provideIcons({
+      lucidePlus,
+      lucidePencil,
+      lucideTrash2,
+      lucideFolderPlus,
+      lucideImport,
+      lucideServer,
+    }),
   ],
   templateUrl: './import.page.html',
 })
@@ -185,18 +201,92 @@ export class ImportPage implements OnInit {
       : (await this.gql.mutate(AnalyzeMstreamFolderMutation, { folder: source.folder ?? '' }))
           .analyzeMstreamFolder;
 
+  // Copies from DLNA media servers
+  protected readonly dlnaImports = signal<DlnaImportJob[]>([]);
+  /** Library folders on this server's disks, where copies can go. */
+  protected readonly localTargets = computed(() =>
+    this.libraries().flatMap((library) =>
+      (library.sources ?? [])
+        .filter((source) => source.kind === 'LOCAL')
+        .map((source) => ({ id: source.id, label: `${library.name} — ${source.location}` })),
+    ),
+  );
+  protected readonly dlnaOpen = signal(false);
+
   constructor() {
     const timer = setInterval(() => {
       void this.loadQueue();
       if (this.migrations().some((m) => m.status === 'WAITING' || m.status === 'RUNNING'))
         void this.loadMigrations();
     }, REFRESH_MS);
+    // Copies move fast: their progress is refreshed more often.
+    const dlnaTimer = setInterval(() => {
+      if (this.dlnaImports().some((i) => this.dlnaActive(i))) void this.loadDlnaImports();
+    }, 1500);
+    inject(DestroyRef).onDestroy(() => clearInterval(dlnaTimer));
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   async ngOnInit(): Promise<void> {
     await this.loadQueue();
-    if (this.auth.isAdmin()) await Promise.all([this.loadFolders(), this.loadMigrations()]);
+    if (this.auth.isAdmin())
+      await Promise.all([this.loadFolders(), this.loadMigrations(), this.loadDlnaImports()]);
+  }
+
+  private async loadDlnaImports(): Promise<void> {
+    this.dlnaImports.set((await this.gql.query(DlnaImportsQuery)).dlnaImports);
+  }
+
+  protected dlnaActive(job: DlnaImportJob): boolean {
+    return job.status === 'QUEUED' || job.status === 'LISTING' || job.status === 'COPYING';
+  }
+
+  protected dlnaPercent(job: DlnaImportJob): number | null {
+    return job.found > 0
+      ? Math.round(((job.copied + job.duplicates + job.failed) * 100) / job.found)
+      : null;
+  }
+
+  protected async openDlna(): Promise<void> {
+    await this.loadLibraries();
+    this.dlnaOpen.set(true);
+  }
+
+  protected async dlnaStarted(job: DlnaImportJob): Promise<void> {
+    this.dlnaOpen.set(false);
+    this.dlnaImports.update((list) => [job, ...list.filter((j) => j.id !== job.id)]);
+    toast.success(this.i18n.t('dlnaImport.startedToast'));
+    await this.loadLibraries();
+  }
+
+  protected async cancelDlna(job: DlnaImportJob): Promise<void> {
+    await this.dlnaAction(
+      job,
+      async () =>
+        (await this.gql.mutate(CancelDlnaImportMutation, { id: job.id })).cancelDlnaImport,
+    );
+  }
+
+  protected async retryDlna(job: DlnaImportJob): Promise<void> {
+    await this.dlnaAction(
+      job,
+      async () => (await this.gql.mutate(RetryDlnaImportMutation, { id: job.id })).retryDlnaImport,
+    );
+  }
+
+  private async dlnaAction(
+    job: DlnaImportJob,
+    action: () => Promise<DlnaImportJob>,
+  ): Promise<void> {
+    this.busy.set(job.id);
+    try {
+      const updated = await action();
+      this.dlnaImports.update((list) => list.map((j) => (j.id === updated.id ? updated : j)));
+    } catch (error) {
+      toast.error(this.i18n.error(ApiError.from(error).code));
+    } finally {
+      this.busy.set(null);
+    }
   }
 
   private async loadMigrations(): Promise<void> {

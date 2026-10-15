@@ -93,6 +93,14 @@ type Documents = {
     "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": typeof types.MstreamImportJobFieldsFragmentDoc,
     "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": typeof types.MstreamAnalysisFieldsFragmentDoc,
     "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.MstreamImportsDocument,
+    "\n  fragment DlnaImportJobFields on DlnaImportJob {\n    id\n    serverName\n    folders\n    libraryId\n    libraryName\n    status\n    found\n    copied\n    duplicates\n    failed\n    copiedBytes\n    createdAt\n    finishedAt\n    errorCode\n    failures {\n      title\n      artist\n      album\n      reason\n    }\n  }\n": typeof types.DlnaImportJobFieldsFragmentDoc,
+    "\n  query DlnaImports {\n    dlnaImports {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.DlnaImportsDocument,
+    "\n  query DlnaMediaServers {\n    dlnaMediaServers {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n": typeof types.DlnaMediaServersDocument,
+    "\n  query DlnaMediaServer($location: String!) {\n    dlnaMediaServer(location: $location) {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n": typeof types.DlnaMediaServerDocument,
+    "\n  query BrowseDlnaMediaServer($location: String!, $folderId: String) {\n    browseDlnaMediaServer(location: $location, folderId: $folderId) {\n      id\n      tracks\n      truncated\n      folders {\n        id\n        title\n        childCount\n      }\n    }\n  }\n": typeof types.BrowseDlnaMediaServerDocument,
+    "\n  mutation StartDlnaImport($input: StartDlnaImportInput!) {\n    startDlnaImport(input: $input) {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.StartDlnaImportDocument,
+    "\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.CancelDlnaImportDocument,
+    "\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.RetryDlnaImportDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.ImportMstreamDocument,
@@ -213,6 +221,14 @@ const documents: Documents = {
     "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": types.MstreamImportJobFieldsFragmentDoc,
     "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": types.MstreamAnalysisFieldsFragmentDoc,
     "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": types.MstreamImportsDocument,
+    "\n  fragment DlnaImportJobFields on DlnaImportJob {\n    id\n    serverName\n    folders\n    libraryId\n    libraryName\n    status\n    found\n    copied\n    duplicates\n    failed\n    copiedBytes\n    createdAt\n    finishedAt\n    errorCode\n    failures {\n      title\n      artist\n      album\n      reason\n    }\n  }\n": types.DlnaImportJobFieldsFragmentDoc,
+    "\n  query DlnaImports {\n    dlnaImports {\n      ...DlnaImportJobFields\n    }\n  }\n": types.DlnaImportsDocument,
+    "\n  query DlnaMediaServers {\n    dlnaMediaServers {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n": types.DlnaMediaServersDocument,
+    "\n  query DlnaMediaServer($location: String!) {\n    dlnaMediaServer(location: $location) {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n": types.DlnaMediaServerDocument,
+    "\n  query BrowseDlnaMediaServer($location: String!, $folderId: String) {\n    browseDlnaMediaServer(location: $location, folderId: $folderId) {\n      id\n      tracks\n      truncated\n      folders {\n        id\n        title\n        childCount\n      }\n    }\n  }\n": types.BrowseDlnaMediaServerDocument,
+    "\n  mutation StartDlnaImport($input: StartDlnaImportInput!) {\n    startDlnaImport(input: $input) {\n      ...DlnaImportJobFields\n    }\n  }\n": types.StartDlnaImportDocument,
+    "\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": types.CancelDlnaImportDocument,
+    "\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": types.RetryDlnaImportDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.ImportMstreamDocument,
@@ -584,6 +600,38 @@ export function graphql(source: "\n  fragment MstreamAnalysisFields on MstreamAn
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n"): (typeof documents)["\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment DlnaImportJobFields on DlnaImportJob {\n    id\n    serverName\n    folders\n    libraryId\n    libraryName\n    status\n    found\n    copied\n    duplicates\n    failed\n    copiedBytes\n    createdAt\n    finishedAt\n    errorCode\n    failures {\n      title\n      artist\n      album\n      reason\n    }\n  }\n"): (typeof documents)["\n  fragment DlnaImportJobFields on DlnaImportJob {\n    id\n    serverName\n    folders\n    libraryId\n    libraryName\n    status\n    found\n    copied\n    duplicates\n    failed\n    copiedBytes\n    createdAt\n    finishedAt\n    errorCode\n    failures {\n      title\n      artist\n      album\n      reason\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DlnaImports {\n    dlnaImports {\n      ...DlnaImportJobFields\n    }\n  }\n"): (typeof documents)["\n  query DlnaImports {\n    dlnaImports {\n      ...DlnaImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DlnaMediaServers {\n    dlnaMediaServers {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n"): (typeof documents)["\n  query DlnaMediaServers {\n    dlnaMediaServers {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query DlnaMediaServer($location: String!) {\n    dlnaMediaServer(location: $location) {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n"): (typeof documents)["\n  query DlnaMediaServer($location: String!) {\n    dlnaMediaServer(location: $location) {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query BrowseDlnaMediaServer($location: String!, $folderId: String) {\n    browseDlnaMediaServer(location: $location, folderId: $folderId) {\n      id\n      tracks\n      truncated\n      folders {\n        id\n        title\n        childCount\n      }\n    }\n  }\n"): (typeof documents)["\n  query BrowseDlnaMediaServer($location: String!, $folderId: String) {\n    browseDlnaMediaServer(location: $location, folderId: $folderId) {\n      id\n      tracks\n      truncated\n      folders {\n        id\n        title\n        childCount\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation StartDlnaImport($input: StartDlnaImportInput!) {\n    startDlnaImport(input: $input) {\n      ...DlnaImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation StartDlnaImport($input: StartDlnaImportInput!) {\n    startDlnaImport(input: $input) {\n      ...DlnaImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

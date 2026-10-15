@@ -23,6 +23,7 @@ export const en: Dictionary = {
     close: 'Close',
   },
   nav: {
+    cloud: 'Ultimate Cloud',
     database: 'Database',
     network: 'P2P network',
     dlna: 'DLNA',
@@ -734,6 +735,81 @@ export const en: Dictionary = {
       PREVIOUS: 'Previous',
     },
   },
+  cloud: {
+    title: 'Ultimate Cloud',
+    subtitle:
+      'Link this server to your Ultimate Cloud account to use your music in the cloud and the paid features.',
+    linked: 'Server linked to Ultimate Cloud',
+    unlinked: 'Account unlinked',
+    account: {
+      title: 'Account',
+      description:
+        'Arcanist never sees your password: you approve the access on Ultimate Cloud’s site with a code.',
+      notConfigured:
+        'This server has no Ultimate Cloud address configured (Arcanist:UltimateCloud:ApiUrl).',
+      notes: {
+        free: 'With a free account, your Ultimate Cloud music shows up as a library source.',
+        paid: 'With the Cloud plan: sync, libraries on S3 and remote access without pairing.',
+        local: 'Everything local keeps working the same, with or without an account.',
+      },
+      link: 'Link account',
+      relink: 'Link again',
+      refresh: 'Check the plan',
+      unlink: 'Unlink',
+      unlinkTitle: 'Unlink the account?',
+      unlinkHelp:
+        'The Ultimate Cloud features turn off. Your local libraries, users and data do not change.',
+      name: 'Account',
+      linkedAt: 'Linked',
+    },
+    pending: {
+      instructions:
+        'Scan the code or open the link, sign in to Ultimate Cloud and confirm this code:',
+      qr: 'QR code to approve the access',
+      open: 'Open Ultimate Cloud',
+      code: 'Code',
+      waiting: 'Waiting for the approval (expires {when})…',
+    },
+    plan: {
+      name: 'Plan',
+      storage: 'Storage',
+      used: '{used} of {limit}',
+      readOnly: 'read only',
+      renews: 'Renews',
+      checked: 'Checked',
+      status: {
+        PastDue: 'Payment pending',
+        PendingCancellation: 'Cancels at the end of the period',
+      },
+    },
+    tier: {
+      NONE: 'No account',
+      FREE: 'Free',
+      PAID: 'Paid',
+    },
+    capabilities: {
+      title: 'Features',
+      description: 'What your plan enables on this server.',
+      on: 'On',
+      off: 'Off',
+      ULTIMATE_CLOUD_SOURCE: {
+        name: 'Ultimate Cloud as a library',
+        help: 'Listen here to the music you keep in Ultimate Cloud. Free account.',
+      },
+      CLOUD_SYNC: {
+        name: 'Sync',
+        help: 'Upload or download libraries between this server and Ultimate Cloud. Cloud plan.',
+      },
+      THIRD_PARTY_STORAGE: {
+        name: 'Libraries on S3',
+        help: 'Libraries on S3-compatible storage. Cloud plan.',
+      },
+      CLOUD_CONNECT: {
+        name: 'Seamless connection',
+        help: 'Your devices find this server through the P2P network without pairing it with a QR code. Cloud plan.',
+      },
+    },
+  },
   database: {
     title: 'Database',
     subtitle:
@@ -1014,6 +1090,13 @@ export const en: Dictionary = {
     already_postgres: 'The database is PostgreSQL already.',
     verification_failed: 'The copy does not match the original: the server goes on with SQLite.',
     migration_failed: 'The migration failed: the server goes on with SQLite. Check the server log.',
+    cloud_not_configured: 'This server has no Ultimate Cloud address configured.',
+    cloud_not_linked: 'No Ultimate Cloud account is linked.',
+    cloud_unreachable: 'Ultimate Cloud cannot be reached. It will be tried again.',
+    cloud_link_expired:
+      'The access to Ultimate Cloud expired or was revoked: link the account again.',
+    cloud_link_denied: 'The access was refused on Ultimate Cloud.',
+    cloud_link_unsupported: 'Ultimate Cloud does not allow linking this server with a code.',
     unexpected: 'Something went wrong. Please try again.',
     network: 'Cannot reach the server.',
     unauthorized: 'Your session has expired. Please sign in again.',

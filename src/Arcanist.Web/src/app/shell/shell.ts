@@ -4,6 +4,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCast,
   lucideChartColumn,
+  lucideCloud,
   lucideCopy,
   lucideDatabase,
   lucideExternalLink,
@@ -38,6 +39,7 @@ import { LanguageSelect } from '../shared/language-select';
     provideIcons({
       lucideCast,
       lucideChartColumn,
+      lucideCloud,
       lucideCopy,
       lucideDatabase,
       lucideHouse,
@@ -169,6 +171,7 @@ export class Shell {
         icon: 'lucideNetwork',
         visible: this.auth.isAdmin(),
       },
+      { path: '/cloud', label: 'nav.cloud', icon: 'lucideCloud', visible: this.auth.isAdmin() },
       { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
       { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
     ].filter((item) => item.visible),

@@ -11,12 +11,6 @@ public interface ICloudLinkState
     CloudTier Tier { get; }
 }
 
-/// <summary>Used until account linking exists: no cloud capabilities are enabled.</summary>
-internal sealed class UnlinkedCloudLinkState : ICloudLinkState
-{
-    public CloudTier Tier => CloudTier.None;
-}
-
 public sealed class CapabilityService(ICloudLinkState cloudLink) : ICapabilityService
 {
     public bool IsEnabled(Capability capability) => cloudLink.Tier >= RequiredTier(capability);
@@ -33,7 +27,6 @@ public static class CapabilityServiceCollectionExtensions
 {
     public static IServiceCollection AddCapabilities(this IServiceCollection services)
     {
-        services.AddSingleton<ICloudLinkState, UnlinkedCloudLinkState>();
         services.AddSingleton<ICapabilityService, CapabilityService>();
         return services;
     }

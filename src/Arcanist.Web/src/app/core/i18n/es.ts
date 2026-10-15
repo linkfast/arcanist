@@ -23,6 +23,7 @@ export const es: Dictionary = {
     close: 'Cerrar',
   },
   nav: {
+    cloud: 'Ultimate Cloud',
     database: 'Base de datos',
     network: 'Red P2P',
     dlna: 'DLNA',
@@ -738,6 +739,81 @@ export const es: Dictionary = {
       PREVIOUS: 'Anterior',
     },
   },
+  cloud: {
+    title: 'Ultimate Cloud',
+    subtitle:
+      'Vincula este servidor a tu cuenta de Ultimate Cloud para usar tu música en la nube y las funciones de pago.',
+    linked: 'Servidor vinculado a Ultimate Cloud',
+    unlinked: 'Cuenta desvinculada',
+    account: {
+      title: 'Cuenta',
+      description:
+        'Arcanist nunca ve tu contraseña: apruebas el acceso en el sitio de Ultimate Cloud con un código.',
+      notConfigured:
+        'Este servidor no tiene configurada la dirección de Ultimate Cloud (Arcanist:UltimateCloud:ApiUrl).',
+      notes: {
+        free: 'Con una cuenta gratuita, tu música de Ultimate Cloud aparece como fuente de biblioteca.',
+        paid: 'Con el plan Cloud: sincronización, bibliotecas en S3 y acceso remoto sin emparejar.',
+        local: 'Todo lo local sigue funcionando igual, con o sin cuenta.',
+      },
+      link: 'Vincular cuenta',
+      relink: 'Vincular de nuevo',
+      refresh: 'Comprobar el plan',
+      unlink: 'Desvincular',
+      unlinkTitle: '¿Desvincular la cuenta?',
+      unlinkHelp:
+        'Se apagan las funciones de Ultimate Cloud. Tus bibliotecas locales, usuarios y datos no cambian.',
+      name: 'Cuenta',
+      linkedAt: 'Vinculada',
+    },
+    pending: {
+      instructions:
+        'Escanea el código o abre el enlace, inicia sesión en Ultimate Cloud y confirma este código:',
+      qr: 'Código QR para aprobar el acceso',
+      open: 'Abrir Ultimate Cloud',
+      code: 'Código',
+      waiting: 'Esperando la aprobación (caduca {when})…',
+    },
+    plan: {
+      name: 'Plan',
+      storage: 'Almacenamiento',
+      used: '{used} de {limit}',
+      readOnly: 'solo lectura',
+      renews: 'Se renueva',
+      checked: 'Comprobado',
+      status: {
+        PastDue: 'Pago pendiente',
+        PendingCancellation: 'Se cancela al final del periodo',
+      },
+    },
+    tier: {
+      NONE: 'Sin cuenta',
+      FREE: 'Gratuito',
+      PAID: 'De pago',
+    },
+    capabilities: {
+      title: 'Funciones',
+      description: 'Lo que tu plan activa en este servidor.',
+      on: 'Activa',
+      off: 'Inactiva',
+      ULTIMATE_CLOUD_SOURCE: {
+        name: 'Ultimate Cloud como biblioteca',
+        help: 'Escucha desde aquí la música que guardas en Ultimate Cloud. Cuenta gratuita.',
+      },
+      CLOUD_SYNC: {
+        name: 'Sincronización',
+        help: 'Sube o baja bibliotecas entre este servidor y Ultimate Cloud. Plan Cloud.',
+      },
+      THIRD_PARTY_STORAGE: {
+        name: 'Bibliotecas en S3',
+        help: 'Bibliotecas en almacenamiento compatible con S3. Plan Cloud.',
+      },
+      CLOUD_CONNECT: {
+        name: 'Conexión transparente',
+        help: 'Tus dispositivos encuentran este servidor por la red P2P sin emparejarlos con un QR. Plan Cloud.',
+      },
+    },
+  },
   database: {
     title: 'Base de datos',
     subtitle:
@@ -1028,6 +1104,13 @@ export const es: Dictionary = {
     verification_failed: 'La copia no coincide con el original: el servidor sigue con SQLite.',
     migration_failed:
       'La migración falló: el servidor sigue con SQLite. Revisa el registro del servidor.',
+    cloud_not_configured: 'Este servidor no tiene configurada la dirección de Ultimate Cloud.',
+    cloud_not_linked: 'No hay ninguna cuenta de Ultimate Cloud vinculada.',
+    cloud_unreachable: 'No se puede contactar con Ultimate Cloud. Se volverá a intentar.',
+    cloud_link_expired:
+      'El acceso a Ultimate Cloud caducó o se revocó: vincula la cuenta de nuevo.',
+    cloud_link_denied: 'Se rechazó el acceso desde Ultimate Cloud.',
+    cloud_link_unsupported: 'Ultimate Cloud no permite vincular este servidor con un código.',
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',
     network: 'No se puede contactar con el servidor.',
     unauthorized: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',

@@ -119,6 +119,18 @@ public static class ErrorCodes
     public const string VerificationFailed = "verification_failed";
     /// <summary>Copying the data failed; the server keeps its database.</summary>
     public const string MigrationFailed = "migration_failed";
+    /// <summary>This server has no Ultimate Cloud address configured.</summary>
+    public const string CloudNotConfigured = "cloud_not_configured";
+    /// <summary>No Ultimate Cloud account is linked.</summary>
+    public const string CloudNotLinked = "cloud_not_linked";
+    /// <summary>Ultimate Cloud could not be reached.</summary>
+    public const string CloudUnreachable = "cloud_unreachable";
+    /// <summary>The code expired before it was approved, or Ultimate Cloud ended the session: link the account again.</summary>
+    public const string CloudLinkExpired = "cloud_link_expired";
+    /// <summary>The account refused to link this server.</summary>
+    public const string CloudLinkDenied = "cloud_link_denied";
+    /// <summary>Ultimate Cloud's sign-in does not offer linking with a code for this server.</summary>
+    public const string CloudLinkUnsupported = "cloud_link_unsupported";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

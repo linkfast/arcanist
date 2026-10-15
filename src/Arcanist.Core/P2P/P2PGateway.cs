@@ -40,7 +40,16 @@ internal static class P2PConnections
         }
 
         var keys = services.GetRequiredService<P2PKeys>();
-        var nodeId = await ReadPreambleAsync(context.Transport.Input, keys.Preamble, context.ConnectionClosed);
+        string? nodeId;
+        try
+        {
+            nodeId = await ReadPreambleAsync(context.Transport.Input, keys.Preamble, context.ConnectionClosed);
+        }
+        catch (OperationCanceledException) when (context.ConnectionClosed.IsCancellationRequested)
+        {
+            // Closed before sending anything (browsers open spare connections and drop them).
+            return;
+        }
         switch (nodeId)
         {
             case null:

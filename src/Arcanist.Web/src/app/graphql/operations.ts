@@ -1308,6 +1308,72 @@ export const MigrateToPostgresMutation = graphql(`
   }
 `);
 
+export const UltimateCloudStatusFields = graphql(`
+  fragment UltimateCloudStatusFields on UltimateCloudStatus {
+    state
+    account
+    linkedAt
+    pending {
+      userCode
+      verificationUri
+      verificationUriComplete
+      expiresAt
+    }
+    plan {
+      name
+      cloudStatus
+      usedBytes
+      limitBytes
+      readOnly
+      renewsAt
+      checkedAt
+    }
+    tier
+    capabilities
+    errorCode
+  }
+`);
+
+export const UltimateCloudQuery = graphql(`
+  query UltimateCloud {
+    ultimateCloud {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
+export const StartUltimateCloudLinkMutation = graphql(`
+  mutation StartUltimateCloudLink {
+    startUltimateCloudLink {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
+export const CancelUltimateCloudLinkMutation = graphql(`
+  mutation CancelUltimateCloudLink {
+    cancelUltimateCloudLink {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
+export const UnlinkUltimateCloudMutation = graphql(`
+  mutation UnlinkUltimateCloud {
+    unlinkUltimateCloud {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
+export const RefreshUltimateCloudMutation = graphql(`
+  mutation RefreshUltimateCloud {
+    refreshUltimateCloud {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
 export const ResolvePreviousSqliteMutation = graphql(`
   mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {
     resolvePreviousSqlite(input: $input) {

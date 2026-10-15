@@ -4635,6 +4635,111 @@
         }
       }
     },
+    "/rest/v1/ultimate-cloud": {
+      "get": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "The linked Ultimate Cloud account, its plan and what it enables. Administrators only.",
+        "operationId": "UltimateCloud",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ultimate-cloud/link": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Asks Ultimate Cloud for a code to approve on its site; the server waits for the approval. Administrators only, with a recent authentication.",
+        "operationId": "StartUltimateCloudLink",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ultimate-cloud/link/cancel": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Stops waiting for a code\u0027s approval. Administrators only.",
+        "operationId": "CancelUltimateCloudLink",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ultimate-cloud/unlink": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Forgets the account; only the Ultimate Cloud features turn off. Administrators only, with a recent authentication.",
+        "operationId": "UnlinkUltimateCloud",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ultimate-cloud/refresh": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Reads the account\u0027s plan again now. Administrators only.",
+        "operationId": "RefreshUltimateCloud",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -11228,6 +11333,157 @@
           "FLAC"
         ]
       },
+      "UltimateCloudLinkState": {
+        "enum": [
+          "NOT_CONFIGURED",
+          "UNLINKED",
+          "PENDING",
+          "LINKED"
+        ]
+      },
+      "UltimateCloudPendingLink": {
+        "required": [
+          "userCode",
+          "verificationUri",
+          "verificationUriComplete",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "userCode": {
+            "type": "string"
+          },
+          "verificationUri": {
+            "type": "string"
+          },
+          "verificationUriComplete": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UltimateCloudPlan": {
+        "required": [
+          "name",
+          "cloudStatus",
+          "usedBytes",
+          "limitBytes",
+          "readOnly",
+          "renewsAt",
+          "checkedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "cloudStatus": {
+            "type": "string"
+          },
+          "usedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "limitBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "readOnly": {
+            "type": "boolean"
+          },
+          "renewsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UltimateCloudStatus": {
+        "required": [
+          "state",
+          "account",
+          "linkedAt",
+          "pending",
+          "plan",
+          "tier",
+          "capabilities",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/UltimateCloudLinkState"
+          },
+          "account": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "linkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "pending": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UltimateCloudPendingLink"
+              }
+            ]
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UltimateCloudPlan"
+              }
+            ]
+          },
+          "tier": {
+            "$ref": "#/components/schemas/CloudTier"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            }
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "UpdateLibraryInput": {
         "required": [
           "name",
@@ -11624,6 +11880,9 @@
     },
     {
       "name": "Peer"
+    },
+    {
+      "name": "Ultimate Cloud"
     },
     {
       "name": "Online services"

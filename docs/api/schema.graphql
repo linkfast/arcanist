@@ -90,6 +90,8 @@ type Query {
   scanJob(id: ID!): ScanJob!
   "Artists, albums, tracks and playlists matching every word of the query (as word starts, ignoring accents and case), best first. first is per kind: 10 by default, at most 50."
   search(query: String!, first: Int): SearchResults!
+  "The linked Ultimate Cloud account, its plan and what it enables. Administrators only."
+  ultimateCloud: UltimateCloudStatus!
   "Public description of the server. Does not require authentication."
   serverInfo: ServerInfo!
   "The signed-in user."
@@ -1056,6 +1058,54 @@ type SearchResults {
   playlists: [Playlist!]!
 }
 
+type UltimateCloudStatus {
+  state: UltimateCloudLinkState!
+  account: String
+  linkedAt: DateTime
+  pending: UltimateCloudPendingLink
+  plan: UltimateCloudPlan
+  tier: CloudTier!
+  capabilities: [Capability!]!
+  errorCode: String
+}
+
+enum UltimateCloudLinkState {
+  NOT_CONFIGURED
+  UNLINKED
+  PENDING
+  LINKED
+}
+
+type UltimateCloudPendingLink {
+  userCode: String!
+  verificationUri: String!
+  verificationUriComplete: String
+  expiresAt: DateTime!
+}
+
+type UltimateCloudPlan {
+  name: String!
+  cloudStatus: String!
+  usedBytes: Long!
+  limitBytes: Long!
+  readOnly: Boolean!
+  renewsAt: DateTime
+  checkedAt: DateTime!
+}
+
+enum CloudTier {
+  NONE
+  FREE
+  PAID
+}
+
+enum Capability {
+  ULTIMATE_CLOUD_SOURCE
+  CLOUD_SYNC
+  THIRD_PARTY_STORAGE
+  CLOUD_CONNECT
+}
+
 type ServerInfo {
   name: String!
   version: String!
@@ -1066,19 +1116,6 @@ type ServerInfo {
   cloudTier: CloudTier!
   transcodingFormats: [TranscodeFormat!]!
   ratingMode: RatingMode!
-}
-
-enum Capability {
-  ULTIMATE_CLOUD_SOURCE
-  CLOUD_SYNC
-  THIRD_PARTY_STORAGE
-  CLOUD_CONNECT
-}
-
-enum CloudTier {
-  NONE
-  FREE
-  PAID
 }
 
 enum RatingMode {
@@ -1249,6 +1286,14 @@ type Mutation {
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
   cancelScan(id: ID!): Boolean!
+  "Asks Ultimate Cloud for a code to approve on its site; the server waits for the approval. Administrators only, with a recent authentication."
+  startUltimateCloudLink: UltimateCloudStatus!
+  "Stops waiting for a code's approval. Administrators only."
+  cancelUltimateCloudLink: UltimateCloudStatus!
+  "Forgets the account; only the Ultimate Cloud features turn off. Administrators only, with a recent authentication."
+  unlinkUltimateCloud: UltimateCloudStatus!
+  "Reads the account's plan again now. Administrators only."
+  refreshUltimateCloud: UltimateCloudStatus!
   "Requires MANAGE_USERS and a recent authentication."
   createUser(input: CreateUserInput!): UserAccount!
   "Requires MANAGE_USERS and a recent authentication."

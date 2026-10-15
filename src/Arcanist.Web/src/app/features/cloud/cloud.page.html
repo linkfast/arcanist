@@ -1,0 +1,205 @@
+<header class="mb-6">
+  <h1 class="text-2xl font-semibold">{{ 'cloud.title' | t }}</h1>
+  <p class="text-sm text-muted-foreground">{{ 'cloud.subtitle' | t }}</p>
+</header>
+
+@if (status(); as current) {
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-6">
+    @if (current.errorCode && current.state !== 'PENDING') {
+      <div hlmAlert [variant]="current.state === 'LINKED' ? 'default' : 'destructive'">
+        <p hlmAlertDescription>{{ i18n.error(current.errorCode) }}</p>
+      </div>
+    }
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'cloud.account.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'cloud.account.description' | t }}</p>
+      </div>
+      <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-4">
+        @switch (current.state) {
+          @case ('NOT_CONFIGURED') {
+            <p class="text-sm text-muted-foreground">{{ 'cloud.account.notConfigured' | t }}</p>
+          }
+          @case ('UNLINKED') {
+            <ul class="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              <li>{{ 'cloud.account.notes.free' | t }}</li>
+              <li>{{ 'cloud.account.notes.paid' | t }}</li>
+              <li>{{ 'cloud.account.notes.local' | t }}</li>
+            </ul>
+            <button
+              hlmBtn
+              type="button"
+              class="justify-self-start"
+              [disabled]="busy()"
+              (click)="start()"
+            >
+              {{ 'cloud.account.link' | t }}
+            </button>
+          }
+          @case ('PENDING') {
+            @if (current.pending; as pending) {
+              <div class="grid justify-items-center gap-4 text-center">
+                <p class="text-sm">{{ 'cloud.pending.instructions' | t }}</p>
+                @if (qr(); as code) {
+                  <svg
+                    class="size-56 rounded-md bg-white p-2"
+                    role="img"
+                    [attr.aria-label]="'cloud.pending.qr' | t"
+                    [attr.viewBox]="'0 0 ' + code.size + ' ' + code.size"
+                    shape-rendering="crispEdges"
+                  >
+                    <path [attr.d]="code.path" fill="#000" />
+                  </svg>
+                }
+                <a
+                  hlmBtn
+                  variant="outline"
+                  target="_blank"
+                  rel="noopener"
+                  [href]="pending.verificationUriComplete ?? pending.verificationUri"
+                >
+                  {{ 'cloud.pending.open' | t }}
+                </a>
+                <div class="grid gap-1">
+                  <span class="text-xs text-muted-foreground">{{ 'cloud.pending.code' | t }}</span>
+                  <span class="font-mono text-2xl font-semibold tracking-widest">{{
+                    pending.userCode
+                  }}</span>
+                  <span class="text-xs break-all text-muted-foreground">{{
+                    pending.verificationUri
+                  }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                  <hlm-spinner class="size-4" />
+                  <span [title]="pending.expiresAt | dateTime">{{
+                    'cloud.pending.waiting' | t: { when: (pending.expiresAt | relativeTime) }
+                  }}</span>
+                </div>
+                <button hlmBtn variant="ghost" type="button" [disabled]="busy()" (click)="cancel()">
+                  {{ 'common.cancel' | t }}
+                </button>
+              </div>
+            }
+          }
+          @case ('LINKED') {
+            <dl class="grid gap-2 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <dt class="text-muted-foreground">{{ 'cloud.account.name' | t }}</dt>
+              <dd>{{ current.account ?? '—' }}</dd>
+              @if (current.linkedAt) {
+                <dt class="text-muted-foreground">{{ 'cloud.account.linkedAt' | t }}</dt>
+                <dd [title]="current.linkedAt | dateTime">{{ current.linkedAt | relativeTime }}</dd>
+              }
+              @if (current.plan; as plan) {
+                <dt class="text-muted-foreground">{{ 'cloud.plan.name' | t }}</dt>
+                <dd class="flex flex-wrap items-center gap-2">
+                  {{ plan.name }}
+                  <span hlmBadge [variant]="current.tier === 'PAID' ? 'default' : 'secondary'">{{
+                    'cloud.tier.' + current.tier | t
+                  }}</span>
+                  @if (
+                    plan.cloudStatus === 'PastDue' || plan.cloudStatus === 'PendingCancellation'
+                  ) {
+                    <span hlmBadge variant="destructive">{{
+                      'cloud.plan.status.' + plan.cloudStatus | t
+                    }}</span>
+                  }
+                </dd>
+                @if (plan.limitBytes > 0) {
+                  <dt class="text-muted-foreground">{{ 'cloud.plan.storage' | t }}</dt>
+                  <dd class="grid gap-1">
+                    <hlm-progress [value]="usedPercent()"><hlm-progress-indicator /></hlm-progress>
+                    <span class="text-xs text-muted-foreground">
+                      {{
+                        'cloud.plan.used'
+                          | t: { used: (plan.usedBytes | bytes), limit: (plan.limitBytes | bytes) }
+                      }}
+                      @if (plan.readOnly) {
+                        · {{ 'cloud.plan.readOnly' | t }}
+                      }
+                    </span>
+                  </dd>
+                }
+                @if (plan.renewsAt) {
+                  <dt class="text-muted-foreground">{{ 'cloud.plan.renews' | t }}</dt>
+                  <dd>{{ plan.renewsAt | dateTime }}</dd>
+                }
+                <dt class="text-muted-foreground">{{ 'cloud.plan.checked' | t }}</dt>
+                <dd [title]="plan.checkedAt | dateTime">{{ plan.checkedAt | relativeTime }}</dd>
+              }
+            </dl>
+            <div class="flex flex-wrap gap-2">
+              <button
+                hlmBtn
+                variant="outline"
+                type="button"
+                [disabled]="busy()"
+                (click)="refresh()"
+              >
+                {{ 'cloud.account.refresh' | t }}
+              </button>
+              @if (current.errorCode === 'cloud_link_expired') {
+                <button hlmBtn type="button" [disabled]="busy()" (click)="start()">
+                  {{ 'cloud.account.relink' | t }}
+                </button>
+              }
+              <button
+                hlmBtn
+                variant="destructive"
+                type="button"
+                [disabled]="busy()"
+                (click)="confirmingUnlink.set(true)"
+              >
+                {{ 'cloud.account.unlink' | t }}
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </section>
+
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'cloud.capabilities.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'cloud.capabilities.description' | t }}</p>
+      </div>
+      <ul hlmCardContent class="grid gap-3">
+        @for (capability of capabilities; track capability) {
+          <li class="flex items-start justify-between gap-4 text-sm">
+            <span class="grid gap-0.5">
+              <span class="font-medium">{{
+                'cloud.capabilities.' + capability + '.name' | t
+              }}</span>
+              <span class="text-xs text-muted-foreground">{{
+                'cloud.capabilities.' + capability + '.help' | t
+              }}</span>
+            </span>
+            <span hlmBadge [variant]="enabled(capability) ? 'default' : 'outline'" class="shrink-0">
+              {{ (enabled(capability) ? 'cloud.capabilities.on' : 'cloud.capabilities.off') | t }}
+            </span>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+}
+
+<hlm-alert-dialog
+  [state]="confirmingUnlink() ? 'open' : 'closed'"
+  (closed)="confirmingUnlink.set(false)"
+>
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    <hlm-alert-dialog-header>
+      <h3 hlmAlertDialogTitle>{{ 'cloud.account.unlinkTitle' | t }}</h3>
+      <p hlmAlertDialogDescription>{{ 'cloud.account.unlinkHelp' | t }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel type="button" (click)="confirmingUnlink.set(false)">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button hlmAlertDialogAction type="button" (click)="unlink()">
+        {{ 'cloud.account.unlink' | t }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

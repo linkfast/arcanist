@@ -41,4 +41,13 @@ public static class SettingKeys
 
     /// <summary>The SQLite file left by a migration to PostgreSQL, until the administrator decides about it.</summary>
     public const string PreviousSqlite = "database.previousSqlite";
+
+    /// <summary>The linked Ultimate Cloud account and its protected refresh token (<c>StoredCloudLink</c>).</summary>
+    public const string UltimateCloudLink = "ultimateCloud.link";
+
+    /// <summary>The account's plan as last checked (<c>CloudPlanSnapshot</c>), so the tier survives restarts while offline.</summary>
+    public const string UltimateCloudPlan = "ultimateCloud.plan";
+
+    /// <summary>The id this server uses as its device in Ultimate Cloud, created once.</summary>
+    public const string UltimateCloudDeviceId = "ultimateCloud.deviceId";
 }

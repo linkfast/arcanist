@@ -74,6 +74,11 @@ export const routes: Routes = [
           import('./features/database/database.page').then((m) => m.DatabasePage),
       },
       {
+        path: 'cloud',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/cloud/cloud.page').then((m) => m.CloudPage),
+      },
+      {
         path: 'network',
         canActivate: [adminGuard],
         loadComponent: () => import('./features/network/network.page').then((m) => m.NetworkPage),

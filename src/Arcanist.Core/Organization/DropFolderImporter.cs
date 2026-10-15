@@ -55,8 +55,9 @@ public sealed class DropFolderImporter(
             PathTemplate.TryParse(library.OrganizeTemplate, out var template, out _) ? template : PathTemplate.DefaultTemplate,
             await db.LibrarySources.AsNoTracking().Where(s => s.LibraryId == library.Id).ToDictionaryAsync(s => s.Id, cancellationToken));
 
+        var copying = drop.Mode == DropFolderMode.Copy;
         var items = (await db.ImportItems
-                .Where(i => i.DropFolderId == drop.Id && i.Status != ImportStatus.Imported && i.Status != ImportStatus.Discarded)
+                .Where(i => i.DropFolderId == drop.Id && (i.Status != ImportStatus.Imported || copying) && i.Status != ImportStatus.Discarded)
                 .ToListAsync(cancellationToken))
             .GroupBy(i => i.RelativePath, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(i => i.UpdatedAt).First(), StringComparer.Ordinal);
@@ -222,7 +223,7 @@ public sealed class DropFolderImporter(
                 : Join(batch.Template.RenderFolder(values), Path.GetFileNameWithoutExtension(entry.RelativePath));
 
             var destination = await FreePathAsync(batch, wanted, extension, cancellationToken);
-            await batch.LibraryStorage.ImportAsync(batch.LibraryLocation, destination, converted ?? localPath, cancellationToken);
+            await batch.LibraryStorage.ImportAsync(batch.LibraryLocation, destination, converted ?? Take(batch, localPath), cancellationToken);
             converted = null;
 
             // Worse copies go only once the better one is in, then it takes the place of the one at its path.
@@ -235,7 +236,7 @@ public sealed class DropFolderImporter(
                 destination = wanted + extension;
             }
 
-            if (conversion is not null)
+            if (conversion is not null && batch.Drop.Mode == DropFolderMode.Move)
                 await batch.DropStorage.TrashAsync(batch.DropLocation, entry.RelativePath, cancellationToken);
 
             await ImportSidecarsAsync(batch, entry.RelativePath, destination, cue?.Entry, entries, cancellationToken);
@@ -392,7 +393,7 @@ public sealed class DropFolderImporter(
             try
             {
                 if (batch.DropStorage.TryGetLocalPath(batch.DropLocation, from) is { } local && File.Exists(local))
-                    await batch.LibraryStorage.ImportAsync(batch.LibraryLocation, to, local, cancellationToken);
+                    await batch.LibraryStorage.ImportAsync(batch.LibraryLocation, to, Take(batch, local), cancellationToken);
                 batch.Moved.Add(from);
             }
             catch (IOException e)
@@ -421,7 +422,7 @@ public sealed class DropFolderImporter(
             {
                 if (await batch.LibraryStorage.ExistsAsync(batch.LibraryLocation, to, cancellationToken))
                     continue;
-                await batch.LibraryStorage.ImportAsync(batch.LibraryLocation, to, batch.DropStorage.TryGetLocalPath(batch.DropLocation, from)!, cancellationToken);
+                await batch.LibraryStorage.ImportAsync(batch.LibraryLocation, to, Take(batch, batch.DropStorage.TryGetLocalPath(batch.DropLocation, from)!), cancellationToken);
                 batch.Moved.Add(from);
             }
             catch (IOException e)
@@ -431,9 +432,26 @@ public sealed class DropFolderImporter(
         }
     }
 
+    /// <summary>
+    /// The file to hand to the library: the drop folder's own (importing moves it), or, when the folder copies, a copy
+    /// of it next to the data directory.
+    /// </summary>
+    private string Take(Batch batch, string localPath)
+    {
+        if (batch.Drop.Mode == DropFolderMode.Move)
+            return localPath;
+        var folder = Path.Combine(paths.Cache, "import");
+        Directory.CreateDirectory(folder);
+        var copy = Path.Combine(folder, Guid.NewGuid().ToString("N") + Path.GetExtension(localPath));
+        File.Copy(localPath, copy);
+        return copy;
+    }
+
     /// <summary>Removes the drop folder's subfolders that importing emptied.</summary>
     private async Task TidyDropFolderAsync(Batch batch, CancellationToken cancellationToken)
     {
+        if (batch.Drop.Mode == DropFolderMode.Copy)
+            return;
         var folders = batch.Imported.Select(i => i.DropPath).Concat(batch.Moved).Select(AudioFormats.Folder).Distinct().OrderByDescending(f => f.Length);
         foreach (var folder in folders)
         {

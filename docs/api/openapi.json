@@ -7403,6 +7403,7 @@
           "convertTo",
           "convertBitRate",
           "convertLossy",
+          "mode",
           "createdAt",
           "available"
         ],
@@ -7450,6 +7451,9 @@
           },
           "convertLossy": {
             "type": "boolean"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DropFolderMode"
           },
           "createdAt": {
             "type": "string",
@@ -7506,8 +7510,17 @@
           },
           "convertLossy": {
             "type": "boolean"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DropFolderMode"
           }
         }
+      },
+      "DropFolderMode": {
+        "enum": [
+          "MOVE",
+          "COPY"
+        ]
       },
       "DuplicatePair": {
         "required": [

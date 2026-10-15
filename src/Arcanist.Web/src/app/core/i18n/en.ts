@@ -587,6 +587,13 @@ export const en: Dictionary = {
       noLibraries: 'Create a library to import into first.',
       into: 'Into {library}',
       convertsTo: 'converts to {format}',
+      copies: 'copies (keeps the originals)',
+      mode: 'When importing',
+      modes: { MOVE: 'Move into the library', COPY: 'Copy into the library' },
+      modeHelp: {
+        MOVE: 'Files leave the drop folder (to its trash, for 30 days).',
+        COPY: 'Files stay where they are and a copy is imported; they are imported again only if they change.',
+      },
       paused: 'Paused',
       unavailable: 'Unavailable',
       path: 'Folder',

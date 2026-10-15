@@ -124,6 +124,7 @@ public sealed class ImportService(
         folder.ConvertTo = input.ConvertTo;
         folder.ConvertBitRate = input.ConvertTo is { } target && !TranscodeProfile.For(target).IsLossless ? input.ConvertBitRate : null;
         folder.ConvertLossy = input.ConvertTo is not (null or TranscodeFormat.Flac) && input.ConvertLossy;
+        folder.Mode = input.Mode;
     }
 
     /// <summary>
@@ -258,7 +259,7 @@ public sealed class ImportService(
         var available = (await storages.For(LibrarySourceKind.Local)
             .ProbeAsync(new StorageLocation(LibrarySourceKind.Local, folder.Path), cancellationToken)).IsAvailable;
         return new DropFolder(folder.Id, folder.Path, libraryId, folder.LibrarySourceId, folder.Enabled, folder.DuplicatePolicy,
-            folder.ConvertTo, folder.ConvertBitRate, folder.ConvertLossy, folder.CreatedAt, available);
+            folder.ConvertTo, folder.ConvertBitRate, folder.ConvertLossy, folder.Mode, folder.CreatedAt, available);
     }
 
     private static ImportItem ToModel(ImportItemEntity item) => new(

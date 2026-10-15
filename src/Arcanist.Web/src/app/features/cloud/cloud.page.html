@@ -177,7 +177,7 @@
           <p hlmCardDescription>{{ 'cloud.libraries.description' | t }}</p>
         </div>
         <ul hlmCardContent class="grid gap-3">
-          @for (collection of collections; track collection) {
+          @for (collection of collections(); track collection) {
             <li
               class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
             >

@@ -67,7 +67,10 @@ export class CloudPage implements OnInit {
   protected readonly busy = signal(false);
   protected readonly confirmingUnlink = signal(false);
   protected readonly capabilities = ALL_CAPABILITIES;
-  protected readonly collections: UltimateCloudCollection[] = ['LIBRARY', 'CLOUD_DROP'];
+  /** Cloud Drop is no library to add (it comes in through a drop folder): it is listed only when one already exists. */
+  protected collections(): UltimateCloudCollection[] {
+    return this.libraryOf('CLOUD_DROP') ? ['LIBRARY', 'CLOUD_DROP'] : ['LIBRARY'];
+  }
 
   protected readonly qr = computed(() => {
     const pending = this.status()?.pending;

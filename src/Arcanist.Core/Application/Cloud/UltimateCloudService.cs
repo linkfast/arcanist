@@ -134,6 +134,9 @@ public sealed class UltimateCloudService(
         if (!capabilities.IsEnabled(Capability.UltimateCloudSource) || await auth.LinkAsync(cancellationToken) is not { } link)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
 
+        // Cloud Drop holds unchecked uploads: it comes in through a drop folder, never as a library.
+        if (input.Collection != UltimateCloudCollection.Library)
+            throw ArcanistException.Field("collection", ErrorCodes.InvalidFormat);
         var location = input.Collection.ToString();
         if (await db.LibrarySources.AnyAsync(s => s.Kind == LibrarySourceKind.UltimateCloud && s.Location == location, cancellationToken))
             throw ArcanistException.Field("collection", ErrorCodes.Duplicate);

@@ -205,6 +205,9 @@
                     @if (folder.convertTo) {
                       · {{ 'import.folders.convertsTo' | t: { format: folder.convertTo } }}
                     }
+                    @if (folder.mode === 'COPY') {
+                      · {{ 'import.folders.copies' | t }}
+                    }
                   </span>
                   <span class="flex flex-wrap gap-1">
                     @if (!folder.enabled) {
@@ -531,6 +534,22 @@
             }
           </hlm-native-select>
           <p hlmFieldDescription>{{ 'import.policyHelp.' + current.duplicatePolicy | t }}</p>
+        </hlm-field>
+
+        <hlm-field>
+          <label hlmFieldLabel>{{ 'import.folders.mode' | t }}</label>
+          <hlm-native-select
+            [value]="current.mode"
+            (change)="updateForm({ mode: $any($event.target).value })"
+          >
+            <option hlmNativeSelectOption value="MOVE">
+              {{ 'import.folders.modes.MOVE' | t }}
+            </option>
+            <option hlmNativeSelectOption value="COPY">
+              {{ 'import.folders.modes.COPY' | t }}
+            </option>
+          </hlm-native-select>
+          <p hlmFieldDescription>{{ 'import.folders.modeHelp.' + current.mode | t }}</p>
         </hlm-field>
 
         <hlm-field>

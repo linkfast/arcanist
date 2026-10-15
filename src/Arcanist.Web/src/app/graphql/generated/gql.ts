@@ -61,7 +61,7 @@ type Documents = {
     "\n  mutation UpdateLibraryOrganization($libraryId: ID!, $input: UpdateLibraryOrganizationInput!) {\n    updateLibraryOrganization(libraryId: $libraryId, input: $input) {\n      id\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n": typeof types.UpdateLibraryOrganizationDocument,
     "\n  mutation OrganizeLibrary($libraryId: ID!) {\n    organizeLibrary(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n": typeof types.OrganizeLibraryDocument,
     "\n  mutation UndoOrganizeRun($id: ID!) {\n    undoOrganizeRun(id: $id) {\n      ...OrganizeRunFields\n    }\n  }\n": typeof types.UndoOrganizeRunDocument,
-    "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n": typeof types.DropFolderFieldsFragmentDoc,
+    "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    mode\n    createdAt\n    available\n  }\n": typeof types.DropFolderFieldsFragmentDoc,
     "\n  query DropFolders {\n    dropFolders {\n      ...DropFolderFields\n    }\n  }\n": typeof types.DropFoldersDocument,
     "\n  mutation CreateDropFolder($input: DropFolderInput!) {\n    createDropFolder(input: $input) {\n      ...DropFolderFields\n    }\n  }\n": typeof types.CreateDropFolderDocument,
     "\n  mutation UpdateDropFolder($id: ID!, $input: DropFolderInput!) {\n    updateDropFolder(id: $id, input: $input) {\n      ...DropFolderFields\n    }\n  }\n": typeof types.UpdateDropFolderDocument,
@@ -200,7 +200,7 @@ const documents: Documents = {
     "\n  mutation UpdateLibraryOrganization($libraryId: ID!, $input: UpdateLibraryOrganizationInput!) {\n    updateLibraryOrganization(libraryId: $libraryId, input: $input) {\n      id\n      organization {\n        template\n        isDefaultTemplate\n        autoOrganize\n        autoOrganizeSince\n      }\n    }\n  }\n": types.UpdateLibraryOrganizationDocument,
     "\n  mutation OrganizeLibrary($libraryId: ID!) {\n    organizeLibrary(libraryId: $libraryId) {\n      ...OrganizeRunFields\n    }\n  }\n": types.OrganizeLibraryDocument,
     "\n  mutation UndoOrganizeRun($id: ID!) {\n    undoOrganizeRun(id: $id) {\n      ...OrganizeRunFields\n    }\n  }\n": types.UndoOrganizeRunDocument,
-    "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n": types.DropFolderFieldsFragmentDoc,
+    "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    mode\n    createdAt\n    available\n  }\n": types.DropFolderFieldsFragmentDoc,
     "\n  query DropFolders {\n    dropFolders {\n      ...DropFolderFields\n    }\n  }\n": types.DropFoldersDocument,
     "\n  mutation CreateDropFolder($input: DropFolderInput!) {\n    createDropFolder(input: $input) {\n      ...DropFolderFields\n    }\n  }\n": types.CreateDropFolderDocument,
     "\n  mutation UpdateDropFolder($id: ID!, $input: DropFolderInput!) {\n    updateDropFolder(id: $id, input: $input) {\n      ...DropFolderFields\n    }\n  }\n": types.UpdateDropFolderDocument,
@@ -497,7 +497,7 @@ export function graphql(source: "\n  mutation UndoOrganizeRun($id: ID!) {\n    u
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n"): (typeof documents)["\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    createdAt\n    available\n  }\n"];
+export function graphql(source: "\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    mode\n    createdAt\n    available\n  }\n"): (typeof documents)["\n  fragment DropFolderFields on DropFolder {\n    id\n    path\n    libraryId\n    librarySourceId\n    enabled\n    duplicatePolicy\n    convertTo\n    convertBitRate\n    convertLossy\n    mode\n    createdAt\n    available\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

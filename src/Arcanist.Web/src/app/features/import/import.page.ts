@@ -31,6 +31,7 @@ import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   DlnaImportJobFieldsFragment as DlnaImportJob,
   DropFolderFieldsFragment as DropFolder,
+  DropFolderMode,
   DuplicatePolicy,
   ImportItemFieldsFragment as ImportItem,
   ImportQueueQuery,
@@ -81,6 +82,7 @@ interface FolderForm {
   convertTo: TranscodeFormat | '';
   convertBitRate: number | null;
   convertLossy: boolean;
+  mode: DropFolderMode;
 }
 
 interface TagsForm {
@@ -461,6 +463,7 @@ export class ImportPage implements OnInit {
       convertTo: '',
       convertBitRate: null,
       convertLossy: false,
+      mode: 'MOVE',
     });
   }
 
@@ -475,6 +478,7 @@ export class ImportPage implements OnInit {
       convertTo: folder.convertTo ?? '',
       convertBitRate: folder.convertBitRate ?? null,
       convertLossy: folder.convertLossy,
+      mode: folder.mode,
     });
   }
 
@@ -503,6 +507,7 @@ export class ImportPage implements OnInit {
           ? Number(form.convertBitRate)
           : null,
       convertLossy: form.convertTo !== '' && form.convertTo !== 'FLAC' && form.convertLossy,
+      mode: form.mode,
     };
     try {
       if (form.id) await this.gql.mutate(UpdateDropFolderMutation, { id: form.id, input });

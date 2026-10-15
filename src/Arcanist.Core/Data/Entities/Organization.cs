@@ -45,7 +45,19 @@ public sealed class DropFolder : Entity
     /// </summary>
     public bool ConvertLossy { get; set; }
 
+    /// <summary>What happens to a file once imported: it leaves the drop folder (the default) or stays there.</summary>
+    public DropFolderMode Mode { get; set; }
+
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+}
+
+public enum DropFolderMode
+{
+    /// <summary>Imported files leave the drop folder (to its trash, for 30 days).</summary>
+    Move,
+
+    /// <summary>A copy is imported and the file stays; it is imported again only if it changes.</summary>
+    Copy,
 }
 
 public enum ImportStatus

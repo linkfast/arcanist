@@ -475,6 +475,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid>("LibrarySourceId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Path")
                         .IsRequired()
                         .HasMaxLength(4096)

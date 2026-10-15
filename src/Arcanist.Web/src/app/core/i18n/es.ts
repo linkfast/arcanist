@@ -593,6 +593,13 @@ export const es: Dictionary = {
       noLibraries: 'Crea primero una biblioteca a la que importar.',
       into: 'A {library}',
       convertsTo: 'convierte a {format}',
+      copies: 'copia (deja los originales)',
+      mode: 'Al importar',
+      modes: { MOVE: 'Mover a la biblioteca', COPY: 'Copiar a la biblioteca' },
+      modeHelp: {
+        MOVE: 'Los archivos salen de la carpeta de entrada (a su papelera, 30 días).',
+        COPY: 'Los archivos se quedan donde están y se importa una copia; se vuelven a importar solo si cambian.',
+      },
       paused: 'En pausa',
       unavailable: 'No disponible',
       path: 'Carpeta',

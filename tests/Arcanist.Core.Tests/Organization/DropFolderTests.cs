@@ -50,7 +50,7 @@ public sealed class DropFolderTests : IAsyncLifetime
             File.Move(file, Path.Combine(Drop, Path.GetFileName(file)));
     }
 
-    private async Task StartAsync(string policy = "SKIP", string? convertTo = null)
+    private async Task StartAsync(string policy = "SKIP", string? convertTo = null, string mode = "MOVE")
     {
         _factory = new ArcanistFactory(new Dictionary<string, string?>
         {
@@ -64,12 +64,12 @@ public sealed class DropFolderTests : IAsyncLifetime
 
         var library = (await _admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))![0];
         _sourceId = library.GetProperty("sources")[0].GetProperty("id").GetString()!;
-        var response = await _admin.PostAsJsonAsync("/rest/v1/drop-folders", Folder(policy, convertTo), ArcanistFactory.Json, Cancel);
+        var response = await _admin.PostAsJsonAsync("/rest/v1/drop-folders", Folder(policy, convertTo, mode: mode), ArcanistFactory.Json, Cancel);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         _dropId = (await response.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("id").GetString()!;
     }
 
-    private object Folder(string policy, string? convertTo = null, string? path = null) => new
+    private object Folder(string policy, string? convertTo = null, string? path = null, string mode = "MOVE") => new
     {
         path = path ?? Drop,
         librarySourceId = _sourceId,
@@ -78,6 +78,7 @@ public sealed class DropFolderTests : IAsyncLifetime
         convertTo,
         convertBitRate = (int?)null,
         convertLossy = false,
+        mode,
     };
 
     private static string In(string root, string relativePath)
@@ -137,6 +138,24 @@ public sealed class DropFolderTests : IAsyncLifetime
         Assert.Equal(2, imported.Count);
         Assert.Contains(imported, i => i.GetProperty("destinationPath").GetString() == "The Band/2001 - First/01 One.wav");
         Assert.Empty(await ItemsAsync());
+    }
+
+    [Fact]
+    public async Task A_copying_drop_folder_keeps_its_files_and_imports_each_once()
+    {
+        await StartAsync(mode: "COPY");
+        WriteSong(In(Staging, "Some Album/a.wav"), One);
+        File.WriteAllText(In(Staging, "Some Album/a.lrc"), "[00:01.00]Hello");
+        Deliver();
+        await _factory.WaitForImportsAsync();
+
+        Assert.Equal(["The Band/2001 - First/01 One.lrc", "The Band/2001 - First/01 One.wav"], Files(Music));
+        Assert.Equal(["Some Album/a.lrc", "Some Album/a.wav"], Files(Drop));
+
+        // Looked at again, nothing is imported twice.
+        await _factory.WaitForImportsAsync();
+        Assert.Equal(2, Files(Music).Count);
+        Assert.Equal("IMPORTED", Assert.Single(await ItemsAsync("IMPORTED")).GetProperty("status").GetString());
     }
 
     [Fact]

@@ -530,6 +530,7 @@ export const DropFolderFields = graphql(`
     convertTo
     convertBitRate
     convertLossy
+    mode
     createdAt
     available
   }

@@ -61,6 +61,7 @@ public sealed record DropFolder(
     TranscodeFormat? ConvertTo,
     int? ConvertBitRate,
     bool ConvertLossy,
+    DropFolderMode Mode,
     DateTime CreatedAt,
     bool Available);
 
@@ -76,7 +77,8 @@ public sealed record DropFolderInput(
     DuplicatePolicy DuplicatePolicy,
     TranscodeFormat? ConvertTo,
     int? ConvertBitRate,
-    bool ConvertLossy);
+    bool ConvertLossy,
+    DropFolderMode Mode = DropFolderMode.Move);
 
 /// <summary>What was read from a dropped file.</summary>
 public sealed record ImportFileDetails(

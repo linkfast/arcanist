@@ -470,6 +470,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("LibrarySourceId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Mode")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Path")
                         .IsRequired()
                         .HasMaxLength(4096)

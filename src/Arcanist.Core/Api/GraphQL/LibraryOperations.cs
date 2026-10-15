@@ -16,6 +16,10 @@ public sealed partial class Query
     public static Task<Library> Library([Id] Guid id, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
         libraries.GetAsync(id, cancellationToken);
 
+    [Name("librarySourceMoves")]
+    [Description("Library folder moves since the server started, the latest first, with their progress. Administrators only.")]
+    public static IReadOnlyList<LibrarySourceMove> LibrarySourceMoves([FromServices] LibraryService libraries) => libraries.Moves();
+
     [Name("serverDirectories")]
     [Description("Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only.")]
     public static ServerDirectoryListing ServerDirectories(string? path, [FromServices] LibraryService libraries) =>
@@ -52,8 +56,13 @@ public sealed partial class Mutation
     public static ServerDirectory CreateServerDirectory(CreateServerDirectoryInput input, [FromServices] LibraryService libraries) =>
         libraries.CreateServerDirectory(input);
 
+    [Name("moveLibrarySource")]
+    [Description("Moves a local library's folder to another folder of the server in the background: copies every file, points the library at the new folder and, unless keepOriginals, deletes the old files. Nothing is overwritten. Administrators only, with a recent authentication.")]
+    public static Task<LibrarySourceMove> MoveLibrarySource([Id] Guid id, MoveLibrarySourceInput input, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
+        libraries.MoveSourceAsync(id, input, cancellationToken);
+
     [Name("removeLibrarySource")]
-    [Description("Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES.")]
+    [Description("Removes a location and its tracks from the catalog; files on disk are not touched. A local library's only folder cannot be removed (last_source): move it instead. Requires MANAGE_LIBRARIES.")]
     public static Task<Library> RemoveLibrarySource([Id] Guid id, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
         libraries.RemoveSourceAsync(id, cancellationToken);
 }

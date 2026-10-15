@@ -100,7 +100,7 @@ public sealed class LibraryManagementTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Sources_can_be_added_and_removed()
+    public async Task A_local_library_keeps_its_one_folder()
     {
         var library = await CreateAsync("Music", visibleToAll: true, Folder("Music"));
 
@@ -110,15 +110,10 @@ public sealed class LibraryManagementTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
         Assert.Contains("too_many", await second.Content.ReadAsStringAsync(Cancel));
 
-        // Once the folder is removed, the library can get another.
+        // And it cannot be removed (it is moved instead).
         var removed = await _admin.GraphQLAsync("mutation($id: ID!) { removeLibrarySource(id: $id) { sources { location } } }",
             new { id = library.Sources!.Single().Id });
-        Assert.Equal(0, removed.GetProperty("data").GetProperty("removeLibrarySource").GetProperty("sources").GetArrayLength());
-
-        var added = await _admin.PostAsJsonAsync($"/rest/v1/libraries/{library.Id}/sources",
-            new LibrarySourceInput(Folder("More Music")), ArcanistFactory.Json, Cancel);
-        var moved = (await added.Content.ReadFromJsonAsync<Library>(ArcanistFactory.Json, Cancel))!;
-        Assert.EndsWith("More Music", Assert.Single(moved.Sources!).Location);
+        Assert.Equal("last_source", removed.ErrorCode());
     }
 
     [Fact]

@@ -27,7 +27,9 @@ public sealed record MatchTracksInput(IReadOnlyList<TrackCandidate> Candidates, 
 
 /// <param name="TrackId">The server's track; null when it has none like it.</param>
 /// <param name="MatchedBy">What made them the same track.</param>
-public sealed record TrackMatch(string Key, Guid? TrackId, TrackMatchKind? MatchedBy);
+/// <param name="Pending">Not found yet, but it may be soon: its audio was uploaded and the library has not been scanned
+/// since, or a scan is going on. Ask again later.</param>
+public sealed record TrackMatch(string Key, Guid? TrackId, TrackMatchKind? MatchedBy, bool Pending = false);
 
 public enum TrackMatchKind
 {
@@ -48,7 +50,7 @@ public enum TrackMatchKind
 /// Finds the server's tracks for an app's own (migrating a library, playlists that name local tracks…), among those
 /// the caller can play: by audio, MusicBrainz recording, AcoustID and, last, title, artist and album.
 /// </summary>
-public sealed class TrackMatchService(AccessGuard guard, CatalogService catalog)
+public sealed class TrackMatchService(ArcanistDbContext db, AccessGuard guard, CatalogService catalog, Libraries.UploadScans uploads)
 {
     public const int MaxCandidates = 1000;
 
@@ -138,8 +140,19 @@ public sealed class TrackMatchService(AccessGuard guard, CatalogService catalog)
             }
         }
 
+        // Uploaded audio becomes a track once its library is scanned: until then, say so.
+        var scanning = false;
+        if (input.Candidates.Any(c => c.ContentHash is not null && !found.ContainsKey(c.Key)))
+        {
+            var libraries = input.LibraryId is { } one ? [one] : access.IsAdmin ? null : access.LibraryIds.ToList();
+            scanning = await db.ScanJobs.AnyAsync(j => (j.Status == Data.Entities.ScanStatus.Queued || j.Status == Data.Entities.ScanStatus.Running)
+                                                       && (libraries == null || libraries.Contains(j.LibraryId)), cancellationToken);
+        }
+
         return input.Candidates
-            .Select(c => found.TryGetValue(c.Key, out var m) ? new TrackMatch(c.Key, m.TrackId, m.By) : new TrackMatch(c.Key, null, null))
+            .Select(c => found.TryGetValue(c.Key, out var m)
+                ? new TrackMatch(c.Key, m.TrackId, m.By)
+                : new TrackMatch(c.Key, null, null, c.ContentHash is { } hash && (scanning || uploads.IsPendingAnywhere(hash))))
             .ToList();
     }
 

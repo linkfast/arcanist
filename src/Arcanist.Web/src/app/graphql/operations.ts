@@ -117,6 +117,40 @@ export const RemoveLibrarySourceMutation = graphql(`
   }
 `);
 
+export const LibrarySourceMoveFields = graphql(`
+  fragment LibrarySourceMoveFields on LibrarySourceMove {
+    sourceId
+    libraryId
+    from
+    to
+    keepOriginals
+    phase
+    filesDone
+    filesTotal
+    bytesDone
+    bytesTotal
+    startedAt
+    finishedAt
+    errorCode
+  }
+`);
+
+export const LibrarySourceMovesQuery = graphql(`
+  query LibrarySourceMoves {
+    librarySourceMoves {
+      ...LibrarySourceMoveFields
+    }
+  }
+`);
+
+export const MoveLibrarySourceMutation = graphql(`
+  mutation MoveLibrarySource($id: ID!, $input: MoveLibrarySourceInput!) {
+    moveLibrarySource(id: $id, input: $input) {
+      ...LibrarySourceMoveFields
+    }
+  }
+`);
+
 export const ServerDirectoriesQuery = graphql(`
   query ServerDirectories($path: String) {
     serverDirectories(path: $path) {

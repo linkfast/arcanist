@@ -107,30 +107,84 @@
           @if (library.sources) {
             <ul class="grid gap-1">
               @for (source of library.sources; track source.id) {
-                <li class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5">
-                  @if (source.kind === 'PEER') {
-                    <span class="truncate text-xs">{{ 'libraries.sharedByPeer' | t }}</span>
-                  } @else if (source.kind === 'ULTIMATE_CLOUD') {
-                    <span class="truncate text-xs">{{
-                      'libraries.ultimateCloud.' + source.location | t
-                    }}</span>
-                  } @else {
-                    <span class="truncate font-mono text-xs" [title]="source.location">{{
-                      source.location
-                    }}</span>
-                  }
-                  @if (canManage() && source.kind === 'LOCAL') {
-                    <button
-                      hlmBtn
-                      variant="ghost"
-                      size="icon-sm"
-                      type="button"
-                      [attr.aria-label]="'common.remove' | t"
-                      [disabled]="busy()"
-                      (click)="removeSource(source.id)"
-                    >
-                      <ng-icon name="lucideX" />
-                    </button>
+                <li class="grid gap-1 rounded-md bg-muted px-3 py-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    @if (source.kind === 'PEER') {
+                      <span class="truncate text-xs">{{ 'libraries.sharedByPeer' | t }}</span>
+                    } @else if (source.kind === 'ULTIMATE_CLOUD') {
+                      <span class="truncate text-xs">{{
+                        'libraries.ultimateCloud.' + source.location | t
+                      }}</span>
+                    } @else {
+                      <span class="truncate font-mono text-xs" [title]="source.location">{{
+                        source.location
+                      }}</span>
+                    }
+                    <span class="flex shrink-0 items-center">
+                      @if (auth.isAdmin() && source.kind === 'LOCAL') {
+                        <button
+                          hlmBtn
+                          variant="ghost"
+                          size="icon-sm"
+                          type="button"
+                          [attr.aria-label]="'libraries.move.button' | t"
+                          [title]="'libraries.move.button' | t"
+                          [disabled]="busy() || isActive(moveOf(source.id))"
+                          (click)="openMove(source)"
+                        >
+                          <ng-icon name="lucideFolderInput" />
+                        </button>
+                      }
+                      <!-- A local library keeps its one folder: it is moved, not removed. -->
+                      @if (
+                        canManage() && source.kind === 'LOCAL' && (library.sources?.length ?? 0) > 1
+                      ) {
+                        <button
+                          hlmBtn
+                          variant="ghost"
+                          size="icon-sm"
+                          type="button"
+                          [attr.aria-label]="'common.remove' | t"
+                          [disabled]="busy()"
+                          (click)="removeSource(source.id)"
+                        >
+                          <ng-icon name="lucideX" />
+                        </button>
+                      }
+                    </span>
+                  </div>
+                  @if (moveOf(source.id); as move) {
+                    @if (isActive(move)) {
+                      <div class="grid gap-1 pb-1">
+                        <hlm-progress [value]="movePercent(move)"
+                          ><hlm-progress-indicator
+                        /></hlm-progress>
+                        <span class="text-xs text-muted-foreground">
+                          {{
+                            'libraries.move.phase.' + move.phase
+                              | t
+                                : {
+                                    to: move.to,
+                                    done: move.filesDone,
+                                    total: move.filesTotal,
+                                    bytes: (move.bytesDone | bytes),
+                                    of: (move.bytesTotal | bytes),
+                                  }
+                          }}
+                        </span>
+                      </div>
+                    } @else if (move.phase === 'FAILED') {
+                      <span class="pb-1 text-xs text-destructive">
+                        {{
+                          'libraries.move.failed'
+                            | t: { error: i18n.error(move.errorCode ?? 'write_failed') }
+                        }}
+                      </span>
+                    } @else if (move.errorCode) {
+                      <span class="pb-1 text-xs text-amber-700 dark:text-amber-400">
+                        {{ i18n.error(move.errorCode) }}
+                      </span>
+                    }
                   }
                 </li>
               }
@@ -443,6 +497,82 @@
   >
     @if (organizing(); as library) {
       <app-organize-dialog [library]="library" (closed)="closeOrganize()" />
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Move a library's folder -->
+<hlm-dialog [state]="moving() ? 'open' : 'closed'" (closed)="moving.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(34rem,calc(100vw-2rem))] overflow-y-auto"
+  >
+    @if (moving(); as move) {
+      <form class="grid gap-4" (ngSubmit)="startMove()">
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>{{ 'libraries.move.title' | t }}</h3>
+          <p hlmDialogDescription>{{ 'libraries.move.help' | t }}</p>
+        </hlm-dialog-header>
+
+        <hlm-field>
+          <label hlmFieldLabel>{{ 'libraries.move.from' | t }}</label>
+          <span
+            class="truncate rounded-md bg-muted px-3 py-1.5 font-mono text-xs"
+            [title]="move.from"
+            >{{ move.from }}</span
+          >
+        </hlm-field>
+
+        <hlm-field>
+          <label hlmFieldLabel for="move-destination">{{ 'libraries.move.to' | t }}</label>
+          <div class="flex gap-2">
+            <input
+              hlmInput
+              id="move-destination"
+              name="destination"
+              class="min-w-0 flex-1 font-mono text-xs"
+              [ngModel]="move.destination"
+              (ngModelChange)="patchMove({ destination: $event })"
+            />
+            <button
+              hlmBtn
+              variant="outline"
+              type="button"
+              (click)="picking.set({ libraryId: null, move: true })"
+            >
+              {{ 'libraries.move.choose' | t }}
+            </button>
+          </div>
+          <p hlmFieldDescription>{{ 'libraries.move.toHelp' | t }}</p>
+        </hlm-field>
+
+        <label class="flex items-start gap-2 text-sm">
+          <hlm-switch
+            class="mt-0.5"
+            [checked]="move.keepOriginals"
+            (checkedChange)="patchMove({ keepOriginals: $event })"
+          />
+          <span class="grid gap-0.5">
+            {{ 'libraries.move.keep' | t }}
+            <span class="text-xs text-muted-foreground">{{
+              (move.keepOriginals ? 'libraries.move.keepHelp' : 'libraries.move.cleanHelp') | t
+            }}</span>
+          </span>
+        </label>
+
+        @if (moveError(); as error) {
+          <p class="text-sm text-destructive">{{ error }}</p>
+        }
+
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" (click)="moving.set(null)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button hlmBtn type="submit" [disabled]="busy() || !move.destination.trim()">
+            {{ (move.keepOriginals ? 'libraries.move.copy' : 'libraries.move.start') | t }}
+          </button>
+        </hlm-dialog-footer>
+      </form>
     }
   </hlm-dialog-content>
 </hlm-dialog>

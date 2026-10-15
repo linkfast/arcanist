@@ -358,7 +358,7 @@
         "tags": [
           "Libraries"
         ],
-        "summary": "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES.",
+        "summary": "Removes a location and its tracks from the catalog; files on disk are not touched. A local library\u0027s only folder cannot be removed (last_source): move it instead. Requires MANAGE_LIBRARIES.",
         "operationId": "RemoveLibrarySource",
         "parameters": [
           {
@@ -378,6 +378,72 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/library-sources/{id}/move": {
+      "post": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Moves a local library\u0027s folder to another folder of the server in the background: copies every file, points the library at the new folder and, unless keepOriginals, deletes the old files. Nothing is overwritten. Administrators only, with a recent authentication.",
+        "operationId": "MoveLibrarySource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveLibrarySourceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibrarySourceMove"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/library-sources/moves": {
+      "get": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Library folder moves since the server started, the latest first, with their progress. Administrators only.",
+        "operationId": "LibrarySourceMoves",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibrarySourceMove"
+                  }
                 }
               }
             }
@@ -8881,6 +8947,10 @@
                 "$ref": "#/components/schemas/LibraryOrganization"
               }
             ]
+          },
+          "canUpload": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -8990,6 +9060,15 @@
           }
         }
       },
+      "LibraryMovePhase": {
+        "enum": [
+          "COPYING",
+          "SWITCHING",
+          "CLEANING",
+          "COMPLETED",
+          "FAILED"
+        ]
+      },
       "LibraryOrganization": {
         "required": [
           "template",
@@ -9055,6 +9134,95 @@
           "ULTIMATE_CLOUD",
           "S3"
         ]
+      },
+      "LibrarySourceMove": {
+        "required": [
+          "sourceId",
+          "libraryId",
+          "from",
+          "to",
+          "keepOriginals",
+          "phase",
+          "filesDone",
+          "filesTotal",
+          "bytesDone",
+          "bytesTotal",
+          "startedAt",
+          "finishedAt",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "keepOriginals": {
+            "type": "boolean"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/LibraryMovePhase"
+          },
+          "filesDone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytesDone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "bytesTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "LibraryTotals": {
         "required": [
@@ -9554,6 +9722,21 @@
             "items": {
               "$ref": "#/components/schemas/Track"
             }
+          }
+        }
+      },
+      "MoveLibrarySourceInput": {
+        "required": [
+          "destination"
+        ],
+        "type": "object",
+        "properties": {
+          "destination": {
+            "type": "string"
+          },
+          "keepOriginals": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13076,6 +13259,10 @@
                 "$ref": "#/components/schemas/TrackMatchKind"
               }
             ]
+          },
+          "pending": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

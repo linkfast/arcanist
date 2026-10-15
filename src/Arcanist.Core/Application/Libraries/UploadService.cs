@@ -153,6 +153,9 @@ public sealed class UploadScans(IServiceScopeFactory scopes, IOptionsMonitor<Upl
         public HashSet<string> Hashes { get; } = new(StringComparer.Ordinal);
     }
 
+    /// <summary>The audio was uploaded to some library whose scan has not been queued yet.</summary>
+    public bool IsPendingAnywhere(string hash) => _pending.Keys.Any(library => IsPending(library, hash));
+
     public bool IsPending(Guid libraryId, string hash)
     {
         if (!_pending.TryGetValue(libraryId, out var pending))

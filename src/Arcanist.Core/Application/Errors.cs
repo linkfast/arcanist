@@ -87,6 +87,15 @@ public static class ErrorCodes
     /// <summary>The Ultimate Cloud extension is switched off.</summary>
     public const string CloudDisabled = "cloud_disabled";
 
+    /// <summary>A local library keeps its folder: it can be moved, not removed.</summary>
+    public const string LastSource = "last_source";
+
+    /// <summary>A different file with the same name is already where a file had to go.</summary>
+    public const string StorageConflict = "storage_conflict";
+
+    /// <summary>The move finished, but some files of the old folder could not be deleted.</summary>
+    public const string CleanupIncomplete = "cleanup_incomplete";
+
     /// <summary>That Ultimate Cloud online service is switched off.</summary>
     public const string CloudServiceOff = "cloud_service_off";
     /// <summary>The renderer did not answer: switched off or gone from the network.</summary>

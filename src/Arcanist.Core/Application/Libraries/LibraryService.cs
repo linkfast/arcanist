@@ -23,6 +23,8 @@ public sealed class LibraryService(
     UserAccessCache accessCache,
     ScanCoordinator scans,
     LibraryWatchSignal watches,
+    LibraryMoves moves,
+    Storage.ILibraryStorageResolver storages,
     TimeProvider time)
 {
     public async Task<IReadOnlyList<Library>> ListAsync(CancellationToken cancellationToken)
@@ -35,7 +37,7 @@ public sealed class LibraryService(
             .OrderBy(l => l.Name)
             .ToListAsync(cancellationToken);
 
-        return libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries))).ToList();
+        return libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries), access)).ToList();
     }
 
     public async Task<Library> GetAsync(Guid id, CancellationToken cancellationToken)
@@ -44,7 +46,7 @@ public sealed class LibraryService(
         var library = await Visible(access).AsNoTracking().Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == id, cancellationToken)
                       ?? throw new ArcanistException.NotFound();
 
-        return library.ToModel(access.Has(Permissions.ManageLibraries));
+        return library.ToModel(access.Has(Permissions.ManageLibraries), access);
     }
 
     public async Task<Library> CreateAsync(CreateLibraryInput input, CancellationToken cancellationToken)
@@ -91,7 +93,7 @@ public sealed class LibraryService(
             watches.Refresh();
         await scans.EnqueueAsync(library.Id, ScanKind.Full, actor.UserId, cancellationToken);
 
-        return library.ToModel(includeSources: true);
+        return library.ToModel(includeSources: true, guard.Authenticated());
     }
 
     public async Task<Library> UpdateAsync(Guid id, UpdateLibraryInput input, CancellationToken cancellationToken)
@@ -120,7 +122,7 @@ public sealed class LibraryService(
         if (watchChanged)
             watches.Refresh();
 
-        return library.ToModel(includeSources: true);
+        return library.ToModel(includeSources: true, guard.Authenticated());
     }
 
     /// <summary>Removes the library and its files from the catalog. Files on disk are never touched.</summary>
@@ -176,6 +178,11 @@ public sealed class LibraryService(
         var source = await db.LibrarySources.SingleOrDefaultAsync(s => s.Id == sourceId, cancellationToken)
                      ?? throw new ArcanistException.NotFound();
         await FindManageableAsync(actor, source.LibraryId, cancellationToken);
+        if (source.Kind == LibrarySourceKind.Local
+            && !await db.LibrarySources.AnyAsync(s => s.LibraryId == source.LibraryId && s.Id != source.Id, cancellationToken))
+            throw new ArcanistException.Conflict(ErrorCodes.LastSource);
+        if (moves.IsMoving(source.LibraryId))
+            throw new ArcanistException.Conflict(ErrorCodes.Busy);
 
         db.LibrarySources.Remove(source);
         await db.SaveChangesAsync(cancellationToken);
@@ -185,6 +192,37 @@ public sealed class LibraryService(
         await scans.EnqueueAsync(source.LibraryId, ScanKind.Incremental, actor.UserId, cancellationToken);
 
         return await GetManagedAsync(source.LibraryId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Moves a local library's folder to another folder of the server, in the background (see <see cref="LibraryMoves"/>).
+    /// Administrators only, with a recent authentication: it writes, and maybe deletes, the server's files.
+    /// </summary>
+    public async Task<LibrarySourceMove> MoveSourceAsync(Guid sourceId, MoveLibrarySourceInput input, CancellationToken cancellationToken)
+    {
+        var actor = guard.Admin();
+        guard.RecentAuthentication();
+        var source = await db.LibrarySources.AsNoTracking().SingleOrDefaultAsync(s => s.Id == sourceId, cancellationToken)
+                     ?? throw new ArcanistException.NotFound();
+        if (source.Kind != LibrarySourceKind.Local)
+            throw ArcanistException.Field("id", ErrorCodes.ReadOnly);
+        if (moves.IsMoving(source.LibraryId))
+            throw new ArcanistException.Conflict(ErrorCodes.Busy);
+
+        var errors = new ValidationErrors();
+        var destination = (await rules.ValidateLocationsAsync([input.Destination], [source.Location], _ => "destination", errors, cancellationToken))[0];
+        errors.ThrowIfAny();
+        if (!await storages.For(LibrarySourceKind.Local).CanWriteAsync(new Storage.StorageLocation(LibrarySourceKind.Local, destination!), cancellationToken))
+            throw ArcanistException.Field("destination", ErrorCodes.ReadOnly);
+
+        return moves.Start(source, destination!, input.KeepOriginals, actor.UserId);
+    }
+
+    /// <summary>Folder moves since the server started, the latest first. Administrators only.</summary>
+    public IReadOnlyList<LibrarySourceMove> Moves()
+    {
+        guard.Admin();
+        return moves.List();
     }
 
     /// <summary>Lists folders on the server for choosing library locations. Administrators only: it reveals the
@@ -248,7 +286,7 @@ public sealed class LibraryService(
     private async Task<Library> GetManagedAsync(Guid id, CancellationToken cancellationToken)
     {
         var library = await db.Libraries.AsNoTracking().Include(l => l.Sources).SingleAsync(l => l.Id == id, cancellationToken);
-        return library.ToModel(includeSources: true);
+        return library.ToModel(includeSources: true, guard.Authenticated());
     }
 
     private async Task EnsureUniqueNameAsync(string? name, Guid? exceptId, ValidationErrors errors, CancellationToken cancellationToken)

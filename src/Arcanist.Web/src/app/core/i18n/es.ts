@@ -464,6 +464,29 @@ export const es: Dictionary = {
     deleteTitle: '¿Eliminar «{name}»?',
     deleteHelp:
       'Se quitará del catálogo junto con sus canciones. Los archivos en disco no se tocan.',
+    move: {
+      button: 'Mover la carpeta',
+      title: 'Mover la carpeta de la biblioteca',
+      help: 'Sus archivos se copian a la carpeta nueva (con las mismas subcarpetas y fechas), la biblioteca pasa a leer de ahí y al final se vacía la carpeta anterior. Sus canciones, valoraciones y playlists siguen igual. No se sobrescribe nada.',
+      from: 'Carpeta actual',
+      to: 'Carpeta nueva',
+      toHelp:
+        'Una carpeta del servidor, fuera de la actual. Si un traslado se interrumpió, elige la misma: lo ya copiado no se vuelve a copiar.',
+      choose: 'Elegir…',
+      keep: 'Solo copiar',
+      keepHelp: 'La carpeta actual conserva sus archivos; la biblioteca lee de la nueva.',
+      cleanHelp: 'Cuando todo esté copiado, los archivos se borran de la carpeta actual.',
+      start: 'Mover',
+      copy: 'Copiar',
+      started: 'Moviendo la carpeta en segundo plano',
+      done: 'La biblioteca ahora lee de {to}',
+      failed: 'El traslado se detuvo: {error}',
+      phase: {
+        COPYING: 'Copiando a {to}: {done} de {total} archivos ({bytes} de {of})',
+        SWITCHING: 'Cambiando la biblioteca a {to}',
+        CLEANING: 'Vaciando la carpeta anterior',
+      },
+    },
   },
   scan: {
     start: 'Escanear',
@@ -1530,6 +1553,10 @@ export const es: Dictionary = {
       'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
     dlna_disabled: 'DLNA está desactivado.',
     cloud_disabled: 'Ultimate Cloud está desactivado.',
+    last_source: 'Una biblioteca local conserva su carpeta: muévela en lugar de quitarla.',
+    storage_conflict: 'En la carpeta nueva ya hay un archivo distinto con el mismo nombre.',
+    cleanup_incomplete:
+      'Movida, pero algunos archivos de la carpeta anterior no se pudieron borrar.',
     cloud_service_off: 'Ese servicio de Ultimate Cloud está desactivado.',
     renderer_unreachable: 'El dispositivo no responde: puede estar apagado o fuera de la red.',
     renderer_failed: 'El dispositivo rechazó la orden.',

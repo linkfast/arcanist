@@ -11,6 +11,8 @@ namespace Arcanist.Core.Application.Libraries;
 /// <param name="Sources">Where the files live. Null unless the caller has the MANAGE_LIBRARIES permission, since
 /// locations reveal the server's file system layout.</param>
 /// <param name="Organization">How files are organized. Null unless the caller has the MANAGE_LIBRARIES permission.</param>
+/// <param name="CanUpload">The caller may upload files to it: they have the UPLOAD permission and it has a folder Arcanist
+/// writes to (on this server or in S3). A folder that turns out read-only still answers <c>read_only</c>.</param>
 public sealed record Library(
     Guid Id,
     string Name,
@@ -20,7 +22,8 @@ public sealed record Library(
     DateTime CreatedAt,
     DateTime? LastScanAt,
     IReadOnlyList<LibrarySource>? Sources,
-    LibraryOrganization? Organization);
+    LibraryOrganization? Organization,
+    bool CanUpload = false);
 
 public sealed record LibrarySource(Guid Id, LibrarySourceKind Kind, string Location);
 
@@ -57,7 +60,7 @@ public sealed record ServerDirectoryListing(string? Path, string? Parent, IReadO
 internal static class LibraryMapping
 {
     /// <param name="includeSources">Whether the caller manages libraries, and sees their locations and organization.</param>
-    public static Library ToModel(this LibraryEntity library, bool includeSources) => new(
+    public static Library ToModel(this LibraryEntity library, bool includeSources, Auth.UserAccess? access = null) => new(
         library.Id,
         library.Name,
         library.VisibleToAll,
@@ -66,7 +69,9 @@ internal static class LibraryMapping
         library.CreatedAt,
         library.LastScanAt,
         includeSources ? library.Sources.OrderBy(s => s.Location).Select(ToModel).ToList() : null,
-        includeSources ? library.ToOrganization() : null);
+        includeSources ? library.ToOrganization() : null,
+        access is not null && access.Has(Permissions.Upload)
+                            && library.Sources.Any(s => s.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3));
 
     public static LibraryOrganization ToOrganization(this LibraryEntity library) => new(
         string.IsNullOrEmpty(library.OrganizeTemplate) ? PathTemplate.Default : library.OrganizeTemplate,

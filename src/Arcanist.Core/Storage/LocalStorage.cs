@@ -299,6 +299,83 @@ internal sealed class LocalStorage(TimeProvider? time = null) : ILibraryStorage
         }
     }
 
+    // ── Moving a whole library folder ───────────────────────────────────────
+
+    /// <summary>
+    /// Every file under a folder, hidden ones and the trash included (moving a library takes everything), but not
+    /// Arcanist's half-written files. Relative paths use '/'.
+    /// </summary>
+    internal IEnumerable<(string RelativePath, long Size)> AllFiles(string root)
+    {
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = false, AttributesToSkip = 0 };
+        foreach (var file in new DirectoryInfo(root).EnumerateFiles("*", options))
+        {
+            if (!file.Name.StartsWith(".arcanist-partial-", StringComparison.Ordinal))
+                yield return (ToRelativePath(root, file.FullName), file.Length);
+        }
+    }
+
+    /// <summary>
+    /// Copies one file into the same place under another folder, keeping its modification time (so scans see it
+    /// unchanged), through a hidden name and a rename. A file already there with the same size counts as copied
+    /// (a move that was interrupted); one with another size is a conflict, never overwritten.
+    /// </summary>
+    internal async Task CopyFileAsync(string fromRoot, string toRoot, string relativePath, CancellationToken cancellationToken)
+    {
+        var source = ResolveInside(fromRoot, relativePath) ?? throw new FileNotFoundException("The path is outside the location.", relativePath);
+        var target = ResolveInside(toRoot, relativePath) ?? throw new FileNotFoundException("The path is outside the location.", relativePath);
+        var info = new FileInfo(source);
+        if (File.Exists(target))
+        {
+            if (new FileInfo(target).Length == info.Length)
+                return;
+            throw new StorageConflictException(relativePath);
+        }
+
+        var folder = Path.GetDirectoryName(target)!;
+        Directory.CreateDirectory(folder);
+        var partial = Path.Combine(folder, $".arcanist-partial-{Guid.NewGuid():N}");
+        try
+        {
+            await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 1 << 16, useAsync: true))
+            await using (var output = new FileStream(partial, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1 << 16, useAsync: true))
+                await input.CopyToAsync(output, cancellationToken);
+            File.SetLastWriteTimeUtc(partial, info.LastWriteTimeUtc);
+            File.Move(partial, target, overwrite: false);
+        }
+        finally
+        {
+            if (File.Exists(partial))
+                File.Delete(partial);
+        }
+    }
+
+    /// <summary>Whether a copied file is there whole: same size as the original.</summary>
+    internal bool IsCopied(string fromRoot, string toRoot, string relativePath) =>
+        ResolveInside(fromRoot, relativePath) is { } source && ResolveInside(toRoot, relativePath) is { } target
+        && File.Exists(target) && new FileInfo(target).Length == new FileInfo(source).Length;
+
+    /// <summary>Deletes a file that was moved elsewhere, and the folders it leaves empty (never the root).</summary>
+    internal void DeleteMoved(string root, string relativePath)
+    {
+        if (ResolveInside(root, relativePath) is not { } path)
+            return;
+        if (File.Exists(path))
+        {
+            File.SetAttributes(path, FileAttributes.Normal);
+            File.Delete(path);
+        }
+
+        var folder = Path.GetDirectoryName(path);
+        root = NormalizeLocation(root);
+        while (folder is not null && !PathComparer.Equals(folder, root) && Contains(root, folder)
+               && Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
+        {
+            Directory.Delete(folder);
+            folder = Path.GetDirectoryName(folder);
+        }
+    }
+
     /// <summary>Maps a stored relative path back to a full path, refusing anything that escapes the root.</summary>
     public string? TryGetLocalPath(StorageLocation location, string relativePath) => ResolveInside(location.Location, relativePath);
 

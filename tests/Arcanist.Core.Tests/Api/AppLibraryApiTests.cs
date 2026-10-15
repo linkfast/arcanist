@@ -116,8 +116,11 @@ public sealed class AppLibraryApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, again.StatusCode);
         Assert.Equal("DUPLICATE", (await again.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("status").GetString());
 
-        // Catalogued by the scan after the uploads, and found by its hash.
+        // Catalogued by the scan after the uploads, and found by its hash; until then it is pending.
         var hash = uploaded.GetProperty("contentHash").GetString();
+        var early = await _admin.PostAsJsonAsync("/rest/v1/tracks/match", new { candidates = new[] { new { key = "x", contentHash = hash } } }, ArcanistFactory.Json, Cancel);
+        var earlyMatch = (await early.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel))[0];
+        Assert.True(earlyMatch.GetProperty("pending").GetBoolean() || earlyMatch.GetProperty("trackId").ValueKind != JsonValueKind.Null);
         JsonElement match = default;
         for (var i = 0; i < 100; i++)
         {
@@ -130,9 +133,11 @@ public sealed class AppLibraryApiTests : IAsyncLifetime
         }
         Assert.Equal("CONTENT_HASH", match.GetProperty("matchedBy").GetString());
 
-        // With the permission, a user uploads to the libraries they can use.
+        // With the permission, a user uploads to the libraries they can use, and is told so.
         var uploader = await _factory.CreateUserAsync("uploader", permissions: Permissions.Upload);
         var client = await _factory.CreateAuthenticatedClientAsync("uploader");
+        Assert.True((await client.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))[0].GetProperty("canUpload").GetBoolean());
+        Assert.False((await listener.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))[0].GetProperty("canUpload").GetBoolean());
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsync($"/rest/v1/libraries/{_rockId}/uploads?fileName=copy.wav", Body(), Cancel)).StatusCode);
         Assert.NotEqual(Guid.Empty, uploader.Id);
     }

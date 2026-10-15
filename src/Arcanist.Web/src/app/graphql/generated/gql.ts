@@ -23,6 +23,9 @@ type Documents = {
     "\n  mutation DeleteLibrary($id: ID!) {\n    deleteLibrary(id: $id)\n  }\n": typeof types.DeleteLibraryDocument,
     "\n  mutation AddLibrarySource($libraryId: ID!, $input: LibrarySourceInput!) {\n    addLibrarySource(libraryId: $libraryId, input: $input) {\n      id\n    }\n  }\n": typeof types.AddLibrarySourceDocument,
     "\n  mutation RemoveLibrarySource($id: ID!) {\n    removeLibrarySource(id: $id) {\n      id\n    }\n  }\n": typeof types.RemoveLibrarySourceDocument,
+    "\n  fragment LibrarySourceMoveFields on LibrarySourceMove {\n    sourceId\n    libraryId\n    from\n    to\n    keepOriginals\n    phase\n    filesDone\n    filesTotal\n    bytesDone\n    bytesTotal\n    startedAt\n    finishedAt\n    errorCode\n  }\n": typeof types.LibrarySourceMoveFieldsFragmentDoc,
+    "\n  query LibrarySourceMoves {\n    librarySourceMoves {\n      ...LibrarySourceMoveFields\n    }\n  }\n": typeof types.LibrarySourceMovesDocument,
+    "\n  mutation MoveLibrarySource($id: ID!, $input: MoveLibrarySourceInput!) {\n    moveLibrarySource(id: $id, input: $input) {\n      ...LibrarySourceMoveFields\n    }\n  }\n": typeof types.MoveLibrarySourceDocument,
     "\n  query ServerDirectories($path: String) {\n    serverDirectories(path: $path) {\n      path\n      parent\n      directories {\n        name\n        path\n        isHidden\n      }\n    }\n  }\n": typeof types.ServerDirectoriesDocument,
     "\n  mutation CreateServerDirectory($input: CreateServerDirectoryInput!) {\n    createServerDirectory(input: $input) {\n      name\n      path\n      isHidden\n    }\n  }\n": typeof types.CreateServerDirectoryDocument,
     "\n  query ScanJobs($libraryId: ID, $limit: Int) {\n    scanJobs(libraryId: $libraryId, limit: $limit) {\n      ...ScanJobFields\n    }\n  }\n": typeof types.ScanJobsDocument,
@@ -164,6 +167,9 @@ const documents: Documents = {
     "\n  mutation DeleteLibrary($id: ID!) {\n    deleteLibrary(id: $id)\n  }\n": types.DeleteLibraryDocument,
     "\n  mutation AddLibrarySource($libraryId: ID!, $input: LibrarySourceInput!) {\n    addLibrarySource(libraryId: $libraryId, input: $input) {\n      id\n    }\n  }\n": types.AddLibrarySourceDocument,
     "\n  mutation RemoveLibrarySource($id: ID!) {\n    removeLibrarySource(id: $id) {\n      id\n    }\n  }\n": types.RemoveLibrarySourceDocument,
+    "\n  fragment LibrarySourceMoveFields on LibrarySourceMove {\n    sourceId\n    libraryId\n    from\n    to\n    keepOriginals\n    phase\n    filesDone\n    filesTotal\n    bytesDone\n    bytesTotal\n    startedAt\n    finishedAt\n    errorCode\n  }\n": types.LibrarySourceMoveFieldsFragmentDoc,
+    "\n  query LibrarySourceMoves {\n    librarySourceMoves {\n      ...LibrarySourceMoveFields\n    }\n  }\n": types.LibrarySourceMovesDocument,
+    "\n  mutation MoveLibrarySource($id: ID!, $input: MoveLibrarySourceInput!) {\n    moveLibrarySource(id: $id, input: $input) {\n      ...LibrarySourceMoveFields\n    }\n  }\n": types.MoveLibrarySourceDocument,
     "\n  query ServerDirectories($path: String) {\n    serverDirectories(path: $path) {\n      path\n      parent\n      directories {\n        name\n        path\n        isHidden\n      }\n    }\n  }\n": types.ServerDirectoriesDocument,
     "\n  mutation CreateServerDirectory($input: CreateServerDirectoryInput!) {\n    createServerDirectory(input: $input) {\n      name\n      path\n      isHidden\n    }\n  }\n": types.CreateServerDirectoryDocument,
     "\n  query ScanJobs($libraryId: ID, $limit: Int) {\n    scanJobs(libraryId: $libraryId, limit: $limit) {\n      ...ScanJobFields\n    }\n  }\n": types.ScanJobsDocument,
@@ -346,6 +352,18 @@ export function graphql(source: "\n  mutation AddLibrarySource($libraryId: ID!, 
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation RemoveLibrarySource($id: ID!) {\n    removeLibrarySource(id: $id) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation RemoveLibrarySource($id: ID!) {\n    removeLibrarySource(id: $id) {\n      id\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment LibrarySourceMoveFields on LibrarySourceMove {\n    sourceId\n    libraryId\n    from\n    to\n    keepOriginals\n    phase\n    filesDone\n    filesTotal\n    bytesDone\n    bytesTotal\n    startedAt\n    finishedAt\n    errorCode\n  }\n"): (typeof documents)["\n  fragment LibrarySourceMoveFields on LibrarySourceMove {\n    sourceId\n    libraryId\n    from\n    to\n    keepOriginals\n    phase\n    filesDone\n    filesTotal\n    bytesDone\n    bytesTotal\n    startedAt\n    finishedAt\n    errorCode\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query LibrarySourceMoves {\n    librarySourceMoves {\n      ...LibrarySourceMoveFields\n    }\n  }\n"): (typeof documents)["\n  query LibrarySourceMoves {\n    librarySourceMoves {\n      ...LibrarySourceMoveFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation MoveLibrarySource($id: ID!, $input: MoveLibrarySourceInput!) {\n    moveLibrarySource(id: $id, input: $input) {\n      ...LibrarySourceMoveFields\n    }\n  }\n"): (typeof documents)["\n  mutation MoveLibrarySource($id: ID!, $input: MoveLibrarySourceInput!) {\n    moveLibrarySource(id: $id, input: $input) {\n      ...LibrarySourceMoveFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

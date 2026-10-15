@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideFolderInput,
   lucideFolderPlus,
   lucideFolderTree,
   lucidePencil,
@@ -33,6 +34,7 @@ import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   CloudSyncStateFieldsFragment as CloudSyncState,
   LibrariesQuery as LibrariesResult,
+  LibrarySourceMoveFieldsFragment as SourceMove,
   ScanJobFieldsFragment,
 } from '../../graphql/generated/graphql';
 import {
@@ -42,6 +44,8 @@ import {
   CreateLibraryMutation,
   DeleteLibraryMutation,
   LibrariesQuery,
+  LibrarySourceMovesQuery,
+  MoveLibrarySourceMutation,
   RemoveLibrarySourceMutation,
   ScanJobUpdatedSubscription,
   ScanJobsQuery,
@@ -54,7 +58,7 @@ import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/fo
 import { OrganizeDialog } from './organize-dialog';
 import { CloudSyncPanel } from './cloud-sync';
 import { S3LibraryForm } from './s3-library';
-import { CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
+import { BytesPipe, CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
 type Library = LibrariesResult['libraries'][number];
 type ScanJob = ScanJobFieldsFragment;
@@ -116,12 +120,14 @@ function splitInterval(minutes: number | null | undefined): {
     DateTimePipe,
     RelativeTimePipe,
     CountPipe,
+    BytesPipe,
   ],
   providers: [
     provideIcons({
       lucidePlus,
       lucidePencil,
       lucideTrash2,
+      lucideFolderInput,
       lucideFolderPlus,
       lucideFolderTree,
       lucideRefreshCw,
@@ -146,7 +152,7 @@ export class LibrariesPage implements OnInit {
 
   protected readonly auth = inject(AuthService);
   private readonly gql = inject(Gql);
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly libraries = signal<Library[] | null>(null);
@@ -175,8 +181,90 @@ export class LibrariesPage implements OnInit {
   protected readonly formError = signal<string | null>(null);
   protected newFolder = '';
 
-  // Folder picking: for the open form, or to add a source to an existing library.
-  protected readonly picking = signal<{ libraryId: string | null } | null>(null);
+  // Folder picking: for the open form, to add a source to an existing library, or where to move one.
+  protected readonly picking = signal<{ libraryId: string | null; move?: boolean } | null>(null);
+
+  // Moving a library's folder (administrators): the dialog, and the moves going on or done.
+  protected readonly moving = signal<{
+    sourceId: string;
+    from: string;
+    destination: string;
+    keepOriginals: boolean;
+  } | null>(null);
+  protected readonly moveError = signal<string | null>(null);
+  protected readonly moves = signal<Record<string, SourceMove>>({});
+
+  protected moveOf(sourceId: string): SourceMove | null {
+    return this.moves()[sourceId] ?? null;
+  }
+
+  protected isActive(move: SourceMove | null): boolean {
+    return !!move && move.phase !== 'COMPLETED' && move.phase !== 'FAILED';
+  }
+
+  protected movePercent(move: SourceMove): number {
+    return move.bytesTotal > 0 ? Math.round((move.bytesDone * 100) / move.bytesTotal) : 0;
+  }
+
+  protected openMove(source: { id: string; location: string }): void {
+    this.moveError.set(null);
+    this.moving.set({
+      sourceId: source.id,
+      from: source.location,
+      destination: '',
+      keepOriginals: false,
+    });
+  }
+
+  protected patchMove(change: { destination?: string; keepOriginals?: boolean }): void {
+    this.moving.update((move) => (move ? { ...move, ...change } : move));
+  }
+
+  protected async startMove(): Promise<void> {
+    const move = this.moving();
+    if (!move || !move.destination.trim()) return;
+    this.busy.set(true);
+    this.moveError.set(null);
+    try {
+      const started = (
+        await this.gql.mutate(MoveLibrarySourceMutation, {
+          id: move.sourceId,
+          input: { destination: move.destination.trim(), keepOriginals: move.keepOriginals },
+        })
+      ).moveLibrarySource;
+      this.moves.update((moves) => ({ ...moves, [started.sourceId]: started }));
+      this.moving.set(null);
+      toast.success(this.i18n.t('libraries.move.started'));
+    } catch (error) {
+      this.moveError.set(this.describe(ApiError.from(error)));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private async loadMoves(): Promise<void> {
+    try {
+      const before = this.moves();
+      const moves = (await this.gql.query(LibrarySourceMovesQuery)).librarySourceMoves;
+      const latest: Record<string, SourceMove> = {};
+      for (const move of moves) latest[move.sourceId] ??= move;
+      this.moves.set(latest);
+      // A move that just finished changed where its library reads from.
+      const finished = Object.values(latest).filter(
+        (m) => this.isActive(before[m.sourceId] ?? null) && !this.isActive(m),
+      );
+      if (finished.length > 0) {
+        await this.load();
+        for (const move of finished) {
+          if (move.phase === 'COMPLETED')
+            toast.success(this.i18n.t('libraries.move.done', { to: move.to }));
+          else toast.error(this.i18n.error(move.errorCode ?? 'write_failed'));
+        }
+      }
+    } catch {
+      // Followed again on the next tick.
+    }
+  }
   protected readonly loadDirectories: DirectoryLoader = async (path) =>
     (await this.gql.query(ServerDirectoriesQuery, { path })).serverDirectories;
   protected readonly createDirectory: DirectoryCreator = async (parent, name) =>
@@ -195,6 +283,11 @@ export class LibrariesPage implements OnInit {
   async ngOnInit(): Promise<void> {
     await this.load();
     if (this.auth.isAdmin()) {
+      await this.loadMoves();
+      const moveTimer = setInterval(() => {
+        if (Object.values(this.moves()).some((m) => this.isActive(m))) void this.loadMoves();
+      }, 1000);
+      this.destroyRef.onDestroy(() => clearInterval(moveTimer));
       await this.loadCloudSyncs();
       // Syncs run in the background: follow the ones going on.
       const timer = setInterval(() => {
@@ -347,6 +440,11 @@ export class LibrariesPage implements OnInit {
     const target = this.picking();
     this.picking.set(null);
     if (!target) return;
+
+    if (target.move) {
+      this.moving.update((move) => (move ? { ...move, destination: path } : move));
+      return;
+    }
 
     if (target.libraryId === null) {
       this.addFormFolder(path);

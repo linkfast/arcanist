@@ -52,6 +52,8 @@ type Query {
   libraries: [Library!]!
   "A library by id. Libraries the user cannot access are reported as not found."
   library(id: ID!): Library!
+  "Library folder moves since the server started, the latest first, with their progress. Administrators only."
+  librarySourceMoves: [LibrarySourceMove!]!
   "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only."
   serverDirectories(path: String): ServerDirectoryListing!
   "The user's tracks rated at least minRating (5 for starred ones), most recently rated first. With the single-star rating mode, only starred tracks."
@@ -279,6 +281,7 @@ type TrackMatch {
   key: String!
   trackId: ID
   matchedBy: TrackMatchKind
+  pending: Boolean!
 }
 
 enum TrackMatchKind {
@@ -628,6 +631,7 @@ type Library {
   lastScanAt: DateTime
   sources: [LibrarySource!]
   organization: LibraryOrganization
+  canUpload: Boolean!
 }
 
 type LibrarySource {
@@ -648,6 +652,30 @@ type LibraryOrganization {
   isDefaultTemplate: Boolean!
   autoOrganize: Boolean!
   autoOrganizeSince: DateTime
+}
+
+type LibrarySourceMove {
+  sourceId: ID!
+  libraryId: ID!
+  from: String!
+  to: String!
+  keepOriginals: Boolean!
+  phase: LibraryMovePhase!
+  filesDone: Int!
+  filesTotal: Int!
+  bytesDone: Long!
+  bytesTotal: Long!
+  startedAt: DateTime!
+  finishedAt: DateTime
+  errorCode: String
+}
+
+enum LibraryMovePhase {
+  COPYING
+  SWITCHING
+  CLEANING
+  COMPLETED
+  FAILED
 }
 
 type ServerDirectoryListing {
@@ -1478,7 +1506,9 @@ type Mutation {
   addLibrarySource(libraryId: ID!, input: LibrarySourceInput!): Library!
   "Creates a folder on the server, to pick it as a location. Administrators only."
   createServerDirectory(input: CreateServerDirectoryInput!): ServerDirectory!
-  "Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES."
+  "Moves a local library's folder to another folder of the server in the background: copies every file, points the library at the new folder and, unless keepOriginals, deletes the old files. Nothing is overwritten. Administrators only, with a recent authentication."
+  moveLibrarySource(id: ID!, input: MoveLibrarySourceInput!): LibrarySourceMove!
+  "Removes a location and its tracks from the catalog; files on disk are not touched. A local library's only folder cannot be removed (last_source): move it instead. Requires MANAGE_LIBRARIES."
   removeLibrarySource(id: ID!): Library!
   "Brings ratings and play counts an app kept on its own (at most 1000 of each per call). Ratings only fill gaps; play counts keep the highest."
   importListening(input: ImportListeningInput!): ListeningImportResult!
@@ -1680,6 +1710,11 @@ input UpdateLibraryInput {
 input CreateServerDirectoryInput {
   parent: String!
   name: String!
+}
+
+input MoveLibrarySourceInput {
+  destination: String!
+  keepOriginals: Boolean!
 }
 
 type ListeningImportResult {

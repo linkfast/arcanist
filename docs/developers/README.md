@@ -216,10 +216,13 @@ An app that keeps its own library (Ultimate Desktop, for one) can use the server
   `key` and what it knows (`contentHash`, `acoustId`, `musicBrainzRecordingId`, `title`, `artist`, `album`,
   `discNumber`, `trackNumber`, `durationMs`), and answers each key with the server's `trackId` (or null) and
   `matchedBy`: the same audio first, then the MusicBrainz recording, the AcoustID, and last the same title, artist and
-  album (with the duration within three seconds). `libraryId` limits it to one library.
+  album (with the duration within three seconds). `libraryId` limits it to one library. A candidate with a
+  `contentHash` that is not found yet but may be soon (uploaded, its library not scanned since, or a scan going on)
+  comes back with `pending: true`: ask again later.
 - **Uploading:** `POST /rest/v1/libraries/{id}/uploads?fileName=…` with the file as the body
   (`application/octet-stream`, up to 2 GB) adds it to a library the user can use. It needs the `UPLOAD` permission and
-  a library folder the server can write to (`read_only` otherwise). The file is placed with the library's folder
+  a library folder the server can write to (`read_only` otherwise); `Library.canUpload` says beforehand whether both
+  hold. The file is placed with the library's folder
   template and never overwrites anything: `201` with `status: IMPORTED`, its `contentHash` and `path`, or `200` with
   `status: DUPLICATE` when the library already has that audio (with its `trackId` once catalogued). The library is
   scanned shortly after the last upload of a batch; then `matchTracks` finds the new tracks by `contentHash`.

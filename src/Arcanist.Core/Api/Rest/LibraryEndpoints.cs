@@ -74,7 +74,18 @@ public static class LibraryEndpoints
                 service.RemoveSourceAsync(id, ct))
             .WithTags("Libraries")
             .WithName("RemoveLibrarySource")
-            .WithSummary("Removes a location and its tracks from the catalog; files on disk are not touched. Requires MANAGE_LIBRARIES.");
+            .WithSummary("Removes a location and its tracks from the catalog; files on disk are not touched. A local library's only folder cannot be removed (last_source): move it instead. Requires MANAGE_LIBRARIES.");
+
+        rest.MapPost("/library-sources/{id:guid}/move", (Guid id, MoveLibrarySourceInput input, LibraryService service, CancellationToken ct) =>
+                service.MoveSourceAsync(id, input, ct))
+            .WithTags("Libraries")
+            .WithName("MoveLibrarySource")
+            .WithSummary("Moves a local library's folder to another folder of the server in the background: copies every file, points the library at the new folder and, unless keepOriginals, deletes the old files. Nothing is overwritten. Administrators only, with a recent authentication.");
+
+        rest.MapGet("/library-sources/moves", (LibraryService service) => service.Moves())
+            .WithTags("Libraries")
+            .WithName("LibrarySourceMoves")
+            .WithSummary("Library folder moves since the server started, the latest first, with their progress. Administrators only.");
 
         rest.MapGet("/server/directories", (string? path, LibraryService service) => service.BrowseServerDirectories(path))
             .WithTags("Server")

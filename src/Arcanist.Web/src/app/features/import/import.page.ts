@@ -165,16 +165,21 @@ export class ImportPage implements OnInit {
   protected readonly libraries = signal<Library[]>([]);
   protected readonly busy = signal<string | null>(null);
 
-  /** Every library location, to choose where a drop folder imports to. */
+  /**
+   * The library locations a drop folder can import to: those Arcanist writes to (on this server or in S3), never
+   * Ultimate Cloud's or other servers' libraries, which are read only.
+   */
   protected readonly targets = computed(() =>
     this.libraries().flatMap((library) =>
-      (library.sources ?? []).map((source) => ({
-        id: source.id,
-        label:
-          (library.sources?.length ?? 0) > 1
-            ? `${library.name} — ${source.location}`
-            : library.name,
-      })),
+      (library.sources ?? [])
+        .filter((source) => source.kind === 'LOCAL' || source.kind === 'S3')
+        .map((source) => ({
+          id: source.id,
+          label:
+            (library.sources?.length ?? 0) > 1
+              ? `${library.name} — ${source.location}`
+              : library.name,
+        })),
     ),
   );
 

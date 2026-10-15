@@ -480,7 +480,10 @@
 </hlm-dialog>
 
 <hlm-dialog [state]="form() ? 'open' : 'closed'" (closed)="form.set(null)">
-  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(32rem,calc(100vw-2rem))]">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto"
+  >
     @if (form(); as current) {
       <form class="grid gap-4" (ngSubmit)="saveForm()">
         <hlm-dialog-header>
@@ -705,7 +708,10 @@
 
 <!-- Review -->
 <hlm-dialog [state]="reviewing() ? 'open' : 'closed'" (closed)="reviewing.set(null)">
-  <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(32rem,calc(100vw-2rem))]">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto"
+  >
     @if (reviewing(); as item) {
       <form class="grid gap-4" (ngSubmit)="saveReview()">
         <hlm-dialog-header>

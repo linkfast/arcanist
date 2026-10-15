@@ -113,9 +113,7 @@ export class NetworkPage implements OnInit {
   protected readonly i18n = inject(I18n);
   private readonly gql = inject(Gql);
 
-  protected readonly relays: P2PRelayMode[] = ['N0', 'ULTIMATE', 'CUSTOM', 'DIRECT'];
-  /** The linked Ultimate Cloud account has the Cloud plan: its relay and devices can be used. */
-  protected readonly ultimateAvailable = signal(false);
+  protected readonly relays: P2PRelayMode[] = ['N0', 'CUSTOM', 'DIRECT'];
 
   protected readonly status = signal<Status | null>(null);
   protected readonly peers = signal<Peer[]>([]);
@@ -165,7 +163,6 @@ export class NetworkPage implements OnInit {
     try {
       const result = await this.gql.query(NetworkQuery);
       this.status.set(result.p2pStatus);
-      this.ultimateAvailable.set(result.serverInfo.capabilities.includes('CLOUD_CONNECT'));
       this.peers.set(result.networkPeers);
       this.shares.set(result.receivedShares);
       this.activity.set(result.p2pActivity);

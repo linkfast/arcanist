@@ -155,8 +155,6 @@ public static class ErrorCodes
     public const string CloudQuotaExceeded = "cloud_quota_exceeded";
     /// <summary>The account is read-only (a lapsed subscription): nothing is uploaded.</summary>
     public const string CloudReadOnly = "cloud_read_only";
-    /// <summary>Ultimate's relay and the transparent connection need the Cloud plan.</summary>
-    public const string CloudConnectUnavailable = "cloud_connect_unavailable";
     /// <summary>Libraries in S3 need the Cloud plan.</summary>
     public const string S3Unavailable = "s3_unavailable";
     /// <summary>The S3 service did not answer at that address.</summary>

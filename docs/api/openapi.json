@@ -9826,8 +9826,7 @@
         "enum": [
           "N0",
           "CUSTOM",
-          "DIRECT",
-          "ULTIMATE"
+          "DIRECT"
         ]
       },
       "P2PRules": {

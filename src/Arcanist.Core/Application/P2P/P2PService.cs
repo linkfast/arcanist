@@ -25,9 +25,6 @@ public enum P2PRelayMode
 
     /// <summary>Direct connections only. Some networks will not connect.</summary>
     Direct,
-
-    /// <summary>Ultimate's relay, with the Cloud plan of the linked Ultimate Cloud account (n0's while it is not available).</summary>
-    Ultimate,
 }
 
 /// <summary>The P2P network: whether it runs, how, and what goes through it now.</summary>
@@ -185,8 +182,6 @@ public sealed class P2PService(
         if (name is { Length: > NameMaxLength })
             errors.Add("name", ErrorCodes.InvalidFormat);
         var relayUrl = string.IsNullOrWhiteSpace(input.RelayUrl) ? null : input.RelayUrl.Trim();
-        if (input.Relay == P2PRelayMode.Ultimate && !services.GetRequiredService<Capabilities.ICapabilityService>().IsEnabled(Capabilities.Capability.CloudConnect))
-            errors.Add("relay", ErrorCodes.CloudConnectUnavailable);
         if (input.Relay == P2PRelayMode.Custom
             && !(Uri.TryCreate(relayUrl, UriKind.Absolute, out var relay) && relay.Scheme is "https" or "http"))
         {
@@ -592,7 +587,6 @@ public sealed class P2PService(
     {
         P2PRelay.Custom => P2PRelayMode.Custom,
         P2PRelay.Direct or P2PRelay.Local => P2PRelayMode.Direct,
-        P2PRelay.Ultimate => P2PRelayMode.Ultimate,
         _ => P2PRelayMode.N0,
     };
 
@@ -600,7 +594,6 @@ public sealed class P2PService(
     {
         P2PRelayMode.Custom => P2PRelay.Custom,
         P2PRelayMode.Direct => P2PRelay.Direct,
-        P2PRelayMode.Ultimate => P2PRelay.Ultimate,
         _ => P2PRelay.N0,
     };
 

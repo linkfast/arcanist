@@ -73,8 +73,8 @@ When the server is linked to an Ultimate Cloud account with the **Cloud plan**, 
    within the hour (an administrator can force it with "Check the plan"), and stops trusting them when they leave
    the account or the plan ends.
 2. Find the account's servers with `myP2PNodes`: entries of kind `SERVER` carry a `ticket`, the same base64url JSON
-   as the `node` of an invitation link. `connect(ticket)` and sign in as usual.
-3. `p2pRelay` gives Ultimate's relay, which only lets in nodes of Cloud accounts; n0's work too.
+   as the `node` of an invitation link. `connect(ticket)` and sign in as usual, through n0's relays (or the
+   server's own, if its administrator runs one).
 
 ## What can go wrong
 

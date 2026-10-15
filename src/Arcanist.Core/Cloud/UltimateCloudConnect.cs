@@ -12,8 +12,8 @@ namespace Arcanist.Core.Cloud;
 /// <summary>
 /// The transparent P2P connection of the Cloud plan (<see cref="Capability.CloudConnect"/>): this server registers its
 /// node in Ultimate Cloud, so the account's apps find it without pairing; the account's devices are trusted here as
-/// they register theirs (<see cref="P2PPeerSource.UltimateCloud"/>), and dropped when they no longer are; and the
-/// node may use Ultimate's relay (<see cref="P2PRelay.Ultimate"/>). Run after every plan check.
+/// they register theirs (<see cref="P2PPeerSource.UltimateCloud"/>), and dropped when they no longer are. The nodes
+/// reach each other through the relays chosen in the P2P settings. Run after every plan check.
 /// </summary>
 public sealed class UltimateCloudConnect(
     UltimateCloudClient client,
@@ -21,7 +21,6 @@ public sealed class UltimateCloudConnect(
     ICloudLinkState link,
     P2PSettings p2p,
     P2PNode node,
-    P2PUltimateRelay relay,
     P2PPeerDirectory directory,
     IArcanistDbContextFactory databases,
     TimeProvider time,
@@ -32,13 +31,11 @@ public sealed class UltimateCloudConnect(
         var config = await p2p.GetAsync(cancellationToken);
         if (link.Tier != CloudTier.Paid || !config.Enabled)
         {
-            SetRelay(null, config);
             await TrustAsync([], cancellationToken);
             return;
         }
 
-        var data = await client.SendAsync("query Connect { p2pRelay { url } myP2PNodes { nodeId kind name } }", null, cancellationToken);
-        SetRelay(data["p2pRelay"]?["url"]?.GetValue<string>(), config);
+        var data = await client.SendAsync("query Connect { myP2PNodes { nodeId kind name } }", null, cancellationToken);
 
         var state = node.State;
         if (state is { Running: true, NodeId: { } nodeId, Ticket: { } ticket })
@@ -56,16 +53,6 @@ public sealed class UltimateCloudConnect(
             .DistinctBy(n => n.Id)
             .ToList();
         await TrustAsync(devices, cancellationToken);
-    }
-
-    private void SetRelay(string? url, P2PConfig config)
-    {
-        if (relay.Url == url)
-            return;
-        relay.Url = url;
-        // A node on Ultimate's relay restarts on it (or back on n0's when the plan ends).
-        if (config.Relay == P2PRelay.Ultimate)
-            node.Changed();
     }
 
     /// <summary>Makes the account's devices the peers that came from Ultimate Cloud: adds the new, drops the gone.</summary>

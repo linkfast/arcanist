@@ -154,13 +154,6 @@ public enum P2PRelay
     /// <summary>Nothing outside this network, not even address lookup: for tests and closed networks.</summary>
     [JsonStringEnumMemberName("local")]
     Local,
-
-    /// <summary>
-    /// Ultimate's relay (Cloud plan): the node runs on the relay Ultimate Cloud gives (<see cref="P2PUltimateRelay"/>),
-    /// as a custom relay; on n0's while there is none. Never reaches the native library as such.
-    /// </summary>
-    [JsonStringEnumMemberName("ultimate")]
-    Ultimate,
 }
 
 internal sealed record NodeConfig(P2PRelay Relay, string? RelayUrl, int? ForwardPort, string? PreambleSecret, int? BindPort);

@@ -11,7 +11,7 @@ namespace Arcanist.Core.Tests.Cloud;
 
 /// <summary>
 /// The transparent P2P connection of the Cloud plan: the server registers its node in Ultimate Cloud, trusts the
-/// account's devices, and may use Ultimate's relay. A real node, on a real port, without anything outside this machine.
+/// account's devices. A real node, on a real port, without anything outside this machine.
 /// </summary>
 public sealed class UltimateCloudConnectTests : IAsyncDisposable
 {
@@ -98,26 +98,6 @@ public sealed class UltimateCloudConnectTests : IAsyncDisposable
         _cloud.Plan = "Standard";
         await _admin.GraphQLAsync("mutation { refreshUltimateCloud { tier } }");
         Assert.Empty(await PeersAsync());
-    }
-
-    [Fact]
-    public async Task Ultimate_s_relay_needs_the_Cloud_plan()
-    {
-        await StartAsync(plan: "Standard");
-        var refused = await _admin.PutAsJsonAsync("/rest/v1/p2p/settings",
-            new P2PSettingsInput(true, P2PRelayMode.Ultimate, null, null, null, null), ArcanistFactory.Json, Cancel);
-        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
-        Assert.Contains("cloud_connect_unavailable", await refused.Content.ReadAsStringAsync(Cancel));
-        Assert.Empty(await PeersAsync());
-        Assert.Empty(_cloud.RegisteredNodes);
-
-        _cloud.Plan = "Cloud";
-        await _admin.GraphQLAsync("mutation { refreshUltimateCloud { tier } }");
-        var accepted = await _admin.PutAsJsonAsync("/rest/v1/p2p/settings",
-            new P2PSettingsInput(true, P2PRelayMode.Ultimate, null, null, null, null), ArcanistFactory.Json, Cancel);
-        Assert.True(accepted.IsSuccessStatusCode, await accepted.Content.ReadAsStringAsync(Cancel));
-        Assert.Equal("ULTIMATE", (await Status()).GetProperty("relay").GetString());
-        await WaitAsync(() => Task.FromResult(_factory.Services.GetRequiredService<P2PUltimateRelay>().Url == _cloud.RelayUrl), "The relay was not given");
     }
 
     private static int FreeUdpPort()

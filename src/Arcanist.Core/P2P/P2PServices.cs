@@ -10,7 +10,6 @@ public static class P2PServiceCollectionExtensions
         services.Configure<P2POptions>(configuration.GetSection(P2POptions.Section));
         services.AddSingleton<P2PSettings>();
         services.AddSingleton<P2PKeys>();
-        services.AddSingleton<P2PUltimateRelay>();
         services.AddSingleton<P2PPeerDirectory>();
         services.AddSingleton<P2PNode>();
         services.AddHostedService(provider => provider.GetRequiredService<P2PNode>());

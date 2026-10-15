@@ -104,7 +104,6 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 {
                     data = new
                     {
-                        p2pRelay = cloud && RelayUrl is not null ? new { url = RelayUrl } : null,
                         myP2PNodes = cloud
                             ? DeviceNodes.Select(d => new { nodeId = d.Key, kind = "DEVICE", name = d.Value })
                                 .Concat(RegisteredNodes.Select(n => new { nodeId = n.Key, kind = "SERVER", name = n.Value })).ToArray()
@@ -320,9 +319,6 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     public ConcurrentDictionary<string, string> RegisteredNodes { get; } = new();
 
     public ConcurrentQueue<string?> RegisteredTickets { get; } = new();
-
-    /// <summary>Ultimate's relay, for Cloud accounts.</summary>
-    public string? RelayUrl { get; set; } = "https://relay.ultimate.test/";
 
     /// <summary>The account's storage is full.</summary>
     public bool Full { get; set; }

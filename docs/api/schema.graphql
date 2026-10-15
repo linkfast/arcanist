@@ -978,7 +978,6 @@ enum P2PRelayMode {
   N0
   CUSTOM
   DIRECT
-  ULTIMATE
 }
 
 type NetworkPeer {

@@ -90,7 +90,6 @@ public sealed record P2PNodeState(bool Running, string? ErrorCode, string? NodeI
 public sealed class P2PNode(
     P2PSettings settings,
     P2PKeys keys,
-    P2PUltimateRelay ultimate,
     IOptionsMonitor<P2POptions> options,
     IServer server,
     IHostApplicationLifetime lifetime,
@@ -247,8 +246,6 @@ public sealed class P2PNode(
     {
         var relay = options.CurrentValue.Relay ?? config.Relay;
         var url = relay == P2PRelay.Custom ? config.RelayUrl : null;
-        if (relay == P2PRelay.Ultimate)
-            (relay, url) = ultimate.Url is { } ultimateUrl ? (P2PRelay.Custom, ultimateUrl) : (P2PRelay.N0, null);
         return new NodeConfig(relay, url, HttpPort(),
             Convert.ToHexStringLower(keys.Preamble), options.CurrentValue.BindPort);
     }

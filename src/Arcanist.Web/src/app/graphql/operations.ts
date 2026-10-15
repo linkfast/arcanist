@@ -1261,9 +1261,6 @@ export const NetworkQuery = graphql(`
     p2pStatus {
       ...P2PStatusFields
     }
-    serverInfo {
-      capabilities
-    }
     networkPeers {
       ...NetworkPeerFields
     }

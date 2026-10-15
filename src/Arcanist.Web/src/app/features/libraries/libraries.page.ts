@@ -101,9 +101,9 @@ interface LibraryForm {
   templateUrl: './libraries.page.html',
 })
 export class LibrariesPage implements OnInit {
-  /** A library another server shares through the P2P network: read-only here. */
+  /** A library another server shares through the P2P network, or kept in Ultimate Cloud: read-only here. */
   protected isShared(library: { sources?: { kind: string }[] | null }): boolean {
-    return (library.sources ?? []).some((s) => s.kind === 'PEER');
+    return (library.sources ?? []).some((s) => s.kind !== 'LOCAL');
   }
 
   protected readonly auth = inject(AuthService);

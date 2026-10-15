@@ -386,7 +386,7 @@ public sealed class P2PService(
             throw new ArcanistException.Forbidden(ErrorCodes.DownloadNotAllowed);
         var target = await db.LibrarySources.AsNoTracking().SingleOrDefaultAsync(s => s.Id == input.TargetSourceId, cancellationToken);
         var storages = services.GetRequiredService<Storage.ILibraryStorageResolver>();
-        if (target is null || target.Kind == LibrarySourceKind.Peer)
+        if (target is null || target.Kind != LibrarySourceKind.Local)
             throw ArcanistException.Field("targetSourceId", ErrorCodes.NotFound);
         if (!await storages.For(target.Kind).CanWriteAsync(Storage.StorageLocation.From(target), cancellationToken))
             throw ArcanistException.Field("targetSourceId", ErrorCodes.AccessDenied);
@@ -499,8 +499,8 @@ public sealed class P2PService(
     private async Task<List<Guid>> ValidLibrariesAsync(IReadOnlyList<Guid>? ids, ValidationErrors errors, CancellationToken cancellationToken)
     {
         var libraries = (ids ?? []).Distinct().ToList();
-        // A share received from another server cannot be shared on.
-        var existing = await db.Libraries.Where(l => libraries.Contains(l.Id) && l.Sources.All(s => s.Kind != LibrarySourceKind.Peer))
+        // A share received from another server cannot be shared on, nor an Ultimate Cloud library (the account is personal).
+        var existing = await db.Libraries.Where(l => libraries.Contains(l.Id) && l.Sources.All(s => s.Kind == LibrarySourceKind.Local))
             .CountAsync(cancellationToken);
         if (libraries.Count == 0)
             errors.Add("libraryIds", ErrorCodes.Required);

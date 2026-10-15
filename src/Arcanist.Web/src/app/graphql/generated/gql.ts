@@ -133,11 +133,12 @@ type Documents = {
     "\n  query Database {\n    database {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.DatabaseDocument,
     "\n  mutation TestPostgresConnection($connectionString: String!) {\n    testPostgresConnection(connectionString: $connectionString) {\n      success\n      error\n    }\n  }\n": typeof types.TestPostgresConnectionDocument,
     "\n  mutation MigrateToPostgres($connectionString: String!) {\n    migrateToPostgres(connectionString: $connectionString) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.MigrateToPostgresDocument,
-    "\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n  }\n": typeof types.UltimateCloudStatusFieldsFragmentDoc,
+    "\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n    libraries {\n      libraryId\n      name\n      collection\n    }\n  }\n": typeof types.UltimateCloudStatusFieldsFragmentDoc,
     "\n  query UltimateCloud {\n    ultimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.UltimateCloudDocument,
     "\n  mutation StartUltimateCloudLink {\n    startUltimateCloudLink {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.StartUltimateCloudLinkDocument,
     "\n  mutation CancelUltimateCloudLink {\n    cancelUltimateCloudLink {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.CancelUltimateCloudLinkDocument,
     "\n  mutation UnlinkUltimateCloud {\n    unlinkUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.UnlinkUltimateCloudDocument,
+    "\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.AddUltimateCloudLibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.ResolvePreviousSqliteDocument,
 };
@@ -261,11 +262,12 @@ const documents: Documents = {
     "\n  query Database {\n    database {\n      ...DatabaseStatusFields\n    }\n  }\n": types.DatabaseDocument,
     "\n  mutation TestPostgresConnection($connectionString: String!) {\n    testPostgresConnection(connectionString: $connectionString) {\n      success\n      error\n    }\n  }\n": types.TestPostgresConnectionDocument,
     "\n  mutation MigrateToPostgres($connectionString: String!) {\n    migrateToPostgres(connectionString: $connectionString) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.MigrateToPostgresDocument,
-    "\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n  }\n": types.UltimateCloudStatusFieldsFragmentDoc,
+    "\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n    libraries {\n      libraryId\n      name\n      collection\n    }\n  }\n": types.UltimateCloudStatusFieldsFragmentDoc,
     "\n  query UltimateCloud {\n    ultimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.UltimateCloudDocument,
     "\n  mutation StartUltimateCloudLink {\n    startUltimateCloudLink {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.StartUltimateCloudLinkDocument,
     "\n  mutation CancelUltimateCloudLink {\n    cancelUltimateCloudLink {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.CancelUltimateCloudLinkDocument,
     "\n  mutation UnlinkUltimateCloud {\n    unlinkUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.UnlinkUltimateCloudDocument,
+    "\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.AddUltimateCloudLibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.ResolvePreviousSqliteDocument,
 };
@@ -763,7 +765,7 @@ export function graphql(source: "\n  mutation MigrateToPostgres($connectionStrin
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n  }\n"): (typeof documents)["\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n  }\n"];
+export function graphql(source: "\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n    libraries {\n      libraryId\n      name\n      collection\n    }\n  }\n"): (typeof documents)["\n  fragment UltimateCloudStatusFields on UltimateCloudStatus {\n    state\n    account\n    linkedAt\n    pending {\n      userCode\n      verificationUri\n      verificationUriComplete\n      expiresAt\n    }\n    plan {\n      name\n      cloudStatus\n      usedBytes\n      limitBytes\n      readOnly\n      renewsAt\n      checkedAt\n    }\n    tier\n    capabilities\n    errorCode\n    libraries {\n      libraryId\n      name\n      collection\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -780,6 +782,10 @@ export function graphql(source: "\n  mutation CancelUltimateCloudLink {\n    can
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation UnlinkUltimateCloud {\n    unlinkUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation UnlinkUltimateCloud {\n    unlinkUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {\n    addUltimateCloudLibrary(input: $input) {\n      ...UltimateCloudStatusFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

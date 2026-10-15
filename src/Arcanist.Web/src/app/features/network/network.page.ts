@@ -129,14 +129,14 @@ export class NetworkPage implements OnInit {
   protected readonly copyTargets = computed(() =>
     this.libraries().flatMap((library) =>
       (library.sources ?? [])
-        .filter((s) => s.kind !== 'PEER')
+        .filter((s) => s.kind === 'LOCAL')
         .map((s) => ({ id: s.id, label: `${library.name} — ${s.location}` })),
     ),
   );
 
   /** Libraries that can be shared: not ones received from another server. */
   protected readonly shareable = computed(() =>
-    this.libraries().filter((l) => !(l.sources ?? []).some((s) => s.kind === 'PEER')),
+    this.libraries().filter((l) => (l.sources ?? []).every((s) => s.kind === 'LOCAL')),
   );
 
   // Dialogs

@@ -1,4 +1,5 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
@@ -13,9 +14,11 @@ import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   Capability,
+  UltimateCloudCollection,
   UltimateCloudStatusFieldsFragment as Status,
 } from '../../graphql/generated/graphql';
 import {
+  AddUltimateCloudLibraryMutation,
   CancelUltimateCloudLinkMutation,
   RefreshUltimateCloudMutation,
   StartUltimateCloudLinkMutation,
@@ -39,6 +42,7 @@ const ALL_CAPABILITIES: Capability[] = [
 @Component({
   selector: 'app-cloud-page',
   imports: [
+    RouterLink,
     BrnAlertDialogContent,
     HlmAlertImports,
     HlmAlertDialogImports,
@@ -63,6 +67,7 @@ export class CloudPage implements OnInit {
   protected readonly busy = signal(false);
   protected readonly confirmingUnlink = signal(false);
   protected readonly capabilities = ALL_CAPABILITIES;
+  protected readonly collections: UltimateCloudCollection[] = ['LIBRARY', 'CLOUD_DROP'];
 
   protected readonly qr = computed(() => {
     const pending = this.status()?.pending;
@@ -84,6 +89,23 @@ export class CloudPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.load();
+  }
+
+  protected libraryOf(collection: UltimateCloudCollection) {
+    return this.status()?.libraries.find((l) => l.collection === collection) ?? null;
+  }
+
+  protected async addLibrary(collection: UltimateCloudCollection): Promise<void> {
+    await this.run(async () => {
+      this.show(
+        (
+          await this.gql.mutate(AddUltimateCloudLibraryMutation, {
+            input: { collection, name: null },
+          })
+        ).addUltimateCloudLibrary,
+      );
+      toast.success(this.i18n.t('cloud.libraries.added'));
+    });
   }
 
   protected enabled(capability: Capability): boolean {

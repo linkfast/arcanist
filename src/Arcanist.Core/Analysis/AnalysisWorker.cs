@@ -168,11 +168,11 @@ internal sealed class AnalysisWorker(
 
     /// <summary>
     /// Present files whose audio has no result from this analyzer version; with ffmpeg, also those that were waiting
-    /// for it. Files another server shares are not analyzed here: that would download them all.
+    /// for it. Files another server or Ultimate Cloud keeps are not analyzed here: that would download them all.
     /// </summary>
     private static IQueryable<MediaFile> Pending(ArcanistDbContext db, int version, bool withFfmpeg) =>
         db.MediaFiles.AsNoTracking()
-            .Where(f => f.MissingSince == null && f.LibrarySource.Kind != LibrarySourceKind.Peer)
+            .Where(f => f.MissingSince == null && f.LibrarySource.Kind == LibrarySourceKind.Local)
             .Where(f => !db.AudioAnalyses.Any(a => a.ContentHash == f.ContentHash && a.AnalyzerVersion == version
                                                    && !(withFfmpeg && a.State == AnalysisState.NeedsFfmpeg)));
 

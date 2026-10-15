@@ -1,5 +1,13 @@
+using Arcanist.Core.Application.Libraries;
+using Arcanist.Core.Auth;
 using Arcanist.Core.Capabilities;
 using Arcanist.Core.Cloud;
+using Arcanist.Core.Data;
+using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Scanning;
+using Microsoft.EntityFrameworkCore;
+using LibraryEntity = Arcanist.Core.Data.Entities.Library;
+using LibrarySourceEntity = Arcanist.Core.Data.Entities.LibrarySource;
 
 namespace Arcanist.Core.Application.Cloud;
 
@@ -36,6 +44,12 @@ public sealed record UltimateCloudPlan(
     DateTime? RenewsAt,
     DateTime CheckedAt);
 
+/// <summary>A library of this server that shows a collection of the account.</summary>
+public sealed record UltimateCloudLibrary(Guid LibraryId, string Name, UltimateCloudCollection Collection);
+
+/// <param name="Name">The library's name; by default, "Ultimate Cloud" (or "Cloud Drop").</param>
+public sealed record AddUltimateCloudLibraryInput(UltimateCloudCollection Collection, string? Name);
+
 /// <summary>The Ultimate Cloud account linked to this server, and what it enables.</summary>
 /// <param name="Account">The account's user name or email.</param>
 /// <param name="ErrorCode">The last problem: <c>cloud_unreachable</c>, <c>cloud_link_expired</c> (link again), <c>cloud_link_denied</c>…</param>
@@ -47,14 +61,18 @@ public sealed record UltimateCloudStatus(
     UltimateCloudPlan? Plan,
     CloudTier Tier,
     IReadOnlyList<Capability> Capabilities,
-    string? ErrorCode);
+    string? ErrorCode,
+    IReadOnlyList<UltimateCloudLibrary> Libraries);
 
 /// <summary>Linking the server to an Ultimate Cloud account. Administrators only; linking and unlinking need a recent authentication.</summary>
 public sealed class UltimateCloudService(
+    ArcanistDbContext db,
     AccessGuard guard,
     UltimateCloudAccount account,
     UltimateCloudAuth auth,
-    ICapabilityService capabilities)
+    ICapabilityService capabilities,
+    ScanCoordinator scans,
+    UserAccessCache accessCache)
 {
     public async Task<UltimateCloudStatus> StatusAsync(CancellationToken cancellationToken)
     {
@@ -95,6 +113,43 @@ public sealed class UltimateCloudService(
         return await CurrentAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Shows a collection of the account as a library of this server (one library per collection): visible to
+    /// administrators until it is given to users, scanned now and every 6 hours. Nothing is downloaded.
+    /// </summary>
+    public async Task<UltimateCloudStatus> AddLibraryAsync(AddUltimateCloudLibraryInput input, CancellationToken cancellationToken)
+    {
+        var actor = guard.Admin();
+        guard.RecentAuthentication();
+        if (!capabilities.IsEnabled(Capability.UltimateCloudSource) || await auth.LinkAsync(cancellationToken) is null)
+            throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
+
+        var location = input.Collection.ToString();
+        if (await db.LibrarySources.AnyAsync(s => s.Kind == LibrarySourceKind.UltimateCloud && s.Location == location, cancellationToken))
+            throw ArcanistException.Field("collection", ErrorCodes.Duplicate);
+
+        var name = string.IsNullOrWhiteSpace(input.Name)
+            ? input.Collection == UltimateCloudCollection.CloudDrop ? "Cloud Drop" : "Ultimate Cloud"
+            : input.Name.Trim();
+        var normalized = TextNormalizer.Normalize(name);
+        if ((await db.Libraries.Select(l => l.Name).ToListAsync(cancellationToken)).Any(n => TextNormalizer.Normalize(n) == normalized))
+            throw ArcanistException.Field("name", ErrorCodes.Duplicate);
+
+        var library = new LibraryEntity
+        {
+            Number = await LibraryService.NextNumberAsync(db, cancellationToken),
+            Name = name,
+            VisibleToAll = false,
+            ScanIntervalHours = 6,
+        };
+        library.Sources.Add(new LibrarySourceEntity { Library = library, Kind = LibrarySourceKind.UltimateCloud, Location = location });
+        db.Libraries.Add(library);
+        await db.SaveChangesAsync(cancellationToken);
+        accessCache.InvalidateAll();
+        await scans.EnqueueAsync(library.Id, ScanKind.Full, actor.UserId, cancellationToken);
+        return await CurrentAsync(cancellationToken);
+    }
+
     private async Task<UltimateCloudStatus> CurrentAsync(CancellationToken cancellationToken)
     {
         var link = account.IsConfigured ? await auth.LinkAsync(cancellationToken) : null;
@@ -114,6 +169,14 @@ public sealed class UltimateCloudService(
             plan is null ? null : new UltimateCloudPlan(plan.Plan, plan.CloudStatus, plan.UsedBytes, plan.LimitBytes, plan.ReadOnly, plan.RenewsAt, plan.CheckedAt),
             account.Tier,
             Enum.GetValues<Capability>().Where(capabilities.IsEnabled).ToList(),
-            account.ErrorCode);
+            account.ErrorCode,
+            (await db.LibrarySources.AsNoTracking()
+                .Where(s => s.Kind == LibrarySourceKind.UltimateCloud)
+                .Select(s => new { s.LibraryId, s.Library.Name, s.Location })
+                .ToListAsync(cancellationToken))
+            .Select(s => new UltimateCloudLibrary(s.LibraryId, s.Name,
+                Enum.TryParse<UltimateCloudCollection>(s.Location, out var collection) ? collection : UltimateCloudCollection.Library))
+            .OrderBy(l => l.Name)
+            .ToList());
     }
 }

@@ -319,6 +319,10 @@ export const en: Dictionary = {
   },
   libraries: {
     sharedByPeer: 'Shared by another server through the P2P network',
+    ultimateCloud: {
+      Library: 'Your Ultimate Cloud library',
+      CloudDrop: 'Your Ultimate Cloud Cloud Drop',
+    },
     title: 'Libraries',
     subtitle: 'Music folders and their analysis.',
     create: 'New library',
@@ -781,6 +785,22 @@ export const en: Dictionary = {
       status: {
         PastDue: 'Payment pending',
         PendingCancellation: 'Cancels at the end of the period',
+      },
+    },
+    libraries: {
+      title: 'Ultimate Cloud as a library',
+      description:
+        'The music of your account shows up as a library of this server, without downloading it: it is fetched when played. At first only administrators see it; give it to whoever you like in Users.',
+      add: 'Add',
+      added: 'Library added; its content is being read',
+      open: 'See “{name}”',
+      LIBRARY: {
+        name: 'My library',
+        help: 'What you upload from Ultimate Desktop and the web player.',
+      },
+      CLOUD_DROP: {
+        name: 'Cloud Drop',
+        help: 'The music you drop into Cloud Drop, apart from your library.',
       },
     },
     tier: {

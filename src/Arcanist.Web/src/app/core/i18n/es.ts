@@ -321,6 +321,10 @@ export const es: Dictionary = {
   },
   libraries: {
     sharedByPeer: 'Compartida por otro servidor a través de la red P2P',
+    ultimateCloud: {
+      Library: 'Tu biblioteca de Ultimate Cloud',
+      CloudDrop: 'Tu Cloud Drop de Ultimate Cloud',
+    },
     title: 'Bibliotecas',
     subtitle: 'Carpetas de música y su análisis.',
     create: 'Nueva biblioteca',
@@ -785,6 +789,22 @@ export const es: Dictionary = {
       status: {
         PastDue: 'Pago pendiente',
         PendingCancellation: 'Se cancela al final del periodo',
+      },
+    },
+    libraries: {
+      title: 'Ultimate Cloud como biblioteca',
+      description:
+        'La música de tu cuenta aparece como una biblioteca de este servidor, sin descargarla: se trae al reproducirla. Al principio solo la ven los administradores; dásela a quien quieras en Usuarios.',
+      add: 'Añadir',
+      added: 'Biblioteca añadida; se está leyendo su contenido',
+      open: 'Ver «{name}»',
+      LIBRARY: {
+        name: 'Mi biblioteca',
+        help: 'Lo que subes desde Ultimate Desktop y el reproductor web.',
+      },
+      CLOUD_DROP: {
+        name: 'Cloud Drop',
+        help: 'La música que dejas en Cloud Drop, aparte de tu biblioteca.',
       },
     },
     tier: {

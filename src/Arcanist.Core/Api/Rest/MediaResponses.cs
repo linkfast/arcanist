@@ -76,6 +76,10 @@ public static class MediaResponses
                 : new TranscodeResult(session, profile.ContentType, remaining);
         }
 
+        // Originals in Ultimate Cloud come from their signed URLs, Range included.
+        if (target.Location.Kind == Data.Entities.LibrarySourceKind.UltimateCloud)
+            return await Cloud.UltimateCloudStreaming.ProxyAsync(context, target, download, cancellationToken);
+
         Stream stream;
         try
         {

@@ -40,7 +40,7 @@ public sealed class StreamService(AccessGuard guard, CatalogService catalog)
 
         var file = await files.AsNoTracking()
             .Include(f => f.LibrarySource)
-            .OrderBy(f => f.LibrarySource.Kind == LibrarySourceKind.Peer ? 1 : 0)
+            .OrderBy(f => f.LibrarySource.Kind == LibrarySourceKind.Local ? 0 : 1)
             .ThenByDescending(f => f.BitDepth ?? 0).ThenByDescending(f => f.SampleRate ?? 0).ThenByDescending(f => f.BitRate ?? 0)
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new ArcanistException.NotFound();

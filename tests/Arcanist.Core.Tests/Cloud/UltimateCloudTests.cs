@@ -90,6 +90,24 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 return new HttpResponseMessage(HttpStatusCode.Unauthorized);
             if (query.Contains("touchSyncedDevice"))
                 return Json(new { data = new { touchSyncedDevice = true } });
+            if (query.Contains("myLibrary"))
+                return Json(new { data = new { myLibrary = new { id = "lib-1" } } });
+            if (query.Contains("cloudDropTracks"))
+                return Json(new { data = new { cloudDropTracks = Array.Empty<object>() } });
+            if (query.Contains("library {"))
+                return Json(new { data = new { library = Tracks.Select(t => t.Payload).ToArray() } });
+            var variables = JsonNode.Parse(body)!["variables"];
+            if (query.Contains("streamUrl"))
+            {
+                var id = variables!["id"]!.GetValue<string>();
+                Interlocked.Increment(ref _streamUrls);
+                return Tracks.Any(t => t.Id == id)
+                    ? Json(new { data = new { streamUrl = new { url = $"{FilesBase}/file/bucket/{id}?Authorization=token", validForSeconds = 3600 } } })
+                    : Json(new { errors = new[] { new { message = $"Track '{id}' not found in library." } } });
+            }
+
+            if (query.Contains("coverImageUrl"))
+                return Json(new { data = new { coverImageUrl = new { url = $"{FilesBase}/file/bucket/cover-{variables!["id"]!.GetValue<string>()}", validForSeconds = 3600 } } });
             return Json(new
             {
                 data = new
@@ -106,8 +124,51 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             });
         }
 
+        // Backblaze B2: the tracks' audio (with Range) and covers.
+        if (url.StartsWith(FilesBase + "/file/bucket/", StringComparison.Ordinal))
+        {
+            var name = request.RequestUri!.AbsolutePath["/file/bucket/".Length..];
+            if (name.StartsWith("cover-", StringComparison.Ordinal))
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Cover) };
+            if (Tracks.FirstOrDefault(t => t.Id == name) is not { Audio: not null } track)
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            Ranges.Enqueue(request.Headers.Range?.ToString());
+            if (request.Headers.Range?.Ranges.SingleOrDefault() is { } range)
+            {
+                var from = (int)range.From!.Value;
+                var to = (int)Math.Min(range.To ?? track.Audio.Length - 1, track.Audio.Length - 1);
+                var part = new ByteArrayContent(track.Audio[from..(to + 1)]);
+                part.Headers.ContentRange = new System.Net.Http.Headers.ContentRangeHeaderValue(from, to, track.Audio.Length);
+                return new HttpResponseMessage(HttpStatusCode.PartialContent) { Content = part };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(track.Audio) };
+        }
+
         return new HttpResponseMessage(HttpStatusCode.NotFound);
     }
+
+    public const string FilesBase = "https://f000.backblazeb2.test";
+
+    /// <summary>The account's library: what <c>library</c> describes, and the audio B2 serves.</summary>
+    public List<(string Id, object Payload, byte[] Audio)> Tracks { get; } = [];
+
+    public byte[] Cover { get; set; } = [];
+
+    public ConcurrentQueue<string?> Ranges { get; } = new();
+
+    public int StreamUrls => _streamUrls;
+
+    private int _streamUrls;
+
+    public void AddTrack(string id, string title, string artist, string album, int track, byte[] audio, string? cover = null) =>
+        Tracks.Add((id, new
+        {
+            cloudTrackId = id, title, artist, album, genre = "Ambient", trackNumber = track, discNumber = 1, year = 2020,
+            duration = 8.5, audioBitrate = 900, audioSampleRate = 44100, audioFormat = "FLAC", size = (long)audio.Length,
+            coverImageId = cover, musicBrainzRecordingId = (string?)null, musicBrainzArtistId = (string?)null,
+            dateUpdated = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        }, audio));
 
     /// <summary>A new access token (expiring at once, so every call refreshes) and a rotated refresh token.</summary>
     private HttpResponseMessage Tokens()
@@ -125,8 +186,11 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     private static HttpResponseMessage Error(string error) =>
         new(HttpStatusCode.BadRequest) { Content = new StringContent(JsonSerializer.Serialize(new { error }), Encoding.UTF8, "application/json") };
 
-    public void Register(IServiceCollection services) =>
+    public void Register(IServiceCollection services)
+    {
         services.AddHttpClient(UltimateCloudClient.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => this);
+        services.AddHttpClient(UltimateCloudStorage.FilesClientName).ConfigurePrimaryHttpMessageHandler(() => this);
+    }
 }
 
 public sealed class UltimateCloudTests : IAsyncDisposable
@@ -254,6 +318,60 @@ public sealed class UltimateCloudTests : IAsyncDisposable
             .GetProperty("data").GetProperty("refreshUltimateCloud");
         Assert.Equal("cloud_link_expired", status.GetProperty("errorCode").GetString());
         Assert.Equal("NONE", status.GetProperty("tier").GetString());
+    }
+
+    [Fact]
+    public async Task The_music_of_the_account_is_a_library_streamed_on_demand()
+    {
+        var audio = Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray();
+        _cloud.Plan = "Standard";
+        _cloud.Cover = Scanning.AudioFixtures.Png(3);
+        _cloud.AddTrack("t1", "Drift", "Haze", "Low Tide", 1, audio, cover: "c1");
+        _cloud.AddTrack("t2", "Undertow", "Haze", "Low Tide", 2, audio[..1000], cover: "c1");
+        var admin = await StartAsync();
+        const string add = "mutation($c: UltimateCloudCollection!) { addUltimateCloudLibrary(input: {collection: $c}) { libraries { libraryId name collection } } }";
+
+        // Only with a linked account.
+        Assert.Equal("cloud_not_linked", (await admin.GraphQLAsync(add, new { c = "LIBRARY" })).ErrorCode());
+        await admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }");
+        _cloud.Approve = true;
+        await WaitForStateAsync(admin, "LINKED");
+
+        var added = (await admin.GraphQLAsync(add, new { c = "LIBRARY" })).GetProperty("data").GetProperty("addUltimateCloudLibrary");
+        var library = added.GetProperty("libraries").EnumerateArray().Single();
+        Assert.Equal(("Ultimate Cloud", "LIBRARY"), (library.GetProperty("name").GetString(), library.GetProperty("collection").GetString()));
+        Assert.Equal("validation_failed", (await admin.GraphQLAsync(add, new { c = "LIBRARY" })).ErrorCode());
+        await _factory.WaitForScansAsync(admin);
+
+        // Described by Ultimate Cloud: nothing but the cover was downloaded to catalog it.
+        var tracks = (await admin.GraphQLAsync("query { tracks(first: 10) { items { id title artworkId } } }"))
+            .GetProperty("data").GetProperty("tracks").GetProperty("items").EnumerateArray().OrderBy(t => t.GetProperty("title").GetString()).ToList();
+        Assert.Equal(["Drift", "Undertow"], tracks.Select(t => t.GetProperty("title").GetString()));
+        Assert.NotEqual(JsonValueKind.Null, tracks[0].GetProperty("artworkId").ValueKind);
+        Assert.Equal(0, _cloud.StreamUrls);
+
+        // Played through the server: Range goes to the signed URL, which is reused.
+        var trackId = tracks[0].GetProperty("id").GetString();
+        using var partial = new HttpRequestMessage(HttpMethod.Get, $"/rest/v1/stream/{trackId}");
+        partial.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(100, 199);
+        var response = await admin.SendAsync(partial, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+        Assert.Equal("audio/flac", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(audio[100..200], await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(audio, await admin.GetByteArrayAsync($"/rest/v1/stream/{trackId}", TestContext.Current.CancellationToken));
+        Assert.Equal(1, _cloud.StreamUrls);
+
+        // Folders are not added to it.
+        var libraryId = library.GetProperty("libraryId").GetString();
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/rest/v1/libraries/{libraryId}/sources",
+            new { location = Path.GetTempPath() }, TestContext.Current.CancellationToken)).StatusCode);
+
+        // Unlinked, the library stays as it is: a scan finds the source unavailable and marks nothing missing.
+        await admin.GraphQLAsync("mutation { unlinkUltimateCloud { state } }");
+        await admin.GraphQLAsync("mutation($id: ID!) { startScan(libraryId: $id, full: false) { id } }", new { id = libraryId });
+        await _factory.WaitForScansAsync(admin);
+        Assert.Equal(2, (await admin.GraphQLAsync("query { tracks(first: 10) { totalCount } }"))
+            .GetProperty("data").GetProperty("tracks").GetProperty("totalCount").GetInt32());
     }
 
     [Fact]

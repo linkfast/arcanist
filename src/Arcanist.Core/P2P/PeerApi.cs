@@ -130,7 +130,7 @@ public sealed class PeerApi(IArcanistDbContextFactory databases, P2PSettings set
     private static async Task<Dictionary<Guid, string>> PrefixesAsync(ArcanistDbContext db, P2PPeerSnapshot peer, CancellationToken cancellationToken)
     {
         var sources = await db.LibrarySources.AsNoTracking()
-            .Where(s => peer.LibraryIds.Contains(s.LibraryId) && s.Kind != LibrarySourceKind.Peer)
+            .Where(s => peer.LibraryIds.Contains(s.LibraryId) && s.Kind == LibrarySourceKind.Local)
             .Select(s => new { s.Id, s.Library.Name, s.Library.Number })
             .ToListAsync(cancellationToken);
         return sources.OrderBy(s => s.Number).ThenBy(s => s.Id).GroupBy(s => s.Name)

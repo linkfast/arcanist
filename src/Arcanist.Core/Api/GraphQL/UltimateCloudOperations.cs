@@ -29,6 +29,12 @@ public sealed partial class Mutation
     public static Task<UltimateCloudStatus> UnlinkUltimateCloud([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
         cloud.UnlinkAsync(cancellationToken);
 
+    [Name("addUltimateCloudLibrary")]
+    [Description("Shows a collection of the account (its library or Cloud Drop) as a library of this server; nothing is downloaded. Administrators only, with a recent authentication.")]
+    public static Task<UltimateCloudStatus> AddUltimateCloudLibrary(
+        AddUltimateCloudLibraryInput input, [FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
+        cloud.AddLibraryAsync(input, cancellationToken);
+
     [Name("refreshUltimateCloud")]
     [Description("Reads the account's plan again now. Administrators only.")]
     public static Task<UltimateCloudStatus> RefreshUltimateCloud([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>

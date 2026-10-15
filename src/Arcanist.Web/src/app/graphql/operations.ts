@@ -1427,6 +1427,11 @@ export const UltimateCloudStatusFields = graphql(`
     tier
     capabilities
     errorCode
+    libraries {
+      libraryId
+      name
+      collection
+    }
   }
 `);
 
@@ -1457,6 +1462,14 @@ export const CancelUltimateCloudLinkMutation = graphql(`
 export const UnlinkUltimateCloudMutation = graphql(`
   mutation UnlinkUltimateCloud {
     unlinkUltimateCloud {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
+export const AddUltimateCloudLibraryMutation = graphql(`
+  mutation AddUltimateCloudLibrary($input: AddUltimateCloudLibraryInput!) {
+    addUltimateCloudLibrary(input: $input) {
       ...UltimateCloudStatusFields
     }
   }

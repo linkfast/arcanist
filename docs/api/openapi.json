@@ -4719,6 +4719,37 @@
         }
       }
     },
+    "/rest/v1/ultimate-cloud/libraries": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Shows a collection of the account (its library or Cloud Drop) as a library of this server; nothing is downloaded. Administrators only, with a recent authentication.",
+        "operationId": "AddUltimateCloudLibrary",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddUltimateCloudLibraryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/ultimate-cloud/refresh": {
       "post": {
         "tags": [
@@ -5432,6 +5463,24 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "AddUltimateCloudLibraryInput": {
+        "required": [
+          "collection",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "collection": {
+            "$ref": "#/components/schemas/UltimateCloudCollection"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8126,7 +8175,8 @@
       "LibrarySourceKind": {
         "enum": [
           "LOCAL",
-          "PEER"
+          "PEER",
+          "ULTIMATE_CLOUD"
         ]
       },
       "LibraryTotals": {
@@ -11834,6 +11884,32 @@
           "FLAC"
         ]
       },
+      "UltimateCloudCollection": {
+        "enum": [
+          "LIBRARY",
+          "CLOUD_DROP"
+        ]
+      },
+      "UltimateCloudLibrary": {
+        "required": [
+          "libraryId",
+          "name",
+          "collection"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "collection": {
+            "$ref": "#/components/schemas/UltimateCloudCollection"
+          }
+        }
+      },
       "UltimateCloudLinkState": {
         "enum": [
           "NOT_CONFIGURED",
@@ -11928,7 +12004,8 @@
           "plan",
           "tier",
           "capabilities",
-          "errorCode"
+          "errorCode",
+          "libraries"
         ],
         "type": "object",
         "properties": {
@@ -11982,6 +12059,12 @@
               "null",
               "string"
             ]
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UltimateCloudLibrary"
+            }
           }
         }
       },

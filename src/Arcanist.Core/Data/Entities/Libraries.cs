@@ -46,6 +46,12 @@ public enum LibrarySourceKind
     /// files are described by that server and streamed from it on demand.
     /// </summary>
     Peer,
+
+    /// <summary>
+    /// The music of the linked Ultimate Cloud account. The location is the collection (<c>Library</c> or
+    /// <c>CloudDrop</c>); tracks are described by Ultimate Cloud and their audio fetched when played.
+    /// </summary>
+    UltimateCloud,
 }
 
 /// <summary>A location whose audio files belong to a library. Always read through <c>ILibraryStorage</c>.</summary>

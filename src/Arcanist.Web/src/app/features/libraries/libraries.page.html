@@ -80,12 +80,16 @@
                 <li class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5">
                   @if (source.kind === 'PEER') {
                     <span class="truncate text-xs">{{ 'libraries.sharedByPeer' | t }}</span>
+                  } @else if (source.kind === 'ULTIMATE_CLOUD') {
+                    <span class="truncate text-xs">{{
+                      'libraries.ultimateCloud.' + source.location | t
+                    }}</span>
                   } @else {
                     <span class="truncate font-mono text-xs" [title]="source.location">{{
                       source.location
                     }}</span>
                   }
-                  @if (canManage() && source.kind !== 'PEER') {
+                  @if (canManage() && source.kind === 'LOCAL') {
                     <button
                       hlmBtn
                       variant="ghost"

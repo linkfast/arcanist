@@ -25,6 +25,12 @@ public static class UltimateCloudEndpoints
             .WithName("UnlinkUltimateCloud")
             .WithSummary("Forgets the account; only the Ultimate Cloud features turn off. Administrators only, with a recent authentication.");
 
+        cloud.MapPost("/libraries", (AddUltimateCloudLibraryInput input, UltimateCloudService service, CancellationToken ct) =>
+                service.AddLibraryAsync(input, ct))
+            .WithName("AddUltimateCloudLibrary")
+            .WithSummary("Shows a collection of the account (its library or Cloud Drop) as a library of this server; nothing is downloaded. " +
+                         "Administrators only, with a recent authentication.");
+
         cloud.MapPost("/refresh", (UltimateCloudService service, CancellationToken ct) => service.RefreshAsync(ct))
             .WithName("RefreshUltimateCloud")
             .WithSummary("Reads the account's plan again now. Administrators only.");

@@ -136,6 +136,9 @@ public sealed class LibraryService(
     {
         var actor = guard.Permission(Permissions.ManageLibraries);
         var library = await FindManageableAsync(actor, libraryId, cancellationToken);
+        // Libraries shared by another server or kept in Ultimate Cloud show only that: folders are not added to them.
+        if (library.Sources.Any(s => s.Kind != LibrarySourceKind.Local))
+            throw ArcanistException.Field("location", ErrorCodes.ReadOnly);
 
         var errors = new ValidationErrors();
         var locations = await rules.ValidateLocationsAsync(

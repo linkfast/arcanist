@@ -598,6 +598,7 @@ type LibrarySource {
 enum LibrarySourceKind {
   LOCAL
   PEER
+  ULTIMATE_CLOUD
 }
 
 type LibraryOrganization {
@@ -1130,6 +1131,7 @@ type UltimateCloudStatus {
   tier: CloudTier!
   capabilities: [Capability!]!
   errorCode: String
+  libraries: [UltimateCloudLibrary!]!
 }
 
 enum UltimateCloudLinkState {
@@ -1167,6 +1169,17 @@ enum Capability {
   CLOUD_SYNC
   THIRD_PARTY_STORAGE
   CLOUD_CONNECT
+}
+
+type UltimateCloudLibrary {
+  libraryId: ID!
+  name: String!
+  collection: UltimateCloudCollection!
+}
+
+enum UltimateCloudCollection {
+  LIBRARY
+  CLOUD_DROP
 }
 
 type ServerInfo {
@@ -1361,6 +1374,8 @@ type Mutation {
   cancelUltimateCloudLink: UltimateCloudStatus!
   "Forgets the account; only the Ultimate Cloud features turn off. Administrators only, with a recent authentication."
   unlinkUltimateCloud: UltimateCloudStatus!
+  "Shows a collection of the account (its library or Cloud Drop) as a library of this server; nothing is downloaded. Administrators only, with a recent authentication."
+  addUltimateCloudLibrary(input: AddUltimateCloudLibraryInput!): UltimateCloudStatus!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
   "Requires MANAGE_USERS and a recent authentication."
@@ -1623,6 +1638,11 @@ input AddPlaylistTracksInput {
 input MovePlaylistEntriesInput {
   entryIds: [ID!]!
   position: Int!
+}
+
+input AddUltimateCloudLibraryInput {
+  collection: UltimateCloudCollection!
+  name: String
 }
 
 input CreateUserInput {

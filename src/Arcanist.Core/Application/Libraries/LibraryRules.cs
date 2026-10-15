@@ -7,7 +7,8 @@ namespace Arcanist.Core.Application.Libraries;
 public sealed class LibraryRules(ILibraryStorageResolver storages)
 {
     public const int NameMaxLength = 128;
-    public const int MaxScanIntervalHours = 24 * 30;
+    public const int MinScanIntervalMinutes = 5;
+    public const int MaxScanIntervalMinutes = 60 * 24 * 30;
 
     public static void ValidateName(string? name, string field, ValidationErrors errors)
     {
@@ -17,11 +18,14 @@ public sealed class LibraryRules(ILibraryStorageResolver storages)
             errors.Add(field, ErrorCodes.InvalidFormat);
     }
 
-    public static void ValidateScanInterval(int? hours, string field, ValidationErrors errors)
+    public static void ValidateScanInterval(int? minutes, string field, ValidationErrors errors)
     {
-        if (hours is < 1 or > MaxScanIntervalHours)
+        if (minutes is < MinScanIntervalMinutes or > MaxScanIntervalMinutes)
             errors.Add(field, ErrorCodes.InvalidFormat);
     }
+
+    /// <summary>Whether changes in sources of this kind can be noticed as they happen.</summary>
+    public static bool CanWatch(LibrarySourceKind kind) => kind is LibrarySourceKind.Local or LibrarySourceKind.UltimateCloud;
 
     /// <summary>
     /// Checks new locations for a library: each must be usable, and none may repeat or nest inside another of the

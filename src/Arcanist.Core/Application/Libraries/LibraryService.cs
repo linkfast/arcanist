@@ -2,6 +2,7 @@ using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Libraries;
+using Arcanist.Core.Organization;
 using Arcanist.Core.Scanning;
 using Microsoft.EntityFrameworkCore;
 using LibraryEntity = Arcanist.Core.Data.Entities.Library;
@@ -21,6 +22,7 @@ public sealed class LibraryService(
     DirectoryBrowser directories,
     UserAccessCache accessCache,
     ScanCoordinator scans,
+    LibraryWatchSignal watches,
     TimeProvider time)
 {
     public async Task<IReadOnlyList<Library>> ListAsync(CancellationToken cancellationToken)
@@ -51,9 +53,11 @@ public sealed class LibraryService(
 
         var errors = new ValidationErrors();
         LibraryRules.ValidateName(input.Name, "name", errors);
-        LibraryRules.ValidateScanInterval(input.ScanIntervalHours, "scanIntervalHours", errors);
+        LibraryRules.ValidateScanInterval(input.ScanIntervalMinutes, "scanIntervalMinutes", errors);
         if (input.Sources is not { Count: > 0 })
             errors.Add("sources", ErrorCodes.Required);
+        else if (input.Sources.Count > 1)
+            errors.Add("sources", ErrorCodes.TooMany);
 
         var locations = await rules.ValidateLocationsAsync(
             input.Sources?.Select(s => (string?)s.Location).ToList() ?? [], [], i => $"sources[{i}].location", errors, cancellationToken);
@@ -65,7 +69,8 @@ public sealed class LibraryService(
             Number = await NextNumberAsync(db, cancellationToken),
             Name = input.Name.Trim(),
             VisibleToAll = input.VisibleToAll,
-            ScanIntervalHours = input.ScanIntervalHours,
+            ScanIntervalMinutes = input.ScanIntervalMinutes,
+            WatchForChanges = input.WatchForChanges,
             CreatedAt = Now(),
         };
         library.Sources.AddRange(locations.Select(location => new LibrarySourceEntity
@@ -82,6 +87,8 @@ public sealed class LibraryService(
         db.Libraries.Add(library);
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateAll();
+        if (library.WatchForChanges)
+            watches.Refresh();
         await scans.EnqueueAsync(library.Id, ScanKind.Full, actor.UserId, cancellationToken);
 
         return library.ToModel(includeSources: true);
@@ -94,18 +101,24 @@ public sealed class LibraryService(
 
         var errors = new ValidationErrors();
         LibraryRules.ValidateName(input.Name, "name", errors);
-        LibraryRules.ValidateScanInterval(input.ScanIntervalHours, "scanIntervalHours", errors);
+        LibraryRules.ValidateScanInterval(input.ScanIntervalMinutes, "scanIntervalMinutes", errors);
+        if (input.WatchForChanges && !library.Sources.All(s => LibraryRules.CanWatch(s.Kind)))
+            errors.Add("watchForChanges", ErrorCodes.WatchUnsupported);
         await EnsureUniqueNameAsync(input.Name, exceptId: id, errors, cancellationToken);
         errors.ThrowIfAny();
 
         var visibilityChanged = library.VisibleToAll != input.VisibleToAll;
+        var watchChanged = library.WatchForChanges != input.WatchForChanges;
         library.Name = input.Name.Trim();
         library.VisibleToAll = input.VisibleToAll;
-        library.ScanIntervalHours = input.ScanIntervalHours;
+        library.ScanIntervalMinutes = input.ScanIntervalMinutes;
+        library.WatchForChanges = input.WatchForChanges;
         await db.SaveChangesAsync(cancellationToken);
 
         if (visibilityChanged)
             accessCache.InvalidateAll();
+        if (watchChanged)
+            watches.Refresh();
 
         return library.ToModel(includeSources: true);
     }
@@ -139,6 +152,9 @@ public sealed class LibraryService(
         // Libraries shared by another server or kept in Ultimate Cloud show only that: folders are not added to them.
         if (library.Sources.Any(s => s.Kind != LibrarySourceKind.Local))
             throw ArcanistException.Field("location", ErrorCodes.ReadOnly);
+        // A local library has one folder. Libraries created with several before that rule keep them, but get no more.
+        if (library.Sources.Count > 0)
+            throw ArcanistException.Field("location", ErrorCodes.TooMany);
 
         var errors = new ValidationErrors();
         var locations = await rules.ValidateLocationsAsync(
@@ -147,6 +163,7 @@ public sealed class LibraryService(
 
         db.LibrarySources.Add(new LibrarySourceEntity { LibraryId = library.Id, Kind = LibrarySourceKind.Local, Location = locations[0]! });
         await db.SaveChangesAsync(cancellationToken);
+        watches.Refresh();
         await scans.EnqueueAsync(library.Id, ScanKind.Incremental, actor.UserId, cancellationToken);
 
         return await GetManagedAsync(library.Id, cancellationToken);
@@ -162,6 +179,7 @@ public sealed class LibraryService(
 
         db.LibrarySources.Remove(source);
         await db.SaveChangesAsync(cancellationToken);
+        watches.Refresh();
 
         // The scan removes tracks left without files.
         await scans.EnqueueAsync(source.LibraryId, ScanKind.Incremental, actor.UserId, cancellationToken);

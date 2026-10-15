@@ -71,7 +71,8 @@ export const en: Dictionary = {
       },
       libraries: {
         title: 'Your libraries',
-        description: 'The folders that hold your music. You can add more later.',
+        description:
+          'The folder that holds your music. Each library has one: if your music is in several folders, create a library for each.',
       },
       media: { title: 'Audio', description: 'Tools to convert and analyze your music.' },
       ratings: { title: 'Ratings', description: 'How music is rated on this server.' },
@@ -329,15 +330,36 @@ export const en: Dictionary = {
     edit: 'Edit library',
     name: 'Name',
     folders: 'Folders',
-    addFolder: 'Add folder',
+    folder: 'Folder',
+    addFolder: 'Choose folder',
+    changeFolder: 'Change folder',
     visibleToAll: 'Visible to all users',
     everyone: 'Everyone',
     restricted: 'Restricted',
-    interval: 'Scan automatically every (hours)',
-    intervalHelp: 'Leave empty to scan only manually.',
+    interval: 'Scan automatically every',
+    intervalHelp: 'From 5 minutes to 30 days. Leave empty to scan only manually.',
+    intervalUnit: 'Unit',
+    units: { MINUTES: 'minutes', HOURS: 'hours', DAYS: 'days' },
+    watching: 'watching for changes',
+    watch: {
+      FOLDER: {
+        label: 'Watch the folder for changes',
+        help: 'What is added, changed or removed is scanned right away, once the files stop changing. The interval still catches what watching misses.',
+        warning:
+          'Watching has a cost: on very large folders it uses memory and, on Linux, an inotify watch per folder (if they run out, raise fs.inotify.max_user_watches). On network folders (SMB/NFS) it may report nothing or report constantly; an interval works better there.',
+      },
+      CLOUD: {
+        label: 'Get changes from Ultimate Cloud',
+        help: 'Ultimate Cloud tells the server when your music changes, and it is scanned right away. No cost for the server.',
+      },
+    },
     lastScan: 'Last scan',
     neverScanned: 'Not scanned yet',
-    every: 'every {hours} h',
+    every: {
+      MINUTES: 'every {count} min',
+      HOURS: 'every {count} h',
+      DAYS: 'every {count} d',
+    },
     empty: 'No libraries',
     emptyHelp: 'Create a library from the folders where you keep your music.',
     emptyNoAccess: "You don't have access to any library yet. Ask an administrator.",
@@ -635,6 +657,7 @@ export const en: Dictionary = {
   },
   extensions: {
     descriptions: {
+      dlna: 'DLNA/UPnP server for TVs, speakers and apps on the local network, and “play on”.',
       mstream: 'The mStream API, for the mStream apps.',
       subsonic:
         'The Subsonic and OpenSubsonic API, for apps such as Symfonium, DSub, Feishin or Amperfy.',
@@ -1258,6 +1281,7 @@ export const en: Dictionary = {
     cloud_link_expired:
       'The access to Ultimate Cloud expired or was revoked: link the account again.',
     cloud_link_denied: 'The access was refused on Ultimate Cloud.',
+    watch_unsupported: 'This library cannot be watched: scan it on an interval.',
     cloud_link_unsupported: 'Ultimate Cloud does not allow linking this server with a code.',
     dlna_server_unreachable: 'The DLNA server does not answer.',
     not_media_server: 'That address is not the one of a DLNA/UPnP media server.',

@@ -584,7 +584,8 @@ type Library {
   id: ID!
   name: String!
   visibleToAll: Boolean!
-  scanIntervalHours: Int
+  scanIntervalMinutes: Int
+  watchForChanges: Boolean!
   createdAt: DateTime!
   lastScanAt: DateTime
   sources: [LibrarySource!]
@@ -1517,8 +1518,9 @@ enum DlnaRendererAction {
 input CreateLibraryInput {
   name: String!
   visibleToAll: Boolean!
-  scanIntervalHours: Int
+  scanIntervalMinutes: Int
   sources: [LibrarySourceInput!]!
+  watchForChanges: Boolean!
 }
 
 input LibrarySourceInput {
@@ -1528,7 +1530,8 @@ input LibrarySourceInput {
 input UpdateLibraryInput {
   name: String!
   visibleToAll: Boolean!
-  scanIntervalHours: Int
+  scanIntervalMinutes: Int
+  watchForChanges: Boolean!
 }
 
 input CreateServerDirectoryInput {

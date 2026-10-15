@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 namespace Arcanist.Core.Scanning;
 
 /// <summary>
-/// Queues incremental scans for libraries with <see cref="Library.ScanIntervalHours"/> set, once that long has
+/// Queues incremental scans for libraries with <see cref="Library.ScanIntervalMinutes"/> set, once that long has
 /// passed since their last scan was requested (successful or not, so a failing source is not retried every minute).
 /// </summary>
 internal sealed class ScanScheduler(
@@ -46,18 +46,18 @@ internal sealed class ScanScheduler(
         var now = time.GetUtcNow().UtcDateTime;
 
         var libraries = await db.Libraries.AsNoTracking()
-            .Where(l => l.ScanIntervalHours != null)
+            .Where(l => l.ScanIntervalMinutes != null)
             .Select(l => new
             {
                 l.Id,
-                Interval = l.ScanIntervalHours!.Value,
+                Interval = l.ScanIntervalMinutes!.Value,
                 LastRequested = db.ScanJobs.Where(j => j.LibraryId == l.Id).Max(j => (DateTime?)j.RequestedAt),
             })
             .ToListAsync(cancellationToken);
 
         foreach (var library in libraries)
         {
-            if (library.LastRequested is null || now - library.LastRequested >= TimeSpan.FromHours(library.Interval))
+            if (library.LastRequested is null || now - library.LastRequested >= TimeSpan.FromMinutes(library.Interval))
                 await coordinator.EnqueueAsync(library.Id, ScanKind.Incremental, requestedBy: null, cancellationToken);
         }
     }

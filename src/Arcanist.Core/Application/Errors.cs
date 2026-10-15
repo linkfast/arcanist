@@ -171,6 +171,8 @@ public static class ErrorCodes
     public const string UploadFailed = "upload_failed";
     /// <summary>Ultimate Cloud's sign-in does not offer linking with a code for this server.</summary>
     public const string CloudLinkUnsupported = "cloud_link_unsupported";
+    /// <summary>Changes in this library cannot be noticed as they happen (it is shared by another server, or in S3): scan it on an interval.</summary>
+    public const string WatchUnsupported = "watch_unsupported";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

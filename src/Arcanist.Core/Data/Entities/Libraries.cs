@@ -12,8 +12,14 @@ public sealed class Library : Entity
     /// <summary>When set, every user can see the library without an explicit <see cref="LibraryAccess"/> row.</summary>
     public bool VisibleToAll { get; set; }
 
-    /// <summary>Automatic incremental scan interval; null disables scheduled scans.</summary>
-    public int? ScanIntervalHours { get; set; }
+    /// <summary>Automatic incremental scan interval, in minutes; null disables scheduled scans.</summary>
+    public int? ScanIntervalMinutes { get; set; }
+
+    /// <summary>
+    /// Changes are noticed as they happen: local folders are watched (<c>LibraryWatcher</c>), and Ultimate Cloud
+    /// tells about its own. Works alongside <see cref="ScanIntervalMinutes"/>, which catches what watching misses.
+    /// </summary>
+    public bool WatchForChanges { get; set; }
 
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 

@@ -25,6 +25,7 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { ApiError } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
@@ -58,12 +59,34 @@ import { CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 type Library = LibrariesResult['libraries'][number];
 type ScanJob = ScanJobFieldsFragment;
 
+type IntervalUnit = 'MINUTES' | 'HOURS' | 'DAYS';
+
+const UnitMinutes: Record<IntervalUnit, number> = { MINUTES: 1, HOURS: 60, DAYS: 60 * 24 };
+
 interface LibraryForm {
   id: string | null;
   name: string;
   visibleToAll: boolean;
-  scanIntervalHours: number | null;
+  /** The interval in `intervalUnit`s; null to scan only by hand. */
+  interval: number | null;
+  intervalUnit: IntervalUnit;
+  watchForChanges: boolean;
+  /** How changes are noticed: a folder is watched, Ultimate Cloud tells; null when they cannot be. */
+  watchKind: 'FOLDER' | 'CLOUD' | null;
   folders: string[];
+}
+
+/** The largest unit that expresses `minutes` exactly. */
+function splitInterval(minutes: number | null | undefined): {
+  interval: number | null;
+  intervalUnit: IntervalUnit;
+} {
+  if (!minutes) return { interval: null, intervalUnit: 'HOURS' };
+  if (minutes % UnitMinutes.DAYS === 0)
+    return { interval: minutes / UnitMinutes.DAYS, intervalUnit: 'DAYS' };
+  if (minutes % UnitMinutes.HOURS === 0)
+    return { interval: minutes / UnitMinutes.HOURS, intervalUnit: 'HOURS' };
+  return { interval: minutes, intervalUnit: 'MINUTES' };
 }
 
 @Component({
@@ -81,6 +104,7 @@ interface LibraryForm {
     HlmFieldImports,
     HlmInputImports,
     HlmSwitchImports,
+    HlmNativeSelectImports,
     HlmProgressImports,
     HlmSpinnerImports,
     HlmEmptyImports,
@@ -112,9 +136,12 @@ export class LibrariesPage implements OnInit {
     return (library.sources ?? []).some((s) => s.kind === 'PEER' || s.kind === 'ULTIMATE_CLOUD');
   }
 
-  /** Folders of this server can be added: not to libraries in a bucket, shared or in Ultimate Cloud. */
+  /**
+   * A folder of this server can be added: a local library has one, so only one whose folder was removed takes
+   * another (libraries in a bucket, shared or in Ultimate Cloud never have none).
+   */
   protected takesFolders(library: { sources?: { kind: string }[] | null }): boolean {
-    return (library.sources ?? []).every((s) => s.kind === 'LOCAL');
+    return (library.sources ?? []).length === 0;
   }
 
   protected readonly auth = inject(AuthService);
@@ -218,7 +245,16 @@ export class LibrariesPage implements OnInit {
   protected openCreate(): void {
     this.formError.set(null);
     this.newFolder = '';
-    this.form.set({ id: null, name: '', visibleToAll: true, scanIntervalHours: null, folders: [] });
+    this.form.set({
+      id: null,
+      name: '',
+      visibleToAll: true,
+      interval: null,
+      intervalUnit: 'HOURS',
+      watchForChanges: false,
+      watchKind: 'FOLDER',
+      folders: [],
+    });
   }
 
   protected openEdit(library: Library): void {
@@ -227,9 +263,26 @@ export class LibrariesPage implements OnInit {
       id: library.id,
       name: library.name,
       visibleToAll: library.visibleToAll,
-      scanIntervalHours: library.scanIntervalHours ?? null,
+      ...splitInterval(library.scanIntervalMinutes),
+      watchForChanges: library.watchForChanges,
+      watchKind: this.watchKind(library),
       folders: [],
     });
+  }
+
+  protected readonly intervalUnits: IntervalUnit[] = ['MINUTES', 'HOURS', 'DAYS'];
+
+  /** The interval as text, in the largest unit that expresses it exactly. */
+  protected intervalLabel(minutes: number): string {
+    const { interval, intervalUnit } = splitInterval(minutes);
+    return this.i18n.t('libraries.every.' + intervalUnit, { count: interval ?? 0 });
+  }
+
+  private watchKind(library: Library): LibraryForm['watchKind'] {
+    const kinds = (library.sources ?? []).map((s) => s.kind);
+    if (kinds.every((k) => k === 'LOCAL')) return 'FOLDER';
+    if (kinds.every((k) => k === 'ULTIMATE_CLOUD')) return 'CLOUD';
+    return null;
   }
 
   protected updateForm(change: Partial<LibraryForm>): void {
@@ -240,9 +293,10 @@ export class LibrariesPage implements OnInit {
     const trimmed = path.trim();
     if (!trimmed) return;
     this.form.update((form) => {
-      if (!form || form.folders.includes(trimmed)) return form;
+      if (!form) return form;
+      // One folder per library: choosing another replaces it.
       const name = form.name || trimmed.split(/[\\/]/).filter(Boolean).pop() || '';
-      return { ...form, name, folders: [...form.folders, trimmed] };
+      return { ...form, name, folders: [trimmed] };
     });
     this.newFolder = '';
   }
@@ -254,14 +308,18 @@ export class LibrariesPage implements OnInit {
     this.formError.set(null);
     this.busy.set(true);
     try {
-      const interval = form.scanIntervalHours ? Number(form.scanIntervalHours) : null;
+      const interval = form.interval
+        ? Number(form.interval) * UnitMinutes[form.intervalUnit]
+        : null;
+      const watchForChanges = form.watchKind !== null && form.watchForChanges;
       if (form.id) {
         await this.gql.mutate(UpdateLibraryMutation, {
           id: form.id,
           input: {
             name: form.name.trim(),
             visibleToAll: form.visibleToAll,
-            scanIntervalHours: interval,
+            scanIntervalMinutes: interval,
+            watchForChanges,
           },
         });
       } else {
@@ -269,7 +327,8 @@ export class LibrariesPage implements OnInit {
           input: {
             name: form.name.trim(),
             visibleToAll: form.visibleToAll,
-            scanIntervalHours: interval,
+            scanIntervalMinutes: interval,
+            watchForChanges,
             sources: form.folders.map((location) => ({ location })),
           },
         });

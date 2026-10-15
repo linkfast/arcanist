@@ -6547,7 +6547,7 @@
         "required": [
           "name",
           "visibleToAll",
-          "scanIntervalHours",
+          "scanIntervalMinutes",
           "sources"
         ],
         "type": "object",
@@ -6558,7 +6558,7 @@
           "visibleToAll": {
             "type": "boolean"
           },
-          "scanIntervalHours": {
+          "scanIntervalMinutes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
@@ -6572,6 +6572,10 @@
             "items": {
               "$ref": "#/components/schemas/LibrarySourceInput"
             }
+          },
+          "watchForChanges": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -8289,7 +8293,8 @@
           "id",
           "name",
           "visibleToAll",
-          "scanIntervalHours",
+          "scanIntervalMinutes",
+          "watchForChanges",
           "createdAt",
           "lastScanAt",
           "sources",
@@ -8307,7 +8312,7 @@
           "visibleToAll": {
             "type": "boolean"
           },
-          "scanIntervalHours": {
+          "scanIntervalMinutes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
@@ -8315,6 +8320,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "watchForChanges": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -12540,7 +12548,8 @@
         "required": [
           "name",
           "visibleToAll",
-          "scanIntervalHours"
+          "scanIntervalMinutes",
+          "watchForChanges"
         ],
         "type": "object",
         "properties": {
@@ -12550,7 +12559,7 @@
           "visibleToAll": {
             "type": "boolean"
           },
-          "scanIntervalHours": {
+          "scanIntervalMinutes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
@@ -12558,6 +12567,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "watchForChanges": {
+            "type": "boolean"
           }
         }
       },

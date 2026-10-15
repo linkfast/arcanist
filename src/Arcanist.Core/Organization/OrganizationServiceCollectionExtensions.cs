@@ -9,6 +9,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddSingleton<LibraryOrganizer>();
         services.AddSingleton<OrganizeQueue>();
         services.AddHostedService<OrganizeWorker>();
+        services.AddSingleton<LibraryWatchSignal>();
         services.AddHostedService<LibraryWatcher>();
         services.AddSingleton<DropFolderImporter>();
         services.AddSingleton<ImportMonitor>();

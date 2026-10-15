@@ -356,7 +356,7 @@ public sealed class P2PService(
                 Number = await LibraryService.NextNumberAsync(db, cancellationToken),
                 Name = await LibraryNameAsync(share.Name, cancellationToken),
                 VisibleToAll = false,
-                ScanIntervalHours = 6,
+                ScanIntervalMinutes = 6 * 60,
             };
             remote = new P2PRemote
             {

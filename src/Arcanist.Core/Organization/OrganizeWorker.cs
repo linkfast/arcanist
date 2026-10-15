@@ -94,6 +94,7 @@ internal sealed class LibraryWatcher(
     ILibraryStorageResolver storages,
     ScanCoordinator scans,
     LibraryLocks locks,
+    LibraryWatchSignal signal,
     IOptionsMonitor<SetupOptions> setup,
     IOptions<OrganizationOptions> options,
     TimeProvider time,
@@ -117,7 +118,7 @@ internal sealed class LibraryWatcher(
                     try
                     {
                         using var work = await maintenance.WorkAsync(stoppingToken);
-                        if (time.GetUtcNow() - refreshed >= TimeSpan.FromSeconds(options.Value.PollSeconds))
+                        if (signal.TakeRequest() || time.GetUtcNow() - refreshed >= TimeSpan.FromSeconds(options.Value.PollSeconds))
                         {
                             await RefreshAsync(stoppingToken);
                             refreshed = time.GetUtcNow();
@@ -139,11 +140,15 @@ internal sealed class LibraryWatcher(
         }
     }
 
-    /// <summary>Watches the sources of libraries that organize themselves, and stops watching the others.</summary>
+    /// <summary>
+    /// Watches the folders of libraries that watch for changes or organize themselves, and stops watching the others.
+    /// </summary>
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {
         await using var db = databases.CreateDbContext();
-        var sources = await db.LibrarySources.AsNoTracking().Where(s => s.Library.AutoOrganize).ToListAsync(cancellationToken);
+        var sources = await db.LibrarySources.AsNoTracking()
+            .Where(s => s.Kind == LibrarySourceKind.Local && (s.Library.WatchForChanges || s.Library.AutoOrganize))
+            .ToListAsync(cancellationToken);
 
         foreach (var (sourceId, watch) in _watches.Where(w => sources.All(s => s.Id != w.Key || s.Location != w.Value.Location)).ToList())
         {

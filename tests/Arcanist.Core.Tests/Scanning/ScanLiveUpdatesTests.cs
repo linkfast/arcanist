@@ -97,7 +97,7 @@ public sealed class ScanLiveUpdatesTests : IAsyncLifetime
     [Fact]
     public async Task Libraries_with_an_interval_are_scanned_when_it_elapses()
     {
-        await _admin.PutAsJsonAsync($"/rest/v1/libraries/{_libraryId}", new UpdateLibraryInput("Music", true, 6), ArcanistFactory.Json, Cancel);
+        await _admin.PutAsJsonAsync($"/rest/v1/libraries/{_libraryId}", new UpdateLibraryInput("Music", true, 6 * 60, false), ArcanistFactory.Json, Cancel);
         var scheduler = _factory.Services.GetServices<IHostedService>().OfType<Arcanist.Core.Scanning.ScanScheduler>().Single();
 
         await scheduler.QueueDueScansAsync(Cancel);

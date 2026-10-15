@@ -74,7 +74,8 @@ export const es: Dictionary = {
       },
       libraries: {
         title: 'Tus bibliotecas',
-        description: 'Las carpetas donde está tu música. Puedes añadir más después.',
+        description:
+          'La carpeta donde está tu música. Cada biblioteca tiene una: si tu música está en varias carpetas, crea una biblioteca para cada una.',
       },
       media: { title: 'Audio', description: 'Herramientas para convertir y analizar tu música.' },
       ratings: {
@@ -331,15 +332,36 @@ export const es: Dictionary = {
     edit: 'Editar biblioteca',
     name: 'Nombre',
     folders: 'Carpetas',
-    addFolder: 'Añadir carpeta',
+    folder: 'Carpeta',
+    addFolder: 'Elegir carpeta',
+    changeFolder: 'Cambiar carpeta',
     visibleToAll: 'Visible para todos los usuarios',
     everyone: 'Todos',
     restricted: 'Acceso restringido',
-    interval: 'Escanear automáticamente cada (horas)',
-    intervalHelp: 'Déjalo vacío para escanear solo a mano.',
+    interval: 'Escanear automáticamente cada',
+    intervalHelp: 'Entre 5 minutos y 30 días. Déjalo vacío para escanear solo a mano.',
+    intervalUnit: 'Unidad',
+    units: { MINUTES: 'minutos', HOURS: 'horas', DAYS: 'días' },
+    watching: 'vigilando cambios',
+    watch: {
+      FOLDER: {
+        label: 'Vigilar cambios en la carpeta',
+        help: 'Lo que se añada, cambie o quite se escanea al momento, cuando los archivos dejan de cambiar. El intervalo sigue siendo útil para lo que la vigilancia no vea.',
+        warning:
+          'Vigilar tiene un coste: en carpetas muy grandes usa memoria y, en Linux, un vigilante de inotify por carpeta (si se agotan, sube fs.inotify.max_user_watches). En carpetas de red (SMB/NFS) puede no avisar de nada o hacerlo sin parar; ahí es mejor un intervalo.',
+      },
+      CLOUD: {
+        label: 'Recibir los cambios de Ultimate Cloud',
+        help: 'Ultimate Cloud avisa al servidor cuando cambia tu música, y se escanea al momento. Sin coste para el servidor.',
+      },
+    },
     lastScan: 'Último escaneo',
     neverScanned: 'Aún no escaneada',
-    every: 'cada {hours} h',
+    every: {
+      MINUTES: 'cada {count} min',
+      HOURS: 'cada {count} h',
+      DAYS: 'cada {count} d',
+    },
     empty: 'No hay bibliotecas',
     emptyHelp: 'Crea una biblioteca a partir de las carpetas donde guardas tu música.',
     emptyNoAccess: 'Todavía no tienes acceso a ninguna biblioteca. Pídeselo a un administrador.',
@@ -639,6 +661,7 @@ export const es: Dictionary = {
   },
   extensions: {
     descriptions: {
+      dlna: 'Servidor DLNA/UPnP para televisores, altavoces y apps de la red local, y «reproducir en».',
       mstream: 'La API de mStream, para las apps de mStream.',
       subsonic:
         'La API de Subsonic y OpenSubsonic, para apps como Symfonium, DSub, Feishin o Amperfy.',
@@ -1274,6 +1297,7 @@ export const es: Dictionary = {
     cloud_link_expired:
       'El acceso a Ultimate Cloud caducó o se revocó: vincula la cuenta de nuevo.',
     cloud_link_denied: 'Se rechazó el acceso desde Ultimate Cloud.',
+    watch_unsupported: 'Esta biblioteca no se puede vigilar: escanéala con un intervalo.',
     cloud_link_unsupported: 'Ultimate Cloud no permite vincular este servidor con un código.',
     dlna_server_unreachable: 'El servidor DLNA no responde.',
     not_media_server: 'Esa dirección no es la de un servidor DLNA/UPnP de medios.',

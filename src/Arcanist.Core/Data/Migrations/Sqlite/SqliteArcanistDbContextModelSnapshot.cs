@@ -641,10 +641,13 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("ScanIntervalHours")
+                    b.Property<int?>("ScanIntervalMinutes")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("VisibleToAll")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("WatchForChanges")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

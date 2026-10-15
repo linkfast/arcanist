@@ -646,10 +646,13 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
 
-                    b.Property<int?>("ScanIntervalHours")
+                    b.Property<int?>("ScanIntervalMinutes")
                         .HasColumnType("integer");
 
                     b.Property<bool>("VisibleToAll")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("WatchForChanges")
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");

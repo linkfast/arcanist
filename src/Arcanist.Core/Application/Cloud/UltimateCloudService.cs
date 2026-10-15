@@ -147,7 +147,8 @@ public sealed class UltimateCloudService(
             Number = await LibraryService.NextNumberAsync(db, cancellationToken),
             Name = name,
             VisibleToAll = false,
-            ScanIntervalHours = 6,
+            ScanIntervalMinutes = 6 * 60,
+            WatchForChanges = true,
         };
         library.Sources.Add(new LibrarySourceEntity { Library = library, Kind = LibrarySourceKind.UltimateCloud, Location = location });
         db.Libraries.Add(library);

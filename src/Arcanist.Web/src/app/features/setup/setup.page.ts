@@ -275,10 +275,11 @@ export class SetupPage implements OnInit {
 
     this.libraries.update((libraries) =>
       libraries.map((library, i) => {
-        if (i !== index || library.folders.includes(path)) return library;
-        // Name the library after its first folder unless the user already named it.
+        if (i !== index) return library;
+        // A library has one folder: choosing another replaces it. The library is named after its folder unless the
+        // user already named it.
         const name = library.name || path.split(/[\\/]/).filter(Boolean).pop() || '';
-        return { ...library, name, folders: [...library.folders, path] };
+        return { ...library, name, folders: [path] };
       }),
     );
   }
@@ -334,7 +335,7 @@ export class SetupPage implements OnInit {
           const folder = choice.path.trim();
           return {
             ...l,
-            folders: [...l.folders.filter((f) => f !== l.mstream!.folder), folder],
+            folders: [folder],
             mstream: { vpath: choice.vpath, folder },
           };
         });

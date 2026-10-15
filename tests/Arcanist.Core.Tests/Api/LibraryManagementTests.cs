@@ -66,7 +66,7 @@ public sealed class LibraryManagementTests : IAsyncLifetime
         Assert.All(await ListAsync(a), l => Assert.Null(l.Sources));
 
         // Making a library visible to all applies immediately.
-        await _admin.PutAsJsonAsync($"/rest/v1/libraries/{music.Id}", new UpdateLibraryInput("Music", true, null), ArcanistFactory.Json, Cancel);
+        await _admin.PutAsJsonAsync($"/rest/v1/libraries/{music.Id}", new UpdateLibraryInput("Music", true, null, false), ArcanistFactory.Json, Cancel);
         Assert.Equal(["Music", "Podcasts"], (await ListAsync(b)).Select(l => l.Name));
 
         var graphql = await b.GraphQLAsync("{ libraries { name sources { location } } }");
@@ -81,21 +81,22 @@ public sealed class LibraryManagementTests : IAsyncLifetime
         await CreateAsync("Music", visibleToAll: true, music);
 
         var response = await _admin.PostAsJsonAsync("/rest/v1/libraries", new CreateLibraryInput("MUSIC", true, 0,
-        [
-            new LibrarySourceInput(Path.Combine(_root, "missing")),
-            new LibrarySourceInput("relative/folder"),
-            new LibrarySourceInput(Folder("Other")),
-            new LibrarySourceInput(Folder(Path.Combine("Other", "Nested"))),
-        ]), ArcanistFactory.Json, Cancel);
+            [new LibrarySourceInput(Path.Combine(_root, "missing"))]), ArcanistFactory.Json, Cancel);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var errors = (await response.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("errors");
         Assert.Equal("duplicate", errors.GetProperty("name")[0].GetString());
-        Assert.Equal("invalid_format", errors.GetProperty("scanIntervalHours")[0].GetString());
+        Assert.Equal("invalid_format", errors.GetProperty("scanIntervalMinutes")[0].GetString());
         Assert.Equal("not_found", errors.GetProperty("sources[0].location")[0].GetString());
-        Assert.Equal("invalid_format", errors.GetProperty("sources[1].location")[0].GetString());
-        Assert.False(errors.TryGetProperty("sources[2].location", out _));
-        Assert.Equal("overlapping", errors.GetProperty("sources[3].location")[0].GetString());
+
+        var relative = await _admin.PostAsJsonAsync("/rest/v1/libraries", new CreateLibraryInput("Relative", true, null,
+            [new LibrarySourceInput("relative/folder")]), ArcanistFactory.Json, Cancel);
+        Assert.Equal("invalid_format", (await relative.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("errors").GetProperty("sources[0].location")[0].GetString());
+
+        // A local library has a single folder.
+        var two = await _admin.PostAsJsonAsync("/rest/v1/libraries", new CreateLibraryInput("Two", true, null,
+            [new LibrarySourceInput(Folder("Other")), new LibrarySourceInput(Folder("Another"))]), ArcanistFactory.Json, Cancel);
+        Assert.Equal("too_many", (await two.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("errors").GetProperty("sources")[0].GetString());
     }
 
     [Fact]
@@ -103,18 +104,21 @@ public sealed class LibraryManagementTests : IAsyncLifetime
     {
         var library = await CreateAsync("Music", visibleToAll: true, Folder("Music"));
 
-        var overlapping = await _admin.PostAsJsonAsync($"/rest/v1/libraries/{library.Id}/sources",
-            new LibrarySourceInput(Folder(Path.Combine("Music", "Rock"))), ArcanistFactory.Json, Cancel);
-        Assert.Equal(HttpStatusCode.BadRequest, overlapping.StatusCode);
+        // One folder per library: a second one is refused.
+        var second = await _admin.PostAsJsonAsync($"/rest/v1/libraries/{library.Id}/sources",
+            new LibrarySourceInput(Folder("More Music")), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+        Assert.Contains("too_many", await second.Content.ReadAsStringAsync(Cancel));
+
+        // Once the folder is removed, the library can get another.
+        var removed = await _admin.GraphQLAsync("mutation($id: ID!) { removeLibrarySource(id: $id) { sources { location } } }",
+            new { id = library.Sources!.Single().Id });
+        Assert.Equal(0, removed.GetProperty("data").GetProperty("removeLibrarySource").GetProperty("sources").GetArrayLength());
 
         var added = await _admin.PostAsJsonAsync($"/rest/v1/libraries/{library.Id}/sources",
             new LibrarySourceInput(Folder("More Music")), ArcanistFactory.Json, Cancel);
-        var withTwo = (await added.Content.ReadFromJsonAsync<Library>(ArcanistFactory.Json, Cancel))!;
-        Assert.Equal(2, withTwo.Sources!.Count);
-
-        var removed = await _admin.GraphQLAsync("mutation($id: ID!) { removeLibrarySource(id: $id) { sources { location } } }",
-            new { id = withTwo.Sources.First(s => s.Location.EndsWith("More Music")).Id });
-        Assert.Equal(1, removed.GetProperty("data").GetProperty("removeLibrarySource").GetProperty("sources").GetArrayLength());
+        var moved = (await added.Content.ReadFromJsonAsync<Library>(ArcanistFactory.Json, Cancel))!;
+        Assert.EndsWith("More Music", Assert.Single(moved.Sources!).Location);
     }
 
     [Fact]
@@ -130,7 +134,7 @@ public sealed class LibraryManagementTests : IAsyncLifetime
         Assert.Equal(["Curated"], (await ListAsync(curator)).Select(l => l.Name));
 
         var update = await curator.PutAsJsonAsync($"/rest/v1/libraries/{hidden.Id}",
-            new UpdateLibraryInput("Mine now", true, null), ArcanistFactory.Json, Cancel);
+            new UpdateLibraryInput("Mine now", true, null, false), ArcanistFactory.Json, Cancel);
         Assert.Equal(HttpStatusCode.NotFound, update.StatusCode);
 
         // Only administrators can look at the server's folders.

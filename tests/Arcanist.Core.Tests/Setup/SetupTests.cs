@@ -80,7 +80,12 @@ public sealed class SetupTests : IAsyncLifetime
         var request = new SetupRequest(
             Database: null,
             Admin: new SetupAdmin("x", "short", null),
-            Libraries: [new SetupLibrary("Music", [Path.Combine(_musicFolder, "missing")]), new SetupLibrary("music", [])],
+            Libraries:
+            [
+                new SetupLibrary("Music", [Path.Combine(_musicFolder, "missing")]),
+                new SetupLibrary("music", []),
+                new SetupLibrary("Two", [_musicFolder, _musicFolder + "2"]),
+            ],
             ShareAnonymousStatistics: null,
             Language: null);
 
@@ -94,6 +99,7 @@ public sealed class SetupTests : IAsyncLifetime
         AssertError(errors, "libraries[0].folders[0]", "not_found");
         AssertError(errors, "libraries[1].name", "duplicate");
         AssertError(errors, "libraries[1].folders", "required");
+        AssertError(errors, "libraries[2].folders", "too_many");
         AssertError(errors, "shareAnonymousStatistics", "required");
     }
 

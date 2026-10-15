@@ -411,6 +411,9 @@ public sealed class SetupService(
                 continue;
             }
 
+            if (library.Folders.Count > 1)
+                errors.Add(field + ".folders", ErrorCodes.TooMany);
+
             result.Add(await libraryRules.ValidateLocationsAsync(
                 library.Folders.Select(f => (string?)f).ToList(), [], j => $"{field}.folders[{j}]", errors, cancellationToken));
         }

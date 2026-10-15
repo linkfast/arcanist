@@ -15,7 +15,8 @@ public sealed record Library(
     Guid Id,
     string Name,
     bool VisibleToAll,
-    int? ScanIntervalHours,
+    int? ScanIntervalMinutes,
+    bool WatchForChanges,
     DateTime CreatedAt,
     DateTime? LastScanAt,
     IReadOnlyList<LibrarySource>? Sources,
@@ -23,17 +24,24 @@ public sealed record Library(
 
 public sealed record LibrarySource(Guid Id, LibrarySourceKind Kind, string Location);
 
-/// <param name="ScanIntervalHours">Hours between automatic scans; null disables them.</param>
+/// <param name="ScanIntervalMinutes">Minutes between automatic scans (5 to 43200, 30 days); null disables them.</param>
+/// <param name="Sources">The library's folder: exactly one.</param>
+/// <param name="WatchForChanges">Watch the folder and scan what changes as it happens.</param>
 public sealed record CreateLibraryInput(
     string Name,
     bool VisibleToAll,
-    int? ScanIntervalHours,
-    IReadOnlyList<LibrarySourceInput> Sources);
+    int? ScanIntervalMinutes,
+    IReadOnlyList<LibrarySourceInput> Sources,
+    bool WatchForChanges = false);
 
 /// <summary>Replaces the editable fields of a library. Sources are changed with their own operations.</summary>
-public sealed record UpdateLibraryInput(string Name, bool VisibleToAll, int? ScanIntervalHours);
+/// <param name="ScanIntervalMinutes">Minutes between automatic scans (5 to 43200, 30 days); null disables them.</param>
+/// <param name="WatchForChanges">Notice changes as they happen: local folders are watched, and Ultimate Cloud tells
+/// about its own. Libraries shared by another server or in S3 cannot (<c>watch_unsupported</c>).</param>
+public sealed record UpdateLibraryInput(string Name, bool VisibleToAll, int? ScanIntervalMinutes, bool WatchForChanges);
 
-/// <param name="Location">For local sources, an absolute folder path on the server.</param>
+/// <param name="Location">For local sources, an absolute folder path on the server. Only a library without a
+/// folder (its folder was removed) can get one.</param>
 public sealed record LibrarySourceInput(string Location);
 
 /// <summary>A folder on the server, offered when choosing library locations.</summary>
@@ -53,7 +61,8 @@ internal static class LibraryMapping
         library.Id,
         library.Name,
         library.VisibleToAll,
-        library.ScanIntervalHours,
+        library.ScanIntervalMinutes,
+        library.WatchForChanges,
         library.CreatedAt,
         library.LastScanAt,
         includeSources ? library.Sources.OrderBy(s => s.Location).Select(ToModel).ToList() : null,

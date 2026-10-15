@@ -60,7 +60,8 @@ export const LibrariesQuery = graphql(`
       id
       name
       visibleToAll
-      scanIntervalHours
+      scanIntervalMinutes
+      watchForChanges
       createdAt
       lastScanAt
       sources {

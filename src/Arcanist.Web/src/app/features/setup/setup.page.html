@@ -293,7 +293,9 @@
                   (click)="pickingFor.set(index)"
                 >
                   <ng-icon name="lucideFolderPlus" />
-                  {{ 'libraries.addFolder' | t }}
+                  {{
+                    (library.folders.length ? 'libraries.changeFolder' : 'libraries.addFolder') | t
+                  }}
                 </button>
                 <label class="flex items-center gap-2 text-sm">
                   <hlm-switch

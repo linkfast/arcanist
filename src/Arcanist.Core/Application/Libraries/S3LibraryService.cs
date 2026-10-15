@@ -84,7 +84,7 @@ public sealed partial class S3LibraryService(
             Number = await LibraryService.NextNumberAsync(db, cancellationToken),
             Name = name,
             VisibleToAll = false,
-            ScanIntervalHours = 24,
+            ScanIntervalMinutes = 24 * 60,
         };
         var prefix = target.Prefix;
         library.Sources.Add(new LibrarySourceEntity

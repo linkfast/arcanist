@@ -22,6 +22,7 @@ public sealed class OrganizationService(
     LibraryOrganizer organizer,
     OrganizeQueue queue,
     ILibraryStorageResolver storages,
+    LibraryWatchSignal watches,
     TimeProvider time)
 {
     public const int PreviewMoves = 200;
@@ -47,8 +48,11 @@ public sealed class OrganizationService(
         library.OrganizeTemplate = template;
         if (input.AutoOrganize && !library.AutoOrganize)
             library.AutoOrganizeSince = Now();
+        var watchChanged = library.AutoOrganize != input.AutoOrganize;
         library.AutoOrganize = input.AutoOrganize;
         await db.SaveChangesAsync(cancellationToken);
+        if (watchChanged)
+            watches.Refresh();
 
         return library.ToModel(includeSources: true);
     }

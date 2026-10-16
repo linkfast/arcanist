@@ -114,9 +114,7 @@ public sealed class DatabaseMigrator(
             return;
         }
 
-        IReadOnlyList<IEntityType> order;
-        await using (var model = new SqliteArcanistDbContext(new DbContextOptionsBuilder<SqliteArcanistDbContext>().UseSqlite("Data Source=:memory:").Options))
-            order = Order(model.Model);
+        var order = ModelOrder();
         var copiedSomething = false;
         try
         {
@@ -138,7 +136,7 @@ public sealed class DatabaseMigrator(
             copiedSomething = true;
             foreach (var type in order)
             {
-                await Invoke(nameof(CopyAsync), type, from, to, progress, cancellationToken);
+                await CopyTableAsync(type, from, to, progress.Copy, cancellationToken);
                 maintenance.Percent = progress.Percent;
             }
 
@@ -217,8 +215,19 @@ public sealed class DatabaseMigrator(
         (Task)typeof(DatabaseMigrator).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Static)!
             .MakeGenericMethod(type.ClrType).Invoke(null, arguments)!;
 
+    /// <summary>Every table of the model, parents before children (see <see cref="Order"/>).</summary>
+    internal static IReadOnlyList<IEntityType> ModelOrder()
+    {
+        using var model = new SqliteArcanistDbContext(new DbContextOptionsBuilder<SqliteArcanistDbContext>().UseSqlite("Data Source=:memory:").Options);
+        return Order(model.Model);
+    }
+
+    /// <summary>Copies one table between databases of either provider (also backups' export of PostgreSQL to SQLite).</summary>
+    internal static Task CopyTableAsync(IEntityType type, ArcanistDbContext from, ArcanistDbContext to, Action<string, int> copied, CancellationToken cancellationToken) =>
+        Invoke(nameof(CopyAsync), type, from, to, copied, cancellationToken);
+
     /// <summary>Streams a table from one database and inserts it in batches into the other, with the same keys.</summary>
-    private static async Task CopyAsync<T>(ArcanistDbContext from, ArcanistDbContext to, Progress progress, CancellationToken cancellationToken) where T : class
+    private static async Task CopyAsync<T>(ArcanistDbContext from, ArcanistDbContext to, Action<string, int> copied, CancellationToken cancellationToken) where T : class
     {
         var table = to.Model.FindEntityType(typeof(T))!.GetTableName()!;
         var batch = new List<T>(BatchSize);
@@ -238,7 +247,7 @@ public sealed class DatabaseMigrator(
             to.Set<T>().AddRange(batch);
             await to.SaveChangesAsync(cancellationToken);
             to.ChangeTracker.Clear();
-            progress.Copy(table, batch.Count);
+            copied(table, batch.Count);
             batch.Clear();
         }
     }

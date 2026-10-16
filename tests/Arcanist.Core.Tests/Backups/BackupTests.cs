@@ -169,6 +169,77 @@ public sealed class BackupTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task The_server_brings_its_users_data_playlists_and_its_encrypted_database()
+    {
+        await StartAsync();
+        var tracks = (await _admin.GraphQLAsync("query { tracks(first: 10) { items { id title } } }"))
+            .GetProperty("data").GetProperty("tracks").GetProperty("items").EnumerateArray()
+            .ToDictionary(t => t.GetProperty("title").GetString()!, t => t.GetProperty("id").GetGuid());
+        await _admin.GraphQLAsync("mutation($id: ID!) { rateTrack(trackId: $id, rating: 4) { id } }", new { id = tracks["Alpha"] });
+        await _admin.GraphQLAsync("mutation($input: CreatePlaylistInput!) { createPlaylist(input: $input) { id } }",
+            new { input = new { name = "Road trip", isPublic = false, trackIds = new[] { tracks["Gamma"], tracks["Alpha"] } } });
+
+        var backup = await PostAsync("/rest/v1/backups", new
+        {
+            name = "Server", destinationId = await DestinationAsync(), scope = "SERVER", includeUserData = true, includeServer = true,
+            password = "correct horse battery", schedule = "MANUAL", retentionDays = 30, enabled = true,
+        });
+        var run = await RunAsync(backup.GetProperty("id").GetGuid());
+        Assert.Equal("COMPLETED", run.GetProperty("status").GetString());
+        var root = Root(backup);
+        var snapshot = Path.Combine(root, "snapshots", run.GetProperty("snapshot").GetString()!);
+
+        var catalog = Read<BackupCatalog>(Path.Combine(snapshot, "catalog.json.gz"));
+        var alpha = catalog.Tracks.Single(t => t.Title == "Alpha");
+        Assert.Equal(["Music/Band/Pulse/01 Alpha.wav"], alpha.Files);
+        Assert.NotEmpty(alpha.ContentHashes);
+
+        var userData = Read<BackupUserData>(Path.Combine(snapshot, "userdata.json.gz"));
+        var admin = userData.Users.Single(u => u.UserName == ArcanistFactory.AdminUserName);
+        Assert.Equal(4, Assert.Single(admin.Ratings).Rating);
+        var playlist = Assert.Single(admin.Playlists);
+        Assert.Equal([tracks["Gamma"], tracks["Alpha"]], playlist.Entries.Select(e => e.Track));
+
+        // The playlist also plays from the backup itself.
+        var m3u = File.ReadAllLines(Path.Combine(snapshot, "playlists", ArcanistFactory.AdminUserName, "Road trip.m3u8"));
+        Assert.Equal("#EXTM3U", m3u[0]);
+        Assert.Equal(["../../../../current/Music/Other/Solo/01 Gamma.wav", "../../../../current/Music/Band/Pulse/01 Alpha.wav"],
+            m3u.Where(l => !l.StartsWith('#')));
+        Assert.True(File.Exists(Path.GetFullPath(Path.Combine(snapshot, "playlists", ArcanistFactory.AdminUserName, m3u[2]))));
+
+        // The server's part opens with the password: a copy of the database, the settings and the keys.
+        using var plain = new MemoryStream();
+        await using (var encrypted = File.OpenRead(Path.Combine(snapshot, "server.arcb")))
+            await BackupCrypto.DecryptAsync(encrypted, plain, "correct horse battery", Cancel);
+        plain.Position = 0;
+        using var zip = new ZipArchive(plain);
+        Assert.Contains(zip.Entries, e => e.FullName == "arcanist.db");
+        Assert.Contains(zip.Entries, e => e.FullName.StartsWith("keys/", StringComparison.Ordinal));
+        using (var settings = new StreamReader(zip.GetEntry("arcanist.json")!.Open()))
+            Assert.Equal("Sqlite", JsonDocument.Parse(settings.ReadToEnd()).RootElement.GetProperty("Arcanist").GetProperty("Database").GetProperty("Provider").GetString());
+
+        var database = Path.Combine(_destination, "restored.db");
+        zip.GetEntry("arcanist.db")!.ExtractToFile(database);
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={database};Pooling=False"))
+        {
+            await connection.OpenAsync(Cancel);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM Playlists";
+            Assert.Equal(1L, await command.ExecuteScalarAsync(Cancel));
+        }
+
+        var manifest = JsonSerializer.Deserialize<BackupManifest>(File.ReadAllText(Path.Combine(root, "arcanist-backup.json")), BackupFormat.Json)!;
+        Assert.True(manifest.Snapshots.Single() is { UserData: true, Server: true });
+    }
+
+    private static T Read<T>(string path)
+    {
+        using var file = File.OpenRead(path);
+        using var zip = new GZipStream(file, CompressionMode.Decompress);
+        return JsonSerializer.Deserialize<T>(zip, BackupFormat.Json)!;
+    }
+
+    [Fact]
     public async Task A_destination_cannot_be_inside_a_library_nor_the_data_folder()
     {
         await StartAsync();

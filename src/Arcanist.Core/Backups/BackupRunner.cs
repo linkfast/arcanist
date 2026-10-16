@@ -17,6 +17,7 @@ internal sealed record BackupPlanSource(
 
 /// <summary>What one run copies.</summary>
 /// <param name="ContentHashes">The catalog's audio hash of each file, by source and path.</param>
+/// <param name="ServerPassword">The password of the server's encrypted part; null when the backup does not carry it.</param>
 internal sealed record BackupPlan(
     Guid BackupId,
     string Name,
@@ -24,7 +25,28 @@ internal sealed record BackupPlan(
     string Scope,
     int RetentionDays,
     IReadOnlyList<BackupPlanSource> Sources,
-    IReadOnlyDictionary<(Guid SourceId, string Path), string> ContentHashes);
+    IReadOnlyDictionary<(Guid SourceId, string Path), string> ContentHashes)
+{
+    public Data.Entities.BackupScope ScopeKind { get; init; }
+
+    public IReadOnlyList<Guid> ScopeIds { get; init; } = [];
+
+    public bool IncludeUserData { get; init; }
+
+    public string? ServerPassword { get; init; }
+}
+
+/// <summary>A snapshot being written: where, for which plan, and what its files are.</summary>
+/// <param name="SourceFolders">Each library folder's folder in <c>current/</c>.</param>
+/// <param name="Index">The snapshot's files.</param>
+internal sealed record BackupSnapshot(
+    IBackupTarget Target,
+    string BackupFolder,
+    string SnapshotFolder,
+    string Name,
+    BackupPlan Plan,
+    IReadOnlyDictionary<Guid, string> SourceFolders,
+    IReadOnlyList<BackupIndexEntry> Index);
 
 /// <summary>How far a run got.</summary>
 internal sealed class BackupCounters
@@ -51,7 +73,7 @@ internal sealed class BackupCounters
 internal interface IBackupExtra
 {
     /// <summary>Writes its files into <c>snapshots/&lt;snapshot&gt;/</c>; returns what the manifest says it holds.</summary>
-    Task<(bool UserData, bool Server)> WriteAsync(IBackupTarget target, string snapshotFolder, BackupPlan plan, CancellationToken cancellationToken);
+    Task<(bool UserData, bool Server)> WriteAsync(BackupSnapshot snapshot, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -159,9 +181,10 @@ internal sealed class BackupRunner(ILogger logger, TimeProvider time)
             new BackupIndex(BackupFormat.Version, snapshot, run.Index, run.Moved.ToList()), cancellationToken);
         var userData = false;
         var server = false;
+        var context = new BackupSnapshot(target, folder, snapshotFolder, snapshot, plan, folders, run.Index);
         foreach (var extra in extras)
         {
-            var (writesUserData, writesServer) = await extra.WriteAsync(target, snapshotFolder, plan, cancellationToken);
+            var (writesUserData, writesServer) = await extra.WriteAsync(context, cancellationToken);
             userData |= writesUserData;
             server |= writesServer;
         }

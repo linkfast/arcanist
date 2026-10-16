@@ -360,11 +360,13 @@ public sealed class BackupService(
     private async Task<IReadOnlyList<BackupDefinition>> ToModelsAsync(IReadOnlyList<Backup> backups, CancellationToken cancellationToken)
     {
         var backupIds = backups.Select(b => b.Id).ToList();
-        var lastRuns = await db.BackupRuns.AsNoTracking()
-            .Where(r => backupIds.Contains(r.BackupId))
+        var lastRuns = (await db.BackupRuns.AsNoTracking()
+                .Where(r => backupIds.Contains(r.BackupId))
+                .Select(r => new { r.Id, r.BackupId, r.RequestedAt })
+                .ToListAsync(cancellationToken))
             .GroupBy(r => r.BackupId)
-            .Select(g => g.OrderByDescending(r => r.RequestedAt).Select(r => r.Id).First())
-            .ToListAsync(cancellationToken);
+            .Select(g => g.MaxBy(r => r.RequestedAt)!.Id)
+            .ToList();
         var runs = (await RunModelsAsync(db, lastRuns, cancellationToken)).ToDictionary(r => r.BackupId);
         var counts = await db.Backups.AsNoTracking().GroupBy(b => b.DestinationId).Select(g => new { g.Key, Count = g.Count() })
             .ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);

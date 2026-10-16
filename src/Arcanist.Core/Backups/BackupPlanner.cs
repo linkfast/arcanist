@@ -5,6 +5,7 @@ using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Scanning;
 using Arcanist.Core.Storage;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 namespace Arcanist.Core.Backups;
@@ -22,7 +23,7 @@ internal sealed class BackupTargets(IServiceProvider services)
 }
 
 /// <summary>Turns a backup's definition into what a run copies.</summary>
-internal sealed class BackupPlanner(ILibraryStorageResolver storages)
+internal sealed class BackupPlanner(ILibraryStorageResolver storages, IDataProtectionProvider protection)
 {
     /// <summary>Library folders backups can read: those on this server or in S3 (not other servers' nor Ultimate Cloud's).</summary>
     public static bool IsBackedUp(LibrarySourceKind kind) => kind is LibrarySourceKind.Local or LibrarySourceKind.S3;
@@ -67,7 +68,15 @@ internal sealed class BackupPlanner(ILibraryStorageResolver storages)
             backup.RetentionDays,
             sources.Select(s => new BackupPlanSource(s.Id, s.LibraryId, s.Library.Name, storages.For(s.Kind), StorageLocation.From(s),
                 filters?.GetValueOrDefault(s.Id) is { } filter ? new PathFilter(filter) : null)).ToList(),
-            hashes);
+            hashes)
+        {
+            ScopeKind = backup.Scope,
+            ScopeIds = ids,
+            IncludeUserData = backup.IncludeUserData,
+            ServerPassword = backup.IncludeServer && backup.ProtectedPassword is { } password
+                ? protection.CreateProtector(Application.Backups.BackupService.PasswordPurpose).Unprotect(password)
+                : null,
+        };
     }
 
     public static IReadOnlyList<Guid> ScopeIds(Backup backup) =>

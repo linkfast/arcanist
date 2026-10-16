@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador), 7 (DLNA), 8 (red P2P) y 9 (migrador a PostgreSQL) completas. Pendiente:
+Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ffmpeg y servicios en línea), 4 (carpetas de entrada y organización), 5 (valoraciones, reproducciones, playlists, búsqueda y descubrimiento), 6 (reproductores, extensiones, Subsonic, mStream e importador), 7 (DLNA), 8 (red P2P), 9 (migrador a PostgreSQL) y 11 (copias de seguridad) completas, y la 10 (Ultimate Cloud) salvo lo que depende de producción. Pendiente:
 - De la F2: probar el instalador de Windows y el modo servicio en una máquina limpia, publicar la primera release y enviar el paquete a SynoCommunity.
 - De la F3: probar AcoustID con la clave del proyecto (`OnlineOptions.ProjectAcoustIdKey`, ya registrada) contra el servicio real. La descarga real de ffmpeg desde el panel ya se probó (build BtbN n9.0, Windows x64).
 - De la F4: sugerir etiquetas con AcoustID para los archivos por revisar (la clave del proyecto ya existe).
@@ -17,7 +17,7 @@ Fases 1 (fundaciones y biblioteca), 2 (distribución), 3 (análisis de audio, ff
 - De la F11 (copias de seguridad): probar S3 con servicios reales y archivos de más de 5 GB (sin multipart todavía: fallan solos con `backup_file_too_large`), la P2P entre redes distintas, bibliotecas grandes (el índice y los datos de usuario se escriben en memoria) y la restauración del servidor con supervisores reales (tray, servicio, systemd, Docker con `--restart`).
 - Antes de la primera release, fusionar las migraciones en una `Initial` (ver "Datos").
 
-Siguiente: Fase 10, ver "Roadmap". La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
+Siguiente: lo pendiente de arriba y la primera release (ver "Roadmap"). La sección "Arquitectura decidida" describe el diseño aprobado: comprobar en el código qué existe antes de asumirlo. Mantener este archivo alineado con el código conforme avance.
 
 Git en la rama `main`, que sigue a `origin` = `github.com/linkfast/arcanist` (los workflows, `RepositoryUrl` y el paquete Synology apuntan ahí). Hay dos `.gitignore`: el de la raíz (`dotnet new gitignore`) y el de `src/Arcanist.Web/` (Angular). `.gitattributes` fuerza LF en todo el repo salvo `.bat`/`.cmd`.
 

@@ -6,6 +6,9 @@ public static class SettingKeys
     /// <summary>Whether anonymous play counts are contributed to Ultimate Cloud's global statistics.</summary>
     public const string ShareAnonymousStatistics = "privacy.shareAnonymousStatistics";
 
+    /// <summary>The mStream import the setup wizard started: the panel waits for it (<c>SetupStatus.Migrating</c>).</summary>
+    public const string SetupMigration = "setup.migration";
+
     /// <summary>No telemetry, and which outside services may be used (<c>Privacy</c>).</summary>
     public const string Privacy = "privacy.settings";
 

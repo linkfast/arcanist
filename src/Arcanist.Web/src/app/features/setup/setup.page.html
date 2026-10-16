@@ -222,7 +222,16 @@
               /></hlm-radio>
               <span class="grid gap-1">
                 <span class="font-medium">mStream</span>
-                <span class="text-muted-foreground">{{ 'setup.import.mstreamHelp' | t }}</span>
+                <span class="text-muted-foreground">{{
+                  (reconfigure ? 'setup.import.mstreamAgainHelp' : 'setup.import.mstreamHelp') | t
+                }}</span>
+              </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="dlna" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <span class="grid gap-1">
+                <span class="font-medium">{{ 'setup.import.dlna' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.import.dlnaHelp' | t }}</span>
               </span>
             </label>
           </hlm-radio-group>
@@ -232,9 +241,45 @@
               [analyzeWith]="analyzeMstream"
               [loadDirectories]="loadDirectories"
               [createDirectory]="createDirectory"
-              [setup]="true"
-              [adminName]="userName"
+              [setup]="!reconfigure"
+              [sources]="existingSources()"
+              [adminName]="reconfigure ? '' : userName"
             />
+            @if (!reconfigure) {
+              <p class="text-xs text-muted-foreground">{{ 'setup.import.mstreamWaits' | t }}</p>
+            }
+          }
+          @if (migrateFrom === 'dlna') {
+            @if (dlnaChoice(); as choice) {
+              <div class="grid gap-1 rounded-lg border p-3 text-sm">
+                <span class="font-medium">{{ choice.serverName }}</span>
+                <span class="text-muted-foreground">{{ dlnaFolders(choice) }}</span>
+                <span class="text-xs text-muted-foreground break-all">{{
+                  'setup.import.dlnaInto' | t: { place: dlnaPlace(choice) }
+                }}</span>
+                <button
+                  hlmBtn
+                  variant="link"
+                  size="sm"
+                  type="button"
+                  class="justify-self-start px-0"
+                  (click)="dlnaPicking.set(true)"
+                >
+                  {{ 'common.edit' | t }}
+                </button>
+              </div>
+            } @else {
+              <button
+                hlmBtn
+                variant="outline"
+                type="button"
+                class="justify-self-start"
+                (click)="dlnaPicking.set(true)"
+              >
+                {{ 'setup.import.dlnaPick' | t }}
+              </button>
+            }
+            <p class="text-xs text-muted-foreground">{{ 'setup.import.dlnaLater' | t }}</p>
           }
         }
 
@@ -531,7 +576,7 @@
           <app-setup-users
             [draft]="extras"
             [adminName]="reconfigure ? null : userName.trim()"
-            [existing]="existingUsers()"
+            [existing]="existingUsers().concat(importedUsers())"
             [restricted]="restrictedLibraries()"
           />
         }
@@ -820,6 +865,8 @@
           hlmBtn
           type="button"
           [variant]="finished() ? 'default' : 'outline'"
+          [disabled]="importing && !finished()"
+          [title]="importing && !finished() ? ('setup.progress.migrationWait' | t) : ''"
           (click)="openPanel()"
         >
           {{ 'setup.progress.open' | t }}
@@ -864,6 +911,20 @@
       [create]="createDirectory"
       (picked)="addFolder($event)"
       (cancelled)="pickingFor.set(null)"
+    />
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="dlnaPicking() ? 'open' : 'closed'" (closed)="dlnaPicking.set(false)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-3xl">
+    <app-dlna-import
+      [targets]="reconfigure ? localSources() : []"
+      [loadDirectories]="loadDirectories"
+      [createDirectory]="createDirectory"
+      [api]="reconfigure ? null : setupDlnaApi"
+      [chooseOnly]="true"
+      (chosen)="chooseDlna($event)"
+      (cancelled)="dlnaPicking.set(false)"
     />
   </hlm-dialog-content>
 </hlm-dialog>

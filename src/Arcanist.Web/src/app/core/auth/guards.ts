@@ -13,12 +13,21 @@ export const setupCompletedGuard: CanActivateFn = async () => {
   return status.completed ? true : router.parseUrl('/setup');
 };
 
-/** The wizard is only reachable while setup is pending. */
+/** The wizard is only reachable while setup is pending, or while the migration it started runs (its progress). */
 export const setupPendingGuard: CanActivateFn = async () => {
   const setup = inject(SetupService);
   const router = inject(Router);
-  const status = setup.status() ?? (await setup.loadStatus());
-  return status.completed ? router.parseUrl('/') : true;
+  let status = setup.status() ?? (await setup.loadStatus());
+  if (status.completed) status = await setup.loadStatus();
+  return status.completed && !status.migrating ? router.parseUrl('/') : true;
+};
+
+/** While the migration the wizard started runs, the panel shows its progress (the wizard's last screen). */
+export const migrationGuard: CanActivateFn = async () => {
+  const setup = inject(SetupService);
+  const router = inject(Router);
+  const status = await setup.loadStatus();
+  return status.migrating ? router.parseUrl('/setup') : true;
 };
 
 /** Requires a session, restoring it from the refresh cookie after a page reload. */

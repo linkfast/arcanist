@@ -24,7 +24,9 @@ public sealed class SetupOptions
     public bool Completed { get; set; }
 }
 
-public sealed record SetupStatus(bool Completed, bool RequiresCode, SetupDatabaseStatus Database, string DataDirectory);
+/// <param name="Migrating">Set up, but the migration the wizard started (mStream: users and their data) is still
+/// running: the panel shows its progress until it ends.</param>
+public sealed record SetupStatus(bool Completed, bool RequiresCode, SetupDatabaseStatus Database, string DataDirectory, bool Migrating = false);
 
 /// <param name="LockedByEnvironment">The database is set outside the wizard (environment variables, appsettings),
 /// so the wizard skips that step and ignores <see cref="SetupRequest.Database"/>.</param>
@@ -121,6 +123,27 @@ public sealed class SetupService(
                 database.Provider,
                 Path.Combine(paths.Root, "arcanist.db")),
             paths.Root);
+    }
+
+    /// <summary>Whether the migration the wizard started is still running.</summary>
+    public async Task<bool> MigratingAsync(CancellationToken cancellationToken)
+    {
+        if (!IsCompleted || databaseOptions.CurrentValue.Provider is null)
+            return false;
+        try
+        {
+            await using var db = ArcanistDbContextFactory.Create(databaseOptions.CurrentValue, paths);
+            var value = await db.Settings.AsNoTracking().Where(s => s.Key == SettingKeys.SetupMigration).Select(s => s.Value).FirstOrDefaultAsync(cancellationToken);
+            if (value is null || JsonSerializer.Deserialize<Guid?>(value) is not { } id)
+                return false;
+            return await db.MstreamImports.AsNoTracking()
+                .AnyAsync(i => i.Id == id && (i.Status == MstreamImportStatus.Waiting || i.Status == MstreamImportStatus.Running), cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogDebug(e, "Could not read the setup migration");
+            return false;
+        }
     }
 
     /// <summary>Checks the ffmpeg at <paramref name="path"/>, or which one would be found automatically.</summary>
@@ -224,7 +247,11 @@ public sealed class SetupService(
                 await db.SaveChangesAsync(cancellationToken);
                 // The import worker waits until these libraries have been scanned, so their files can be matched.
                 if (mstreamImport is { } found)
+                {
                     imported = await RecordMstreamImportAsync(db, request.Mstream!, found.Source, found.Vpaths, created, adminId, cancellationToken);
+                    db.Settings.Add(new Setting { Key = SettingKeys.SetupMigration, Value = JsonSerializer.Serialize<Guid?>(imported.Id) });
+                    await db.SaveChangesAsync(cancellationToken);
+                }
                 await transaction.CommitAsync(cancellationToken);
             }
 

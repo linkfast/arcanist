@@ -141,6 +141,7 @@ export const es: Dictionary = {
     confirm: 'Confirmar',
   },
   setup: {
+    importContinues: 'La importación sigue en segundo plano: su progreso está en Importación.',
     extrasFailed: 'No se pudo aplicar «{what}»: {error}',
     users: {
       explanation:
@@ -298,6 +299,17 @@ export const es: Dictionary = {
       passwordsDiffer: 'Las contraseñas no coinciden.',
     },
     import: {
+      dlna: 'Un servidor DLNA/UPnP',
+      dlnaHelp:
+        'Copia la música de otro servidor de tu red (MinimServer, Serviio, un NAS…). Solo archivos: no trae usuarios.',
+      dlnaPick: 'Elegir servidor y carpetas',
+      dlnaInto: 'En una biblioteca nueva, en {place}',
+      dlnaLater:
+        'La copia empieza al terminar y sigue en segundo plano: verás su progreso en Importación.',
+      dlnaChoose: 'Elige el servidor DLNA y las carpetas que quieres copiar.',
+      mstreamAgainHelp: 'Trae sus bibliotecas, usuarios y sus datos a este servidor.',
+      mstreamWaits:
+        'Es una migración: al terminar, el asistente muestra su progreso y espera a que acabe antes de abrir el panel.',
       none: 'Empezar de cero',
       noneHelp: 'Añadirás las carpetas de tu música en el siguiente paso.',
       mstreamHelp:
@@ -398,6 +410,7 @@ export const es: Dictionary = {
         'Al terminar verás cómo Arcanist lee tu música y, si importas, cómo llegan los datos.',
     },
     progress: {
+      migrationWait: 'Espera a que termine la migración de mStream.',
       extrasFailed: 'Esto no se pudo aplicar; puedes hacerlo desde el panel:',
       libraries: 'Bibliotecas',
       mstream: 'Importación desde mStream',
@@ -1560,6 +1573,7 @@ export const es: Dictionary = {
     serverHelp: 'Envía este enlace al administrador del otro servidor.',
   },
   dlnaImport: {
+    choose: 'Usar esta selección',
     title: 'Copiar desde un servidor DLNA',
     subtitle:
       'Trae la música de otro servidor de la red (MinimServer, Serviio, Universal Media Server, Twonky, un NAS…) a una biblioteca. El otro servidor no se modifica.',
@@ -1585,6 +1599,7 @@ export const es: Dictionary = {
     },
     selected: 'Carpetas elegidas',
     destination: {
+      folderRequired: 'Elige la carpeta de la biblioteca nueva.',
       title: 'Copiar a',
       existing: 'Una biblioteca existente',
       new: 'Una biblioteca nueva',

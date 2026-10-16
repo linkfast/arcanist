@@ -85,30 +85,43 @@ public sealed class DlnaImportService(
     public async Task<IReadOnlyList<DlnaMediaServer>> SearchAsync(CancellationToken cancellationToken)
     {
         guard.Admin();
-        var self = (await Dlna.DeviceIdAsync(cancellationToken)).ToString();
-        var servers = await Client.SearchAsync(TimeSpan.FromSeconds(3), cancellationToken);
-        return servers.Where(s => !s.Id.Equals(self, StringComparison.OrdinalIgnoreCase)).Select(ToModel).ToList();
+        return await SearchAsync(Client, (await Dlna.DeviceIdAsync(cancellationToken)).ToString(), cancellationToken);
     }
 
     /// <summary>The media server at a description URL (for servers the search does not find).</summary>
     public async Task<DlnaMediaServer> DescribeAsync(string location, CancellationToken cancellationToken)
     {
         guard.Admin();
-        return ToModel(await Client.DescribeAsync(ParseLocation(location), cancellationToken));
+        return await DescribeAsync(Client, location, cancellationToken);
     }
 
     /// <summary>A folder of a media server; <c>0</c> is the root.</summary>
     public async Task<DlnaFolderContents> BrowseAsync(string location, string? folderId, CancellationToken cancellationToken)
     {
         guard.Admin();
-        var server = await Client.DescribeAsync(ParseLocation(location), cancellationToken);
+        return await BrowseAsync(Client, location, folderId, cancellationToken);
+    }
+
+    /// <summary>The search, also for the setup wizard (no account yet). <paramref name="self"/> is this server's own, left out.</summary>
+    internal static async Task<IReadOnlyList<DlnaMediaServer>> SearchAsync(MediaServerClient client, string? self, CancellationToken cancellationToken)
+    {
+        var servers = await client.SearchAsync(TimeSpan.FromSeconds(3), cancellationToken);
+        return servers.Where(s => self is null || !s.Id.Equals(self, StringComparison.OrdinalIgnoreCase)).Select(ToModel).ToList();
+    }
+
+    internal static async Task<DlnaMediaServer> DescribeAsync(MediaServerClient client, string location, CancellationToken cancellationToken) =>
+        ToModel(await client.DescribeAsync(ParseLocation(location), cancellationToken));
+
+    internal static async Task<DlnaFolderContents> BrowseAsync(MediaServerClient client, string location, string? folderId, CancellationToken cancellationToken)
+    {
+        var server = await client.DescribeAsync(ParseLocation(location), cancellationToken);
         var id = string.IsNullOrEmpty(folderId) ? "0" : folderId;
         var folders = new List<DlnaFolder>();
         var tracks = 0;
         var truncated = true;
         for (var page = 0; page < MaxFolderPages; page++)
         {
-            var result = await Client.BrowseAsync(server, id, page * 200, 200, cancellationToken);
+            var result = await client.BrowseAsync(server, id, page * 200, 200, cancellationToken);
             folders.AddRange(result.Containers.Select(c => new DlnaFolder(c.Id, c.Title, c.ChildCount)));
             tracks += result.Tracks.Count;
             if (result.Returned == 0 || (page + 1) * 200 >= result.Total)

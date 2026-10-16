@@ -1,6 +1,8 @@
 using Arcanist.Core.Application;
 using Arcanist.Core.Application.Libraries;
+using Arcanist.Core.Application.Import;
 using Arcanist.Core.Auth;
+using Arcanist.Core.Dlna;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Libraries;
 using Arcanist.Core.Setup;
@@ -13,8 +15,8 @@ public static class SetupEndpoints
     {
         var setup = rest.MapGroup("/setup").WithTags("Setup");
 
-        setup.MapGet("/status", (HttpContext context, SetupService service) =>
-                service.GetStatus(RequestOrigin.IsLocal(context)))
+        setup.MapGet("/status", async (HttpContext context, SetupService service, CancellationToken cancellationToken) =>
+                service.GetStatus(RequestOrigin.IsLocal(context)) with { Migrating = await service.MigratingAsync(cancellationToken) })
             .WithName("GetSetupStatus");
 
         // Everything else is only available while setup is pending, and from other devices only with the code.
@@ -44,6 +46,21 @@ public static class SetupEndpoints
                 service.AnalyzeMstreamAsync(request, cancellationToken))
             .WithName("AnalyzeSetupMstream")
             .WithSummary("Reads an mStream installation, from its folder on this server or from its server, to choose what to import.");
+
+        guarded.MapGet("/dlna/servers", (MediaServerClient client, CancellationToken cancellationToken) =>
+                DlnaImportService.SearchAsync(client, null, cancellationToken))
+            .WithName("SearchSetupDlnaServers")
+            .WithSummary("Looks for DLNA/UPnP media servers on the local networks, to copy music from once set up.");
+
+        guarded.MapGet("/dlna/server", (string location, MediaServerClient client, CancellationToken cancellationToken) =>
+                DlnaImportService.DescribeAsync(client, location, cancellationToken))
+            .WithName("DescribeSetupDlnaServer")
+            .WithSummary("The media server at a description URL.");
+
+        guarded.MapGet("/dlna/browse", (string location, string? folderId, MediaServerClient client, CancellationToken cancellationToken) =>
+                DlnaImportService.BrowseAsync(client, location, folderId, cancellationToken))
+            .WithName("BrowseSetupDlnaServer")
+            .WithSummary("A folder of a media server; 0 is the root.");
 
         guarded.MapPost("/complete", async (SetupRequest request, SetupService service, CancellationToken cancellationToken) =>
                 await service.CompleteAsync(request, cancellationToken) switch

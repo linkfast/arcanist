@@ -37,6 +37,38 @@ import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/fo
 type DlnaMediaServer = ServersResult['dlnaMediaServers'][number];
 type DlnaFolderContents = BrowseResult['browseDlnaMediaServer'];
 
+/** How the form reads media servers: the panel's API by default, the setup wizard's before there is an account. */
+export interface DlnaBrowseApi {
+  search(): Promise<DlnaMediaServer[]>;
+  describe(location: string): Promise<DlnaMediaServer>;
+  browse(location: string, folderId: string): Promise<DlnaFolderContents>;
+}
+
+/** What to copy, chosen now and started later (the setup wizard and running it again start it at the end). */
+export interface DlnaImportChoice {
+  location: string;
+  serverName: string;
+  folders: { id: string; title: string }[];
+  sourceId: string | null;
+  newLibraryName: string | null;
+  newLibraryPath: string | null;
+}
+
+/** Starts a chosen copy with the administrator's session. */
+export async function startDlnaImport(gql: Gql, choice: DlnaImportChoice): Promise<DlnaImportJob> {
+  return (
+    await gql.mutate(StartDlnaImportMutation, {
+      input: {
+        location: choice.location,
+        folders: choice.folders,
+        sourceId: choice.sourceId,
+        newLibraryName: choice.newLibraryName,
+        newLibraryPath: choice.newLibraryPath,
+      },
+    })
+  ).startDlnaImport;
+}
+
 interface Crumb {
   id: string;
   title: string;
@@ -306,7 +338,7 @@ interface Crumb {
         @if (starting()) {
           <hlm-spinner class="size-4" />
         }
-        {{ 'dlnaImport.start' | t }}
+        {{ (chooseOnly() ? 'dlnaImport.choose' : 'dlnaImport.start') | t }}
       </button>
     </hlm-dialog-footer>
   `,
@@ -321,6 +353,11 @@ export class DlnaImportForm implements OnInit {
   readonly createDirectory = input.required<DirectoryCreator>();
   readonly started = output<DlnaImportJob>();
   readonly cancelled = output<void>();
+  /** Reads servers some other way (the setup wizard, before there is an account). */
+  readonly api = input<DlnaBrowseApi | null>(null);
+  /** Only choose: the copy starts later, and `chosen` says what. */
+  readonly chooseOnly = input(false);
+  readonly chosen = output<DlnaImportChoice>();
 
   protected readonly servers = signal<DlnaMediaServer[]>([]);
   protected readonly searching = signal(false);
@@ -358,7 +395,10 @@ export class DlnaImportForm implements OnInit {
   protected async search(): Promise<void> {
     this.searching.set(true);
     try {
-      this.servers.set((await this.gql.query(DlnaMediaServersQuery)).dlnaMediaServers);
+      this.servers.set(
+        (await this.api()?.search()) ??
+          (await this.gql.query(DlnaMediaServersQuery)).dlnaMediaServers,
+      );
     } catch (error) {
       this.fail(error);
     } finally {
@@ -369,8 +409,10 @@ export class DlnaImportForm implements OnInit {
   protected async openLocation(): Promise<void> {
     this.busy.set(true);
     try {
-      const found = (await this.gql.query(DlnaMediaServerQuery, { location: this.location.trim() }))
-        .dlnaMediaServer;
+      const location = this.location.trim();
+      const found =
+        (await this.api()?.describe(location)) ??
+        (await this.gql.query(DlnaMediaServerQuery, { location })).dlnaMediaServer;
       await this.choose(found);
     } catch (error) {
       this.fail(error);
@@ -410,12 +452,13 @@ export class DlnaImportForm implements OnInit {
     this.contents.set(null);
     try {
       this.contents.set(
-        (
-          await this.gql.query(BrowseDlnaMediaServerQuery, {
-            location: server.location,
-            folderId,
-          })
-        ).browseDlnaMediaServer,
+        (await this.api()?.browse(server.location, folderId)) ??
+          (
+            await this.gql.query(BrowseDlnaMediaServerQuery, {
+              location: server.location,
+              folderId,
+            })
+          ).browseDlnaMediaServer,
       );
     } catch (error) {
       this.fail(error);
@@ -446,19 +489,26 @@ export class DlnaImportForm implements OnInit {
   protected async start(): Promise<void> {
     const server = this.server();
     if (!server) return;
+    const existing = this.target === 'existing';
+    const choice: DlnaImportChoice = {
+      location: server.location,
+      serverName: server.name,
+      folders: this.selected(),
+      sourceId: existing ? this.sourceId : null,
+      newLibraryName: existing ? null : this.newName.trim() || null,
+      newLibraryPath: existing ? null : this.newPath.trim(),
+    };
+    if (this.chooseOnly()) {
+      if (!existing && !choice.newLibraryPath) {
+        toast.error(this.i18n.t('dlnaImport.destination.folderRequired'));
+        return;
+      }
+      this.chosen.emit(choice);
+      return;
+    }
     this.starting.set(true);
     try {
-      const existing = this.target === 'existing';
-      const result = await this.gql.mutate(StartDlnaImportMutation, {
-        input: {
-          location: server.location,
-          folders: this.selected(),
-          sourceId: existing ? this.sourceId : null,
-          newLibraryName: existing ? null : this.newName.trim() || null,
-          newLibraryPath: existing ? null : this.newPath.trim(),
-        },
-      });
-      this.started.emit(result.startDlnaImport);
+      this.started.emit(await startDlnaImport(this.gql, choice));
     } catch (error) {
       this.fail(error);
     } finally {

@@ -184,6 +184,99 @@
         }
       }
     },
+    "/rest/v1/setup/dlna/servers": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Looks for DLNA/UPnP media servers on the local networks, to copy music from once set up.",
+        "operationId": "SearchSetupDlnaServers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DlnaMediaServer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/setup/dlna/server": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "The media server at a description URL.",
+        "operationId": "DescribeSetupDlnaServer",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaMediaServer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/setup/dlna/browse": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "A folder of a media server; 0 is the root.",
+        "operationId": "BrowseSetupDlnaServer",
+        "parameters": [
+          {
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "folderId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaFolderContents"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/setup/complete": {
       "post": {
         "tags": [
@@ -13511,6 +13604,10 @@
           },
           "dataDirectory": {
             "type": "string"
+          },
+          "migrating": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

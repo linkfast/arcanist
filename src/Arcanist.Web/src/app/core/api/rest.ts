@@ -37,6 +37,8 @@ export interface TokenResponse {
 export interface SetupStatus {
   completed: boolean;
   requiresCode: boolean;
+  /** Set up, but the migration the wizard started is still running: the panel shows its progress. */
+  migrating?: boolean;
   database: {
     configured: boolean;
     lockedByEnvironment: boolean;

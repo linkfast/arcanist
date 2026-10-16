@@ -138,6 +138,7 @@ export const en: Dictionary = {
     confirm: 'Confirm',
   },
   setup: {
+    importContinues: 'The import goes on in the background: its progress is in Import.',
     extrasFailed: 'Could not apply “{what}”: {error}',
     users: {
       explanation:
@@ -285,6 +286,17 @@ export const en: Dictionary = {
       passwordsDiffer: 'The passwords do not match.',
     },
     import: {
+      dlna: 'A DLNA/UPnP server',
+      dlnaHelp:
+        'Copies the music of another server on your network (MinimServer, Serviio, a NAS…). Files only: no users.',
+      dlnaPick: 'Choose the server and folders',
+      dlnaInto: 'Into a new library, at {place}',
+      dlnaLater:
+        'The copy starts when you finish and goes on in the background: its progress is in Import.',
+      dlnaChoose: 'Choose the DLNA server and the folders to copy.',
+      mstreamAgainHelp: 'Brings its libraries, users and their data to this server.',
+      mstreamWaits:
+        'It is a migration: when you finish, the wizard shows its progress and waits for it before opening the panel.',
       none: 'Start from scratch',
       noneHelp: 'You will add your music folders in the next step.',
       mstreamHelp:
@@ -387,6 +399,7 @@ export const en: Dictionary = {
         'Once finished you will see Arcanist read your music and, if you import, the data arrive.',
     },
     progress: {
+      migrationWait: 'Wait for the mStream migration to finish.',
       extrasFailed: 'This could not be applied; you can do it from the panel:',
       libraries: 'Libraries',
       mstream: 'Import from mStream',
@@ -1536,6 +1549,7 @@ export const en: Dictionary = {
     serverHelp: 'Send this link to the other server’s administrator.',
   },
   dlnaImport: {
+    choose: 'Use this selection',
     title: 'Copy from a DLNA server',
     subtitle:
       'Brings the music of another server of the network (MinimServer, Serviio, Universal Media Server, Twonky, a NAS…) into a library. The other server is not changed.',
@@ -1561,6 +1575,7 @@ export const en: Dictionary = {
     },
     selected: 'Chosen folders',
     destination: {
+      folderRequired: 'Choose the new library’s folder.',
       title: 'Copy into',
       existing: 'An existing library',
       new: 'A new library',

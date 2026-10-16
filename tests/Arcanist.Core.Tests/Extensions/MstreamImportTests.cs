@@ -283,8 +283,13 @@ public sealed class MstreamImportTests : IAsyncDisposable
         // The same folder, written another way.
         var sameFolder = _music.Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + "/";
         (await client.PostAsJsonAsync("/rest/v1/setup/complete", Request(sameFolder), ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+        // It is a migration: the panel shows its progress until it ends.
+        var migrating = (await client.GetFromJsonAsync<JsonElement>("/rest/v1/setup/status", ArcanistFactory.Json, Cancel)).GetProperty("migrating").GetBoolean();
         var admin = await _factory.CreateAuthenticatedClientAsync();
+        if (!migrating)
+            Assert.Equal("COMPLETED", (await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/mstream/imports", ArcanistFactory.Json, Cancel))![0].GetProperty("status").GetString());
         var import = await WaitForImportAsync(admin);
+        Assert.False((await client.GetFromJsonAsync<JsonElement>("/rest/v1/setup/status", ArcanistFactory.Json, Cancel)).GetProperty("migrating").GetBoolean());
         Assert.Equal("COMPLETED", import.GetProperty("status").GetString());
         Assert.Equal((1, 1), (import.GetProperty("librariesCreated").GetInt32(), import.GetProperty("usersCreated").GetInt32()));
         Assert.Equal((1, 2, 1), (import.GetProperty("playlists").GetInt32(), import.GetProperty("ratings").GetInt32(), import.GetProperty("plays").GetInt32()));

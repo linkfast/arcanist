@@ -44,7 +44,17 @@ import {
   ServerConfigurationQuery,
   ServerDirectoriesQuery,
   SetupExtrasQuery,
+  AnalyzeMstreamFolderMutation,
+  AnalyzeMstreamServerMutation,
+  ImportMstreamMutation,
 } from '../../graphql/operations';
+import {
+  DlnaBrowseApi,
+  DlnaImportChoice,
+  DlnaImportForm,
+  startDlnaImport,
+} from '../import/dlna-import';
+
 import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
 import {
   ExtraFailure,
@@ -112,6 +122,7 @@ const PROGRESS_MS = 1500;
     SetupUsersStep,
     SetupP2PStep,
     SetupAddonsStep,
+    DlnaImportForm,
     HlmAlertImports,
     HlmBadgeImports,
     HlmDialogImports,
@@ -149,6 +160,7 @@ export class SetupPage implements OnInit {
     if (this.reconfigure)
       return [
         'welcome',
+        'import',
         'libraries',
         'users',
         'media',
@@ -270,10 +282,64 @@ export class SetupPage implements OnInit {
   }
   protected shareStatistics: 'yes' | 'no' | null = null;
   /** Another server to bring music, users and their data from. */
-  protected migrateFrom: 'none' | 'mstream' = 'none';
+  protected migrateFrom: 'none' | 'mstream' | 'dlna' = 'none';
+  /** The copy chosen from a DLNA server; it starts once the server is set up (or at the end, running the wizard again). */
+  protected readonly dlnaChoice = signal<DlnaImportChoice | null>(null);
+  protected readonly dlnaPicking = signal(false);
+  /** A DLNA copy was started at the end: it goes on in Import. */
+  protected readonly dlnaStarted = signal(false);
+  /** Running the wizard again: the folders of the libraries the server has, for imports to go into. */
+  protected readonly existingSources = signal<{ id: string; label: string; local: boolean }[]>([]);
+  protected localSources(): { id: string; label: string }[] {
+    return this.existingSources().filter((s) => s.local);
+  }
+
+  /** Before there is an account, media servers are read through the setup API. */
+  protected readonly setupDlnaApi: DlnaBrowseApi = {
+    search: () => this.setup.dlnaServers(),
+    describe: (location) => this.setup.dlnaServer(location),
+    browse: (location, folderId) => this.setup.dlnaBrowse(location, folderId),
+  };
+
+  protected dlnaFolders(choice: DlnaImportChoice): string {
+    return choice.folders.map((f) => f.title).join(', ');
+  }
+
+  /** Where the copy goes: the new library's folder, or the chosen library folder. */
+  protected dlnaPlace(choice: DlnaImportChoice): string {
+    return (
+      choice.newLibraryPath ??
+      this.existingSources().find((s) => s.id === choice.sourceId)?.label ??
+      ''
+    );
+  }
+
+  protected chooseDlna(choice: DlnaImportChoice): void {
+    this.dlnaChoice.set(choice);
+    this.dlnaPicking.set(false);
+  }
+
+  /** The users the mStream import brings (one named like the administrator is the administrator). */
+  protected importedUsers(): { userName: string; displayName?: string | null; role: string }[] {
+    if (this.migrateFrom !== 'mstream' || !this.mstream.importUsers) return [];
+    const admin = this.userName.trim().toLowerCase();
+    return (this.mstream.analysis()?.users ?? [])
+      .filter((u) => u.userName.toLowerCase() !== admin && !u.exists)
+      .map((u) => ({
+        userName: u.userName,
+        displayName: 'mStream',
+        role: u.isAdmin ? 'ADMIN' : 'USER',
+      }));
+  }
   protected readonly mstream = new MstreamImportDraft();
-  protected readonly analyzeMstream = (source: MstreamSourceInput) =>
-    this.setup.analyzeMstream(source);
+  protected readonly analyzeMstream = async (source: MstreamSourceInput) =>
+    !this.reconfigure
+      ? this.setup.analyzeMstream(source)
+      : source.server
+        ? (await this.gql.mutate(AnalyzeMstreamServerMutation, { input: source.server }))
+            .analyzeMstreamServer
+        : (await this.gql.mutate(AnalyzeMstreamFolderMutation, { folder: source.folder ?? '' }))
+            .analyzeMstreamFolder;
   protected ffmpegPath = '';
   protected ratingMode: RatingMode = 'STAR';
   /** Off until the user turns each on: they contact other servers. */
@@ -307,7 +373,7 @@ export class SetupPage implements OnInit {
   protected readonly scanJobs = signal<ScanJob[]>([]);
   protected readonly libraryNames = signal<Record<string, string>>({});
   protected readonly importJob = signal<MstreamImportJob | null>(null);
-  private importing = false;
+  protected importing = false;
   private readonly progressLoaded = signal(false);
   protected readonly finished = computed(
     () =>
@@ -360,6 +426,15 @@ export class SetupPage implements OnInit {
         this.extras.extensions[id] = extras.extensions.some((e) => e.id === id && e.enabled);
       this.extras.extensionsInitial = { ...this.extras.extensions };
       const existing = (await this.gql.query(LibrariesQuery)).libraries.filter((l) => !l.personal);
+      this.existingSources.set(
+        existing.flatMap((l) =>
+          (l.sources ?? []).map((s) => ({
+            id: s.id,
+            label: `${l.name} — ${s.location}`,
+            local: s.kind === 'LOCAL',
+          })),
+        ),
+      );
       this.existingLibraries.set(
         existing.map((l) => ({
           name: l.name,
@@ -374,6 +449,18 @@ export class SetupPage implements OnInit {
       return;
     }
     const status = await this.setup.loadStatus();
+    if (status.completed && status.migrating) {
+      // Set up, with the migration still running: its progress, until it ends.
+      if (!this.auth.isAuthenticated() && !(await this.auth.refresh())) {
+        await this.router.navigate(['/login'], { queryParams: { returnUrl: '/setup' } });
+        return;
+      }
+      this.status.set(status);
+      this.importing = true;
+      this.step.set('progress');
+      await this.followProgress();
+      return;
+    }
     this.status.set(status);
     this.step.set(status.requiresCode ? 'code' : 'welcome');
   }
@@ -585,8 +672,14 @@ export class SetupPage implements OnInit {
         });
       }
       await this.applyExtras();
+      const imported = await this.startMstream();
+      await this.startDlna();
       toast.success(this.i18n.t('setup.reconfigured'));
-      await this.router.navigateByUrl('/settings');
+      // Imports go on by themselves: their progress is in Import.
+      if (imported || this.dlnaStarted()) {
+        toast.info(this.i18n.t('setup.importContinues'));
+        await this.router.navigateByUrl('/import');
+      } else await this.router.navigateByUrl('/settings');
     } catch (error) {
       const apiError = ApiError.from(error);
       this.fieldErrors.set(apiError.fields);
@@ -642,9 +735,10 @@ export class SetupPage implements OnInit {
       await this.setup.loadStatus();
       await this.auth.login(this.userName.trim(), this.password);
       await this.applyExtras();
+      await this.startDlna();
       this.importing = this.migrateFrom === 'mstream';
       if (!this.importing && !this.libraries().some((library) => library.folders.length > 0)) {
-        await this.router.navigateByUrl('/libraries');
+        await this.router.navigateByUrl(this.dlnaStarted() ? '/import' : '/libraries');
         return;
       }
       this.step.set('progress');
@@ -686,6 +780,49 @@ export class SetupPage implements OnInit {
           error: this.i18n.error(failure.code),
         }),
       );
+  }
+
+  /** Starts the chosen DLNA copy; it does not hold the wizard: it goes on in Import. */
+  private async startDlna(): Promise<void> {
+    const choice = this.dlnaChoice();
+    if (this.migrateFrom !== 'dlna' || !choice) return;
+    try {
+      await startDlnaImport(this.gql, choice);
+      this.dlnaStarted.set(true);
+    } catch (error) {
+      const code = ApiError.from(error).code;
+      this.extrasFailures.update((list) => [...list, { what: choice.serverName, code }]);
+      toast.error(
+        this.i18n.t('setup.extrasFailed', {
+          what: choice.serverName,
+          error: this.i18n.error(code),
+        }),
+      );
+    }
+  }
+
+  /** Running the wizard again: starts the chosen mStream import; it goes on in Import. */
+  private async startMstream(): Promise<boolean> {
+    if (this.migrateFrom !== 'mstream' || !this.mstream.analyzed) return false;
+    try {
+      await this.gql.mutate(ImportMstreamMutation, {
+        input: {
+          folder: this.mstream.analyzed.folder,
+          server: this.mstream.analyzed.server,
+          importUsers: this.mstream.importUsers,
+          libraries: this.mstream.libraryInputs(),
+        },
+      });
+      return true;
+    } catch (error) {
+      toast.error(
+        this.i18n.t('setup.extrasFailed', {
+          what: 'mStream',
+          error: this.i18n.error(ApiError.from(error).code),
+        }),
+      );
+      return false;
+    }
   }
 
   protected async openPanel(): Promise<void> {
@@ -772,7 +909,12 @@ export class SetupPage implements OnInit {
             return false;
           }
         }
-        this.mergeMstreamLibraries();
+        if (this.migrateFrom === 'dlna' && !this.dlnaChoice()) {
+          this.error.set(this.i18n.t('setup.import.dlnaChoose'));
+          return false;
+        }
+        // Running the wizard again, the import makes its own libraries.
+        if (!this.reconfigure) this.mergeMstreamLibraries();
         return true;
       case 'libraries':
         if (
@@ -791,7 +933,7 @@ export class SetupPage implements OnInit {
       case 'users': {
         const problem = this.extras.usersProblem(
           this.reconfigure ? (this.auth.user()?.userName ?? '') : this.userName,
-          this.existingUsers().map((u) => u.userName),
+          [...this.existingUsers(), ...this.importedUsers()].map((u) => u.userName),
         );
         if (problem) {
           this.error.set(this.i18n.t(problem));

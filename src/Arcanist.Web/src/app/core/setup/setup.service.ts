@@ -10,8 +10,15 @@ import {
   SetupRequest,
   SetupStatus,
 } from '../api/rest';
-import type { MstreamAnalysisFieldsFragment } from '../../graphql/generated/graphql';
+import type {
+  BrowseDlnaMediaServerQuery,
+  DlnaMediaServersQuery,
+  MstreamAnalysisFieldsFragment,
+} from '../../graphql/generated/graphql';
 import type { MstreamSourceInput } from '../../shared/mstream-import';
+
+type DlnaMediaServer = DlnaMediaServersQuery['dlnaMediaServers'][number];
+type DlnaFolderContents = BrowseDlnaMediaServerQuery['browseDlnaMediaServer'];
 
 /** Talks to /rest/v1/setup. From other devices every call carries the one-time setup code. */
 @Injectable({ providedIn: 'root' })
@@ -84,6 +91,33 @@ export class SetupService {
   analyzeMstream(source: MstreamSourceInput): Promise<MstreamAnalysisFieldsFragment> {
     return this.call(
       this.http.post<MstreamAnalysisFieldsFragment>('/rest/v1/setup/mstream/analyze', source, {
+        headers: this.headers(),
+      }),
+    );
+  }
+
+  /** DLNA media servers on the local networks, to copy from once set up. */
+  dlnaServers(): Promise<DlnaMediaServer[]> {
+    return this.call(
+      this.http.get<DlnaMediaServer[]>('/rest/v1/setup/dlna/servers', { headers: this.headers() }),
+    );
+  }
+
+  dlnaServer(location: string): Promise<DlnaMediaServer> {
+    return this.call(
+      this.http.get<DlnaMediaServer>('/rest/v1/setup/dlna/server', {
+        params: new HttpParams().set('location', location),
+        headers: this.headers(),
+      }),
+    );
+  }
+
+  dlnaBrowse(location: string, folderId: string | null): Promise<DlnaFolderContents> {
+    let params = new HttpParams().set('location', location);
+    if (folderId) params = params.set('folderId', folderId);
+    return this.call(
+      this.http.get<DlnaFolderContents>('/rest/v1/setup/dlna/browse', {
+        params,
         headers: this.headers(),
       }),
     );

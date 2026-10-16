@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import {
   adminGuard,
+  migrationGuard,
   authGuard,
   permissionGuard,
   setupCompletedGuard,
@@ -27,7 +28,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    canActivate: [setupCompletedGuard, authGuard],
+    canActivate: [setupCompletedGuard, authGuard, migrationGuard],
     loadComponent: () => import('./shell/shell').then((m) => m.Shell),
     children: [
       {

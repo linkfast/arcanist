@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -155,6 +156,25 @@ public sealed class DlnaImportTests : IAsyncDisposable
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
         _admin = await _factory.CreateAuthenticatedClientAsync();
         await _factory.WaitForScansAsync(_admin);
+    }
+
+    [Fact]
+    public async Task The_setup_wizard_reads_media_servers_before_there_is_an_account()
+    {
+        _server.Tree["0"] = [new FakeMediaServer.Container("music", "Music"), new FakeMediaServer.Container("pictures", "Pictures")];
+        _factory = new ArcanistFactory(services: _server.Register);
+        var client = _factory.CreateClient();
+
+        var server = await client.GetFromJsonAsync<JsonElement>(
+            $"/rest/v1/setup/dlna/server?location={Uri.EscapeDataString(FakeMediaServer.Description)}", ArcanistFactory.Json, Cancel);
+        Assert.Equal(FakeMediaServer.Description, server.GetProperty("location").GetString());
+        var root = await client.GetFromJsonAsync<JsonElement>(
+            $"/rest/v1/setup/dlna/browse?location={Uri.EscapeDataString(FakeMediaServer.Description)}&folderId=0", ArcanistFactory.Json, Cancel);
+        Assert.Equal(["Music", "Pictures"], root.GetProperty("folders").EnumerateArray().Select(f => f.GetProperty("title").GetString()));
+
+        // Once set up, only through the panel's API.
+        await _factory.CompleteSetupAsync();
+        Assert.False((await client.GetAsync($"/rest/v1/setup/dlna/browse?location={Uri.EscapeDataString(FakeMediaServer.Description)}", Cancel)).IsSuccessStatusCode);
     }
 
     private async Task<JsonElement> WaitForImportAsync(string id)

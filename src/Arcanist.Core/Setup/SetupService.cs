@@ -53,6 +53,8 @@ public sealed record SetupMstreamImport(string? Folder, MstreamServerInput? Serv
 /// <param name="FfmpegPath">ffmpeg to use; null to find it automatically (or download it later from the panel).</param>
 /// <param name="OnlineServices">Online services to turn on; none when null.</param>
 /// <param name="RatingMode">How users rate tracks; five stars when null. Can be changed later in the settings.</param>
+/// <param name="Privacy">No telemetry, and which outside services may be used; they limit the statistics and online
+/// services asked for (and with no outside services at all, the Ultimate Cloud extension starts off).</param>
 /// <param name="Mstream">An mStream installation to import, or null. Its progress shows in <c>mstreamImports</c>
 /// once signed in: the users' data comes once the first scans are over.</param>
 public sealed record SetupRequest(
@@ -64,7 +66,8 @@ public sealed record SetupRequest(
     string? FfmpegPath = null,
     Application.Online.OnlineServicesSettings? OnlineServices = null,
     RatingMode? RatingMode = null,
-    SetupMstreamImport? Mstream = null);
+    SetupMstreamImport? Mstream = null,
+    Application.Server.SetPrivacyInput? Privacy = null);
 
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
@@ -226,6 +229,9 @@ public sealed class SetupService(
             }
 
             // Committed: the rest happens even if the wizard goes away, or the first scans would never be queued.
+            if (request.Privacy?.ExternalServices == Application.Server.ExternalServices.None)
+                await Application.Server.PrivacyService.TurnOffUltimateCloudAsync(
+                    settingsWriter, services.GetRequiredService<Extensions.ExtensionHost>(), CancellationToken.None);
             await settingsWriter.SetAsync(new Dictionary<string, object?> { [SetupOptions.CompletedKey] = true }, CancellationToken.None);
             setupCode.Discard();
 
@@ -287,10 +293,15 @@ public sealed class SetupService(
             created.Add(library);
         }
 
+        var privacy = request.Privacy is { } chosen
+            ? new Application.Server.Privacy(chosen.NoTelemetry, chosen.ExternalServices)
+            : Application.Server.PrivacySettings.Default;
+        db.Settings.Add(new Setting { Key = SettingKeys.Privacy, Value = JsonSerializer.Serialize(privacy, JsonSerializerOptions.Web) });
         db.Settings.Add(new Setting
         {
             Key = SettingKeys.ShareAnonymousStatistics,
-            Value = JsonSerializer.Serialize(request.ShareAnonymousStatistics!.Value),
+            Value = JsonSerializer.Serialize(request.ShareAnonymousStatistics!.Value
+                                             && privacy is { NoTelemetry: false, ExternalServices: not Application.Server.ExternalServices.None }),
         });
 
         if (!string.IsNullOrWhiteSpace(request.Language))
@@ -299,7 +310,7 @@ public sealed class SetupService(
         if (!string.IsNullOrWhiteSpace(request.FfmpegPath))
             db.Settings.Add(new Setting { Key = SettingKeys.FfmpegPath, Value = JsonSerializer.Serialize(request.FfmpegPath.Trim()) });
 
-        if (request.OnlineServices is { } online)
+        if (request.OnlineServices is { } online && privacy.ExternalServices == Application.Server.ExternalServices.All)
             db.Settings.Add(new Setting { Key = SettingKeys.OnlineServices, Value = JsonSerializer.Serialize(online, JsonSerializerOptions.Web) });
 
         db.Settings.Add(new Setting { Key = SettingKeys.RatingMode, Value = JsonSerializer.Serialize(request.RatingMode ?? Application.Listening.RatingSettings.Default, JsonSerializerOptions.Web) });

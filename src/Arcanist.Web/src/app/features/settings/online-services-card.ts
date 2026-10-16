@@ -15,6 +15,7 @@ import type {
 } from '../../graphql/generated/graphql';
 import {
   OnlineServicesQuery,
+  PrivacyQuery,
   SetAcoustIdKeyMutation,
   SetOnlineServicesMutation,
 } from '../../graphql/operations';
@@ -52,6 +53,9 @@ const SETTING_OF: Record<OnlineService, SettingKey> = {
       </div>
       @if (status(); as s) {
         <div hlmCardContent class="grid gap-4">
+          @if (restricted()) {
+            <p class="text-sm text-muted-foreground">{{ 'settings.online.restricted' | t }}</p>
+          }
           @for (service of s.services; track service.service) {
             <div class="grid gap-1 rounded-lg border p-3">
               <div class="flex items-start justify-between gap-3">
@@ -65,7 +69,7 @@ const SETTING_OF: Record<OnlineService, SettingKey> = {
                 </div>
                 <hlm-switch
                   [checked]="service.enabled"
-                  [disabled]="busy()"
+                  [disabled]="busy() || restricted()"
                   (checkedChange)="toggle(service.service, $event)"
                   [aria-label]="'settings.online.service.' + service.service + '.name' | t"
                 />
@@ -152,8 +156,12 @@ export class OnlineServicesCard implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected acoustIdKey = '';
 
+  /** The privacy choices keep the online services off. */
+  protected readonly restricted = signal(false);
+
   async ngOnInit(): Promise<void> {
     this.status.set((await this.gql.query(OnlineServicesQuery)).onlineServices);
+    this.restricted.set((await this.gql.query(PrivacyQuery)).privacy.externalServices !== 'ALL');
   }
 
   protected async toggle(service: OnlineService, enabled: boolean): Promise<void> {

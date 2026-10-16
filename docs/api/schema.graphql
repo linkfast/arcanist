@@ -108,6 +108,8 @@ type Query {
   search(query: String!, first: Int): SearchResults!
   "What the setup wizard chose, as it is now, to run it again. Administrators only."
   serverConfiguration: ServerConfiguration!
+  "No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS."
+  privacy: Privacy!
   "Whether anonymous play counts go to Ultimate Cloud's global statistics. Requires MANAGE_SETTINGS."
   anonymousStatistics: Boolean!
   "The linked Ultimate Cloud account, its plan and what it enables. Administrators only."
@@ -1264,11 +1266,23 @@ type ServerConfiguration {
   onlineServices: OnlineServicesSettings!
   shareAnonymousStatistics: Boolean!
   ffmpegPath: String
+  privacy: Privacy!
 }
 
 enum RatingMode {
   STARS
   STAR
+}
+
+type Privacy {
+  noTelemetry: Boolean!
+  externalServices: ExternalServices!
+}
+
+enum ExternalServices {
+  ALL
+  ULTIMATE_CLOUD_ONLY
+  NONE
 }
 
 type UltimateCloudStatus {
@@ -1661,6 +1675,8 @@ type Mutation {
   cancelScan(id: ID!): Boolean!
   "The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication."
   reconfigureServer(input: ReconfigureServerInput!): ServerConfiguration!
+  "Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud's extension off too). What they leave out is turned off. The music server's own services are not affected. Requires MANAGE_SETTINGS."
+  setPrivacy(input: SetPrivacyInput!): Privacy!
   "Sends anonymous play counts to Ultimate Cloud's global statistics, or stops. Requires MANAGE_SETTINGS."
   setAnonymousStatistics(enabled: Boolean!): Boolean!
   "Every server setting back to how a new server starts; libraries, users and their data stay. Administrators only, with a recent authentication."
@@ -2041,6 +2057,12 @@ input ReconfigureServerInput {
   onlineServices: SetOnlineServicesInput!
   shareAnonymousStatistics: Boolean!
   ffmpegPath: String
+  privacy: SetPrivacyInput
+}
+
+input SetPrivacyInput {
+  noTelemetry: Boolean!
+  externalServices: ExternalServices!
 }
 
 type ResetResult {

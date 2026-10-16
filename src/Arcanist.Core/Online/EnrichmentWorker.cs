@@ -32,8 +32,11 @@ public sealed class OnlineOptions
 /// <summary>The online services settings, as stored by the admin panel or the setup wizard.</summary>
 public sealed class OnlineSettings(SettingsStore store, IOptionsMonitor<OnlineOptions> options)
 {
-    public Task<OnlineServicesSettings> GetAsync(CancellationToken cancellationToken) =>
-        store.GetAsync(SettingKeys.OnlineServices, OnlineServicesSettings.None, cancellationToken);
+    public async Task<OnlineServicesSettings> GetAsync(CancellationToken cancellationToken) =>
+        (await store.GetAsync(SettingKeys.Privacy, Application.Server.PrivacySettings.Default, cancellationToken)).ExternalServices
+        == Application.Server.ExternalServices.All
+            ? await store.GetAsync(SettingKeys.OnlineServices, OnlineServicesSettings.None, cancellationToken)
+            : OnlineServicesSettings.None;
 
     public Task<string?> OwnAcoustIdKeyAsync(CancellationToken cancellationToken) =>
         store.GetAsync<string?>(SettingKeys.AcoustIdKey, null, cancellationToken);

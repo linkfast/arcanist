@@ -35,7 +35,8 @@ public sealed class ExtensionService(
     ExtensionHost host,
     ArcanistPaths paths,
     ISettingsFileWriter settings,
-    IHttpClientFactory clients)
+    IHttpClientFactory clients,
+    Server.PrivacySettings privacy)
 {
     private static readonly SemaphoreSlim Changes = new(1, 1);
 
@@ -100,6 +101,9 @@ public sealed class ExtensionService(
         var extension = Current().SingleOrDefault(e => e.Manifest.Id == id) ?? throw new ArcanistException.NotFound();
         if (settings.IsSetOutsideSettingsFile(ExtensionHost.EnabledKey(id)))
             throw new ArcanistException.Conflict(ErrorCodes.SetByEnvironment);
+        if (enabled && id == Core.Extensions.UltimateCloud.UltimateCloudExtension.Id
+                    && (await privacy.GetAsync(cancellationToken)).ExternalServices == Server.ExternalServices.None)
+            throw new ArcanistException.Conflict(ErrorCodes.ExternalServicesDisabled);
         if (enabled)
         {
             var claimed = extension.Manifest.Routes ?? [];

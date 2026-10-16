@@ -366,6 +366,53 @@ export const ServerConfigurationFields = graphql(`
       coverArtArchive
       lyrics
     }
+    privacy {
+      noTelemetry
+      externalServices
+    }
+  }
+`);
+
+export const PrivacyQuery = graphql(`
+  query Privacy {
+    privacy {
+      noTelemetry
+      externalServices
+    }
+    anonymousStatistics
+  }
+`);
+
+export const SetPrivacyMutation = graphql(`
+  mutation SetPrivacy($input: SetPrivacyInput!) {
+    setPrivacy(input: $input) {
+      noTelemetry
+      externalServices
+    }
+  }
+`);
+
+export const SetupExtrasQuery = graphql(`
+  query SetupExtras {
+    users {
+      id
+      userName
+      displayName
+      role
+    }
+    p2pStatus {
+      enabled
+      customName
+      relay
+      relayUrl
+      bandwidthKbps
+      maxStreams
+    }
+    extensions {
+      id
+      builtIn
+      enabled
+    }
   }
 `);
 
@@ -382,12 +429,6 @@ export const ReconfigureServerMutation = graphql(`
     reconfigureServer(input: $input) {
       ...ServerConfigurationFields
     }
-  }
-`);
-
-export const AnonymousStatisticsQuery = graphql(`
-  query AnonymousStatistics {
-    anonymousStatistics
   }
 `);
 

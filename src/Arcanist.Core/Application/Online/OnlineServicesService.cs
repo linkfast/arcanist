@@ -27,6 +27,9 @@ public sealed class OnlineServicesService(
     public async Task<OnlineServicesStatus> SetAsync(SetOnlineServicesInput input, CancellationToken cancellationToken)
     {
         guard.Permission(Permissions.ManageSettings);
+        if ((input.MusicBrainz || input.AcoustId || input.CoverArtArchive || input.Lyrics)
+            && (await store.GetAsync(SettingKeys.Privacy, Server.PrivacySettings.Default, cancellationToken)).ExternalServices != Server.ExternalServices.All)
+            throw new ArcanistException.Conflict(ErrorCodes.ExternalServicesDisabled);
         await store.SetAsync(SettingKeys.OnlineServices,
             new OnlineServicesSettings(input.MusicBrainz, input.AcoustId, input.CoverArtArchive, input.Lyrics), cancellationToken);
         monitor.RequestRun();

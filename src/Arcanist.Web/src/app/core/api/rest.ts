@@ -46,8 +46,11 @@ export interface SetupStatus {
   dataDirectory: string;
 }
 
-/** How users rate tracks: one to five stars, or a single star (kept as five). */
+/** How users rate tracks: one to five stars (five is a StarTrack), or the StarTrack alone (kept as five). */
 export type RatingMode = 'STARS' | 'STAR';
+
+/** Which outside services the server may use. */
+export type ExternalServicesMode = 'ALL' | 'ULTIMATE_CLOUD_ONLY' | 'NONE';
 
 export interface SetupRequest {
   database: { provider: DatabaseProvider; connectionString: string | null } | null;
@@ -58,6 +61,7 @@ export interface SetupRequest {
   ffmpegPath: string | null;
   onlineServices: OnlineServicesChoice;
   ratingMode: RatingMode;
+  privacy: { noTelemetry: boolean; externalServices: ExternalServicesMode };
   /** An mStream installation to import; each vpath goes to one of the folders of `libraries`. */
   mstream: {
     folder: string | null;

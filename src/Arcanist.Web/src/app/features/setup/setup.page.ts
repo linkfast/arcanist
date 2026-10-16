@@ -19,6 +19,7 @@ import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import {
   ApiError,
   DatabaseProvider,
+  ExternalServicesMode,
   OnlineServicesChoice,
   RatingMode,
   SetupFfmpegCheck,
@@ -42,7 +43,16 @@ import {
   ScanJobsQuery,
   ServerConfigurationQuery,
   ServerDirectoriesQuery,
+  SetupExtrasQuery,
 } from '../../graphql/operations';
+import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
+import {
+  ExtraFailure,
+  SetupExtrasDraft,
+  WIZARD_EXTENSIONS,
+  applySetupExtras,
+} from './setup-extras';
+import { SetupAddonsStep, SetupP2PStep, SetupUsersStep } from './setup-steps';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { CountPipe } from '../../shared/format';
 import {
@@ -59,9 +69,12 @@ type Step =
   | 'admin'
   | 'import'
   | 'libraries'
+  | 'users'
   | 'media'
   | 'ratings'
   | 'privacy'
+  | 'p2p'
+  | 'addons'
   | 'review'
   | 'progress';
 
@@ -95,6 +108,10 @@ const PROGRESS_MS = 1500;
     HlmInputImports,
     HlmRadioGroupImports,
     HlmSwitchImports,
+    HlmCheckboxImports,
+    SetupUsersStep,
+    SetupP2PStep,
+    SetupAddonsStep,
     HlmAlertImports,
     HlmBadgeImports,
     HlmDialogImports,
@@ -129,7 +146,18 @@ export class SetupPage implements OnInit {
   protected readonly fieldErrors = signal<Record<string, string[]>>({});
 
   protected readonly steps = computed<Step[]>(() => {
-    if (this.reconfigure) return ['welcome', 'libraries', 'media', 'ratings', 'privacy', 'review'];
+    if (this.reconfigure)
+      return [
+        'welcome',
+        'libraries',
+        'users',
+        'media',
+        'ratings',
+        'privacy',
+        'p2p',
+        'addons',
+        'review',
+      ];
     const status = this.status();
     const steps: Step[] = [
       'welcome',
@@ -137,9 +165,12 @@ export class SetupPage implements OnInit {
       'admin',
       'import',
       'libraries',
+      'users',
       'media',
       'ratings',
       'privacy',
+      'p2p',
+      'addons',
       'review',
     ];
     return status?.requiresCode ? ['code', ...steps] : steps;
@@ -160,6 +191,83 @@ export class SetupPage implements OnInit {
   ]);
   /** Running the wizard again: the libraries the server already has (changed in Libraries, not here). */
   protected readonly existingLibraries = signal<ExistingLibrary[]>([]);
+  /** Users, P2P network, extensions and player: applied once signed in, with the panel's operations. */
+  protected readonly extras = new SetupExtrasDraft();
+  protected readonly existingUsers = signal<
+    { userName: string; displayName?: string | null; role: string }[]
+  >([]);
+  /** What could not be applied at the end. */
+  protected readonly extrasFailures = signal<ExtraFailure[]>([]);
+  /** No statistics leave the server. */
+  protected noTelemetry = false;
+  protected externalServices: ExternalServicesMode = 'ALL';
+
+  /** One of the two "no outside services" options, or neither. */
+  protected setExternal(mode: Exclude<ExternalServicesMode, 'ALL'>, on: boolean): void {
+    this.externalServices = on
+      ? mode
+      : this.externalServices === mode
+        ? 'ALL'
+        : this.externalServices;
+    if (this.externalServices !== 'ALL')
+      for (const key of this.onlineServiceKeys) this.onlineServices[key] = false;
+    if (this.statisticsForced()) this.shareStatistics = 'no';
+  }
+
+  protected setNoTelemetry(on: boolean): void {
+    this.noTelemetry = on;
+    if (this.statisticsForced()) this.shareStatistics = 'no';
+  }
+
+  /** Anonymous statistics cannot be sent with these choices. */
+  protected statisticsForced(): boolean {
+    return this.noTelemetry || this.externalServices === 'NONE';
+  }
+
+  /** Libraries not visible to everyone, by name: new users see them only when given. */
+  protected restrictedLibraries(): string[] {
+    return [
+      ...this.existingLibraries()
+        .filter((l) => !l.visibleToAll)
+        .map((l) => l.name),
+      ...this.libraries()
+        .filter((l) => !l.visibleToAll && l.folders.length > 0 && l.name.trim())
+        .map((l) => l.name.trim()),
+    ];
+  }
+
+  /** The privacy choices, for the review step. */
+  protected privacySummary(): string {
+    const parts: string[] = [];
+    if (this.noTelemetry) parts.push(this.i18n.t('setup.privacy.noTelemetry'));
+    if (this.externalServices === 'NONE') parts.push(this.i18n.t('setup.privacy.noExternal'));
+    if (this.externalServices === 'ULTIMATE_CLOUD_ONLY')
+      parts.push(this.i18n.t('setup.privacy.cloudOnly'));
+    return parts.join(' · ');
+  }
+
+  /** Libraries with a folder, which the wizard will create. */
+  protected newLibraryCount(): number {
+    return this.libraries().filter((l) => l.folders.length > 0).length;
+  }
+
+  protected usersSummary(): string {
+    return this.extras
+      .users()
+      .map((u) => u.userName.trim())
+      .join(', ');
+  }
+
+  /** The P2P, extension and player choices, for the review step. */
+  protected addonsSummary(): string {
+    const parts = WIZARD_EXTENSIONS.filter((id) => this.extras.extensions[id]).map((id) =>
+      this.i18n.t('setup.addons.extensions.' + id + '.name'),
+    );
+    const urls = this.extras.extensionUrls().filter((u) => u.trim()).length;
+    if (urls) parts.push(this.i18n.t('setup.review.extensionUrls', { count: urls }));
+    if (this.extras.playerUrl.trim()) parts.push(this.i18n.t('setup.review.player'));
+    return parts.join(', ');
+  }
   protected shareStatistics: 'yes' | 'no' | null = null;
   /** Another server to bring music, users and their data from. */
   protected migrateFrom: 'none' | 'mstream' = 'none';
@@ -234,6 +342,23 @@ export class SetupPage implements OnInit {
       };
       void __typename;
       Object.assign(this.onlineServices, online);
+      this.noTelemetry = current.privacy.noTelemetry;
+      this.externalServices = current.privacy.externalServices;
+      const extras = await this.gql.query(SetupExtrasQuery);
+      this.existingUsers.set(extras.users);
+      const p2p = extras.p2pStatus;
+      this.extras.p2pEnabled = p2p.enabled;
+      this.extras.p2pName = p2p.customName ?? '';
+      this.extras.p2pRelay = p2p.relay;
+      this.extras.p2pRelayUrl = p2p.relayUrl ?? '';
+      this.extras.p2pLimits = {
+        bandwidthKbps: p2p.bandwidthKbps ?? null,
+        maxStreams: p2p.maxStreams ?? null,
+      };
+      this.extras.p2pInitial = this.extras.p2pKey();
+      for (const id of WIZARD_EXTENSIONS)
+        this.extras.extensions[id] = extras.extensions.some((e) => e.id === id && e.enabled);
+      this.extras.extensionsInitial = { ...this.extras.extensions };
       const existing = (await this.gql.query(LibrariesQuery)).libraries.filter((l) => !l.personal);
       this.existingLibraries.set(
         existing.map((l) => ({
@@ -445,6 +570,7 @@ export class SetupPage implements OnInit {
           onlineServices: { ...this.onlineServices },
           shareAnonymousStatistics: this.shareStatistics === 'yes',
           ffmpegPath: this.ffmpegPath.trim() || null,
+          privacy: { noTelemetry: this.noTelemetry, externalServices: this.externalServices },
         },
       });
       for (const library of this.libraries().filter((l) => l.folders.length > 0)) {
@@ -458,6 +584,7 @@ export class SetupPage implements OnInit {
           },
         });
       }
+      await this.applyExtras();
       toast.success(this.i18n.t('setup.reconfigured'));
       await this.router.navigateByUrl('/settings');
     } catch (error) {
@@ -500,6 +627,7 @@ export class SetupPage implements OnInit {
         ffmpegPath: this.ffmpegPath.trim() || null,
         onlineServices: { ...this.onlineServices },
         ratingMode: this.ratingMode,
+        privacy: { noTelemetry: this.noTelemetry, externalServices: this.externalServices },
         mstream:
           this.migrateFrom === 'mstream' && this.mstream.analyzed
             ? {
@@ -513,6 +641,7 @@ export class SetupPage implements OnInit {
 
       await this.setup.loadStatus();
       await this.auth.login(this.userName.trim(), this.password);
+      await this.applyExtras();
       this.importing = this.migrateFrom === 'mstream';
       if (!this.importing && !this.libraries().some((library) => library.folders.length > 0)) {
         await this.router.navigateByUrl('/libraries');
@@ -539,6 +668,24 @@ export class SetupPage implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** Users, P2P network, extensions and player, with the administrator's session; what fails is shown, not fatal. */
+  private async applyExtras(): Promise<void> {
+    const libraries = (await this.gql.query(LibrariesQuery)).libraries;
+    const failures = await applySetupExtras(
+      this.gql,
+      this.extras,
+      new Map(libraries.map((l) => [l.name, l.id])),
+    );
+    this.extrasFailures.set(failures);
+    for (const failure of failures)
+      toast.error(
+        this.i18n.t('setup.extrasFailed', {
+          what: failure.what,
+          error: this.i18n.error(failure.code),
+        }),
+      );
   }
 
   protected async openPanel(): Promise<void> {
@@ -641,7 +788,29 @@ export class SetupPage implements OnInit {
           return false;
         }
         return true;
+      case 'users': {
+        const problem = this.extras.usersProblem(
+          this.reconfigure ? (this.auth.user()?.userName ?? '') : this.userName,
+          this.existingUsers().map((u) => u.userName),
+        );
+        if (problem) {
+          this.error.set(this.i18n.t(problem));
+          return false;
+        }
+        return true;
+      }
+      case 'p2p':
+        if (
+          this.extras.p2pEnabled &&
+          this.extras.p2pRelay === 'CUSTOM' &&
+          !/^https?:\/\//.test(this.extras.p2pRelayUrl.trim())
+        ) {
+          this.error.set(this.i18n.t('setup.p2p.relayUrlRequired'));
+          return false;
+        }
+        return true;
       case 'privacy':
+        if (this.statisticsForced()) this.shareStatistics = 'no';
         if (this.shareStatistics === null) {
           this.error.set(this.i18n.t('setup.privacy.choose'));
           return false;

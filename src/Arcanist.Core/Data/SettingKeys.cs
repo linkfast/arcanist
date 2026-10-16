@@ -6,6 +6,9 @@ public static class SettingKeys
     /// <summary>Whether anonymous play counts are contributed to Ultimate Cloud's global statistics.</summary>
     public const string ShareAnonymousStatistics = "privacy.shareAnonymousStatistics";
 
+    /// <summary>No telemetry, and which outside services may be used (<c>Privacy</c>).</summary>
+    public const string Privacy = "privacy.settings";
+
     /// <summary>Default UI language for new users, as a BCP 47 tag.</summary>
     public const string DefaultLanguage = "ui.defaultLanguage";
 

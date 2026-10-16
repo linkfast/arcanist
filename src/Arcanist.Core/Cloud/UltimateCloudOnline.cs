@@ -23,9 +23,14 @@ public sealed record UltimateCloudServicesConfig(bool PersonalPlays, bool AlbumP
 /// <summary>The services of the server's account, or of a user's own (<c>user</c>).</summary>
 public sealed class UltimateCloudServicesSettings(SettingsStore settings)
 {
-    public async Task<UltimateCloudServicesConfig> GetAsync(CancellationToken cancellationToken, Guid? user = null) =>
-        await settings.GetAsync<UltimateCloudServicesConfig?>(Key(user), null, cancellationToken)
-        ?? new UltimateCloudServicesConfig(true, true, true, true);
+    /// <summary>The account's choices; until it makes them, everything on (plays and albums off with no telemetry).</summary>
+    public async Task<UltimateCloudServicesConfig> GetAsync(CancellationToken cancellationToken, Guid? user = null)
+    {
+        if (await settings.GetAsync<UltimateCloudServicesConfig?>(Key(user), null, cancellationToken) is { } chosen)
+            return chosen;
+        var quiet = (await settings.GetAsync(SettingKeys.Privacy, Application.Server.PrivacySettings.Default, cancellationToken)).NoTelemetry;
+        return new UltimateCloudServicesConfig(!quiet, !quiet, true, true);
+    }
 
     public Task SetAsync(UltimateCloudServicesConfig config, CancellationToken cancellationToken, Guid? user = null) =>
         settings.SetAsync(Key(user), config, cancellationToken);
@@ -136,7 +141,8 @@ public sealed class UltimateCloudReporter(
         if (!account.Enabled || !account.IsConfigured)
             return;
         var linked = account.Tier != CloudTier.None;
-        var anonymous = await settings.GetAsync(SettingKeys.ShareAnonymousStatistics, false, cancellationToken);
+        var anonymous = await settings.GetAsync(SettingKeys.ShareAnonymousStatistics, false, cancellationToken)
+                        && !(await settings.GetAsync(SettingKeys.Privacy, Application.Server.PrivacySettings.Default, cancellationToken)).NoTelemetry;
         var config = await services.GetAsync(cancellationToken);
         var linker = linked ? await LinkerAsync(cancellationToken) : null;
         var own = new Dictionary<Guid, UltimateCloudServicesConfig>();

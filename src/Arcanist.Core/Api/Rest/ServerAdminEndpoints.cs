@@ -30,6 +30,16 @@ public static class ServerAdminEndpoints
             .WithName("FactoryReset")
             .WithSummary("Everything back to a freshly installed server (database, settings, keys, cache; optionally players, extensions and tools); the server restarts into the setup wizard. Music folders are never touched. Administrators only, with a recent authentication.");
 
+        rest.MapGet("/settings/privacy", (PrivacyService service, CancellationToken ct) => service.StatusAsync(ct))
+            .WithTags("Settings")
+            .WithName("Privacy")
+            .WithSummary("No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS.");
+
+        rest.MapPut("/settings/privacy", (SetPrivacyInput input, PrivacyService service, CancellationToken ct) => service.SetAsync(input, ct))
+            .WithTags("Settings")
+            .WithName("SetPrivacy")
+            .WithSummary("Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud's extension off too). What they leave out is turned off. The music server's own services are not affected. Requires MANAGE_SETTINGS.");
+
         rest.MapGet("/settings/anonymous-statistics", (ServerAdminService service, CancellationToken ct) => service.AnonymousStatisticsAsync(ct))
             .WithTags("Settings")
             .WithName("AnonymousStatistics")

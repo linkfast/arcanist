@@ -141,9 +141,84 @@ export const es: Dictionary = {
     confirm: 'Confirmar',
   },
   setup: {
+    extrasFailed: 'No se pudo aplicar «{what}»: {error}',
+    users: {
+      explanation:
+        'La cuenta de administrador ya existe. Añade a quien vaya a usar este servidor: cada uno tendrá sus valoraciones, playlists y estadísticas.',
+      userName: 'Nombre de usuario',
+      displayName: 'Nombre visible',
+      password: 'Contraseña',
+      admin: 'Administrador',
+      download: 'Puede descargar',
+      libraries: 'Bibliotecas restringidas que puede escuchar',
+      add: 'Añadir un usuario',
+      later: 'Podrás añadir, cambiar o quitar usuarios cuando quieras en Usuarios.',
+      invalidName:
+        'Cada usuario necesita un nombre de 3 a 64 letras, números, puntos, guiones o guiones bajos.',
+      duplicate: 'Hay dos usuarios con el mismo nombre.',
+      shortPassword: 'Cada contraseña necesita al menos 8 caracteres.',
+    },
+    p2p: {
+      explanation:
+        'La red P2P conecta tus dispositivos y otros servidores Arcanist con este sin abrir puertos en el router, con cifrado de extremo a extremo. Está apagada salvo que la actives.',
+      enable: 'Activar la red P2P',
+      name: 'Nombre de este servidor en la red',
+      namePlaceholder: 'Arcanist de casa',
+      relay: {
+        N0: {
+          name: 'Relays públicos de n0 (recomendado)',
+          help: 'Conecta detrás de cualquier router. El tráfico sigue cifrado de extremo a extremo.',
+        },
+        CUSTOM: { name: 'Mi propio relay', help: 'Un relay de iroh que administras tú.' },
+        DIRECT: {
+          name: 'Solo conexiones directas',
+          help: 'Sin relays: algunas redes no podrán conectar.',
+        },
+      },
+      relayUrl: 'Dirección del relay',
+      relayUrlRequired: 'Escribe la dirección de tu relay (https://…).',
+      later: 'Podrás cambiarlo y emparejar dispositivos en Red P2P.',
+    },
+    addons: {
+      builtIn: 'Extensiones integradas',
+      extensions: {
+        dlna: {
+          name: 'DLNA',
+          help: 'Televisores, altavoces y apps de la red local ven y reproducen tus bibliotecas publicadas.',
+        },
+        subsonic: {
+          name: 'Subsonic',
+          help: 'Apps como Symfonium, DSub, Feishin o Amperfy, con contraseñas de aplicación.',
+        },
+        mstream: {
+          name: 'mStream',
+          help: 'Las apps de mStream se conectan como a un servidor mStream.',
+        },
+      },
+      player: 'Reproductor web',
+      playerHelp:
+        'Instala un reproductor desde la dirección de su .zip (opcional). Si ya viene uno, se usará ese.',
+      playerDefault: 'Usarlo como reproductor principal',
+      more: 'Otras extensiones',
+      addExtension: 'Añadir una extensión por dirección',
+      trust:
+        'Las extensiones y los reproductores se ejecutan con plena confianza: instala solo lo que conozcas. Las extensiones instaladas funcionan tras reiniciar el servidor.',
+    },
     stepOf: 'Paso {current} de {total}',
     finish: 'Terminar la configuración',
     steps: {
+      users: {
+        title: 'Usuarios',
+        description: 'Quién más escucha en este servidor. Puedes saltarlo.',
+      },
+      p2p: {
+        title: 'Red P2P',
+        description: 'Escuchar fuera de casa sin abrir puertos. Puedes saltarlo.',
+      },
+      addons: {
+        title: 'Extensiones y reproductores',
+        description: 'Lo que tus apps y dispositivos necesitan. Puedes saltarlo.',
+      },
       code: {
         title: 'Código de configuración',
         description: 'Estás configurando Arcanist desde otro dispositivo.',
@@ -189,8 +264,9 @@ export const es: Dictionary = {
       title: 'El asistente, de nuevo',
       description: 'Cambia lo que elegiste al instalar Arcanist.',
       intro:
-        'Repasa el idioma, añade bibliotecas, el ffmpeg, las valoraciones, los servicios en línea y las estadísticas anónimas. La base de datos, las cuentas, las bibliotecas que ya tienes y su música no cambian.',
-      afterwards: 'Al terminar se guardan estas respuestas y se crean las bibliotecas nuevas.',
+        'Repasa el idioma, las bibliotecas y usuarios nuevos, el ffmpeg, las valoraciones, la privacidad, la red P2P y las extensiones. La base de datos, las cuentas y las bibliotecas que ya tienes y su música no cambian.',
+      afterwards:
+        'Al terminar se guardan estas respuestas y se crean las bibliotecas y los usuarios nuevos.',
     },
     reconfigured: 'Configuración guardada',
     welcome: {
@@ -263,6 +339,16 @@ export const es: Dictionary = {
         'Puedes cambiarlo en Ajustes cuando quieras, sin perder nada: los StarTracks pasan a ser cinco estrellas y al revés.',
     },
     privacy: {
+      noTelemetry: 'Desactivar toda telemetría',
+      noTelemetryHelp:
+        'No se envían estadísticas anónimas, y las cuentas de Ultimate Cloud vinculadas empiezan sin enviar reproducciones (cada uno puede activarlas).',
+      noExternal: 'Desactivar todo servicio externo',
+      noExternalHelp:
+        'Ni servicios en línea ni Ultimate Cloud: su extensión se apaga. Nada sale del servidor.',
+      cloudOnly: 'Desactivar todo servicio externo excepto Ultimate Cloud',
+      cloudOnlyHelp: 'Sin MusicBrainz, AcoustID, Cover Art Archive ni LRCLib.',
+      streamingUnaffected:
+        'No afecta a los servicios del propio servidor: DLNA, Subsonic, mStream ni la red P2P.',
       explanation:
         'Arcanist puede aportar recuentos anónimos de reproducción (qué canciones se escuchan, sin datos personales ni nombres de archivo) a las estadísticas globales de la red Ultimate, que alimentan rankings y recomendaciones para todos.',
       yes: 'Sí, compartir estadísticas anónimas',
@@ -283,6 +369,17 @@ export const es: Dictionary = {
       },
     },
     review: {
+      privacy: 'Privacidad',
+      privacyDefault: 'Sin restricciones',
+      users: 'Otros usuarios',
+      noUsers: 'Ninguno',
+      p2p: 'Red P2P',
+      on: 'Activada',
+      off: 'Apagada',
+      addons: 'Extensiones',
+      noAddons: 'Ninguna',
+      extensionUrls: '{count} por dirección',
+      player: 'reproductor web',
       existing: 'ya existe',
       import: 'Importar',
       importNone: 'Nada',
@@ -301,6 +398,7 @@ export const es: Dictionary = {
         'Al terminar verás cómo Arcanist lee tu música y, si importas, cómo llegan los datos.',
     },
     progress: {
+      extrasFailed: 'Esto no se pudo aplicar; puedes hacerlo desde el panel:',
       libraries: 'Bibliotecas',
       mstream: 'Importación desde mStream',
       created: '{libraries} biblioteca(s) y {users} usuario(s) creados.',
@@ -338,6 +436,12 @@ export const es: Dictionary = {
       'Arcanist compara la huella acústica de cada canción al analizarla. Las copias evidentes se unen solas; aquí solo aparecen los casos dudosos.',
   },
   settings: {
+    privacy: {
+      title: 'Privacidad',
+      description:
+        'Qué sale de este servidor. Lo que se excluye se apaga y no se puede encender mientras siga excluido.',
+      saved: 'Privacidad guardada',
+    },
     statistics: {
       title: 'Estadísticas anónimas',
       description:
@@ -397,6 +501,7 @@ export const es: Dictionary = {
     title: 'Ajustes',
     subtitle: 'Herramientas y servicios del servidor.',
     online: {
+      restricted: 'Desactivados por la privacidad elegida (Ajustes › Privacidad).',
       title: 'Servicios en línea',
       description:
         'Completan tu biblioteca en segundo plano, a una consulta por segundo. Solo envían huellas acústicas, identificadores y nombres de artista, álbum y canción.',
@@ -1579,6 +1684,8 @@ export const es: Dictionary = {
     },
   },
   errors: {
+    external_services_disabled: 'La privacidad elegida no permite servicios externos.',
+    telemetry_disabled: 'La privacidad elegida no permite enviar estadísticas.',
     maintenance:
       'El servidor está en mantenimiento (migrando su base de datos). Inténtalo en unos minutos.',
     busy: 'Hay trabajo en curso (escaneos, organización, copias): espera a que termine.',

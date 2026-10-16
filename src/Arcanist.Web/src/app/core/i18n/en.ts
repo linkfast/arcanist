@@ -138,9 +138,81 @@ export const en: Dictionary = {
     confirm: 'Confirm',
   },
   setup: {
+    extrasFailed: 'Could not apply “{what}”: {error}',
+    users: {
+      explanation:
+        'The administrator account is there already. Add whoever will use this server: each gets their own ratings, playlists and statistics.',
+      userName: 'User name',
+      displayName: 'Display name',
+      password: 'Password',
+      admin: 'Administrator',
+      download: 'Can download',
+      libraries: 'Restricted libraries they may listen to',
+      add: 'Add a user',
+      later: 'You can add, change or remove users at any time in Users.',
+      invalidName:
+        'Each user needs a name of 3 to 64 letters, digits, dots, hyphens or underscores.',
+      duplicate: 'Two users have the same name.',
+      shortPassword: 'Each password needs at least 8 characters.',
+    },
+    p2p: {
+      explanation:
+        'The P2P network connects your devices and other Arcanist servers to this one without opening ports on the router, encrypted end to end. It stays off unless you switch it on.',
+      enable: 'Switch the P2P network on',
+      name: 'This server’s name on the network',
+      namePlaceholder: 'Home Arcanist',
+      relay: {
+        N0: {
+          name: 'n0’s public relays (recommended)',
+          help: 'Connects behind any router. Traffic stays encrypted end to end.',
+        },
+        CUSTOM: { name: 'My own relay', help: 'An iroh relay you run yourself.' },
+        DIRECT: {
+          name: 'Direct connections only',
+          help: 'No relays: some networks will not connect.',
+        },
+      },
+      relayUrl: 'Relay address',
+      relayUrlRequired: 'Type your relay’s address (https://…).',
+      later: 'You can change it and pair devices in P2P network.',
+    },
+    addons: {
+      builtIn: 'Built-in extensions',
+      extensions: {
+        dlna: {
+          name: 'DLNA',
+          help: 'TVs, speakers and apps on the local network see and play your published libraries.',
+        },
+        subsonic: {
+          name: 'Subsonic',
+          help: 'Apps such as Symfonium, DSub, Feishin or Amperfy, with app passwords.',
+        },
+        mstream: { name: 'mStream', help: 'mStream apps connect as to an mStream server.' },
+      },
+      player: 'Web player',
+      playerHelp:
+        'Install a player from its .zip address (optional). If one comes with the server, that one is used.',
+      playerDefault: 'Make it the main player',
+      more: 'Other extensions',
+      addExtension: 'Add an extension by address',
+      trust:
+        'Extensions and players run with full trust: install only what you know. Installed extensions run after the server restarts.',
+    },
     stepOf: 'Step {current} of {total}',
     finish: 'Finish setup',
     steps: {
+      users: {
+        title: 'Users',
+        description: 'Who else listens on this server. You can skip it.',
+      },
+      p2p: {
+        title: 'P2P network',
+        description: 'Listen away from home without opening ports. You can skip it.',
+      },
+      addons: {
+        title: 'Extensions and players',
+        description: 'What your apps and devices need. You can skip it.',
+      },
       code: {
         title: 'Setup code',
         description: 'You are setting up Arcanist from another device.',
@@ -180,8 +252,9 @@ export const en: Dictionary = {
       title: 'The setup wizard, again',
       description: 'Change what you chose when you installed Arcanist.',
       intro:
-        'Go over the language, add libraries, ffmpeg, ratings, online services and anonymous statistics. The database, the accounts, the libraries you already have and their music do not change.',
-      afterwards: 'When you finish, these answers are saved and the new libraries are created.',
+        'Go over the language, new libraries and users, ffmpeg, ratings, privacy, the P2P network and extensions. The database, the accounts and libraries you already have and their music do not change.',
+      afterwards:
+        'When you finish, these answers are saved and the new libraries and users are created.',
     },
     reconfigured: 'Settings saved',
     welcome: {
@@ -252,6 +325,16 @@ export const en: Dictionary = {
         'You can change it in Settings at any time without losing anything: StarTracks become five stars and back.',
     },
     privacy: {
+      noTelemetry: 'Turn off all telemetry',
+      noTelemetryHelp:
+        'No anonymous statistics are sent, and linked Ultimate Cloud accounts start without sending plays (each can turn them on).',
+      noExternal: 'Turn off every outside service',
+      noExternalHelp:
+        'No online services nor Ultimate Cloud: its extension is switched off. Nothing leaves the server.',
+      cloudOnly: 'Turn off every outside service but Ultimate Cloud',
+      cloudOnlyHelp: 'No MusicBrainz, AcoustID, Cover Art Archive or LRCLib.',
+      streamingUnaffected:
+        'The server’s own services are not affected: DLNA, Subsonic, mStream and the P2P network.',
       explanation:
         "Arcanist can contribute anonymous play counts (which songs are played, without personal data or file names) to the Ultimate network's global statistics, which power rankings and recommendations for everyone.",
       yes: 'Yes, share anonymous statistics',
@@ -275,6 +358,17 @@ export const en: Dictionary = {
       },
     },
     review: {
+      privacy: 'Privacy',
+      privacyDefault: 'No restrictions',
+      users: 'Other users',
+      noUsers: 'None',
+      p2p: 'P2P network',
+      on: 'On',
+      off: 'Off',
+      addons: 'Extensions',
+      noAddons: 'None',
+      extensionUrls: '{count} by address',
+      player: 'web player',
       existing: 'already there',
       import: 'Import',
       importNone: 'Nothing',
@@ -293,6 +387,7 @@ export const en: Dictionary = {
         'Once finished you will see Arcanist read your music and, if you import, the data arrive.',
     },
     progress: {
+      extrasFailed: 'This could not be applied; you can do it from the panel:',
       libraries: 'Libraries',
       mstream: 'Import from mStream',
       created: '{libraries} library(ies) and {users} user(s) created.',
@@ -330,6 +425,12 @@ export const en: Dictionary = {
       'Arcanist compares the acoustic fingerprint of every song when it analyzes it. Obvious copies are joined automatically; only doubtful cases show up here.',
   },
   settings: {
+    privacy: {
+      title: 'Privacy',
+      description:
+        'What leaves this server. What is left out is switched off and cannot be switched on while it stays left out.',
+      saved: 'Privacy saved',
+    },
     statistics: {
       title: 'Anonymous statistics',
       description:
@@ -388,6 +489,7 @@ export const en: Dictionary = {
     title: 'Settings',
     subtitle: 'Server tools and services.',
     online: {
+      restricted: 'Off because of the chosen privacy (Settings › Privacy).',
       title: 'Online services',
       description:
         'They complete your library in the background, one request per second. They only send acoustic fingerprints, identifiers and artist, album and song names.',
@@ -1558,6 +1660,8 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    external_services_disabled: 'The chosen privacy does not allow outside services.',
+    telemetry_disabled: 'The chosen privacy does not allow sending statistics.',
     maintenance:
       'The server is in maintenance (migrating its database). Try again in a few minutes.',
     busy: 'Work is in progress (scans, organizing, copies): wait for it to finish.',

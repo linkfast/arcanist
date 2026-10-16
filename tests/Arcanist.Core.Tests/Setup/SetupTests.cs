@@ -35,6 +35,31 @@ public sealed class SetupTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_wizard_s_privacy_limits_what_else_it_asks_for()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
+            new SetupDatabase(DatabaseProvider.Sqlite, null),
+            new SetupAdmin("admin", "correct horse battery", null),
+            [new SetupLibrary("Music", [_musicFolder])],
+            ShareAnonymousStatistics: true,
+            Language: null,
+            OnlineServices: new Core.Application.Online.OnlineServicesSettings(true, true, true, true),
+            Privacy: new Core.Application.Server.SetPrivacyInput(true, Core.Application.Server.ExternalServices.None)),
+            ArcanistFactory.Json, TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        // No statistics, no online services, and Ultimate Cloud's extension off.
+        var settings = _factory.Services.GetRequiredService<Core.Data.SettingsStore>();
+        Assert.False(await settings.GetAsync(Core.Data.SettingKeys.ShareAnonymousStatistics, true, TestContext.Current.CancellationToken));
+        Assert.Equal(Core.Application.Online.OnlineServicesSettings.None,
+            await _factory.Services.GetRequiredService<Core.Online.OnlineSettings>().GetAsync(TestContext.Current.CancellationToken));
+        Assert.False(_factory.Services.GetRequiredService<Core.Extensions.ExtensionHost>().IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id));
+        Assert.Equal(new Core.Application.Server.Privacy(true, Core.Application.Server.ExternalServices.None),
+            await _factory.Services.GetRequiredService<Core.Application.Server.PrivacySettings>().GetAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task Before_setup_the_browser_is_sent_to_the_wizard_and_apis_are_unavailable()
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

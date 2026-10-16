@@ -446,10 +446,55 @@
         }
 
         @case ('privacy') {
-          <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
-          <hlm-radio-group class="grid gap-3" name="statistics" [(ngModel)]="shareStatistics">
+          <div class="grid gap-2">
             <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="yes" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <hlm-checkbox
+                class="mt-0.5"
+                [checked]="noTelemetry"
+                (checkedChange)="setNoTelemetry($event)"
+              />
+              <span class="grid gap-0.5">
+                <span class="font-medium">{{ 'setup.privacy.noTelemetry' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.privacy.noTelemetryHelp' | t }}</span>
+              </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-checkbox
+                class="mt-0.5"
+                [checked]="externalServices === 'NONE'"
+                (checkedChange)="setExternal('NONE', $event)"
+              />
+              <span class="grid gap-0.5">
+                <span class="font-medium">{{ 'setup.privacy.noExternal' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.privacy.noExternalHelp' | t }}</span>
+              </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-checkbox
+                class="mt-0.5"
+                [checked]="externalServices === 'ULTIMATE_CLOUD_ONLY'"
+                (checkedChange)="setExternal('ULTIMATE_CLOUD_ONLY', $event)"
+              />
+              <span class="grid gap-0.5">
+                <span class="font-medium">{{ 'setup.privacy.cloudOnly' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.privacy.cloudOnlyHelp' | t }}</span>
+              </span>
+            </label>
+            <p class="text-xs text-muted-foreground">
+              {{ 'setup.privacy.streamingUnaffected' | t }}
+            </p>
+          </div>
+          <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
+          <hlm-radio-group
+            class="grid gap-3"
+            name="statistics"
+            [(ngModel)]="shareStatistics"
+            [disabled]="statisticsForced()"
+          >
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="yes" class="mt-0.5" [disabled]="statisticsForced()"
+                ><hlm-radio-indicator indicator
+              /></hlm-radio>
               <span>{{ 'setup.privacy.yes' | t }}</span>
             </label>
             <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
@@ -472,6 +517,7 @@
                 </span>
                 <hlm-switch
                   [checked]="onlineServices[key]"
+                  [disabled]="externalServices !== 'ALL'"
                   (checkedChange)="onlineServices[key] = $event"
                   [aria-label]="'setup.privacy.services.' + key + '.name' | t"
                 />
@@ -479,6 +525,23 @@
             }
           </div>
           <p class="text-xs text-muted-foreground">{{ 'setup.privacy.later' | t }}</p>
+        }
+
+        @case ('users') {
+          <app-setup-users
+            [draft]="extras"
+            [adminName]="reconfigure ? null : userName.trim()"
+            [existing]="existingUsers()"
+            [restricted]="restrictedLibraries()"
+          />
+        }
+
+        @case ('p2p') {
+          <app-setup-p2p [draft]="extras" />
+        }
+
+        @case ('addons') {
+          <app-setup-addons [draft]="extras" />
         }
 
         @case ('review') {
@@ -534,10 +597,9 @@
                       {{ 'setup.review.folders' | t: { count: library.folders.length } }}
                     </li>
                   }
-                } @empty {
-                  @if (existingLibraries().length === 0) {
-                    <li class="text-muted-foreground">{{ 'setup.review.noLibraries' | t }}</li>
-                  }
+                }
+                @if (existingLibraries().length === 0 && newLibraryCount() === 0) {
+                  <li class="text-muted-foreground">{{ 'setup.review.noLibraries' | t }}</li>
                 }
               </ul>
               <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('libraries')">
@@ -577,6 +639,34 @@
                 {{ 'common.edit' | t }}
               </button>
             </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.privacy' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{ privacySummary() || ('setup.review.privacyDefault' | t) }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.users' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{ usersSummary() || ('setup.review.noUsers' | t) }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('users')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.p2p' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{ (extras.p2pEnabled ? 'setup.review.on' : 'setup.review.off') | t }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('p2p')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
+            <dt class="text-muted-foreground">{{ 'setup.review.addons' | t }}</dt>
+            <dd class="flex items-center justify-between gap-2">
+              <span>{{ addonsSummary() || ('setup.review.noAddons' | t) }}</span>
+              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('addons')">
+                {{ 'common.edit' | t }}
+              </button>
+            </dd>
           </dl>
           <p class="text-sm text-muted-foreground">
             {{ (reconfigure ? 'setup.reconfigure.afterwards' : 'setup.review.afterwards') | t }}
@@ -584,6 +674,16 @@
         }
 
         @case ('progress') {
+          @if (extrasFailures().length > 0) {
+            <div hlmAlert variant="destructive">
+              <p hlmAlertDescription class="grid gap-1">
+                <span>{{ 'setup.progress.extrasFailed' | t }}</span>
+                @for (failure of extrasFailures(); track $index) {
+                  <span>{{ failure.what }}: {{ i18n.error(failure.code) }}</span>
+                }
+              </p>
+            </div>
+          }
           <section class="grid gap-3">
             <h2 class="text-sm font-medium">{{ 'setup.progress.libraries' | t }}</h2>
             @for (job of scanJobs(); track job.id) {

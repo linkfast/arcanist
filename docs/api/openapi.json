@@ -1319,6 +1319,56 @@
         }
       }
     },
+    "/rest/v1/settings/privacy": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS.",
+        "operationId": "Privacy",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Privacy"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud\u0027s extension off too). What they leave out is turned off. The music server\u0027s own services are not affected. Requires MANAGE_SETTINGS.",
+        "operationId": "SetPrivacy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPrivacyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Privacy"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/settings/anonymous-statistics": {
       "get": {
         "tags": [
@@ -8590,6 +8640,13 @@
           "FAILED"
         ]
       },
+      "ExternalServices": {
+        "enum": [
+          "ALL",
+          "ULTIMATE_CLOUD_ONLY",
+          "NONE"
+        ]
+      },
       "FactoryResetInput": {
         "required": [
           "removeAddons"
@@ -12127,6 +12184,21 @@
           }
         }
       },
+      "Privacy": {
+        "required": [
+          "noTelemetry",
+          "externalServices"
+        ],
+        "type": "object",
+        "properties": {
+          "noTelemetry": {
+            "type": "boolean"
+          },
+          "externalServices": {
+            "$ref": "#/components/schemas/ExternalServices"
+          }
+        }
+      },
       "RatedTrack": {
         "required": [
           "track",
@@ -12310,6 +12382,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "privacy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SetPrivacyInput"
+              }
             ]
           }
         }
@@ -12710,7 +12792,8 @@
           "ratingMode",
           "onlineServices",
           "shareAnonymousStatistics",
-          "ffmpegPath"
+          "ffmpegPath",
+          "privacy"
         ],
         "type": "object",
         "properties": {
@@ -12734,6 +12817,9 @@
               "null",
               "string"
             ]
+          },
+          "privacy": {
+            "$ref": "#/components/schemas/Privacy"
           }
         }
       },
@@ -13045,6 +13131,21 @@
           },
           "lyrics": {
             "type": "boolean"
+          }
+        }
+      },
+      "SetPrivacyInput": {
+        "required": [
+          "noTelemetry",
+          "externalServices"
+        ],
+        "type": "object",
+        "properties": {
+          "noTelemetry": {
+            "type": "boolean"
+          },
+          "externalServices": {
+            "$ref": "#/components/schemas/ExternalServices"
           }
         }
       },
@@ -13375,6 +13476,16 @@
               },
               {
                 "$ref": "#/components/schemas/SetupMstreamImport"
+              }
+            ]
+          },
+          "privacy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SetPrivacyInput"
               }
             ]
           }

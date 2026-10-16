@@ -47,10 +47,12 @@ type Documents = {
     "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.SetAnalysisEnabledDocument,
     "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.AnalysisProgressChangedDocument,
     "\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n": typeof types.FfmpegStatusFieldsFragmentDoc,
-    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n  }\n": typeof types.ServerConfigurationFieldsFragmentDoc,
+    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n": typeof types.ServerConfigurationFieldsFragmentDoc,
+    "\n  query Privacy {\n    privacy {\n      noTelemetry\n      externalServices\n    }\n    anonymousStatistics\n  }\n": typeof types.PrivacyDocument,
+    "\n  mutation SetPrivacy($input: SetPrivacyInput!) {\n    setPrivacy(input: $input) {\n      noTelemetry\n      externalServices\n    }\n  }\n": typeof types.SetPrivacyDocument,
+    "\n  query SetupExtras {\n    users {\n      id\n      userName\n      displayName\n      role\n    }\n    p2pStatus {\n      enabled\n      customName\n      relay\n      relayUrl\n      bandwidthKbps\n      maxStreams\n    }\n    extensions {\n      id\n      builtIn\n      enabled\n    }\n  }\n": typeof types.SetupExtrasDocument,
     "\n  query ServerConfiguration {\n    serverConfiguration {\n      ...ServerConfigurationFields\n    }\n  }\n": typeof types.ServerConfigurationDocument,
     "\n  mutation ReconfigureServer($input: ReconfigureServerInput!) {\n    reconfigureServer(input: $input) {\n      ...ServerConfigurationFields\n    }\n  }\n": typeof types.ReconfigureServerDocument,
-    "\n  query AnonymousStatistics {\n    anonymousStatistics\n  }\n": typeof types.AnonymousStatisticsDocument,
     "\n  mutation SetAnonymousStatistics($enabled: Boolean!) {\n    setAnonymousStatistics(enabled: $enabled)\n  }\n": typeof types.SetAnonymousStatisticsDocument,
     "\n  mutation ResetSettings {\n    resetSettings {\n      restartRequired\n    }\n  }\n": typeof types.ResetSettingsDocument,
     "\n  mutation ResetUserData {\n    resetUserData {\n      restartRequired\n    }\n  }\n": typeof types.ResetUserDataDocument,
@@ -208,10 +210,12 @@ const documents: Documents = {
     "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": types.SetAnalysisEnabledDocument,
     "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": types.AnalysisProgressChangedDocument,
     "\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n": types.FfmpegStatusFieldsFragmentDoc,
-    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n  }\n": types.ServerConfigurationFieldsFragmentDoc,
+    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n": types.ServerConfigurationFieldsFragmentDoc,
+    "\n  query Privacy {\n    privacy {\n      noTelemetry\n      externalServices\n    }\n    anonymousStatistics\n  }\n": types.PrivacyDocument,
+    "\n  mutation SetPrivacy($input: SetPrivacyInput!) {\n    setPrivacy(input: $input) {\n      noTelemetry\n      externalServices\n    }\n  }\n": types.SetPrivacyDocument,
+    "\n  query SetupExtras {\n    users {\n      id\n      userName\n      displayName\n      role\n    }\n    p2pStatus {\n      enabled\n      customName\n      relay\n      relayUrl\n      bandwidthKbps\n      maxStreams\n    }\n    extensions {\n      id\n      builtIn\n      enabled\n    }\n  }\n": types.SetupExtrasDocument,
     "\n  query ServerConfiguration {\n    serverConfiguration {\n      ...ServerConfigurationFields\n    }\n  }\n": types.ServerConfigurationDocument,
     "\n  mutation ReconfigureServer($input: ReconfigureServerInput!) {\n    reconfigureServer(input: $input) {\n      ...ServerConfigurationFields\n    }\n  }\n": types.ReconfigureServerDocument,
-    "\n  query AnonymousStatistics {\n    anonymousStatistics\n  }\n": types.AnonymousStatisticsDocument,
     "\n  mutation SetAnonymousStatistics($enabled: Boolean!) {\n    setAnonymousStatistics(enabled: $enabled)\n  }\n": types.SetAnonymousStatisticsDocument,
     "\n  mutation ResetSettings {\n    resetSettings {\n      restartRequired\n    }\n  }\n": types.ResetSettingsDocument,
     "\n  mutation ResetUserData {\n    resetUserData {\n      restartRequired\n    }\n  }\n": types.ResetUserDataDocument,
@@ -485,7 +489,19 @@ export function graphql(source: "\n  fragment FfmpegStatusFields on FfmpegStatus
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n  }\n"): (typeof documents)["\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n  }\n"];
+export function graphql(source: "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n"): (typeof documents)["\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Privacy {\n    privacy {\n      noTelemetry\n      externalServices\n    }\n    anonymousStatistics\n  }\n"): (typeof documents)["\n  query Privacy {\n    privacy {\n      noTelemetry\n      externalServices\n    }\n    anonymousStatistics\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetPrivacy($input: SetPrivacyInput!) {\n    setPrivacy(input: $input) {\n      noTelemetry\n      externalServices\n    }\n  }\n"): (typeof documents)["\n  mutation SetPrivacy($input: SetPrivacyInput!) {\n    setPrivacy(input: $input) {\n      noTelemetry\n      externalServices\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query SetupExtras {\n    users {\n      id\n      userName\n      displayName\n      role\n    }\n    p2pStatus {\n      enabled\n      customName\n      relay\n      relayUrl\n      bandwidthKbps\n      maxStreams\n    }\n    extensions {\n      id\n      builtIn\n      enabled\n    }\n  }\n"): (typeof documents)["\n  query SetupExtras {\n    users {\n      id\n      userName\n      displayName\n      role\n    }\n    p2pStatus {\n      enabled\n      customName\n      relay\n      relayUrl\n      bandwidthKbps\n      maxStreams\n    }\n    extensions {\n      id\n      builtIn\n      enabled\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -494,10 +510,6 @@ export function graphql(source: "\n  query ServerConfiguration {\n    serverConf
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation ReconfigureServer($input: ReconfigureServerInput!) {\n    reconfigureServer(input: $input) {\n      ...ServerConfigurationFields\n    }\n  }\n"): (typeof documents)["\n  mutation ReconfigureServer($input: ReconfigureServerInput!) {\n    reconfigureServer(input: $input) {\n      ...ServerConfigurationFields\n    }\n  }\n"];
-/**
- * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
- */
-export function graphql(source: "\n  query AnonymousStatistics {\n    anonymousStatistics\n  }\n"): (typeof documents)["\n  query AnonymousStatistics {\n    anonymousStatistics\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

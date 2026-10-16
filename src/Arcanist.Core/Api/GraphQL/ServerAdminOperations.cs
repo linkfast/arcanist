@@ -11,6 +11,11 @@ public sealed partial class Query
     public static Task<ServerConfiguration> ServerConfiguration([FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>
         admin.ConfigurationAsync(cancellationToken);
 
+    [Name("privacy")]
+    [Description("No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS.")]
+    public static Task<Privacy> Privacy([FromServices] PrivacyService privacy, CancellationToken cancellationToken) =>
+        privacy.StatusAsync(cancellationToken);
+
     [Name("anonymousStatistics")]
     [Description("Whether anonymous play counts go to Ultimate Cloud's global statistics. Requires MANAGE_SETTINGS.")]
     public static Task<bool> AnonymousStatistics([FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>
@@ -23,6 +28,11 @@ public sealed partial class Mutation
     [Description("The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication.")]
     public static Task<ServerConfiguration> ReconfigureServer(ReconfigureServerInput input, [FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>
         admin.ReconfigureAsync(input, cancellationToken);
+
+    [Name("setPrivacy")]
+    [Description("Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud's extension off too). What they leave out is turned off. The music server's own services are not affected. Requires MANAGE_SETTINGS.")]
+    public static Task<Privacy> SetPrivacy(SetPrivacyInput input, [FromServices] PrivacyService privacy, CancellationToken cancellationToken) =>
+        privacy.SetAsync(input, cancellationToken);
 
     [Name("setAnonymousStatistics")]
     [Description("Sends anonymous play counts to Ultimate Cloud's global statistics, or stops. Requires MANAGE_SETTINGS.")]

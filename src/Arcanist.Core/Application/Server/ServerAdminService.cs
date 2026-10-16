@@ -21,15 +21,18 @@ public sealed record ServerConfiguration(
     RatingMode RatingMode,
     OnlineServicesSettings OnlineServices,
     bool ShareAnonymousStatistics,
-    string? FfmpegPath);
+    string? FfmpegPath,
+    Privacy Privacy);
 
 /// <summary>The setup wizard's answers, run again on a server that is already set up. Libraries are added apart.</summary>
+/// <param name="Privacy">Applied first: what it leaves out stays off whatever the rest says.</param>
 public sealed record ReconfigureServerInput(
     string? DefaultLanguage,
     RatingMode RatingMode,
     SetOnlineServicesInput OnlineServices,
     bool ShareAnonymousStatistics,
-    string? FfmpegPath);
+    string? FfmpegPath,
+    SetPrivacyInput? Privacy = null);
 
 /// <param name="RemoveAddons">Also the installed players and extensions (with their data) and the downloaded tools
 /// (ffmpeg, ultimate-audio).</param>
@@ -66,7 +69,8 @@ public sealed class ServerAdminService(
             await ratings.GetAsync(cancellationToken),
             await settings.GetAsync(SettingKeys.OnlineServices, OnlineServicesSettings.None, cancellationToken),
             await settings.GetAsync(SettingKeys.ShareAnonymousStatistics, false, cancellationToken),
-            await settings.GetAsync<string?>(SettingKeys.FfmpegPath, null, cancellationToken));
+            await settings.GetAsync<string?>(SettingKeys.FfmpegPath, null, cancellationToken),
+            await services.GetRequiredService<PrivacySettings>().GetAsync(cancellationToken));
     }
 
     /// <summary>The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg.</summary>
@@ -82,8 +86,13 @@ public sealed class ServerAdminService(
 
         await settings.SetAsync(SettingKeys.DefaultLanguage, language, cancellationToken);
         await ratings.SetAsync(input.RatingMode, cancellationToken);
-        await services.GetRequiredService<OnlineServicesService>().SetAsync(input.OnlineServices, cancellationToken);
-        await settings.SetAsync(SettingKeys.ShareAnonymousStatistics, input.ShareAnonymousStatistics, cancellationToken);
+        var privacy = input.Privacy is { } chosen
+            ? await services.GetRequiredService<PrivacyService>().SetAsync(chosen, cancellationToken)
+            : await services.GetRequiredService<PrivacySettings>().GetAsync(cancellationToken);
+        await services.GetRequiredService<OnlineServicesService>().SetAsync(
+            privacy.ExternalServices == ExternalServices.All ? input.OnlineServices : new SetOnlineServicesInput(false, false, false, false), cancellationToken);
+        await settings.SetAsync(SettingKeys.ShareAnonymousStatistics,
+            input.ShareAnonymousStatistics && privacy is { NoTelemetry: false, ExternalServices: not ExternalServices.None }, cancellationToken);
         await services.GetRequiredService<Media.FfmpegService>().SetPathAsync(input.FfmpegPath, cancellationToken);
         WakeReporter();
         return await ConfigurationAsync(cancellationToken);
@@ -93,6 +102,8 @@ public sealed class ServerAdminService(
     public async Task<bool> SetAnonymousStatisticsAsync(bool enabled, CancellationToken cancellationToken)
     {
         guard.Permission(Permissions.ManageSettings);
+        if (enabled && !await services.GetRequiredService<PrivacySettings>().TelemetryAllowedAsync(cancellationToken))
+            throw new ArcanistException.Conflict(ErrorCodes.TelemetryDisabled);
         await settings.SetAsync(SettingKeys.ShareAnonymousStatistics, enabled, cancellationToken);
         WakeReporter();
         return enabled;
@@ -119,7 +130,7 @@ public sealed class ServerAdminService(
         await settings.SetAsync(SettingKeys.ShareAnonymousStatistics, false, cancellationToken);
         foreach (var key in new[]
                  {
-                     SettingKeys.AcoustIdKey, SettingKeys.DefaultLanguage, SettingKeys.AnalysisEnabled, SettingKeys.UltimateCloudServices,
+                     SettingKeys.AcoustIdKey, SettingKeys.DefaultLanguage, SettingKeys.AnalysisEnabled, SettingKeys.UltimateCloudServices, SettingKeys.Privacy,
                  })
             await db.Settings.Where(s => s.Key == key).ExecuteDeleteAsync(cancellationToken);
         await services.GetRequiredService<Media.FfmpegService>().SetPathAsync(null, cancellationToken);

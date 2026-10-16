@@ -58,6 +58,46 @@ public sealed class ServerAdminTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Privacy_turns_off_what_it_leaves_out_and_keeps_it_off()
+    {
+        await DataAsync("mutation { setOnlineServices(input: { musicBrainz: true, acoustId: true, coverArtArchive: true, lyrics: true }) { hasAcoustIdKey } }");
+        await DataAsync("mutation { setAnonymousStatistics(enabled: true) }");
+
+        // No online services: they go off and cannot be turned on; Ultimate Cloud stays.
+        var privacy = (await DataAsync("mutation { setPrivacy(input: { noTelemetry: false, externalServices: ULTIMATE_CLOUD_ONLY }) { noTelemetry externalServices } }"))
+            .GetProperty("setPrivacy");
+        Assert.Equal("ULTIMATE_CLOUD_ONLY", privacy.GetProperty("externalServices").GetString());
+        var online = (await DataAsync("query { serverConfiguration { onlineServices { musicBrainz lyrics } } }")).GetProperty("serverConfiguration").GetProperty("onlineServices");
+        Assert.False(online.GetProperty("musicBrainz").GetBoolean());
+        Assert.Equal("external_services_disabled",
+            (await _admin.GraphQLAsync("mutation { setOnlineServices(input: { musicBrainz: true, acoustId: false, coverArtArchive: false, lyrics: false }) { hasAcoustIdKey } }")).ErrorCode());
+        Assert.True(await AnonymousAsync());
+
+        // No telemetry: anonymous statistics go off and stay off; accounts start without sending plays.
+        await DataAsync("mutation { setPrivacy(input: { noTelemetry: true, externalServices: ULTIMATE_CLOUD_ONLY }) { noTelemetry } }");
+        Assert.False(await AnonymousAsync());
+        Assert.Equal("telemetry_disabled", (await _admin.GraphQLAsync("mutation { setAnonymousStatistics(enabled: true) }")).ErrorCode());
+        var services = await _factory.Services.GetRequiredService<Arcanist.Core.Cloud.UltimateCloudServicesSettings>().GetAsync(Cancel);
+        Assert.Equal((false, false, true), (services.PersonalPlays, services.AlbumPlaythroughs, services.StarTracks));
+
+        // No outside services at all: the Ultimate Cloud extension goes off and stays off.
+        await DataAsync("mutation { setPrivacy(input: { noTelemetry: false, externalServices: NONE }) { noTelemetry } }");
+        var cloud = (await DataAsync("query { extensions { id enabled } }")).GetProperty("extensions").EnumerateArray()
+            .Single(e => e.GetProperty("id").GetString() == "ultimate-cloud");
+        Assert.False(cloud.GetProperty("enabled").GetBoolean());
+        Assert.Equal("external_services_disabled",
+            (await _admin.GraphQLAsync("mutation { setExtensionEnabled(id: \"ultimate-cloud\", enabled: true) { enabled } }")).ErrorCode());
+
+        // Relaxed again: nothing turns back on by itself, but it can be.
+        await DataAsync("mutation { setPrivacy(input: { noTelemetry: false, externalServices: ALL }) { noTelemetry } }");
+        Assert.False(await AnonymousAsync());
+        await DataAsync("mutation { setExtensionEnabled(id: \"ultimate-cloud\", enabled: true) { enabled } }");
+        await DataAsync("mutation { setAnonymousStatistics(enabled: true) }");
+    }
+
+    private async Task<bool> AnonymousAsync() => (await DataAsync("query { anonymousStatistics }")).GetProperty("anonymousStatistics").GetBoolean();
+
+    [Fact]
     public async Task Resetting_settings_keeps_libraries_users_and_their_data()
     {
         var track = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items")[0].GetProperty("id").GetString();

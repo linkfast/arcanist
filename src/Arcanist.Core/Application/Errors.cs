@@ -87,6 +87,12 @@ public static class ErrorCodes
     /// <summary>The Ultimate Cloud extension is switched off.</summary>
     public const string CloudDisabled = "cloud_disabled";
 
+    /// <summary>The privacy settings keep the server from using outside services.</summary>
+    public const string ExternalServicesDisabled = "external_services_disabled";
+
+    /// <summary>The privacy settings keep statistics from leaving the server.</summary>
+    public const string TelemetryDisabled = "telemetry_disabled";
+
     /// <summary>A local library keeps its folder: it can be moved, not removed.</summary>
     public const string LastSource = "last_source";
 

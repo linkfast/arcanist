@@ -546,6 +546,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
 
+                    b.Property<string>("UploadAccount")
+                        .HasColumnType("text");
+
                     b.Property<bool>("UploadToCloud")
                         .HasColumnType("boolean");
 

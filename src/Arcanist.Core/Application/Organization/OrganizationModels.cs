@@ -51,6 +51,8 @@ public sealed record OrganizeRun(
 /// <summary>A folder whose files are imported into a library. Administrators only: it reveals server paths.</summary>
 /// <param name="LibrarySourceId">The library location imported files go to.</param>
 /// <param name="Available">Whether the folder can be read now.</param>
+/// <param name="UploadAccount">With UploadToCloud, the Ultimate Cloud account (<c>LinkedCloudAccount.id</c>) whose library
+/// receives the uploads.</param>
 public sealed record DropFolder(
     Guid Id,
     string Path,
@@ -65,12 +67,14 @@ public sealed record DropFolder(
     DropFolderKind Kind,
     bool UploadToCloud,
     DateTime CreatedAt,
-    bool Available);
+    bool Available,
+    string? UploadAccount);
 
 /// <param name="Path">Absolute folder path on the server, outside library locations. Not used for Cloud Drop.</param>
 /// <param name="Mode">What happens to imported files: they leave the folder (or Cloud Drop), or stay there.</param>
 /// <param name="Kind">A folder of the server, or the linked account's Cloud Drop (one at most). Set when the folder is created.</param>
-/// <param name="UploadToCloud">Cloud Drop only: upload each song it brings to the account's library once it is in the library and identified.</param>
+/// <param name="UploadToCloud">Cloud Drop only: upload each song it brings to an account's library once it is in the library and identified.</param>
+/// <param name="UploadAccount">The account whose library receives them (<c>ultimateCloudAccounts</c>); the linked one when null.</param>
 /// <param name="ConvertTo">Format to convert files to before importing; null keeps them as they are.</param>
 /// <param name="ConvertBitRate">kbit/s for lossy formats; null for the format's default.</param>
 /// <param name="ConvertLossy">Also convert lossy files in another format, losing some quality. Lossless files are
@@ -85,7 +89,8 @@ public sealed record DropFolderInput(
     bool ConvertLossy,
     DropFolderMode Mode = DropFolderMode.Move,
     DropFolderKind Kind = DropFolderKind.Folder,
-    bool UploadToCloud = false);
+    bool UploadToCloud = false,
+    string? UploadAccount = null);
 
 /// <summary>What was read from a dropped file.</summary>
 public sealed record ImportFileDetails(

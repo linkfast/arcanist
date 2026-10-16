@@ -11,6 +11,11 @@ public sealed partial class Query
     public static Task<UltimateCloudStatus> UltimateCloud([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
         cloud.StatusAsync(cancellationToken);
 
+    [Name("ultimateCloudAccounts")]
+    [Description("The Ultimate Cloud accounts linked to this server, for choosing where uploads go. Administrators only.")]
+    public static Task<IReadOnlyList<LinkedCloudAccount>> UltimateCloudAccounts([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
+        cloud.AccountsAsync(cancellationToken);
+
     [Name("ultimateCloudMetrics")]
     [Description("The linked account's listening statistics as Ultimate Cloud counts them. Administrators only.")]
     public static Task<UltimateCloudMetrics> UltimateCloudMetrics([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>

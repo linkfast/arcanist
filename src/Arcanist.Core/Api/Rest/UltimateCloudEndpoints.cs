@@ -40,6 +40,10 @@ public static class UltimateCloudEndpoints
             .WithSummary("Chooses which of Ultimate Cloud's online services this server takes part in: plays for the statistics and rankings, " +
                          "albums heard whole, StarTracks, the account's statistics. Administrators only, with a recent authentication.");
 
+        cloud.MapGet("/accounts", (UltimateCloudService service, CancellationToken ct) => service.AccountsAsync(ct))
+            .WithName("UltimateCloudAccounts")
+            .WithSummary("The Ultimate Cloud accounts linked to this server, for choosing where uploads go. Administrators only.");
+
         cloud.MapGet("/metrics", (UltimateCloudService service, CancellationToken ct) => service.MetricsAsync(ct))
             .WithName("UltimateCloudMetrics")
             .WithSummary("The linked account's listening statistics as Ultimate Cloud counts them. Administrators only.");

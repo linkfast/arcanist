@@ -541,6 +541,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UploadAccount")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("UploadToCloud")
                         .HasColumnType("INTEGER");
 

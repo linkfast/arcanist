@@ -58,6 +58,7 @@ import {
   MstreamImportsQuery,
   ImportQueueQuery as ImportQueue,
   LibrariesQuery,
+  UltimateCloudAccountsQuery,
   RetryImportItemMutation,
   CreateServerDirectoryMutation,
   ServerDirectoriesQuery,
@@ -87,6 +88,8 @@ interface FolderForm {
   mode: DropFolderMode;
   kind: DropFolderKind;
   uploadToCloud: boolean;
+  /** The account whose library receives the uploads. */
+  uploadAccount: string | null;
 }
 
 interface TagsForm {
@@ -147,6 +150,10 @@ const REFRESH_MS = 5000;
 export class ImportPage implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly extensions = inject(EnabledExtensions);
+  /** The Ultimate Cloud accounts linked to this server: where Cloud Drop's songs can be uploaded. */
+  protected readonly cloudAccounts = signal<
+    { id: string; name?: string | null; ownerFirstName?: string | null }[]
+  >([]);
   /** The Ultimate Cloud extension is on: without it Cloud Drop is not offered. */
   protected readonly cloudOn = computed(() => this.extensions.has('ultimate-cloud'));
 
@@ -489,6 +496,7 @@ export class ImportPage implements OnInit {
       mode: 'MOVE',
       kind: 'FOLDER',
       uploadToCloud: false,
+      uploadAccount: this.cloudAccounts()[0]?.id ?? null,
     });
   }
 
@@ -506,6 +514,7 @@ export class ImportPage implements OnInit {
       mode: folder.mode,
       kind: folder.kind,
       uploadToCloud: folder.uploadToCloud,
+      uploadAccount: folder.uploadAccount ?? this.cloudAccounts()[0]?.id ?? null,
     });
   }
 
@@ -527,6 +536,8 @@ export class ImportPage implements OnInit {
       path: form.kind === 'FOLDER' ? form.path.trim() : null,
       kind: form.kind,
       uploadToCloud: form.kind === 'ULTIMATE_CLOUD_DROP' && form.uploadToCloud,
+      uploadAccount:
+        form.kind === 'ULTIMATE_CLOUD_DROP' && form.uploadToCloud ? form.uploadAccount : null,
       librarySourceId: form.librarySourceId,
       enabled: form.enabled,
       duplicatePolicy: form.duplicatePolicy,
@@ -571,6 +582,39 @@ export class ImportPage implements OnInit {
     ]);
     this.libraries.set(libraries.libraries);
     this.folders.set(folders.dropFolders);
+    try {
+      this.cloudAccounts.set(
+        (await this.gql.query(UltimateCloudAccountsQuery)).ultimateCloudAccounts,
+      );
+    } catch {
+      this.cloudAccounts.set([]);
+    }
+  }
+
+  /** "Giancarlo's Ultimate Cloud": an account's library, as Ultimate Cloud libraries are named here. */
+  protected cloudLibraryLabel(accountId: string | null | undefined): string {
+    const account =
+      this.cloudAccounts().find((a) => a.id === accountId) ??
+      (accountId ? null : this.cloudAccounts()[0]);
+    if (!account) return this.i18n.t('import.folders.unlinkedAccount');
+    const owner = account.ownerFirstName ?? account.name;
+    return owner
+      ? this.i18n.t('cloud.libraries.LIBRARY.libraryName', { owner })
+      : this.i18n.t('import.folders.kinds.ULTIMATE_CLOUD_DROP');
+  }
+
+  /** An account a folder uploads to that is not linked any more. */
+  protected accountGone(accountId: string): boolean {
+    return !this.cloudAccounts().some((a) => a.id === accountId);
+  }
+
+  /** "Giancarlo's Cloud Drop": the linked account's. */
+  protected cloudDropLabel(): string {
+    const account = this.cloudAccounts()[0];
+    const owner = account?.ownerFirstName ?? account?.name;
+    return owner
+      ? this.i18n.t('cloud.libraries.CLOUD_DROP.libraryName', { owner })
+      : this.i18n.t('import.folders.kinds.ULTIMATE_CLOUD_DROP');
   }
 
   private async loadLibraries(): Promise<void> {

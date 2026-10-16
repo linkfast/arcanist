@@ -627,8 +627,12 @@ export const es: Dictionary = {
       disabled: 'Desactivada: necesita Ultimate Cloud, que está apagado',
       uploadToCloud: 'Subir a Ultimate Cloud lo que se identifique',
       uploadToCloudHelp:
-        'Cuando una canción traída de Cloud Drop ya está en la biblioteca e identificada (AcoustID o MusicBrainz, en Ajustes > Servicios en línea), se sube a la biblioteca de la cuenta vinculada con la descripción de Arcanist. Lo que no se identifica no se sube.',
-      uploads: 'sube lo identificado a Ultimate Cloud',
+        'Cuando una canción traída de Cloud Drop ya está en la biblioteca e identificada (AcoustID o MusicBrainz, en Ajustes > Servicios en línea), se sube a la biblioteca de Ultimate Cloud elegida, con la descripción de Arcanist. Lo que no se identifica no se sube.',
+      uploads: 'sube lo identificado a {target}',
+      uploadTarget: 'Subir a',
+      uploadTargetHelp:
+        'La biblioteca de una cuenta de Ultimate Cloud vinculada a este servidor. Si esa cuenta deja de estar vinculada, no se sube nada hasta que vuelva.',
+      unlinkedAccount: 'una cuenta que ya no está vinculada',
       kind: 'Origen',
       kinds: {
         FOLDER: 'Una carpeta del servidor',

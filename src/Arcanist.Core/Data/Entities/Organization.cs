@@ -60,6 +60,12 @@ public sealed class DropFolder : Entity
     /// </summary>
     public bool UploadToCloud { get; set; }
 
+    /// <summary>
+    /// The Ultimate Cloud account (its subject) whose library receives the uploads. Nothing is uploaded while another
+    /// account, or none, is linked; null (folders from before) means the linked one.
+    /// </summary>
+    public string? UploadAccount { get; set; }
+
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 }
 

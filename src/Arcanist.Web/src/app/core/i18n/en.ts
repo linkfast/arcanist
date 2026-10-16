@@ -621,8 +621,12 @@ export const en: Dictionary = {
       disabled: 'Disabled: needs Ultimate Cloud, which is off',
       uploadToCloud: 'Upload what gets identified to Ultimate Cloud',
       uploadToCloudHelp:
-        'Once a song brought from Cloud Drop is in the library and identified (AcoustID or MusicBrainz, in Settings > Online services), it is uploaded to the linked account’s library with Arcanist’s description. What is not identified is not uploaded.',
-      uploads: 'uploads what is identified to Ultimate Cloud',
+        'Once a song brought from Cloud Drop is in the library and identified (AcoustID or MusicBrainz, in Settings > Online services), it is uploaded to the chosen Ultimate Cloud library with Arcanist’s description. What is not identified is not uploaded.',
+      uploads: 'uploads what is identified to {target}',
+      uploadTarget: 'Upload to',
+      uploadTargetHelp:
+        'The library of an Ultimate Cloud account linked to this server. While that account is not linked, nothing is uploaded.',
+      unlinkedAccount: 'an account that is no longer linked',
       kind: 'Source',
       kinds: {
         FOLDER: 'A folder of the server',

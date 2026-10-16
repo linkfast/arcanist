@@ -23,6 +23,7 @@ public sealed class CloudDropWorker(
     ICapabilityService capabilities,
     CloudTrackDownloader downloader,
     CloudSyncWorker uploads,
+    UltimateCloudAuth auth,
     ImportMonitor imports,
     DatabaseMaintenance maintenance,
     IOptions<OrganizationOptions> options,
@@ -76,7 +77,23 @@ public sealed class CloudDropWorker(
         }
     }
 
+    private readonly SemaphoreSlim _run = new(1, 1);
+
+    /// <summary>One pass at a time: two at once could bring or upload the same song twice.</summary>
     internal async Task RunAsync(CancellationToken cancellationToken)
+    {
+        await _run.WaitAsync(cancellationToken);
+        try
+        {
+            await RunOnceAsync(cancellationToken);
+        }
+        finally
+        {
+            _run.Release();
+        }
+    }
+
+    private async Task RunOnceAsync(CancellationToken cancellationToken)
     {
         List<DropFolder> folders;
         await using (var db = databases.CreateDbContext())
@@ -105,6 +122,10 @@ public sealed class CloudDropWorker(
     /// <summary>Songs brought from Cloud Drop, now in the library and identified, go to the account's library.</summary>
     private async Task UploadAsync(DropFolder folder, CancellationToken cancellationToken)
     {
+        // Only to the account chosen: with another one linked, the songs wait.
+        if (folder.UploadAccount is { } account && (await auth.LinkAsync(cancellationToken))?.Subject != account)
+            return;
+
         List<CloudDropFetch> waiting;
         await using (var db = databases.CreateDbContext())
         {

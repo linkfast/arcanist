@@ -12,6 +12,12 @@ public sealed record UltimateCloudServices(bool PersonalPlays, bool SharedPlays,
 
 public sealed record UltimateCloudServicesInput(bool PersonalPlays, bool SharedPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
 
+/// <summary>An Ultimate Cloud account linked to this server, as a destination for uploads.</summary>
+/// <param name="Id">The account's id in Ultimate Cloud.</param>
+/// <param name="Name">Its user name or email.</param>
+/// <param name="OwnerFirstName">Its owner's first name, which names its library ("Ana's Ultimate Cloud").</param>
+public sealed record LinkedCloudAccount(string Id, string? Name, string? OwnerFirstName);
+
 public sealed record CloudSongRanking(string AcoustId, string? Title, string? Artist, long PlayCount);
 
 public sealed record CloudArtistRanking(string Artist, long PlayCount);

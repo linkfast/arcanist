@@ -236,6 +236,15 @@ public sealed class UltimateCloudService(
         return await CurrentAsync(cancellationToken);
     }
 
+    /// <summary>The Ultimate Cloud accounts linked to this server (one for now), for choosing where uploads go. Administrators only.</summary>
+    public async Task<IReadOnlyList<LinkedCloudAccount>> AccountsAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        if (!account.Enabled || await auth.LinkAsync(cancellationToken) is not { } link)
+            return [];
+        return [new LinkedCloudAccount(link.Subject, link.UserName ?? link.Email, link.DisplayFirstName)];
+    }
+
     /// <summary>The linked account's listening statistics, as Ultimate Cloud counts them. Administrators only.</summary>
     public async Task<UltimateCloudMetrics> MetricsAsync(CancellationToken cancellationToken)
     {

@@ -568,6 +568,7 @@ export const DropFolderFields = graphql(`
     mode
     kind
     uploadToCloud
+    uploadAccount
     createdAt
     available
   }
@@ -1531,6 +1532,16 @@ export const SetUltimateCloudServicesMutation = graphql(`
   mutation SetUltimateCloudServices($input: UltimateCloudServicesInput!) {
     setUltimateCloudServices(input: $input) {
       ...UltimateCloudStatusFields
+    }
+  }
+`);
+
+export const UltimateCloudAccountsQuery = graphql(`
+  query UltimateCloudAccounts {
+    ultimateCloudAccounts {
+      id
+      name
+      ownerFirstName
     }
   }
 `);

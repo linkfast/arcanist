@@ -52,7 +52,7 @@ public sealed class CloudDropTests : IAsyncDisposable
             .GetProperty("data").GetProperty("ultimateCloud").GetProperty("plan").ValueKind != JsonValueKind.Null, "The account was not linked");
     }
 
-    private async Task<HttpResponseMessage> AddCloudDropFolderAsync(string mode, bool uploadToCloud = false) =>
+    private async Task<HttpResponseMessage> AddCloudDropFolderAsync(string mode, bool uploadToCloud = false, string? uploadAccount = null) =>
         await _admin.PostAsJsonAsync("/rest/v1/drop-folders", new
         {
             path = (string?)null,
@@ -65,6 +65,7 @@ public sealed class CloudDropTests : IAsyncDisposable
             mode,
             kind = "ULTIMATE_CLOUD_DROP",
             uploadToCloud,
+            uploadAccount,
         }, ArcanistFactory.Json, Cancel);
 
     private List<string> Music() =>
@@ -127,7 +128,14 @@ public sealed class CloudDropTests : IAsyncDisposable
     {
         _cloud.AddDropTrack("drop-4", "Tidal", "Haze", "Low Tide", 4, AudioFixtures.Music(bpm: 110, seconds: 3, chordSeed: 4));
         await StartAsync();
-        Assert.Equal(HttpStatusCode.Created, (await AddCloudDropFolderAsync("MOVE", uploadToCloud: true)).StatusCode);
+        // Only to a linked account's library; by default, the linked one.
+        var other = await AddCloudDropFolderAsync("MOVE", uploadToCloud: true, uploadAccount: "someone-else");
+        Assert.Contains("cloud_not_linked", await other.Content.ReadAsStringAsync(Cancel));
+        var accounts = (await _admin.GraphQLAsync("query { ultimateCloudAccounts { id ownerFirstName } }")).GetProperty("data").GetProperty("ultimateCloudAccounts");
+        var added = await AddCloudDropFolderAsync("MOVE", uploadToCloud: true);
+        Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+        Assert.Equal(Assert.Single(accounts.EnumerateArray()).GetProperty("id").GetString(),
+            (await added.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("uploadAccount").GetString());
         await WaitAsync(async () => (await FetchesAsync()).Any(f => f.Upload == CloudDropUpload.Waiting), "The song was not brought");
         await _factory.WaitForScansAsync(_admin);
 

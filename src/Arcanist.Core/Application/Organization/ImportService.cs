@@ -134,6 +134,16 @@ public sealed class ImportService(
                 errors.Add("convertBitRate", ErrorCodes.InvalidFormat);
         }
 
+        string? uploadAccount = null;
+        if (folder.Kind == DropFolderKind.UltimateCloudDrop && input.UploadToCloud)
+        {
+            // The account's library that receives the uploads: one that is linked.
+            var link = await services.GetRequiredService<Core.Cloud.UltimateCloudAuth>().LinkAsync(cancellationToken);
+            uploadAccount = input.UploadAccount ?? link?.Subject;
+            if (link is null || uploadAccount != link.Subject)
+                errors.Add("uploadAccount", ErrorCodes.CloudNotLinked);
+        }
+
         errors.ThrowIfAny();
 
         folder.Path = path!;
@@ -145,6 +155,7 @@ public sealed class ImportService(
         folder.ConvertLossy = input.ConvertTo is not (null or TranscodeFormat.Flac) && input.ConvertLossy;
         folder.Mode = input.Mode;
         folder.UploadToCloud = folder.Kind == DropFolderKind.UltimateCloudDrop && input.UploadToCloud;
+        folder.UploadAccount = uploadAccount;
     }
 
     /// <summary>
@@ -280,7 +291,7 @@ public sealed class ImportService(
             ? capabilities.IsEnabled(Capabilities.Capability.UltimateCloudSource)
             : (await storages.For(LibrarySourceKind.Local).ProbeAsync(new StorageLocation(LibrarySourceKind.Local, folder.Path), cancellationToken)).IsAvailable;
         return new DropFolder(folder.Id, folder.Path, libraryId, folder.LibrarySourceId, folder.Enabled, folder.DuplicatePolicy,
-            folder.ConvertTo, folder.ConvertBitRate, folder.ConvertLossy, folder.Mode, folder.Kind, folder.UploadToCloud, folder.CreatedAt, available);
+            folder.ConvertTo, folder.ConvertBitRate, folder.ConvertLossy, folder.Mode, folder.Kind, folder.UploadToCloud, folder.CreatedAt, available, folder.UploadAccount);
     }
 
     private static ImportItem ToModel(ImportItemEntity item) => new(

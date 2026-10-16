@@ -195,7 +195,7 @@
               <li class="flex items-start justify-between gap-3 rounded-lg border p-3">
                 <div class="grid min-w-0 gap-1 text-sm">
                   @if (folder.kind === 'ULTIMATE_CLOUD_DROP') {
-                    <span class="font-medium">{{ 'import.folders.cloudDrop' | t }}</span>
+                    <span class="font-medium">{{ cloudDropLabel() }}</span>
                   } @else {
                     <span class="truncate font-mono text-xs" [title]="folder.path">{{
                       folder.path
@@ -213,7 +213,11 @@
                       · {{ 'import.folders.copies' | t }}
                     }
                     @if (folder.uploadToCloud) {
-                      · {{ 'import.folders.uploads' | t }}
+                      ·
+                      {{
+                        'import.folders.uploads'
+                          | t: { target: cloudLibraryLabel(folder.uploadAccount) }
+                      }}
                     }
                   </span>
                   <span class="flex flex-wrap gap-1">
@@ -608,6 +612,27 @@
             </label>
             <p hlmFieldDescription>{{ 'import.folders.uploadToCloudHelp' | t }}</p>
           </hlm-field>
+          @if (current.uploadToCloud) {
+            <hlm-field>
+              <label hlmFieldLabel>{{ 'import.folders.uploadTarget' | t }}</label>
+              <hlm-native-select
+                [value]="current.uploadAccount ?? ''"
+                (change)="updateForm({ uploadAccount: $any($event.target).value || null })"
+              >
+                @for (account of cloudAccounts(); track account.id) {
+                  <option hlmNativeSelectOption [value]="account.id">
+                    {{ cloudLibraryLabel(account.id) }}
+                  </option>
+                }
+                @if (current.uploadAccount && accountGone(current.uploadAccount)) {
+                  <option hlmNativeSelectOption [value]="current.uploadAccount">
+                    {{ 'import.folders.unlinkedAccount' | t }}
+                  </option>
+                }
+              </hlm-native-select>
+              <p hlmFieldDescription>{{ 'import.folders.uploadTargetHelp' | t }}</p>
+            </hlm-field>
+          }
         }
 
         <hlm-field>

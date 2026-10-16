@@ -298,7 +298,8 @@ public static class BackupServiceCollectionExtensions
         services.AddSingleton<IBackupExtra, BackupServerExtra>();
         services.AddSingleton<BackupTargets>();
         services.AddSingleton<Targets.S3BackupTargets>();
-        services.AddSingleton<Targets.PeerBackupTargets>();
+        services.AddSingleton<PeerBackupTargets>();
+        services.AddSingleton<PeerBackupStore>();
         services.AddSingleton<BackupWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<BackupWorker>());
         services.AddSingleton<BackupScheduler>();

@@ -55,8 +55,9 @@ public sealed class BackupService(
     {
         guard.Admin();
         guard.RecentAuthentication();
+        // Another server is called by its own name unless given one.
         var name = input.Name?.Trim() ?? "";
-        if (name.Length == 0)
+        if (name.Length == 0 && input.Kind != BackupDestinationKind.Peer)
             throw ArcanistException.Field("name", ErrorCodes.Required);
 
         var destination = input.Kind switch
@@ -128,6 +129,14 @@ public sealed class BackupService(
             CreatedAt = Now,
         };
     }
+
+    /// <summary>An invitation for another server to keep its backups in a folder of this one, valid 7 days.</summary>
+    public Task<Application.P2P.P2PInvitationLink> CreateInvitationAsync(CreateBackupInvitationInput input, CancellationToken cancellationToken) =>
+        services.GetRequiredService<BackupPeers>().InviteAsync(input, cancellationToken);
+
+    /// <summary>The servers that keep their backups here.</summary>
+    public Task<IReadOnlyList<BackupGuest>> GuestsAsync(CancellationToken cancellationToken) =>
+        services.GetRequiredService<BackupPeers>().GuestsAsync(cancellationToken);
 
     // ── Backups ─────────────────────────────────────────────────────────────
 

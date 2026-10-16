@@ -168,6 +168,9 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
 
     private static void ConfigureBackups(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<P2PPeer>().Property(p => p.BackupFolder).HasMaxLength(PathLength);
+        modelBuilder.Entity<P2PInvitation>().Property(i => i.BackupFolder).HasMaxLength(PathLength);
+
         modelBuilder.Entity<BackupDestination>(destination =>
         {
             destination.Property(d => d.Name).HasMaxLength(NameLength);

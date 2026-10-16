@@ -324,7 +324,7 @@ public sealed class P2PService(
         var actor = guard.Admin();
         guard.RecentAuthentication();
         var invitation = P2PLinks.Parse(link);
-        if (invitation is not { Kind: P2PPeerKind.Server })
+        if (invitation is not { Kind: P2PPeerKind.Server, Backup: false })
             throw ArcanistException.Field("link", ErrorCodes.InvitationInvalid);
 
         var config = await Settings.GetAsync(cancellationToken);
@@ -438,7 +438,10 @@ public sealed class P2PService(
         return invitation;
     }
 
-    /// <summary>Creates the peer, or renews it when the node was a peer already (paired again, or a share accepted again).</summary>
+    /// <summary>
+    /// Creates the peer, or renews it when the node was a peer already (paired again, or a share accepted again). An
+    /// invitation to keep backups only adds the backup folder to what a server had (unless its access was revoked).
+    /// </summary>
     private async Task<P2PPeer> JoinedAsync(P2PInvitation invitation, string nodeId, string name, CancellationToken cancellationToken)
     {
         var peer = await db.P2PPeers.Include(p => p.Libraries).SingleOrDefaultAsync(p => p.NodeId == nodeId, cancellationToken);
@@ -446,6 +449,26 @@ public sealed class P2PService(
         {
             db.P2PPeers.Remove(peer);
             peer = null;
+        }
+
+        if (invitation.BackupFolder is { } folder)
+        {
+            if (peer is null || peer.RevokedAt is not null)
+            {
+                if (peer is not null)
+                    db.P2PPeers.Remove(peer);
+                peer = new P2PPeer { Kind = P2PPeerKind.Server, NodeId = nodeId, Name = name, CreatedAt = Now(), Source = P2PPeerSource.Pairing };
+                db.P2PPeers.Add(peer);
+            }
+
+            peer.BackupFolder = folder;
+            peer.BackupQuotaBytes = invitation.BackupQuotaBytes;
+            invitation.UsedAt = Now();
+            invitation.PeerId = peer.Id;
+            await db.SaveChangesAsync(cancellationToken);
+            await Directory.InvalidateAsync(cancellationToken);
+            Activity.Add(P2PActivityKind.Joined, peer.Id, peer.Name, folder);
+            return peer;
         }
 
         if (peer is null)
@@ -492,13 +515,37 @@ public sealed class P2PService(
             Rules = draft.Rules,
             AccessExpiresAt = draft.AccessExpiresAt,
             LibraryIds = draft.LibraryIds,
+            BackupFolder = draft.BackupFolder,
+            BackupQuotaBytes = draft.BackupQuotaBytes,
         };
         db.P2PInvitations.Add(invitation);
         // Invitations nobody used are of no use a day after they expire.
         var stale = Now() - TimeSpan.FromDays(1);
         await db.P2PInvitations.Where(i => i.UsedAt == null && i.ExpiresAt < stale).ExecuteDeleteAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        return new P2PInvitationLink(P2PLinks.Build(draft.Kind, state.Ticket, token, config.DisplayName), invitation.ExpiresAt);
+        return new P2PInvitationLink(P2PLinks.Build(draft.Kind, state.Ticket, token, config.DisplayName, backup: draft.BackupFolder is not null),
+            invitation.ExpiresAt);
+    }
+
+    /// <summary>
+    /// An invitation for another server to keep its backups in <paramref name="folder"/> of this one (checked by the
+    /// caller), up to <paramref name="quotaBytes"/>; valid 7 days. Administrators only, with a recent authentication.
+    /// </summary>
+    internal async Task<P2PInvitationLink> CreateBackupInvitationAsync(string name, string folder, long? quotaBytes, CancellationToken cancellationToken)
+    {
+        var actor = guard.Admin();
+        guard.RecentAuthentication();
+        return await InviteAsync(new P2PInvitation
+        {
+            Kind = P2PPeerKind.Server,
+            Name = name,
+            TokenHash = "",
+            CreatedByUserId = actor.UserId,
+            CreatedAt = Now(),
+            ExpiresAt = Now() + ShareInvitationLifetime,
+            BackupFolder = folder,
+            BackupQuotaBytes = quotaBytes,
+        }, cancellationToken);
     }
 
     private async Task<List<Guid>> ValidLibrariesAsync(IReadOnlyList<Guid>? ids, ValidationErrors errors, CancellationToken cancellationToken)
@@ -605,19 +652,20 @@ public sealed class P2PService(
 }
 
 /// <summary>What an invitation link holds.</summary>
-public sealed record P2PInvitationData(P2PPeerKind Kind, NodeTicket Ticket, string Token, string Name);
+/// <param name="Backup">An invitation to keep the joining server's backups (<c>kind=backup</c>).</param>
+public sealed record P2PInvitationData(P2PPeerKind Kind, NodeTicket Ticket, string Token, string Name, bool Backup = false);
 
 /// <summary>
-/// Invitation links: <c>arcanist://p2p?kind=device|share&amp;node=…&amp;token=…&amp;name=…</c>, with the node's ticket
+/// Invitation links: <c>arcanist://p2p?kind=device|share|backup&amp;node=…&amp;token=…&amp;name=…</c>, with the node's ticket
 /// as base64url JSON. The apps read them with <c>parse_invitation</c> in the P2P library.
 /// </summary>
 public static class P2PLinks
 {
     private const string Prefix = "arcanist://p2p?";
 
-    public static string Build(P2PPeerKind kind, NodeTicket ticket, string token, string name) =>
+    public static string Build(P2PPeerKind kind, NodeTicket ticket, string token, string name, bool backup = false) =>
         Prefix + string.Join('&',
-            "kind=" + (kind == P2PPeerKind.Device ? "device" : "share"),
+            "kind=" + (kind == P2PPeerKind.Device ? "device" : backup ? "backup" : "share"),
             "node=" + P2PService.Base64Url(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(ticket, NativeP2P.Json))),
             "token=" + Uri.EscapeDataString(token),
             "name=" + Uri.EscapeDataString(name));
@@ -640,7 +688,8 @@ public static class P2PLinks
             var ticket = JsonSerializer.Deserialize<NodeTicket>(Convert.FromBase64String(padded), NativeP2P.Json);
             if (ticket is not { Id.Length: 64 })
                 return null;
-            return new P2PInvitationData(kind == "device" ? P2PPeerKind.Device : P2PPeerKind.Server, ticket, token, values.GetValueOrDefault("name") ?? "");
+            return new P2PInvitationData(kind == "device" ? P2PPeerKind.Device : P2PPeerKind.Server, ticket, token, values.GetValueOrDefault("name") ?? "",
+                Backup: kind == "backup");
         }
         catch (Exception e) when (e is FormatException or JsonException)
         {

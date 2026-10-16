@@ -1369,6 +1369,13 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<DateTime?>("AccessExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("BackupFolder")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<long?>("BackupQuotaBytes")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1438,6 +1445,13 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BackupFolder")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<long?>("BackupQuotaBytes")
+                        .HasColumnType("bigint");
 
                     b.Property<long>("BytesReceived")
                         .HasColumnType("bigint");

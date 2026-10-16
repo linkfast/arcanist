@@ -127,3 +127,14 @@ public sealed record BackupJob(
     long Bytes,
     string? ErrorCode,
     IReadOnlyList<BackupJobFailure> Failures);
+
+/// <summary>An invitation for another Arcanist server to keep its backups in a folder of this one.</summary>
+/// <param name="Name">What to call the other server.</param>
+/// <param name="Folder">The folder of this server its backups go to.</param>
+/// <param name="QuotaGb">How much they may take, in GB; no limit when null.</param>
+public sealed record CreateBackupInvitationInput(string Name, string Folder, double? QuotaGb);
+
+/// <summary>Another server that keeps its backups here.</summary>
+/// <param name="PeerId">Its peer in the P2P network (revoking it stops its backups).</param>
+/// <param name="UsedBytes">What its backups take; unknown when the folder cannot be read now.</param>
+public sealed record BackupGuest(Guid PeerId, string Name, string Folder, long? UsedBytes, long? QuotaBytes, bool Revoked, DateTime? LastSeenAt);

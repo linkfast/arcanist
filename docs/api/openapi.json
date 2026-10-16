@@ -6149,6 +6149,61 @@
         }
       }
     },
+    "/rest/v1/backups/invitations": {
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "An invitation for another Arcanist server to keep its backups in a folder of this one, valid 7 days. Needs the P2P network. Administrators only, with a recent authentication.",
+        "operationId": "CreateBackupInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBackupInvitationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/P2PInvitationLink"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/guests": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Other Arcanist servers that keep their backups here, with the space they take. Administrators only.",
+        "operationId": "BackupGuests",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupGuest"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/backups": {
       "get": {
         "tags": [
@@ -7893,6 +7948,58 @@
           }
         }
       },
+      "BackupGuest": {
+        "required": [
+          "peerId",
+          "name",
+          "folder",
+          "usedBytes",
+          "quotaBytes",
+          "revoked",
+          "lastSeenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "peerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "usedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "quotaBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "lastSeenAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "BackupJob": {
         "required": [
           "id",
@@ -8516,6 +8623,31 @@
           },
           "enabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "CreateBackupInvitationInput": {
+        "required": [
+          "name",
+          "folder",
+          "quotaGb"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "quotaGb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },

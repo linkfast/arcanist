@@ -26,6 +26,11 @@ public sealed partial class Query
     public static Task<IReadOnlyList<BackupJob>> BackupRuns([Id] Guid backupId, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
         backups.RunsAsync(backupId, cancellationToken);
 
+    [Name("backupGuests")]
+    [Description("Other Arcanist servers that keep their backups here, with the space they take. Administrators only.")]
+    public static Task<IReadOnlyList<BackupGuest>> BackupGuests([FromServices] BackupService backups, CancellationToken cancellationToken) =>
+        backups.GuestsAsync(cancellationToken);
+
     [Name("backupRun")]
     [Description("A run of a backup and how far it got. Administrators only.")]
     public static Task<BackupJob> BackupRun([Id] Guid id, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
@@ -64,6 +69,13 @@ public sealed partial class Mutation
     [Description("Removes a backup from this server; its copies in the destination stay. Administrators only, with a recent authentication.")]
     public static Task<bool> DeleteBackup([Id] Guid id, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
         backups.DeleteAsync(id, cancellationToken);
+
+    [Name("createBackupInvitation")]
+    [Description("An invitation for another Arcanist server to keep its backups in a folder of this one, valid 7 days. Needs the P2P network. " +
+                 "Administrators only, with a recent authentication.")]
+    public static Task<Application.P2P.P2PInvitationLink> CreateBackupInvitation(
+        CreateBackupInvitationInput input, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
+        backups.CreateInvitationAsync(input, cancellationToken);
 
     [Name("runBackup")]
     [Description("Runs a backup now, in the background. Administrators only.")]

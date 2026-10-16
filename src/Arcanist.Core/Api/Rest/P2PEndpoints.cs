@@ -132,6 +132,8 @@ public static class P2PEndpoints
                     : Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound))
             .WithName("PeerArtwork")
             .WithSummary("Server to server: the original image of a shared track's artwork.");
+
+        BackupEndpoints.MapPeerBackups(peer);
     }
 
     /// <summary>The server peer behind the request; the gate lets nobody else in.</summary>

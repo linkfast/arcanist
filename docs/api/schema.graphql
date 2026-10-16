@@ -11,6 +11,8 @@ type Query {
   backup(id: ID!): BackupDefinition!
   "The 20 latest runs of a backup. Administrators only."
   backupRuns(backupId: ID!): [BackupJob!]!
+  "Other Arcanist servers that keep their backups here, with the space they take. Administrators only."
+  backupGuests: [BackupGuest!]!
   "A run of a backup and how far it got. Administrators only."
   backupRun(id: ID!): BackupJob!
   "Performers and album artists with music the user can play, by name; optionally only those with music in a library. Pages of `first` items (default 50, at most 500) after the `after` cursor."
@@ -281,6 +283,16 @@ scalar Long
 type BackupJobFailure {
   path: String!
   code: String!
+}
+
+type BackupGuest {
+  peerId: ID!
+  name: String!
+  folder: String!
+  usedBytes: Long
+  quotaBytes: Long
+  revoked: Boolean!
+  lastSeenAt: DateTime
 }
 
 type ArtistPage {
@@ -1659,6 +1671,8 @@ type Mutation {
   updateBackup(id: ID!, input: UpdateBackupInput!): BackupDefinition!
   "Removes a backup from this server; its copies in the destination stay. Administrators only, with a recent authentication."
   deleteBackup(id: ID!): Boolean!
+  "An invitation for another Arcanist server to keep its backups in a folder of this one, valid 7 days. Needs the P2P network. Administrators only, with a recent authentication."
+  createBackupInvitation(input: CreateBackupInvitationInput!): P2PInvitationLink!
   "Runs a backup now, in the background. Administrators only."
   runBackup(id: ID!): BackupJob!
   "Stops a run; what it copied stays, and the next run finishes its snapshot. Administrators only."
@@ -1918,6 +1932,17 @@ input UpdateBackupInput {
   enabled: Boolean!
 }
 
+type P2PInvitationLink {
+  link: String!
+  expiresAt: DateTime!
+}
+
+input CreateBackupInvitationInput {
+  name: String!
+  folder: String!
+  quotaGb: Float
+}
+
 type DatabaseTestResult {
   success: Boolean!
   error: String
@@ -2153,11 +2178,6 @@ input P2PSettingsInput {
   name: String
   bandwidthKbps: Int
   maxStreams: Int
-}
-
-type P2PInvitationLink {
-  link: String!
-  expiresAt: DateTime!
 }
 
 input CreateDeviceInvitationInput {

@@ -1364,6 +1364,13 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<DateTime?>("AccessExpiresAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BackupFolder")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("BackupQuotaBytes")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -1433,6 +1440,13 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("BackupFolder")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("BackupQuotaBytes")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("BytesReceived")
                         .HasColumnType("INTEGER");

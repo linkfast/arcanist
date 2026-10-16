@@ -79,6 +79,12 @@ public sealed class P2PPeer : Entity
     /// <summary>Audio streams it started.</summary>
     public long Streams { get; set; }
 
+    /// <summary>For a server that keeps its backups here: the folder of this server they go to.</summary>
+    public string? BackupFolder { get; set; }
+
+    /// <summary>How much its backups may take, in bytes; null for no limit.</summary>
+    public long? BackupQuotaBytes { get; set; }
+
     public List<P2PPeerLibrary> Libraries { get; } = [];
 }
 
@@ -130,6 +136,14 @@ public sealed class P2PInvitation : Entity
 
     /// <summary>Libraries for a server, as JSON (<c>["id", …]</c>).</summary>
     public string LibraryIds { get; init; } = "[]";
+
+    /// <summary>
+    /// For an invitation to keep another server's backups (and nothing else): the folder of this server they go to.
+    /// Joining with it leaves what the server had already (shared libraries, rules) as it was.
+    /// </summary>
+    public string? BackupFolder { get; init; }
+
+    public long? BackupQuotaBytes { get; init; }
 }
 
 public enum P2PRemoteStatus

@@ -238,6 +238,13 @@ public sealed class MstreamImportTests : IAsyncDisposable
             new { server, libraries = new[] { new { vpath = "music", sourceId = sources[0].GetProperty("id").GetString() } }, importUsers = true });
         Assert.Equal(("COMPLETED", "SERVER", 1), (import.GetProperty("status").GetString(), import.GetProperty("kind").GetString(), import.GetProperty("usersCreated").GetInt32()));
 
+        // Until Anna signs in, her sign-in needs the import: it stays in the history.
+        var importId = import.GetProperty("id").GetString();
+        var inUse = await admin.DeleteAsync($"/rest/v1/mstream/imports/{importId}", Cancel);
+        Assert.Equal(HttpStatusCode.Conflict, inUse.StatusCode);
+        Assert.Contains("import_in_use", await inUse.Content.ReadAsStringAsync(Cancel));
+        Assert.Equal(0, (await admin.GraphQLAsync("mutation { clearImportHistory }")).GetProperty("data").GetProperty("clearImportHistory").GetInt32());
+
         // Anna's first sign-in asks mStream, then brings her data.
         Assert.Equal(HttpStatusCode.Unauthorized, (await _factory.CreateClient().PostAsJsonAsync("/rest/v1/auth/login",
             new { userName = "anna", password = "nope pass" }, ArcanistFactory.Json, Cancel)).StatusCode);
@@ -252,6 +259,11 @@ public sealed class MstreamImportTests : IAsyncDisposable
         Assert.Equal(5, tracks["Again"].GetProperty("rating").GetInt32());
         var report = (await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/mstream/imports", ArcanistFactory.Json, Cancel))![0];
         Assert.Equal((1, 1, 1), (report.GetProperty("playlists").GetInt32(), report.GetProperty("ratings").GetInt32(), report.GetProperty("plays").GetInt32()));
+
+        // Now nobody needs it: it can leave the history, and what it brought stays.
+        Assert.True((await admin.DeleteAsync($"/rest/v1/mstream/imports/{importId}", Cancel)).IsSuccessStatusCode);
+        Assert.Empty((await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/mstream/imports", ArcanistFactory.Json, Cancel))!);
+        Assert.Equal(5, (await TracksAsync(anna))["Again"].GetProperty("rating").GetInt32());
     }
 
     [Fact]

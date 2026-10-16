@@ -24,6 +24,16 @@ public static class MstreamImportEndpoints
             .WithName("AnalyzeMstreamServer")
             .WithSummary("Reads the libraries and users of an mStream server through its API, signing in with one of its administrators. Administrators only.");
 
+        mstream.MapDelete("/imports/{id:guid}", (Guid id, MstreamImportService service, CancellationToken ct) => service.DeleteAsync(id, ct))
+            .WithName("DeleteMstreamImport")
+            .WithSummary("Removes a finished import from mStream from the history; what it brought stays. An import from an mStream server stays " +
+                         "while some of its users have not signed in. Administrators only.");
+
+        mstream.MapPost("/import-history/clear", (MstreamImportService service, CancellationToken ct) => service.ClearHistoryAsync(ct))
+            .WithName("ClearImportHistory")
+            .WithSummary("Clears the history of migrations from mStream and DLNA servers (only finished ones, and not the mStream imports still " +
+                         "needed to sign in); returns how many went. Administrators only.");
+
         mstream.MapPost("/imports", (ImportMstreamInput input, MstreamImportService service, CancellationToken ct) => service.ImportAsync(input, ct))
             .WithName("ImportMstream")
             .WithSummary("Imports from mStream: the chosen libraries, its users (who keep their passwords) and their playlists, ratings and play counts, " +

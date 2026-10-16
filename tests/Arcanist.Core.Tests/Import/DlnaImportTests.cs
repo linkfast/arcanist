@@ -239,6 +239,7 @@ public sealed class DlnaImportTests : IAsyncDisposable
             .GetProperty("data").GetProperty("tracks").GetProperty("items").EnumerateArray().Select(t => t.GetProperty("title").GetString()).Order().ToList();
         // The untagged copy got the server's description as tags; the tagged one kept its own title.
         Assert.Equal(["Alpha", "Beta", "Known"], titles);
+
         var beta = new ATL.Track(Path.Combine(_music, "Band", "Pulse", "02 Beta.wav"));
         Assert.Equal(("Beta", "Band", "Pulse", 2), (beta.Title, beta.Artist, beta.Album, beta.TrackNumber ?? 0));
 
@@ -249,6 +250,12 @@ public sealed class DlnaImportTests : IAsyncDisposable
         Assert.Equal(2, import.GetProperty("copied").GetInt32());
         Assert.Equal(4, import.GetProperty("found").GetInt32());
         Assert.Equal(requestsBefore + 1, _server.Requested.Count(p => p.StartsWith("/media/", StringComparison.Ordinal)));
+
+        // A finished copy can leave the history; what it copied stays.
+        var cleared = await _admin.GraphQLAsync("mutation { clearImportHistory }");
+        Assert.Equal(1, cleared.GetProperty("data").GetProperty("clearImportHistory").GetInt32());
+        Assert.Equal(0, (await _admin.GraphQLAsync("query { dlnaImports { id } }")).GetProperty("data").GetProperty("dlnaImports").GetArrayLength());
+        Assert.True(File.Exists(Path.Combine(_music, "Band", "Pulse", "02 Beta.wav")));
     }
 
     [Fact]

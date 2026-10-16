@@ -109,6 +109,54 @@ public sealed class MstreamImportService(
     }
 
     /// <summary>
+    /// Removes a finished import from the history; what it brought stays. An import from an mStream server stays while
+    /// some of its users have not signed in: their first sign-in asks that server through it.
+    /// </summary>
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var import = await db.MstreamImports.SingleOrDefaultAsync(i => i.Id == id, cancellationToken) ?? throw new ArcanistException.NotFound();
+        if (import.Status is MstreamImportStatus.Waiting or MstreamImportStatus.Running)
+            throw new ArcanistException.Conflict(ErrorCodes.ImportRunning);
+        if (await InUseAsync(db, [import.Id], cancellationToken) is { Count: > 0 })
+            throw new ArcanistException.Conflict(ErrorCodes.ImportInUse);
+        db.MstreamImports.Remove(import);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>
+    /// Clears the history of migrations: every finished import from mStream (but those still needed to sign in) and
+    /// from DLNA servers. What they brought stays. Returns how many went.
+    /// </summary>
+    public async Task<int> ClearHistoryAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        return await ClearAsync(db, cancellationToken) + await DlnaImportService.ClearAsync(db, cancellationToken);
+    }
+
+    /// <summary>Removes every finished import that nobody needs any more from the history; returns how many.</summary>
+    internal static async Task<int> ClearAsync(ArcanistDbContext db, CancellationToken cancellationToken)
+    {
+        var finished = await db.MstreamImports
+            .Where(i => i.Status == MstreamImportStatus.Completed || i.Status == MstreamImportStatus.Failed)
+            .Select(i => i.Id)
+            .ToListAsync(cancellationToken);
+        var inUse = await InUseAsync(db, finished, cancellationToken);
+        var removable = finished.Where(id => !inUse.Contains(id)).ToList();
+        return await db.MstreamImports.Where(i => removable.Contains(i.Id)).ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <summary>The imports some user still signs in through (an mStream server's, until their first sign-in).</summary>
+    private static async Task<HashSet<Guid>> InUseAsync(ArcanistDbContext db, IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        var hashes = await db.Users.Where(u => u.PasswordHash.StartsWith(MstreamPasswords.ServerPrefix))
+            .Select(u => u.PasswordHash)
+            .ToListAsync(cancellationToken);
+        return hashes.Select(MstreamPasswords.ServerImport).OfType<Guid>().Where(ids.Contains).ToHashSet();
+    }
+
+    /// <summary>
     /// Adds the import to <paramref name="db"/> (not saved), with the users it creates. A folder import with users
     /// waits for the import worker, which brings their data once the scans of their libraries are over; one through
     /// the API is done: each user brings their data when they first sign in.

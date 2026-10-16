@@ -4313,6 +4313,64 @@
         }
       }
     },
+    "/rest/v1/mstream/imports/{id}": {
+      "delete": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Removes a finished import from mStream from the history; what it brought stays. An import from an mStream server stays while some of its users have not signed in. Administrators only.",
+        "operationId": "DeleteMstreamImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/mstream/import-history/clear": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Clears the history of migrations from mStream and DLNA servers (only finished ones, and not the mStream imports still needed to sign in); returns how many went. Administrators only.",
+        "operationId": "ClearImportHistory",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "pattern": "^-?(?:0|[1-9]\\d*)$",
+                  "type": [
+                    "integer",
+                    "string"
+                  ],
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/dlna": {
       "get": {
         "tags": [
@@ -6082,6 +6140,38 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DlnaImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna-import/imports/{id}": {
+      "delete": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Removes a finished copy from a media server from the history; what it copied stays. Administrators only.",
+        "operationId": "DeleteDlnaImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
                 }
               }
             }

@@ -219,6 +219,10 @@ public static class ErrorCodes
     public const string BackupFailed = "backup_failed";
     /// <summary>Only queued or running backups can be cancelled.</summary>
     public const string BackupNotActive = "backup_not_active";
+    /// <summary>An import that is still going cannot leave the history: cancel it first.</summary>
+    public const string ImportRunning = "import_running";
+    /// <summary>Users of that mStream server have not signed in yet, and their first sign-in asks that server through this import.</summary>
+    public const string ImportInUse = "import_in_use";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

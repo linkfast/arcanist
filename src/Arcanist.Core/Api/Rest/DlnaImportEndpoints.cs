@@ -34,6 +34,10 @@ public static class DlnaImportEndpoints
             .WithName("CancelDlnaImport")
             .WithSummary("Stops a copy from a media server; what was copied stays. Administrators only.");
 
+        dlna.MapDelete("/imports/{id:guid}", (Guid id, DlnaImportService service, CancellationToken ct) => service.DeleteAsync(id, ct))
+            .WithName("DeleteDlnaImport")
+            .WithSummary("Removes a finished copy from a media server from the history; what it copied stays. Administrators only.");
+
         dlna.MapPost("/imports/{id:guid}/retry", (Guid id, DlnaImportService service, CancellationToken ct) => service.RetryAsync(id, ct))
             .WithName("RetryDlnaImport")
             .WithSummary("Walks the media server again and copies what is missing. Administrators only, with a recent authentication.");

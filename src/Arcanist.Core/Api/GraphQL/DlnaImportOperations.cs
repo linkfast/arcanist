@@ -40,6 +40,11 @@ public sealed partial class Mutation
     public static Task<DlnaImportJob> CancelDlnaImport([Id] Guid id, [FromServices] DlnaImportService import, CancellationToken cancellationToken) =>
         import.CancelAsync(id, cancellationToken);
 
+    [Name("deleteDlnaImport")]
+    [Description("Removes a finished copy from a media server from the history; what it copied stays. Administrators only.")]
+    public static Task<bool> DeleteDlnaImport([Id] Guid id, [FromServices] DlnaImportService import, CancellationToken cancellationToken) =>
+        import.DeleteAsync(id, cancellationToken);
+
     [Name("retryDlnaImport")]
     [Description("Walks the media server again and copies what is missing. Administrators only, with a recent authentication.")]
     public static Task<DlnaImportJob> RetryDlnaImport([Id] Guid id, [FromServices] DlnaImportService import, CancellationToken cancellationToken) =>

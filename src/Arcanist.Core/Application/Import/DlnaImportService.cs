@@ -241,6 +241,23 @@ public sealed class DlnaImportService(
         return (await ListAsync([id], cancellationToken))[0];
     }
 
+    /// <summary>Removes a finished import from the history; what it copied stays.</summary>
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var import = await db.DlnaImports.SingleOrDefaultAsync(i => i.Id == id, cancellationToken) ?? throw new ArcanistException.NotFound();
+        if (import.Status is DlnaImportStatus.Queued or DlnaImportStatus.Listing or DlnaImportStatus.Copying)
+            throw new ArcanistException.Conflict(ErrorCodes.ImportRunning);
+        db.DlnaImports.Remove(import);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>Removes every finished import from the history; returns how many.</summary>
+    internal static Task<int> ClearAsync(ArcanistDbContext db, CancellationToken cancellationToken) =>
+        db.DlnaImports.Where(i => i.Status != DlnaImportStatus.Queued && i.Status != DlnaImportStatus.Listing && i.Status != DlnaImportStatus.Copying)
+            .ExecuteDeleteAsync(cancellationToken);
+
     private async Task<IReadOnlyList<DlnaImportJob>> ListAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         var imports = await db.DlnaImports.AsNoTracking()

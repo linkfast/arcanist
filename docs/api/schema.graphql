@@ -1798,6 +1798,8 @@ type Mutation {
   startDlnaImport(input: StartDlnaImportInput!): DlnaImportJob!
   "Stops a copy from a media server; what was copied stays. Administrators only."
   cancelDlnaImport(id: ID!): DlnaImportJob!
+  "Removes a finished copy from a media server from the history; what it copied stays. Administrators only."
+  deleteDlnaImport(id: ID!): Boolean!
   "Walks the media server again and copies what is missing. Administrators only, with a recent authentication."
   retryDlnaImport(id: ID!): DlnaImportJob!
   "Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication."
@@ -1864,6 +1866,10 @@ type Mutation {
   analyzeMstreamServer(input: MstreamServerInput!): MstreamAnalysis!
   "Imports from mStream: the chosen libraries, its users (who keep their passwords) and their playlists, ratings and play counts, which arrive once the new libraries are scanned (or, from a server, when each user first signs in). Needs a recent authentication."
   importMstream(input: ImportMstreamInput!): MstreamImportJob!
+  "Removes a finished import from mStream from the history; what it brought stays. An import from an mStream server stays while some of its users have not signed in. Administrators only."
+  deleteMstreamImport(id: ID!): Boolean!
+  "Clears the history of migrations from mStream and DLNA servers (only finished ones, and not the mStream imports still needed to sign in); returns how many went. Administrators only."
+  clearImportHistory: Int!
   "Changes how the mStream extension behaves with the mStream apps. Administrators only, with a recent authentication."
   setMstreamSettings(input: MstreamSettingsInput!): MstreamStatus!
   "A new pairing code for the mStream apps' quick connect: apps that scanned the old one are disconnected. Administrators only, with a recent authentication."

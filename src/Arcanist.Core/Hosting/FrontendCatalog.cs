@@ -68,11 +68,29 @@ public sealed partial class FrontendCatalog(
         }
     }
 
+    /// <summary>The other players that come with the server (<see cref="FrontendOptions.BundledRoot"/>).</summary>
+    public IReadOnlyList<InstalledFrontend> Bundled
+    {
+        get
+        {
+            var root = Path.GetFullPath(options.Value.BundledRoot ?? Path.Combine("wwwroot", "players"), environment.ContentRootPath);
+            if (!Directory.Exists(root))
+                return [];
+            return Directory.GetDirectories(root)
+                .Select(folder => (Folder: folder, Manifest: TryRead(folder)))
+                .Where(f => f.Manifest is { } m && m.Id == Path.GetFileName(f.Folder) && File.Exists(Path.Combine(f.Folder, m.Entry)))
+                .OrderBy(f => f.Manifest!.Id, StringComparer.Ordinal)
+                .Select(f => new InstalledFrontend(f.Manifest!, f.Folder, BuiltIn: true, File.GetLastWriteTimeUtc(Path.Combine(f.Folder, f.Manifest!.Entry))))
+                .ToList();
+        }
+    }
+
     public IReadOnlyList<InstalledFrontend> List()
     {
         var installed = new List<InstalledFrontend>();
         if (BuiltIn is { } builtIn)
             installed.Add(builtIn);
+        installed.AddRange(Bundled.Where(b => installed.All(i => i.Manifest.Id != b.Manifest.Id)));
 
         if (Directory.Exists(paths.Frontends))
         {
@@ -88,7 +106,7 @@ public sealed partial class FrontendCatalog(
 
     public InstalledFrontend? Find(string id) => List().FirstOrDefault(f => f.Manifest.Id == id);
 
-    /// <summary>The frontend served at <c>/</c>: the chosen one if still installed, else the bundled one.</summary>
+    /// <summary>The frontend served at <c>/</c>: the chosen one if still installed, else the bundled one (the main one first).</summary>
     public async Task<InstalledFrontend?> DefaultAsync(CancellationToken cancellationToken)
     {
         if (!_defaultLoaded && setup.CurrentValue.Completed && databases.IsConfigured)
@@ -97,7 +115,7 @@ public sealed partial class FrontendCatalog(
             _defaultLoaded = true;
         }
 
-        return (_defaultId is { } id ? Find(id) : null) ?? BuiltIn;
+        return (_defaultId is { } id ? Find(id) : null) ?? BuiltIn ?? Bundled.FirstOrDefault();
     }
 
     /// <summary>Back to the bundled player at <c>/</c>.</summary>
@@ -128,7 +146,7 @@ public sealed partial class FrontendCatalog(
             try
             {
                 var manifest = Validate(PackageArchive.ReadManifest<FrontendManifest>(unpacked, ManifestFile), unpacked);
-                if (BuiltIn?.Manifest.Id == manifest.Id)
+                if (BuiltIn?.Manifest.Id == manifest.Id || Bundled.Any(b => b.Manifest.Id == manifest.Id))
                     throw ArcanistException.Field("id", ErrorCodes.Duplicate);
 
                 // Swapped in by renames, so requests never see half a frontend.

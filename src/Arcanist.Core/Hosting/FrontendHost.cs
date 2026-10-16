@@ -22,6 +22,12 @@ public sealed class FrontendOptions
     /// When absent, <c>/</c> shows a page pointing to the admin panel.
     /// </summary>
     public string? PlayerRoot { get; set; }
+
+    /// <summary>
+    /// More players that come with the server, one folder each (named by its manifest's id): Webamp, for one.
+    /// Default: <c>wwwroot/players</c>. They are served like the installed ones, and cannot be uninstalled.
+    /// </summary>
+    public string? BundledRoot { get; set; }
 }
 
 /// <summary>

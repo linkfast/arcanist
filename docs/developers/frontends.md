@@ -26,7 +26,7 @@ folder usually produces).
 
 | Field | Required | Meaning |
 |---|---|---|
-| `id` | Yes | 2–64 characters: lowercase letters, digits and dashes. It names the folder and the URL `/players/<id>/`. `admin` and `player` are taken. Installing a package with an id already installed replaces that player. |
+| `id` | Yes | 2–64 characters: lowercase letters, digits and dashes. It names the folder and the URL `/players/<id>/`. `admin` and `player` are taken, and so are the ids of the players that come with the server (`webamp`). Installing a package with an id already installed replaces that player. |
 | `name`, `version` | Yes | Shown in the panel. |
 | `description`, `author`, `license`, `homepage` | No | Shown in the panel, so administrators know what they install. |
 | `minApiVersion` | No (1) | The oldest `serverInfo.apiVersion` the player works with. Servers with an older API refuse the package. |

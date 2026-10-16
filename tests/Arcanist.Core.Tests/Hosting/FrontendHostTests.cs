@@ -103,10 +103,33 @@ public sealed class FrontendHostTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/rest/v1/server-info", Cancel)).StatusCode);
     }
 
+    [Fact]
+    public async Task Players_that_come_with_the_server_are_served_and_kept()
+    {
+        var webamp = Path.Combine(_root, "bundled", "webamp");
+        Write(webamp, "index.html", "<html><head></head>webamp</html>");
+        Write(webamp, "arcanist-frontend.json", "{\"id\":\"webamp\",\"name\":\"Webamp\",\"version\":\"0.1.0\"}");
+        await using var factory = Factory(player: false);
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+
+        // Without the main player, it is the one at /.
+        Assert.Contains("webamp", await admin.GetStringAsync("/", Cancel));
+        Assert.Contains("webamp", await admin.GetStringAsync("/players/webamp/some/route", Cancel));
+        var listed = (await admin.GraphQLAsync("{ frontends { id builtIn isDefault } }")).GetProperty("data").GetProperty("frontends").EnumerateArray()
+            .Single(f => f.GetProperty("id").GetString() == "webamp");
+        Assert.True(listed.GetProperty("builtIn").GetBoolean());
+        Assert.True(listed.GetProperty("isDefault").GetBoolean());
+
+        // It cannot be uninstalled.
+        Assert.Equal("not_found", (await admin.GraphQLAsync("mutation { uninstallFrontend(id: \"webamp\") }")).ErrorCode());
+    }
+
     private ArcanistFactory Factory(bool player) => new(new Dictionary<string, string?>
     {
         ["Arcanist:Frontends:AdminRoot"] = Admin,
         ["Arcanist:Frontends:PlayerRoot"] = player ? Player : Path.Combine(_root, "no-player"),
+        ["Arcanist:Frontends:BundledRoot"] = Path.Combine(_root, "bundled"),
     });
 
     private static void Write(string directory, string name, string content)

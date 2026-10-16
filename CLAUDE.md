@@ -109,7 +109,7 @@ El proveedor se configura en `Arcanist:Database` (`Provider`: `Sqlite`/`Postgres
 **Web (Angular)**, desde `src/Arcanist.Web`:
 
 ```bash
-npm start                        # ng serve en http://localhost:4200/admin/, con proxy de /rest, /graphql (WebSocket) y /health a Core :5263
+npm start                        # ng serve en http://localhost:4200/admin/, con proxy de /rest, /graphql (WebSocket), /health y /players (los reproductores) a Core :5263
 npm run build                    # dist/arcanist-web/browser; Core lo sirve en /admin con Arcanist__Frontends__AdminRoot=<esa ruta>
 npm run codegen                  # tipos de las operaciones GraphQL desde docs/api/schema.graphql (los generados se versionan)
 npm test                         # ng test (Vitest + jsdom); usar `npx ng test --watch=false` para una sola pasada

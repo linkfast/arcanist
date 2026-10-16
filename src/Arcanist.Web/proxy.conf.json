@@ -11,5 +11,9 @@
   "/health": {
     "target": "http://localhost:5263",
     "secure": false
+  },
+  "/players": {
+    "target": "http://localhost:5263",
+    "secure": false
   }
 }

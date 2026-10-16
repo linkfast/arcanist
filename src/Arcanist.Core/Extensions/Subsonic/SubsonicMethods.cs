@@ -169,7 +169,7 @@ internal static partial class SubsonicMethods
     }
 
     /// <summary>Whether a library the user can see is being scanned, and how many files the scan has seen.</summary>
-    private static async Task<IResult> ScanStatusAsync(SubsonicCall call)
+    private static async Task<IResult> ScanStatusAsync(SubsonicCall call, bool started = false)
     {
         var db = call.Service<ArcanistDbContext>();
         var libraries = LibraryService.Visible(db, call.Access).Select(l => l.Id);
@@ -179,7 +179,7 @@ internal static partial class SubsonicMethods
         var count = active.Count > 0
             ? active.Sum()
             : await jobs.OrderByDescending(j => j.RequestedAt).Select(j => j.FilesSeen).FirstOrDefaultAsync(call.Cancellation);
-        return call.Ok(new SubsonicNode("scanStatus").Attr("scanning", active.Count > 0).Attr("count", count));
+        return call.Ok(new SubsonicNode("scanStatus").Attr("scanning", started || active.Count > 0).Attr("count", count));
     }
 
     /// <summary>Scans every library the user can see (<c>fullScan=true</c> rereads every file). Needs RUN_SCANS.</summary>
@@ -192,6 +192,7 @@ internal static partial class SubsonicMethods
         var libraries = await LibraryService.Visible(db, call.Access).Select(l => l.Id).ToListAsync(call.Cancellation);
         foreach (var library in libraries)
             await scans.StartAsync(library, full, call.Cancellation);
-        return await ScanStatusAsync(call);
+        // Just started: a small library can finish before the status is read, and apps expect "scanning" here.
+        return await ScanStatusAsync(call, started: libraries.Count > 0);
     }
 }

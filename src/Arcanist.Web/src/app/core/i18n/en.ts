@@ -2180,6 +2180,7 @@ export const en: Dictionary = {
     renderer_unreachable: 'The device does not answer: it may be off or gone from the network.',
     renderer_failed: 'The device refused the request.',
     nothing_queued: 'Arcanist has nothing queued on that device.',
+    renderer_in_use: 'Someone else is playing on that device; you can control it once they stop or their queue ends.',
     p2p_disabled: 'The P2P network is off.',
     p2p_unavailable: 'The P2P network is not available on this platform.',
     p2p_bind_failed: 'The P2P network could not open its UDP port (is another program using it?).',

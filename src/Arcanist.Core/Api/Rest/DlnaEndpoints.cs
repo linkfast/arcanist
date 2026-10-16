@@ -47,6 +47,15 @@ public static class DlnaEndpoints
             .WithName("ControlDlnaRenderer")
             .WithSummary("Plays, pauses, stops, skips or seeks on a renderer.");
 
+        dlna.MapPost("/queue", (EditDlnaQueueInput input, DlnaService service, CancellationToken ct) => service.EditQueueAsync(input, ct))
+            .WithName("EditDlnaQueue")
+            .WithSummary("Changes the queue playing on a renderer: append or insert tracks after the one playing, remove, move or jump to an entry. " +
+                         "The track playing goes on. Only who started the queue (or an administrator) while it plays.");
+
+        dlna.MapPost("/renderers/search", (DlnaService service, CancellationToken ct) => service.SearchRenderersAsync(ct))
+            .WithName("SearchDlnaRenderers")
+            .WithSummary("Asks the local network for renderers now and returns the list a few seconds later.");
+
         dlna.MapPut("/renderers/{id}/volume", (string id, SetDlnaRendererVolumeInput input, DlnaService service, CancellationToken ct) =>
                 service.SetVolumeAsync(id, input.Volume, ct))
             .WithName("SetDlnaRendererVolume")

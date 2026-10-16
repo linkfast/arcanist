@@ -310,6 +310,58 @@ public sealed class DlnaTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_queue_on_a_renderer_is_changed_by_who_started_it_and_nobody_else()
+    {
+        await _admin.PostAsJsonAsync("/rest/v1/dlna/renderers", new { url = FakeRenderer.Description }, ArcanistFactory.Json, Cancel);
+        var rendererId = (await _admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/dlna/renderers", ArcanistFactory.Json, Cancel))![0].GetProperty("id").GetString()!;
+        var tracks = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items").EnumerateArray()
+            .ToDictionary(t => t.GetProperty("title").GetString()!, t => t.GetProperty("id").GetString()!);
+        string[] Ids(params string[] titles) => titles.Select(t => tracks[t]).ToArray();
+        await _admin.PostAsJsonAsync("/rest/v1/dlna/play", new { rendererId, trackIds = Ids("Opening", "Closing") }, ArcanistFactory.Json, Cancel);
+
+        async Task<JsonElement> EditAsync(object body, HttpStatusCode expected = HttpStatusCode.OK)
+        {
+            var response = await _admin.PostAsJsonAsync("/rest/v1/dlna/queue", body, ArcanistFactory.Json, Cancel);
+            Assert.Equal(expected, response.StatusCode);
+            return await response.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        }
+        List<string> Queue(JsonElement state) => state.GetProperty("queue").EnumerateArray()
+            .Select(id => tracks.Single(t => t.Value == id.GetString()).Key).ToList();
+        string LastNext() => _renderer.Actions.Last(a => a.Action == "SetNextAVTransportURI").Arguments["NextURI"];
+
+        var appended = await EditAsync(new { rendererId, action = "APPEND", trackIds = Ids("Alone") });
+        Assert.Equal(["Opening", "Closing", "Alone"], Queue(appended));
+        Assert.True(appended.GetProperty("startedByYou").GetBoolean());
+
+        // Inserted right after the track playing: the renderer is handed the new next track.
+        var nextBefore = LastNext();
+        var inserted = await EditAsync(new { rendererId, action = "INSERT_NEXT", trackIds = Ids("Alone") });
+        Assert.Equal(["Opening", "Alone", "Closing", "Alone"], Queue(inserted));
+        Assert.NotEqual(nextBefore, LastNext());
+
+        Assert.Equal(["Opening", "Closing", "Alone", "Alone"], Queue(await EditAsync(new { rendererId, action = "MOVE", index = 1, toIndex = 3 })));
+        await EditAsync(new { rendererId, action = "REMOVE", index = 0 }, HttpStatusCode.BadRequest); // the one playing
+        Assert.Equal(["Opening", "Closing", "Alone"], Queue(await EditAsync(new { rendererId, action = "REMOVE", index = 3 })));
+
+        var jumped = await EditAsync(new { rendererId, action = "JUMP", index = 2 });
+        Assert.Equal(("Alone", 2), (jumped.GetProperty("track").GetProperty("title").GetString(), jumped.GetProperty("queueIndex").GetInt32()));
+
+        // Someone else can't take over a queue that is playing.
+        await _factory.CreateUserAsync("listener");
+        var listener = await _factory.CreateAuthenticatedClientAsync("listener");
+        var pause = await listener.PostAsJsonAsync("/rest/v1/dlna/control", new { rendererId, action = "PAUSE" }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.Conflict, pause.StatusCode);
+        Assert.Contains("renderer_in_use", await pause.Content.ReadAsStringAsync(Cancel));
+        var theirs = await listener.GetFromJsonAsync<JsonElement>($"/rest/v1/dlna/renderers/{rendererId}", ArcanistFactory.Json, Cancel);
+        Assert.False(theirs.GetProperty("startedByYou").GetBoolean());
+
+        // Searching asks the network again and lists what is known.
+        var search = await listener.PostAsync("/rest/v1/dlna/renderers/search", null, Cancel);
+        Assert.Equal(HttpStatusCode.OK, search.StatusCode);
+        Assert.Single((await search.Content.ReadFromJsonAsync<List<JsonElement>>(ArcanistFactory.Json, Cancel))!);
+    }
+
+    [Fact]
     public async Task Paused_statistics_leave_the_plays_on_renderers_out()
     {
         Assert.True((await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/dlna", ArcanistFactory.Json, Cancel)).GetProperty("recordPlays").GetBoolean());

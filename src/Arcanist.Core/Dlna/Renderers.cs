@@ -242,7 +242,8 @@ internal sealed class RendererSession(RendererDevice device, Guid userId, IReadO
     /// <summary>Who started it: their plays are recorded as the renderer plays.</summary>
     public Guid UserId { get; } = userId;
 
-    public IReadOnlyList<QueueEntry> Queue { get; } = queue;
+    /// <summary>The queue; changed only under <see cref="Lock"/> (<see cref="RendererSessions.EditAsync"/>).</summary>
+    public List<QueueEntry> Queue { get; } = [.. queue];
 
     public int Index { get; set; }
 
@@ -259,6 +260,10 @@ internal sealed class RendererSession(RendererDevice device, Guid userId, IReadO
     public int Failures { get; set; }
 
     public QueueEntry? Current => Index >= 0 && Index < Queue.Count ? Queue[Index] : null;
+
+    /// <summary>Something of this queue is on the renderer now (not stopped by the user nor run out, and not replaced there by
+    /// another app): who started it decides what plays.</summary>
+    public bool Active => !Stopped && LastState is "PLAYING" or "PAUSED_PLAYBACK" or "TRANSITIONING";
 
     public SemaphoreSlim Lock { get; } = new(1, 1);
 }
@@ -306,6 +311,44 @@ internal sealed class RendererSessions(
                 return;
             session.Index = index;
             await PlayCurrentAsync(session, cancellationToken);
+        }
+        finally
+        {
+            session.Lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Changes a queue that is playing (<paramref name="edit"/> runs under the session's lock and returns false to change nothing). The
+    /// track playing goes on; when what follows it changed, the renderer is handed the new next track.
+    /// </summary>
+    public async Task<bool> EditAsync(RendererSession session, Func<RendererSession, bool> edit, CancellationToken cancellationToken)
+    {
+        await session.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            var nextBefore = session.Index + 1 < session.Queue.Count ? session.Queue[session.Index + 1] : null;
+            if (!edit(session))
+                return false;
+            var nextAfter = session.Index + 1 < session.Queue.Count ? session.Queue[session.Index + 1] : null;
+            if (!ReferenceEquals(nextBefore, nextAfter))
+            {
+                if (nextAfter is not null)
+                    await QueueNextAsync(session, cancellationToken);
+                else if (session.NextQueued)
+                {
+                    try
+                    {
+                        await RendererControl.SetNextUriAsync(registry.Client, session.Device, "", "", cancellationToken);
+                    }
+                    catch (ArcanistException)
+                    {
+                        // A renderer that won't clear it plays the removed track: Arcanist's queue then follows the renderer.
+                    }
+                    session.NextQueued = false;
+                }
+            }
+            return true;
         }
         finally
         {

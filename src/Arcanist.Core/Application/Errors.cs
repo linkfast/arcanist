@@ -113,6 +113,8 @@ public static class ErrorCodes
     public const string RendererFailed = "renderer_failed";
     /// <summary>Arcanist has no queue on that renderer.</summary>
     public const string NothingQueued = "nothing_queued";
+    /// <summary>Another user's queue is playing on that renderer: only they (or an administrator) control it until it stops.</summary>
+    public const string RendererInUse = "renderer_in_use";
     /// <summary>The P2P network is off.</summary>
     public const string P2PDisabled = "p2p_disabled";
     /// <summary>The P2P library is missing for this platform, so the network cannot run.</summary>

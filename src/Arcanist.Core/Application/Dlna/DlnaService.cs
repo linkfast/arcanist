@@ -54,6 +54,7 @@ public enum DlnaTransportState
 /// <param name="Track">The track playing from Arcanist's queue, when the caller can see it.</param>
 /// <param name="Queue">Arcanist's queue on the renderer (empty when it plays something else).</param>
 /// <param name="Volume">0–100; null when the renderer does not say.</param>
+/// <param name="StartedByYou">The queue playing on it is the caller's: only they (or an administrator) control it while it plays.</param>
 public sealed record DlnaRendererState(
     DlnaRenderer Renderer,
     DlnaTransportState State,
@@ -62,7 +63,8 @@ public sealed record DlnaRendererState(
     int DurationMs,
     int? Volume,
     IReadOnlyList<Guid> Queue,
-    int QueueIndex);
+    int QueueIndex,
+    bool StartedByYou);
 
 /// <param name="TrackIds">The queue, in order (at most 1,000 tracks).</param>
 /// <param name="StartIndex">Where to start; the first track when null.</param>
@@ -80,6 +82,23 @@ public enum DlnaRendererAction
 }
 
 public sealed record ControlDlnaRendererInput(string RendererId, DlnaRendererAction Action, int? PositionMs);
+
+public enum DlnaQueueAction
+{
+    /// <summary><see cref="EditDlnaQueueInput.TrackIds"/> at the end.</summary>
+    Append,
+    /// <summary><see cref="EditDlnaQueueInput.TrackIds"/> right after the track playing.</summary>
+    InsertNext,
+    /// <summary>The entry at <see cref="EditDlnaQueueInput.Index"/> (not the one playing).</summary>
+    Remove,
+    /// <summary>The entry at <see cref="EditDlnaQueueInput.Index"/> to <see cref="EditDlnaQueueInput.ToIndex"/>.</summary>
+    Move,
+    /// <summary>Plays the entry at <see cref="EditDlnaQueueInput.Index"/>.</summary>
+    Jump,
+}
+
+/// <param name="TrackIds">Append and InsertNext: tracks the caller can see (the queue holds at most 1,000).</param>
+public sealed record EditDlnaQueueInput(string RendererId, DlnaQueueAction Action, IReadOnlyList<Guid>? TrackIds, int? Index, int? ToIndex);
 
 /// <summary>
 /// DLNA: the media server's settings (administrators, with a recent password for what it publishes) and "play to"
@@ -158,6 +177,81 @@ public sealed class DlnaService(
         return Enabled ? Registry.List().Select(ToModel).ToList() : [];
     }
 
+    /// <summary>Asks the local network for renderers now and returns the list a few seconds later (those that answered by then).</summary>
+    public async Task<IReadOnlyList<DlnaRenderer>> SearchRenderersAsync(CancellationToken cancellationToken)
+    {
+        guard.Authenticated();
+        RequireEnabled();
+        services.GetService<SsdpService>()?.SearchNow();
+        await Task.Delay(SearchWait, cancellationToken);
+        return Renderers();
+    }
+
+    /// <summary>How long a search waits for renderers to answer (SSDP's MX is 2 s).</summary>
+    internal static TimeSpan SearchWait { get; set; } = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// Another user's queue playing on the renderer is theirs to control: anyone else (but an administrator) gets
+    /// <see cref="ErrorCodes.RendererInUse"/> until it stops or runs out.
+    /// </summary>
+    private void RequireControl(UserAccess access, RendererSession? session)
+    {
+        if (session is { Active: true } && session.UserId != access.UserId && !access.IsAdmin)
+            throw new ArcanistException.Conflict(ErrorCodes.RendererInUse);
+    }
+
+    public async Task<DlnaRendererState> EditQueueAsync(EditDlnaQueueInput input, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var device = Find(input.RendererId);
+        var session = Sessions.Find(device.Id) ?? throw new ArcanistException.Conflict(ErrorCodes.NothingQueued);
+        RequireControl(access, session);
+
+        if (input.Action == DlnaQueueAction.Jump)
+        {
+            if (input.Index is not { } jump || jump < 0 || jump >= session.Queue.Count)
+                throw ArcanistException.Field("index", ErrorCodes.InvalidFormat);
+            await Sessions.GoToAsync(session, jump, cancellationToken);
+            return await RendererAsync(device.Id, cancellationToken);
+        }
+
+        var added = input.Action is DlnaQueueAction.Append or DlnaQueueAction.InsertNext
+            ? await BuildQueueAsync(access, device, input.TrackIds ?? [], cancellationToken)
+            : [];
+        string? error = null;
+        await Sessions.EditAsync(session, s =>
+        {
+            switch (input.Action)
+            {
+                case DlnaQueueAction.Append or DlnaQueueAction.InsertNext:
+                    if (s.Queue.Count + added.Count > MaxQueue) { error = "trackIds"; return false; }
+                    s.Queue.InsertRange(input.Action == DlnaQueueAction.Append ? s.Queue.Count : Math.Min(s.Index + 1, s.Queue.Count), added);
+                    return true;
+                case DlnaQueueAction.Remove:
+                    if (input.Index is not { } i || i < 0 || i >= s.Queue.Count || i == s.Index) { error = "index"; return false; }
+                    s.Queue.RemoveAt(i);
+                    if (i < s.Index) s.Index--;
+                    return true;
+                case DlnaQueueAction.Move:
+                    if (input.Index is not { } from || from < 0 || from >= s.Queue.Count) { error = "index"; return false; }
+                    if (input.ToIndex is not { } to || to < 0 || to >= s.Queue.Count) { error = "toIndex"; return false; }
+                    var entry = s.Queue[from];
+                    s.Queue.RemoveAt(from);
+                    s.Queue.Insert(to, entry);
+                    if (from == s.Index) s.Index = to;
+                    else if (from < s.Index && to >= s.Index) s.Index--;
+                    else if (from > s.Index && to <= s.Index) s.Index++;
+                    return true;
+                default:
+                    error = "action";
+                    return false;
+            }
+        }, cancellationToken);
+        if (error is not null)
+            throw ArcanistException.Field(error, error == "trackIds" ? ErrorCodes.TooMany : ErrorCodes.InvalidFormat);
+        return await RendererAsync(device.Id, cancellationToken);
+    }
+
     /// <summary>Adds a renderer by the URL of its description, for networks where it is not found by itself.</summary>
     public async Task<DlnaRenderer> AddRendererAsync(string url, CancellationToken cancellationToken)
     {
@@ -209,7 +303,8 @@ public sealed class DlnaService(
             status.DurationMs > 0 ? status.DurationMs : track?.DurationMs ?? 0,
             volume,
             session?.Queue.Select(e => e.TrackId).ToList() ?? [],
-            session?.Index ?? 0);
+            session?.Index ?? 0,
+            session?.UserId == access.UserId);
     }
 
     /// <summary>
@@ -220,7 +315,16 @@ public sealed class DlnaService(
     {
         var access = guard.Authenticated();
         var device = Find(input.RendererId);
-        var ids = (input.TrackIds ?? []).Take(MaxQueue + 1).ToList();
+        RequireControl(access, Sessions.Find(device.Id));
+        var queue = await BuildQueueAsync(access, device, input.TrackIds ?? [], cancellationToken);
+        await Sessions.StartAsync(device, access.UserId, queue, input.StartIndex ?? 0, cancellationToken);
+        return await RendererAsync(device.Id, cancellationToken);
+    }
+
+    /// <summary>Queue entries for the tracks the caller can see, each in the best format the renderer plays.</summary>
+    private async Task<List<QueueEntry>> BuildQueueAsync(UserAccess access, RendererDevice device, IReadOnlyList<Guid> trackIds, CancellationToken cancellationToken)
+    {
+        var ids = trackIds.Take(MaxQueue + 1).ToList();
         if (ids.Count > MaxQueue)
             throw ArcanistException.Field("trackIds", ErrorCodes.TooMany);
         var visible = await catalog.VisibleTracksAsync(access, ids.Distinct().ToList(), cancellationToken);
@@ -262,17 +366,16 @@ public sealed class DlnaService(
             ]);
             queue.Add(new QueueEntry(track.Id, url, metadata, track.DurationMs));
         }
-
-        await Sessions.StartAsync(device, access.UserId, queue, input.StartIndex ?? 0, cancellationToken);
-        return await RendererAsync(device.Id, cancellationToken);
+        return queue;
     }
 
     public async Task<DlnaRendererState> ControlAsync(ControlDlnaRendererInput input, CancellationToken cancellationToken)
     {
-        guard.Authenticated();
+        var access = guard.Authenticated();
         var device = Find(input.RendererId);
         var client = Registry.Client;
         var session = Sessions.Find(device.Id);
+        RequireControl(access, session);
         switch (input.Action)
         {
             case DlnaRendererAction.Play:
@@ -306,10 +409,11 @@ public sealed class DlnaService(
 
     public async Task<DlnaRendererState> SetVolumeAsync(string rendererId, int volume, CancellationToken cancellationToken)
     {
-        guard.Authenticated();
+        var access = guard.Authenticated();
         if (volume is < 0 or > 100)
             throw ArcanistException.Field("volume", ErrorCodes.InvalidFormat);
         var device = Find(rendererId);
+        RequireControl(access, Sessions.Find(device.Id));
         await RendererControl.SetVolumeAsync(Registry.Client, device, volume, cancellationToken);
         return await RendererAsync(device.Id, cancellationToken);
     }

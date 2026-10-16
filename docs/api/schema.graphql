@@ -813,6 +813,7 @@ type DlnaRendererState {
   volume: Int
   queue: [ID!]!
   queueIndex: Int!
+  startedByYou: Boolean!
 }
 
 enum DlnaTransportState {
@@ -1824,6 +1825,10 @@ type Mutation {
   playOnDlnaRenderer(input: PlayOnDlnaRendererInput!): DlnaRendererState!
   "Plays, pauses, stops, skips or seeks on a renderer."
   controlDlnaRenderer(input: ControlDlnaRendererInput!): DlnaRendererState!
+  "Changes the queue playing on a renderer: append or insert tracks after the one playing, remove, move or jump to an entry. The track playing goes on. Only who started the queue (or an administrator) while it plays."
+  editDlnaQueue(input: EditDlnaQueueInput!): DlnaRendererState!
+  "Asks the local network for renderers now and returns the list a few seconds later."
+  searchDlnaRenderers: [DlnaRenderer!]!
   "Sets a renderer's volume, 0–100."
   setDlnaRendererVolume(rendererId: String!, volume: Int!): DlnaRendererState!
   "Merges an open pair into keepTrackId, one of its two tracks, and returns it. Requires MANAGE_LIBRARIES."
@@ -2145,6 +2150,22 @@ enum DlnaRendererAction {
   NEXT
   PREVIOUS
   SEEK
+}
+
+input EditDlnaQueueInput {
+  rendererId: String!
+  action: DlnaQueueAction!
+  trackIds: [ID!]
+  index: Int
+  toIndex: Int
+}
+
+enum DlnaQueueAction {
+  APPEND
+  INSERT_NEXT
+  REMOVE
+  MOVE
+  JUMP
 }
 
 input CreateLibraryInput {

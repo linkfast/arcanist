@@ -2217,6 +2217,7 @@ export const es: Dictionary = {
     renderer_unreachable: 'El dispositivo no responde: puede estar apagado o fuera de la red.',
     renderer_failed: 'El dispositivo rechazó la orden.',
     nothing_queued: 'Arcanist no tiene nada en cola en ese dispositivo.',
+    renderer_in_use: 'Otra persona está reproduciendo en ese dispositivo; podrás controlarlo cuando termine o lo detenga.',
     p2p_disabled: 'La red P2P está desactivada.',
     p2p_unavailable: 'La red P2P no está disponible en esta plataforma.',
     p2p_bind_failed: 'La red P2P no pudo abrir su puerto UDP (¿lo usa otro programa?).',

@@ -4600,6 +4600,61 @@
         }
       }
     },
+    "/rest/v1/dlna/queue": {
+      "post": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Changes the queue playing on a renderer: append or insert tracks after the one playing, remove, move or jump to an entry. The track playing goes on. Only who started the queue (or an administrator) while it plays.",
+        "operationId": "EditDlnaQueue",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditDlnaQueueInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaRendererState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/dlna/renderers/search": {
+      "post": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Asks the local network for renderers now and returns the list a few seconds later.",
+        "operationId": "SearchDlnaRenderers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DlnaRenderer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/dlna/renderers/{id}/volume": {
       "put": {
         "tags": [
@@ -9705,6 +9760,15 @@
           }
         }
       },
+      "DlnaQueueAction": {
+        "enum": [
+          "APPEND",
+          "INSERT_NEXT",
+          "REMOVE",
+          "MOVE",
+          "JUMP"
+        ]
+      },
       "DlnaRenderer": {
         "required": [
           "id",
@@ -9761,7 +9825,8 @@
           "durationMs",
           "volume",
           "queue",
-          "queueIndex"
+          "queueIndex",
+          "startedByYou"
         ],
         "type": "object",
         "properties": {
@@ -9820,6 +9885,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "startedByYou": {
+            "type": "boolean"
           }
         }
       },
@@ -10160,6 +10228,52 @@
           "MERGED",
           "DISMISSED"
         ]
+      },
+      "EditDlnaQueueInput": {
+        "required": [
+          "rendererId",
+          "action",
+          "trackIds",
+          "index",
+          "toIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "rendererId": {
+            "type": "string"
+          },
+          "action": {
+            "$ref": "#/components/schemas/DlnaQueueAction"
+          },
+          "trackIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "toIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "Extension": {
         "required": [

@@ -299,18 +299,24 @@ talks to the server through a local port, with the same API. See [p2p.md](p2p.md
 When an administrator switches DLNA on, players can send music to speakers and TVs on the server's local network:
 
 - `dlnaRenderers` lists the renderers found (an administrator can add one by its description URL with
-  `addDlnaRenderer`).
+  `addDlnaRenderer`); `searchDlnaRenderers` asks the network again and returns the list a few seconds later.
 - `playOnDlnaRenderer(input: { rendererId, trackIds, startIndex })` replaces what the renderer plays with a queue of
   tracks the user can see. Arcanist picks the best format each renderer says it plays (the lossless original, then
   FLAC, LPCM and MP3), gives it the next track ahead for gapless playback when it can, and records the plays for that
   user as they end.
-- `dlnaRenderer(id)` tells what it is doing (state, position, volume, the queue and the current track); poll it every
-  second or two while showing it.
+- `dlnaRenderer(id)` tells what it is doing (state, position, volume, the queue and the current track, and
+  `startedByYou`); poll it every second or two while showing it.
+- `editDlnaQueue(input: { rendererId, action, trackIds, index, toIndex })` changes the queue while it plays: `APPEND`
+  or `INSERT_NEXT` tracks, `REMOVE` or `MOVE` an entry (not the one playing for `REMOVE`) or `JUMP` to one. The track
+  playing goes on and the renderer is handed the new next track.
 - `controlDlnaRenderer(input: { rendererId, action, positionMs })` plays, pauses, stops, skips (`NEXT`,
   `PREVIOUS`) or seeks, and `setDlnaRendererVolume(rendererId, volume)` sets the volume (0–100).
 
-Errors: `dlna_disabled`, `renderer_unreachable` (switched off or gone), `renderer_failed` (it refused) and
-`nothing_queued` (skipping without an Arcanist queue on it).
+A queue playing on a renderer belongs to who started it: while it plays, only they (or an administrator) can control
+it, change its queue or replace it; anyone else gets `renderer_in_use` until it stops or runs out.
+
+Errors: `dlna_disabled`, `renderer_unreachable` (switched off or gone), `renderer_failed` (it refused),
+`nothing_queued` (skipping without an Arcanist queue on it) and `renderer_in_use`.
 
 ## Subsonic and mStream apps
 

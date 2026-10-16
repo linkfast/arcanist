@@ -47,6 +47,16 @@ public sealed partial class Mutation
     public static Task<DlnaRendererState> ControlDlnaRenderer(ControlDlnaRendererInput input, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
         dlna.ControlAsync(input, cancellationToken);
 
+    [Name("editDlnaQueue")]
+    [Description("Changes the queue playing on a renderer: append or insert tracks after the one playing, remove, move or jump to an entry. The track playing goes on. Only who started the queue (or an administrator) while it plays.")]
+    public static Task<DlnaRendererState> EditDlnaQueue(EditDlnaQueueInput input, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
+        dlna.EditQueueAsync(input, cancellationToken);
+
+    [Name("searchDlnaRenderers")]
+    [Description("Asks the local network for renderers now and returns the list a few seconds later.")]
+    public static Task<IReadOnlyList<DlnaRenderer>> SearchDlnaRenderers([FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
+        dlna.SearchRenderersAsync(cancellationToken);
+
     [Name("setDlnaRendererVolume")]
     [Description("Sets a renderer's volume, 0–100.")]
     public static Task<DlnaRendererState> SetDlnaRendererVolume(string rendererId, int volume, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>

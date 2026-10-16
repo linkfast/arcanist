@@ -109,12 +109,16 @@ public sealed class FrontendHostTests : IAsyncLifetime
         var webamp = Path.Combine(_root, "bundled", "webamp");
         Write(webamp, "index.html", "<html><head></head>webamp</html>");
         Write(webamp, "arcanist-frontend.json", "{\"id\":\"webamp\",\"name\":\"Webamp\",\"version\":\"0.1.0\"}");
+        Write(Path.Combine(webamp, "assets"), "index-ABCD1234.js", "console.log('webamp')");
         await using var factory = Factory(player: false);
         await factory.CompleteSetupAsync();
         var admin = await factory.CreateAuthenticatedClientAsync();
 
-        // Without the main player, it is the one at /.
+        // Without the main player, it is the one at /, with its files.
         Assert.Contains("webamp", await admin.GetStringAsync("/", Cancel));
+        Assert.Contains("webamp", await admin.GetStringAsync("/assets/index-ABCD1234.js", Cancel));
+        Assert.Contains("webamp", await admin.GetStringAsync("/players/webamp/assets/index-ABCD1234.js", Cancel));
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/assets/missing.js", Cancel)).StatusCode);
         Assert.Contains("webamp", await admin.GetStringAsync("/players/webamp/some/route", Cancel));
         var listed = (await admin.GraphQLAsync("{ frontends { id builtIn isDefault } }")).GetProperty("data").GetProperty("frontends").EnumerateArray()
             .Single(f => f.GetProperty("id").GetString() == "webamp");

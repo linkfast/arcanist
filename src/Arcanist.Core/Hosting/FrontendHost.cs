@@ -81,7 +81,8 @@ public static partial class FrontendHost
                 : Serve(context, frontend, $"{PlayersPath}/{id}/", path))
             .ExcludeFromDescription();
 
-        app.MapFallback(async (HttpContext context) => await catalog.DefaultAsync(context.RequestAborted) is { } frontend
+        // With a pattern: the default fallback ({*path:nonfile}) never sees files, and the frontend's assets are files.
+        app.MapFallback("{**path}", async (HttpContext context) => await catalog.DefaultAsync(context.RequestAborted) is { } frontend
                 ? Serve(context, frontend, "/", context.Request.Path.Value)
                 : Html(context, PlaceholderPage(context.RequestServices.GetRequiredService<ServerInfoService>().Get())))
             .WithMetadata(new HttpMethodMetadata(read))

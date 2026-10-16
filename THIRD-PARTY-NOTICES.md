@@ -81,6 +81,23 @@ license. All of them are permissive or MPL-2.0:
 
 The source code of uniffi (https://github.com/mozilla/uniffi-rs) and attohttpc (https://github.com/sbstp/attohttpc) is available there, as the MPL-2.0 requires.
 
+## Players that come with the server (`wwwroot/players`)
+
+Webamp for Arcanist ([linkfast/arcanist-webamp](https://github.com/linkfast/arcanist-webamp), AGPL-3.0-or-later) is
+downloaded from its releases when the server is published. Its folder carries its own `LICENSE.txt` and a
+`THIRD-PARTY-NOTICES.txt` with the full license of everything in its bundle; the main ones:
+
+| Component | License |
+|---|---|
+| Webamp, ani-cursor, winamp-eqf | MIT |
+| React, ReactDOM, Redux, React Redux, reselect | MIT |
+| Butterchurn and its presets (Milkdrop visualizer) | MIT |
+| music-metadata (tags of local files dropped on the player) | MIT |
+| JSZip (skins) | MIT or GPL-3.0-or-later, used under MIT |
+| lucide-react | ISC |
+| class-variance-authority | Apache-2.0 |
+| clsx, tailwind-merge, Tailwind CSS (build only) | MIT |
+
 ## Windows app (`src/Arcanist.Tray`)
 
 | Component | License |

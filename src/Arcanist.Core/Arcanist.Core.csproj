@@ -59,6 +59,50 @@
   </Target>
 
   <!--
+    Players that come with the server (wwwroot/players/<id>, FrontendCatalog.Bundled): released zips, pinned by
+    version and SHA-256, downloaded once into artifacts/players/ and shipped by every `dotnet publish` (installer,
+    tarballs, Docker). `-p:IncludeBundledPlayers=false` leaves them out; `-p:BundledPlayersDirectory=<folder>` ships
+    that folder's players instead (one folder per id, e.g. a local build of Webamp for Arcanist).
+    FetchBundledPlayers alone (`dotnet msbuild -t:FetchBundledPlayers`) checks the downloads.
+  -->
+  <ItemGroup>
+    <!-- github.com/linkfast/arcanist-webamp: its README says how to release a new version. -->
+    <BundledPlayer Include="webamp" Version="0.1.0" Sha256="9dcd4b9aa0f606602c82eb15651992a5deb4e90fa9970688cdf269eba36b3b71"
+                   Url="https://github.com/linkfast/arcanist-webamp/releases/download/arcanist-webamp-v0.1.0/arcanist-webamp-0.1.0.zip" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <IncludeBundledPlayers Condition="'$(IncludeBundledPlayers)' == ''">true</IncludeBundledPlayers>
+    <BundledPlayersCache>$(MSBuildThisFileDirectory)../../artifacts/players/</BundledPlayersCache>
+  </PropertyGroup>
+
+  <Target Name="FetchBundledPlayers" Condition="'$(BundledPlayersDirectory)' == ''" Outputs="%(BundledPlayer.Identity)">
+    <PropertyGroup>
+      <_PlayerZip>$(BundledPlayersCache)%(BundledPlayer.Identity)-%(BundledPlayer.Version).zip</_PlayerZip>
+      <_PlayerFolder>$(BundledPlayersCache)%(BundledPlayer.Identity)-%(BundledPlayer.Version)/</_PlayerFolder>
+    </PropertyGroup>
+    <DownloadFile Condition="!Exists('$(_PlayerZip)')" SourceUrl="%(BundledPlayer.Url)" DestinationFolder="$(BundledPlayersCache)" DestinationFileName="%(BundledPlayer.Identity)-%(BundledPlayer.Version).zip" />
+    <GetFileHash Files="$(_PlayerZip)" Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_PlayerHash" />
+    </GetFileHash>
+    <Delete Condition="'$(_PlayerHash)' != '%(BundledPlayer.Sha256)'" Files="$(_PlayerZip)" />
+    <Error Condition="'$(_PlayerHash)' != '%(BundledPlayer.Sha256)'" Text="%(BundledPlayer.Url) has SHA-256 $(_PlayerHash), not %(BundledPlayer.Sha256)." />
+    <Unzip Condition="!Exists('$(_PlayerFolder)arcanist-frontend.json')" SourceFiles="$(_PlayerZip)" DestinationFolder="$(_PlayerFolder)" />
+  </Target>
+
+  <Target Name="PublishBundledPlayers" BeforeTargets="ComputeResolvedFilesToPublishList" DependsOnTargets="FetchBundledPlayers" Condition="'$(IncludeBundledPlayers)' == 'true'">
+    <ItemGroup Condition="'$(BundledPlayersDirectory)' == ''">
+      <_BundledPlayerFile Include="$(BundledPlayersCache)%(BundledPlayer.Identity)-%(BundledPlayer.Version)/**/*" Player="%(BundledPlayer.Identity)/" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(BundledPlayersDirectory)' != ''">
+      <_BundledPlayerFile Include="$([MSBuild]::EnsureTrailingSlash('$(BundledPlayersDirectory)'))**/*" Player="" />
+    </ItemGroup>
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(_BundledPlayerFile)" RelativePath="wwwroot/players/%(_BundledPlayerFile.Player)%(_BundledPlayerFile.RecursiveDir)%(_BundledPlayerFile.Filename)%(_BundledPlayerFile.Extension)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+  <!--
     Native libraries in Rust, shipped next to the server: audio analysis (native/arcanist-audio) and the P2P network
     (native/arcanist-p2p), as <name>.dll, lib<name>.so or lib<name>.dylib. Builds for this machine's platform run
     `cargo build` when Rust is installed (incrementally); builds for other platforms use the libraries that

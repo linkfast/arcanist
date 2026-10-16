@@ -34,7 +34,8 @@ public sealed class ArcanistFactory(
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper) },
     };
 
-    public string DataPath { get; } =
+    /// <summary>Its data folder; another factory can be given one that is kept (<see cref="KeepData"/>), to start again on it.</summary>
+    public string DataPath { get; init; } =
         Path.Combine(Path.GetTempPath(), "arcanist-tests", Guid.NewGuid().ToString("N"));
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -186,9 +187,14 @@ public sealed class ArcanistFactory(
     public async Task<HttpClient> CreateAuthenticatedClientAsync(string userName = AdminUserName, string password = Password) =>
         CreateClient((await LoginAsync(userName, password)).AccessToken);
 
+    /// <summary>Leaves the data folder when disposed (a restart, or another server started on it).</summary>
+    public bool KeepData { get; init; }
+
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
+        if (KeepData)
+            return;
 
         try
         {

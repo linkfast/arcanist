@@ -2,6 +2,7 @@ using Arcanist.Core.Application;
 using Arcanist.Core.Application.Libraries;
 using Arcanist.Core.Application.Import;
 using Arcanist.Core.Auth;
+using Arcanist.Core.Backups;
 using Arcanist.Core.Dlna;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Libraries;
@@ -61,6 +62,25 @@ public static class SetupEndpoints
                 DlnaImportService.BrowseAsync(client, location, folderId, cancellationToken))
             .WithName("BrowseSetupDlnaServer")
             .WithSummary("A folder of a media server; 0 is the root.");
+
+        guarded.MapPost("/restore/browse", (SetupRestoreSource source, ServerRestore restore, CancellationToken cancellationToken) =>
+                restore.BrowseAsync(source, cancellationToken))
+            .WithName("BrowseSetupRestore")
+            .WithSummary("The backups in a folder of this server or an S3 bucket that carry a server, to restore it instead of setting it up.");
+
+        guarded.MapPost("/restore/check", (SetupRestoreCheck request, ServerRestore restore, CancellationToken cancellationToken) =>
+                restore.CheckAsync(request, cancellationToken))
+            .WithName("CheckSetupRestore")
+            .WithSummary("Whether the password opens a snapshot's server data.");
+
+        guarded.MapPost("/restore", async (SetupRestoreRequest request, ServerRestore restore, CancellationToken cancellationToken) =>
+            {
+                await restore.StartAsync(request, cancellationToken);
+                return Results.Accepted();
+            })
+            .WithName("StartSetupRestore")
+            .WithSummary("Restores the server from a snapshot (its database, settings and keys) and restarts to install it; " +
+                         "afterwards, if asked, the libraries' missing files come back too.");
 
         guarded.MapPost("/complete", async (SetupRequest request, SetupService service, CancellationToken cancellationToken) =>
                 await service.CompleteAsync(request, cancellationToken) switch

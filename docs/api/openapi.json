@@ -277,6 +277,95 @@
         }
       }
     },
+    "/rest/v1/setup/restore/browse": {
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "The backups in a folder of this server or an S3 bucket that carry a server, to restore it instead of setting it up.",
+        "operationId": "BrowseSetupRestore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRestoreSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StoredBackup"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/setup/restore/check": {
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Whether the password opens a snapshot\u0027s server data.",
+        "operationId": "CheckSetupRestore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRestoreCheck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupRestoreCheckResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/setup/restore": {
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Restores the server from a snapshot (its database, settings and keys) and restarts to install it; afterwards, if asked, the libraries\u0027 missing files come back too.",
+        "operationId": "StartSetupRestore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRestoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/rest/v1/setup/complete": {
       "post": {
         "tags": [
@@ -15061,6 +15150,96 @@
               },
               {
                 "$ref": "#/components/schemas/SetPrivacyInput"
+              }
+            ]
+          }
+        }
+      },
+      "SetupRestoreCheck": {
+        "required": [
+          "source",
+          "folder",
+          "snapshot",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SetupRestoreSource"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "SetupRestoreCheckResult": {
+        "required": [
+          "success"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetupRestoreRequest": {
+        "required": [
+          "source",
+          "folder",
+          "snapshot",
+          "password",
+          "restoreFiles"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SetupRestoreSource"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "restoreFiles": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetupRestoreSource": {
+        "required": [
+          "kind",
+          "path",
+          "s3"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/BackupDestinationKind"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "s3": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/S3ConnectionInput"
               }
             ]
           }

@@ -61,6 +61,7 @@ var paths = new ArcanistPaths(DataDirectory.Resolve(builder.Configuration, build
 paths.EnsureCreated();
 // A factory reset asked for by the previous run: its files go before anything reads them.
 FactoryReset.ApplyIfRequested(paths, Console.WriteLine);
+PendingRestore.ApplyIfRequested(paths, Console.WriteLine);
 builder.Configuration.AddArcanistSettingsFile(paths);
 builder.Services.AddSingleton(paths);
 // ASP.NET Core creates these keys anyway; keep them with the rest of the state instead of the user profile. Arcanist

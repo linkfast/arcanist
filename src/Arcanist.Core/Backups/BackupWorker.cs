@@ -296,6 +296,8 @@ public static class BackupServiceCollectionExtensions
         services.AddSingleton<RestoreWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<RestoreWorker>());
         services.AddScoped<RestoreService>();
+        services.AddScoped<ServerRestore>();
+        services.AddHostedService<PendingRestoreFilesStarter>();
         services.AddSingleton<BackupGate>();
         services.AddSingleton<BackupPlanner>();
         services.AddSingleton<IBackupExtra, BackupDataExtra>();

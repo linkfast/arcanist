@@ -310,6 +310,25 @@ public sealed class DlnaTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_deleted_library_is_no_longer_published_and_saving_still_works()
+    {
+        var other = Directory.CreateDirectory(Path.Combine(_music + "-other")).FullName;
+        var created = await _admin.PostAsJsonAsync("/rest/v1/libraries", new { name = "Other", visibleToAll = false, scanIntervalMinutes = (int?)null, sources = new[] { new { location = other } } }, ArcanistFactory.Json, Cancel);
+        var otherId = (await created.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("id").GetString();
+        await _admin.PutAsJsonAsync("/rest/v1/dlna/settings", new { friendlyName = (string?)null, libraryIds = new[] { _libraryId, otherId }, sections = new[] { "ALBUMS" } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.NoContent, (await _admin.DeleteAsync($"/rest/v1/libraries/{otherId}", Cancel)).StatusCode);
+
+        var status = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/dlna", ArcanistFactory.Json, Cancel);
+        Assert.Equal([_libraryId], status.GetProperty("libraryIds").EnumerateArray().Select(l => l.GetString()));
+
+        // Sent back as it was read (or with the deleted one, from a stale page), it saves.
+        var saved = await _admin.PutAsJsonAsync("/rest/v1/dlna/settings", new { friendlyName = "Living room", libraryIds = new[] { _libraryId, otherId }, sections = new[] { "ALBUMS" } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        Assert.Equal([_libraryId], (await saved.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("libraryIds").EnumerateArray().Select(l => l.GetString()));
+        Directory.Delete(other);
+    }
+
+    [Fact]
     public void Ssdp_messages_announce_the_server_and_find_renderers()
     {
         var id = Guid.NewGuid();

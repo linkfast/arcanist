@@ -103,7 +103,9 @@ public sealed class DlnaService(
     {
         guard.Admin();
         var config = await Settings.GetAsync(cancellationToken);
-        return new DlnaStatus(Enabled, config.Name, config.FriendlyName, config.LibraryIds, config.Sections,
+        // Libraries deleted since they were published are not any more.
+        var libraryIds = await db.Libraries.Where(l => config.LibraryIds.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
+        return new DlnaStatus(Enabled, config.Name, config.FriendlyName, config.LibraryIds.Where(libraryIds.Contains).ToList(), config.Sections,
             Enabled ? Endpoint.DescriptionUrls() : [], DlnaFormats.Convertible(ffmpeg.Current).Count > 0);
     }
 
@@ -115,10 +117,10 @@ public sealed class DlnaService(
         var name = string.IsNullOrWhiteSpace(input.FriendlyName) ? null : input.FriendlyName.Trim();
         if (name is { Length: > NameMaxLength })
             errors.Add("friendlyName", ErrorCodes.InvalidFormat);
-        var libraries = (input.LibraryIds ?? []).Distinct().ToList();
-        var existing = await db.Libraries.Where(l => libraries.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
-        if (existing.Count != libraries.Count)
-            errors.Add("libraryIds", ErrorCodes.NotFound);
+        // One deleted meanwhile (in another tab) is just left out.
+        var wanted = (input.LibraryIds ?? []).Distinct().ToList();
+        var existing = await db.Libraries.Where(l => wanted.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
+        var libraries = wanted.Where(existing.Contains).ToList();
         var sections = (input.Sections ?? []).Distinct().ToList();
         if (sections.Any(s => !Enum.IsDefined(s)))
             errors.Add("sections", ErrorCodes.InvalidFormat);

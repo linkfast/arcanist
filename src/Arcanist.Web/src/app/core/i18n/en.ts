@@ -858,11 +858,17 @@ export const en: Dictionary = {
       title: 'DLNA server',
       description:
         'DLNA has no sign-in: any device on the local network sees what you publish here. It is never offered outside the local network.',
-      enabled: 'On',
+      on: 'On: devices on the network see it',
+      off: 'Off',
       noNetwork: 'No local network was found on this server.',
       noFfmpeg:
         'Without ffmpeg only the original files are sent: some devices will not play some formats.',
       name: 'Name devices show',
+    },
+    settings: {
+      title: 'What devices see',
+      description:
+        'Its name, the libraries it publishes and the folders of its menu. They are saved together.',
     },
     libraries: {
       title: 'Published libraries',

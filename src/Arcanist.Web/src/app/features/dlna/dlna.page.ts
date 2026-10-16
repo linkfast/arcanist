@@ -104,13 +104,13 @@ const AllSections: DlnaSection[] = [
             <p hlmCardDescription>{{ 'dlna.server.description' | t }}</p>
           </div>
           <div hlmCardContent class="grid gap-4">
-            <label class="flex items-center gap-2 text-sm">
+            <label class="flex items-center gap-2 text-sm font-medium">
               <hlm-switch
                 [checked]="current.enabled"
                 [disabled]="busy()"
                 (checkedChange)="setEnabled($event)"
               />
-              {{ 'dlna.server.enabled' | t }}
+              {{ (current.enabled ? 'dlna.server.on' : 'dlna.server.off') | t }}
             </label>
             @if (current.enabled) {
               <div class="grid gap-1 text-xs text-muted-foreground">
@@ -124,6 +124,16 @@ const AllSections: DlnaSection[] = [
             @if (!current.convertsFormats) {
               <p class="text-xs text-muted-foreground">{{ 'dlna.server.noFfmpeg' | t }}</p>
             }
+          </div>
+        </section>
+
+        <!-- Everything devices see, saved together. -->
+        <section hlmCard>
+          <div hlmCardHeader>
+            <h2 hlmCardTitle>{{ 'dlna.settings.title' | t }}</h2>
+            <p hlmCardDescription>{{ 'dlna.settings.description' | t }}</p>
+          </div>
+          <div hlmCardContent class="grid gap-6">
             <hlm-field>
               <label hlmFieldLabel for="dlnaName">{{ 'dlna.server.name' | t }}</label>
               <input
@@ -135,83 +145,71 @@ const AllSections: DlnaSection[] = [
                 [(ngModel)]="friendlyName"
               />
             </hlm-field>
-          </div>
-        </section>
 
-        <section hlmCard>
-          <div hlmCardHeader>
-            <h2 hlmCardTitle>{{ 'dlna.libraries.title' | t }}</h2>
-            <p hlmCardDescription>{{ 'dlna.libraries.description' | t }}</p>
-          </div>
-          <div hlmCardContent class="grid gap-2">
-            @for (library of libraries(); track library.id) {
-              <label class="flex items-center gap-2 text-sm">
-                <hlm-checkbox
-                  [checked]="published().includes(library.id)"
-                  (checkedChange)="toggleLibrary(library.id, $event)"
-                />
-                {{ library.name }}
-              </label>
-            } @empty {
-              <p class="text-sm text-muted-foreground">{{ 'dlna.libraries.none' | t }}</p>
-            }
-          </div>
-        </section>
-
-        <section hlmCard>
-          <div hlmCardHeader>
-            <h2 hlmCardTitle>{{ 'dlna.sections.title' | t }}</h2>
-            <p hlmCardDescription>{{ 'dlna.sections.description' | t }}</p>
-          </div>
-          <div hlmCardContent class="grid gap-4">
-            <ul class="grid gap-2">
-              @for (section of orderedSections(); track section; let index = $index) {
-                <li
-                  class="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
-                >
-                  <label class="flex items-center gap-2">
-                    <hlm-checkbox
-                      [checked]="sections().includes(section)"
-                      (checkedChange)="toggleSection(section, $event)"
-                    />
-                    {{ 'dlna.sections.names.' + section | t }}
-                  </label>
-                  @if (sections().includes(section)) {
-                    <span class="flex gap-1">
-                      <button
-                        hlmBtn
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        [attr.aria-label]="'dlna.sections.up' | t"
-                        [disabled]="sections().indexOf(section) === 0"
-                        (click)="move(section, -1)"
-                      >
-                        <ng-icon name="lucideArrowUp" />
-                      </button>
-                      <button
-                        hlmBtn
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        [attr.aria-label]="'dlna.sections.down' | t"
-                        [disabled]="sections().indexOf(section) === sections().length - 1"
-                        (click)="move(section, 1)"
-                      >
-                        <ng-icon name="lucideArrowDown" />
-                      </button>
-                    </span>
-                  }
-                </li>
+            <div class="grid gap-2">
+              <h3 class="text-sm font-medium">{{ 'dlna.libraries.title' | t }}</h3>
+              <p class="text-xs text-muted-foreground">{{ 'dlna.libraries.description' | t }}</p>
+              @for (library of libraries(); track library.id) {
+                <label class="flex items-center gap-2 text-sm">
+                  <hlm-checkbox
+                    [checked]="published().includes(library.id)"
+                    (checkedChange)="toggleLibrary(library.id, $event)"
+                  />
+                  {{ library.name }}
+                </label>
+              } @empty {
+                <p class="text-sm text-muted-foreground">{{ 'dlna.libraries.none' | t }}</p>
               }
-            </ul>
-            <button
-              hlmBtn
-              type="button"
-              class="justify-self-start"
-              [disabled]="busy()"
-              (click)="save()"
-            >
+            </div>
+
+            <div class="grid gap-2">
+              <h3 class="text-sm font-medium">{{ 'dlna.sections.title' | t }}</h3>
+              <p class="text-xs text-muted-foreground">{{ 'dlna.sections.description' | t }}</p>
+              <ul class="grid gap-2">
+                @for (section of orderedSections(); track section; let index = $index) {
+                  <li
+                    class="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm"
+                  >
+                    <label class="flex items-center gap-2">
+                      <hlm-checkbox
+                        [checked]="sections().includes(section)"
+                        (checkedChange)="toggleSection(section, $event)"
+                      />
+                      {{ 'dlna.sections.names.' + section | t }}
+                    </label>
+                    @if (sections().includes(section)) {
+                      <span class="flex gap-1">
+                        <button
+                          hlmBtn
+                          variant="ghost"
+                          size="icon"
+                          type="button"
+                          [attr.aria-label]="'dlna.sections.up' | t"
+                          [disabled]="sections().indexOf(section) === 0"
+                          (click)="move(section, -1)"
+                        >
+                          <ng-icon name="lucideArrowUp" />
+                        </button>
+                        <button
+                          hlmBtn
+                          variant="ghost"
+                          size="icon"
+                          type="button"
+                          [attr.aria-label]="'dlna.sections.down' | t"
+                          [disabled]="sections().indexOf(section) === sections().length - 1"
+                          (click)="move(section, 1)"
+                        >
+                          <ng-icon name="lucideArrowDown" />
+                        </button>
+                      </span>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          </div>
+          <div hlmCardFooter>
+            <button hlmBtn type="button" [disabled]="busy()" (click)="save()">
               {{ 'common.save' | t }}
             </button>
           </div>
@@ -492,7 +490,8 @@ export class DlnaPage implements OnInit, OnDestroy {
       const result = await this.gql.mutate(SetDlnaSettingsMutation, {
         input: {
           friendlyName: this.friendlyName.trim() || null,
-          libraryIds: this.published(),
+          // Only libraries that still exist (one may have been deleted meanwhile).
+          libraryIds: this.published().filter((id) => this.libraries().some((l) => l.id === id)),
           sections: this.sections(),
         },
       });

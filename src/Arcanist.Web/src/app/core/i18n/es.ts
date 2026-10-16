@@ -865,11 +865,17 @@ export const es: Dictionary = {
       title: 'Servidor DLNA',
       description:
         'DLNA no tiene inicio de sesión: cualquier dispositivo de la red local ve lo que publiques aquí. Nunca se ofrece fuera de la red local.',
-      enabled: 'Activado',
+      on: 'Activado: los dispositivos de la red lo ven',
+      off: 'Desactivado',
       noNetwork: 'No se encontró ninguna red local en este servidor.',
       noFfmpeg:
         'Sin ffmpeg solo se envían los archivos originales: algunos dispositivos no reproducirán ciertos formatos.',
       name: 'Nombre que ven los dispositivos',
+    },
+    settings: {
+      title: 'Lo que ven los dispositivos',
+      description:
+        'Su nombre, las bibliotecas que publica y las carpetas de su menú. Se guardan juntos.',
     },
     libraries: {
       title: 'Bibliotecas publicadas',

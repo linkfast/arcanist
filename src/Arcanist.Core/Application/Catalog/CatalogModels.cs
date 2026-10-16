@@ -92,6 +92,9 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// <param name="Starred">It is one of the user's StarTracks (the star, or five stars).</param>
 /// <param name="PlayCount">How many times the user played it.</param>
 /// <param name="LibraryIds">The libraries the user can access with a copy of it.</param>
+/// <param name="Year">Release year of its album; null when unknown.</param>
+/// <param name="MusicBrainzRecordingId">The recording on MusicBrainz, when identified.</param>
+/// <param name="AcoustId">The recording's AcoustID, when identified.</param>
 public sealed record Track(
     Guid Id,
     string Title,
@@ -112,7 +115,10 @@ public sealed record Track(
     bool Starred,
     int PlayCount,
     DateTime? LastPlayedAt,
-    IReadOnlyList<Guid> LibraryIds);
+    IReadOnlyList<Guid> LibraryIds,
+    int? Year,
+    Guid? MusicBrainzRecordingId,
+    Guid? AcoustId);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);

@@ -465,6 +465,9 @@ type Track {
   playCount: Int!
   lastPlayedAt: DateTime
   libraryIds: [ID!]!
+  year: Int
+  musicBrainzRecordingId: ID
+  acoustId: ID
 }
 
 type AlbumReference {
@@ -990,6 +993,9 @@ type ListeningStats {
   topTracks: [TrackPlays!]!
   topArtists: [ArtistPlays!]!
   topAlbums: [AlbumPlays!]!
+  topGenres: [GenrePlays!]!
+  playsByHour: [Int!]!
+  playsByWeekday: [Int!]!
 }
 
 enum StatsPeriod {
@@ -1025,6 +1031,11 @@ type ArtistPlays {
 
 type AlbumPlays {
   album: Album!
+  plays: Int!
+}
+
+type GenrePlays {
+  genre: String!
   plays: Int!
 }
 

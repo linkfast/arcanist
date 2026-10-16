@@ -227,6 +227,10 @@ public sealed class ListeningTests : IAsyncLifetime
         Assert.Equal(3, mine.GetProperty("timeline").EnumerateArray().Sum(b => b.GetProperty("plays").GetInt32()));
         // Every day of the week, quiet ones included.
         Assert.Equal(7, mine.GetProperty("timeline").GetArrayLength());
+        // When in the day and the week the user listens, in their time zone.
+        Assert.Equal((24, 3), (mine.GetProperty("playsByHour").GetArrayLength(), mine.GetProperty("playsByHour").EnumerateArray().Sum(h => h.GetInt32())));
+        Assert.Equal((7, 3), (mine.GetProperty("playsByWeekday").GetArrayLength(), mine.GetProperty("playsByWeekday").EnumerateArray().Sum(d => d.GetInt32())));
+        Assert.Equal(JsonValueKind.Array, mine.GetProperty("topGenres").ValueKind);
 
         // Others' statistics and the server's need VIEW_ALL_STATS.
         Assert.Equal(HttpStatusCode.Forbidden, (await listenerClient.GetAsync("/rest/v1/stats/server?period=month", Cancel)).StatusCode);

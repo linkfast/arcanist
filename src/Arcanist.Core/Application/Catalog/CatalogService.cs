@@ -220,13 +220,18 @@ public sealed class CatalogService(
         var albumIds = tracks.Select(t => t.AlbumId).Distinct().ToList();
 
         var albums = await db.Albums.AsNoTracking().Where(a => albumIds.Contains(a.Id))
-            .Select(a => new { a.Id, a.Title, a.ArtworkId, a.Loudness, a.TruePeak })
+            .Select(a => new { a.Id, a.Title, a.ArtworkId, a.Loudness, a.TruePeak, a.Year })
             .ToDictionaryAsync(a => a.Id, cancellationToken);
 
         var credits = (await db.TrackArtists.AsNoTracking().Where(ta => ids.Contains(ta.TrackId))
                 .Select(ta => new { ta.TrackId, ta.ArtistId, ta.Artist.Name, ta.Role, ta.Position })
                 .ToListAsync(cancellationToken))
             .ToLookup(c => c.TrackId);
+
+        var recordingIds = tracks.Select(t => t.RecordingId).Distinct().ToList();
+        var recordings = await db.Recordings.AsNoTracking().Where(r => recordingIds.Contains(r.Id))
+            .Select(r => new { r.Id, r.MusicBrainzId, r.AcoustId })
+            .ToDictionaryAsync(r => r.Id, cancellationToken);
 
         var genres = (await db.TrackGenres.AsNoTracking().Where(tg => ids.Contains(tg.TrackId))
                 .Select(tg => new { tg.TrackId, tg.Genre.Name })
@@ -288,7 +293,10 @@ public sealed class CatalogService(
                 rating == 5,
                 userPlays.TryGetValue(t.Id, out var plays) ? plays.PlayCount : 0,
                 plays?.LastPlayedAt,
-                copies.Select(f => libraryOf[f.LibrarySourceId]).Distinct().ToList());
+                copies.Select(f => libraryOf[f.LibrarySourceId]).Distinct().ToList(),
+                album.Year,
+                recordings.GetValueOrDefault(t.RecordingId)?.MusicBrainzId,
+                recordings.GetValueOrDefault(t.RecordingId)?.AcoustId);
         }).ToList();
     }
 

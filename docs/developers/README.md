@@ -173,7 +173,8 @@ this server rates tracks, and your interface should follow it:
 
 A StarTrack is a five-star track, so `starTrack` works in both modes and the administrator can switch modes without
 anyone losing theirs. `Track.rating` (null when unrated; only 5 in `STAR` mode), `Track.starred` (a StarTrack),
-`Track.playCount` and `Track.lastPlayedAt` are the signed-in user's. `ratedTracks(minRating)` /
+`Track.playCount` and `Track.lastPlayedAt` are the signed-in user's. `Track.year` is its album's release year, and `Track.musicBrainzRecordingId` /
+`Track.acoustId` identify the recording when it is known (to match it with the same song elsewhere). `ratedTracks(minRating)` /
 `GET /rest/v1/me/rated-tracks` lists their rated tracks, most recently rated first, with `after`/`nextCursor` paging.
 
 With the `STAR_TRACKS` feature in `serverInfo.features`:
@@ -207,9 +208,10 @@ they keep skipping. Plays up to 14 days old are accepted, so queue them while of
 the same report twice is harmless.
 
 `playHistory` / `GET /rest/v1/me/plays` lists the user's plays, newest first. `listeningStats(period, timeZone)` /
-`GET /rest/v1/stats/listening?period=WEEK` gives their plays, time listened, top tracks, artists and albums, and a
-timeline with one entry per day (week and month) or month (year and all time). Pass the user's IANA time zone so
-days start at their midnight.
+`GET /rest/v1/stats/listening?period=WEEK` gives their plays, time listened, top tracks, artists, albums and genres,
+a timeline with one entry per day (week and month) or month (year and all time), and their plays by hour of the day
+(`playsByHour`, 24 entries) and by weekday (`playsByWeekday`, 7, Sunday first). Pass the user's IANA time zone so
+days and hours are theirs.
 
 ## Playlists
 

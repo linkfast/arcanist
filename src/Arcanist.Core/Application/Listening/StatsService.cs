@@ -126,6 +126,23 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
             .Take(TopCount)
             .ToListAsync(cancellationToken);
 
+        var topGenres = await counted
+            .Join(db.TrackGenres, p => p.TrackId, tg => tg.TrackId, (p, tg) => tg.Genre.Name)
+            .GroupBy(name => name)
+            .Select(g => new { Name = g.Key, Plays = g.Count() })
+            .OrderByDescending(g => g.Plays).ThenBy(g => g.Name)
+            .Take(TopCount)
+            .ToListAsync(cancellationToken);
+
+        var byHour = new int[24];
+        var byWeekday = new int[7];
+        foreach (var r in rows.Where(r => r.Counted))
+        {
+            var local = TimeZoneInfo.ConvertTimeFromUtc(r.PlayedAt, zone);
+            byHour[local.Hour]++;
+            byWeekday[(int)local.DayOfWeek]++;
+        }
+
         // Tops show what the viewer can see; a track in a library they lost access to is left out.
         var tracks = await catalog.VisibleTracksAsync(access, topTracks.Select(t => t.Id).ToList(), cancellationToken);
         var albums = await catalog.VisibleAlbumsAsync(access, topAlbums.Select(a => a.Id).ToList(), cancellationToken);
@@ -140,7 +157,10 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
             timeline,
             topTracks.Where(t => tracks.ContainsKey(t.Id)).Take(TopCount).Select(t => new TrackPlays(tracks[t.Id], t.Plays)).ToList(),
             topArtists.Select(a => new ArtistPlays(new ArtistReference(a.ArtistId, a.Name), a.Plays)).ToList(),
-            topAlbums.Where(a => albums.ContainsKey(a.Id)).Take(TopCount).Select(a => new AlbumPlays(albums[a.Id], a.Plays)).ToList());
+            topAlbums.Where(a => albums.ContainsKey(a.Id)).Take(TopCount).Select(a => new AlbumPlays(albums[a.Id], a.Plays)).ToList(),
+            topGenres.Select(g => new GenrePlays(g.Name, g.Plays)).ToList(),
+            byHour,
+            byWeekday);
     }
 
     /// <summary>Start of the period in UTC: the beginning of the local day 7 or 30 days back, or of the month a year back.</summary>

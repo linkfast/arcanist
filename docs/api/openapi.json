@@ -10450,6 +10450,26 @@
           }
         }
       },
+      "GenrePlays": {
+        "required": [
+          "genre",
+          "plays"
+        ],
+        "type": "object",
+        "properties": {
+          "genre": {
+            "type": "string"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Home": {
         "required": [
           "sections"
@@ -11554,7 +11574,10 @@
           "timeline",
           "topTracks",
           "topArtists",
-          "topAlbums"
+          "topAlbums",
+          "topGenres",
+          "playsByHour",
+          "playsByWeekday"
         ],
         "type": "object",
         "properties": {
@@ -11617,6 +11640,34 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AlbumPlays"
+            }
+          },
+          "topGenres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GenrePlays"
+            }
+          },
+          "playsByHour": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "playsByWeekday": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
             }
           }
         }
@@ -16013,7 +16064,10 @@
           "starred",
           "playCount",
           "lastPlayedAt",
-          "libraryIds"
+          "libraryIds",
+          "year",
+          "musicBrainzRecordingId",
+          "acoustId"
         ],
         "type": "object",
         "properties": {
@@ -16140,6 +16194,29 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "musicBrainzRecordingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "acoustId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

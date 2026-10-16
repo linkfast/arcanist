@@ -90,12 +90,17 @@ public sealed record ArtistPlays(ArtistReference Artist, int Plays);
 
 public sealed record AlbumPlays(Album Album, int Plays);
 
+public sealed record GenrePlays(string Genre, int Plays);
+
 /// <summary>Listening over a period, of one user or of the whole server.</summary>
 /// <param name="From">Start of the period; null for all time.</param>
 /// <param name="Plays">Counted plays.</param>
 /// <param name="ListenedMs">Time listened, skips included.</param>
 /// <param name="Timeline">Plays per day (week and month) or per month (year and all time), one entry for every day or
 /// month of the period, quiet ones included.</param>
+/// <param name="TopGenres">Genres by counted plays (a track with several genres counts for each).</param>
+/// <param name="PlaysByHour">Counted plays per hour of the day in the requested time zone, 24 entries (0 = midnight).</param>
+/// <param name="PlaysByWeekday">Counted plays per day of the week in the requested time zone, 7 entries (0 = Sunday).</param>
 public sealed record ListeningStats(
     StatsPeriod Period,
     DateTime? From,
@@ -106,7 +111,10 @@ public sealed record ListeningStats(
     IReadOnlyList<ListeningBucket> Timeline,
     IReadOnlyList<TrackPlays> TopTracks,
     IReadOnlyList<ArtistPlays> TopArtists,
-    IReadOnlyList<AlbumPlays> TopAlbums);
+    IReadOnlyList<AlbumPlays> TopAlbums,
+    IReadOnlyList<GenrePlays> TopGenres,
+    IReadOnlyList<int> PlaysByHour,
+    IReadOnlyList<int> PlaysByWeekday);
 
 /// <summary>One user's listening in a period, for the server's statistics.</summary>
 public sealed record UserListening(Guid UserId, string UserName, string? DisplayName, int Plays, long ListenedMs, DateTime? LastPlayedAt);

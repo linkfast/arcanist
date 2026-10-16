@@ -1217,6 +1217,56 @@
         }
       }
     },
+    "/rest/v1/settings/anonymous-statistics": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Whether anonymous play counts go to Ultimate Cloud\u0027s global statistics. Requires MANAGE_SETTINGS.",
+        "operationId": "AnonymousStatistics",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Sends anonymous play counts to Ultimate Cloud\u0027s global statistics, or stops. Requires MANAGE_SETTINGS.",
+        "operationId": "SetAnonymousStatistics",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAnonymousStatisticsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/stream/{trackId}": {
       "get": {
         "tags": [
@@ -5237,6 +5287,129 @@
         }
       }
     },
+    "/rest/v1/server/configuration": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "What the setup wizard chose, as it is now, to run it again. Administrators only.",
+        "operationId": "ServerConfiguration",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerConfiguration"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "The setup wizard\u0027s answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication.",
+        "operationId": "ReconfigureServer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconfigureServerInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerConfiguration"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server/reset/settings": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Every server setting back to how a new server starts; libraries, users and their data stay. Administrators only, with a recent authentication.",
+        "operationId": "ResetSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server/reset/user-data": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Deletes every user\u0027s ratings, plays and playlists; users, libraries and settings stay. Administrators only, with a recent authentication.",
+        "operationId": "ResetUserData",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server/reset/factory": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Everything back to a freshly installed server (database, settings, keys, cache; optionally players, extensions and tools); the server restarts into the setup wizard. Music folders are never touched. Administrators only, with a recent authentication.",
+        "operationId": "FactoryReset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactoryResetInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/dlna-import/servers": {
       "get": {
         "tags": [
@@ -8146,6 +8319,17 @@
           "RUNNING",
           "FAILED"
         ]
+      },
+      "FactoryResetInput": {
+        "required": [
+          "removeAddons"
+        ],
+        "type": "object",
+        "properties": {
+          "removeAddons": {
+            "type": "boolean"
+          }
+        }
       },
       "FfmpegDownloadProgress": {
         "required": [
@@ -11726,6 +11910,39 @@
           }
         }
       },
+      "ReconfigureServerInput": {
+        "required": [
+          "defaultLanguage",
+          "ratingMode",
+          "onlineServices",
+          "shareAnonymousStatistics",
+          "ffmpegPath"
+        ],
+        "type": "object",
+        "properties": {
+          "defaultLanguage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ratingMode": {
+            "$ref": "#/components/schemas/RatingMode"
+          },
+          "onlineServices": {
+            "$ref": "#/components/schemas/SetOnlineServicesInput"
+          },
+          "shareAnonymousStatistics": {
+            "type": "boolean"
+          },
+          "ffmpegPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RecordedPlay": {
         "required": [
           "id",
@@ -11797,6 +12014,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ResetResult": {
+        "required": [
+          "restartRequired"
+        ],
+        "type": "object",
+        "properties": {
+          "restartRequired": {
+            "type": "boolean"
           }
         }
       },
@@ -12105,6 +12333,39 @@
           }
         }
       },
+      "ServerConfiguration": {
+        "required": [
+          "defaultLanguage",
+          "ratingMode",
+          "onlineServices",
+          "shareAnonymousStatistics",
+          "ffmpegPath"
+        ],
+        "type": "object",
+        "properties": {
+          "defaultLanguage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ratingMode": {
+            "$ref": "#/components/schemas/RatingMode"
+          },
+          "onlineServices": {
+            "$ref": "#/components/schemas/OnlineServicesSettings"
+          },
+          "shareAnonymousStatistics": {
+            "type": "boolean"
+          },
+          "ffmpegPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ServerDirectory": {
         "required": [
           "name",
@@ -12305,6 +12566,17 @@
         }
       },
       "SetAnalysisEnabledInput": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetAnonymousStatisticsInput": {
         "required": [
           "enabled"
         ],
@@ -13709,7 +13981,6 @@
       "UltimateCloudServices": {
         "required": [
           "personalPlays",
-          "sharedPlays",
           "albumPlaythroughs",
           "starTracks",
           "metrics"
@@ -13717,9 +13988,6 @@
         "type": "object",
         "properties": {
           "personalPlays": {
-            "type": "boolean"
-          },
-          "sharedPlays": {
             "type": "boolean"
           },
           "albumPlaythroughs": {
@@ -13736,7 +14004,6 @@
       "UltimateCloudServicesInput": {
         "required": [
           "personalPlays",
-          "sharedPlays",
           "albumPlaythroughs",
           "starTracks",
           "metrics"
@@ -13744,9 +14011,6 @@
         "type": "object",
         "properties": {
           "personalPlays": {
-            "type": "boolean"
-          },
-          "sharedPlays": {
             "type": "boolean"
           },
           "albumPlaythroughs": {

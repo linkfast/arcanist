@@ -55,16 +55,23 @@ public sealed class UltimateCloudClient(IHttpClientFactory clients, UltimateClou
 
     /// <summary>Runs a query or mutation and returns its <c>data</c>.</summary>
     /// <exception cref="UltimateCloudException">The API answered with errors, or could not be reached (<c>cloud_unreachable</c>).</exception>
-    public async Task<JsonNode> SendAsync(string query, object? variables, CancellationToken cancellationToken)
+    public Task<JsonNode> SendAsync(string query, object? variables, CancellationToken cancellationToken) =>
+        SendAsync(query, variables, signedIn: true, cancellationToken);
+
+    /// <summary>Runs an operation that needs no account (anonymous statistics), as this server's device.</summary>
+    public Task<JsonNode> SendAnonymousAsync(string query, object? variables, CancellationToken cancellationToken) =>
+        SendAsync(query, variables, signedIn: false, cancellationToken);
+
+    private async Task<JsonNode> SendAsync(string query, object? variables, bool signedIn, CancellationToken cancellationToken)
     {
         var url = options.CurrentValue.ApiUrl ?? throw new UltimateCloudException(ErrorCodes.CloudNotConfigured);
-        var token = await auth.AccessTokenAsync(cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
             // Buffered, with a Content-Length: some proxies refuse chunked request bodies.
             Content = new StringContent(JsonSerializer.Serialize(new { query, variables }, Json), System.Text.Encoding.UTF8, "application/json"),
         };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (signedIn)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await auth.AccessTokenAsync(cancellationToken));
         request.Headers.Add("X-Device-Id", await auth.DeviceIdAsync(cancellationToken));
         request.Headers.Add("X-Client-App", ClientApp);
 

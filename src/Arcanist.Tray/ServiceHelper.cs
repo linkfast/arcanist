@@ -96,6 +96,8 @@ internal sealed class ServiceHelper
         Require("sc.exe", [WindowsService.IsInstalled ? "config" : "create", Installation.ServiceName, .. settings]);
         Require("sc.exe", "description", Installation.ServiceName, "Arcanist music server");
         Require("sc.exe", "failure", Installation.ServiceName, "reset=", "86400", "actions=", "restart/10000/restart/30000/restart/60000");
+        // Also when the server stops by itself with an error code: a factory reset ends that way to be started again.
+        Require("sc.exe", "failureflag", Installation.ServiceName, "1");
 
         var (_, sddl) = Execute("sc.exe", "sdshow", Installation.ServiceName);
         Require("sc.exe", "sdset", Installation.ServiceName, GrantControl(sddl.Trim(), ownerSid));

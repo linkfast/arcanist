@@ -104,6 +104,10 @@ type Query {
   scanJob(id: ID!): ScanJob!
   "Artists, albums, tracks and playlists matching every word of the query (as word starts, ignoring accents and case), best first. first is per kind: 10 by default, at most 50."
   search(query: String!, first: Int): SearchResults!
+  "What the setup wizard chose, as it is now, to run it again. Administrators only."
+  serverConfiguration: ServerConfiguration!
+  "Whether anonymous play counts go to Ultimate Cloud's global statistics. Requires MANAGE_SETTINGS."
+  anonymousStatistics: Boolean!
   "The linked Ultimate Cloud account, its plan and what it enables. Administrators only."
   ultimateCloud: UltimateCloudStatus!
   "The Ultimate Cloud accounts linked to this server, for choosing where uploads go. Administrators only."
@@ -1235,6 +1239,19 @@ type SearchResults {
   playlists: [Playlist!]!
 }
 
+type ServerConfiguration {
+  defaultLanguage: String
+  ratingMode: RatingMode!
+  onlineServices: OnlineServicesSettings!
+  shareAnonymousStatistics: Boolean!
+  ffmpegPath: String
+}
+
+enum RatingMode {
+  STARS
+  STAR
+}
+
 type UltimateCloudStatus {
   state: UltimateCloudLinkState!
   account: String
@@ -1306,7 +1323,6 @@ type UltimateCloudTool {
 
 type UltimateCloudServices {
   personalPlays: Boolean!
-  sharedPlays: Boolean!
   albumPlaythroughs: Boolean!
   starTracks: Boolean!
   metrics: Boolean!
@@ -1412,11 +1428,6 @@ type ServerInfo {
   transcodingFormats: [TranscodeFormat!]!
   ratingMode: RatingMode!
   features: [ApiFeature!]!
-}
-
-enum RatingMode {
-  STARS
-  STAR
 }
 
 enum ApiFeature {
@@ -1608,6 +1619,16 @@ type Mutation {
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
   cancelScan(id: ID!): Boolean!
+  "The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication."
+  reconfigureServer(input: ReconfigureServerInput!): ServerConfiguration!
+  "Sends anonymous play counts to Ultimate Cloud's global statistics, or stops. Requires MANAGE_SETTINGS."
+  setAnonymousStatistics(enabled: Boolean!): Boolean!
+  "Every server setting back to how a new server starts; libraries, users and their data stay. Administrators only, with a recent authentication."
+  resetSettings: ResetResult!
+  "Deletes every user's ratings, plays and playlists; users, libraries and settings stay. Administrators only, with a recent authentication."
+  resetUserData: ResetResult!
+  "Everything back to a freshly installed server (database, settings, keys, cache; optionally players, extensions and tools); the server restarts into the setup wizard. Music folders are never touched. Administrators only, with a recent authentication."
+  factoryReset(input: FactoryResetInput!): ResetResult!
   "Asks Ultimate Cloud for a code to approve on its site; the server waits for the approval. Administrators only, with a recent authentication."
   startUltimateCloudLink: UltimateCloudStatus!
   "Stops waiting for a code's approval. Administrators only."
@@ -1950,6 +1971,22 @@ input CreateS3LibraryInput {
   connection: S3ConnectionInput!
 }
 
+input ReconfigureServerInput {
+  defaultLanguage: String
+  ratingMode: RatingMode!
+  onlineServices: SetOnlineServicesInput!
+  shareAnonymousStatistics: Boolean!
+  ffmpegPath: String
+}
+
+type ResetResult {
+  restartRequired: Boolean!
+}
+
+input FactoryResetInput {
+  removeAddons: Boolean!
+}
+
 input AddUltimateCloudLibraryInput {
   collection: UltimateCloudCollection!
   name: String
@@ -1962,7 +1999,6 @@ input SetLibraryCloudSyncInput {
 
 input UltimateCloudServicesInput {
   personalPlays: Boolean!
-  sharedPlays: Boolean!
   albumPlaythroughs: Boolean!
   starTracks: Boolean!
   metrics: Boolean!

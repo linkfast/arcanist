@@ -58,6 +58,8 @@ builder.Configuration.AddCommandLine(args, new Dictionary<string, string>
 
 var paths = new ArcanistPaths(DataDirectory.Resolve(builder.Configuration, builder.Environment));
 paths.EnsureCreated();
+// A factory reset asked for by the previous run: its files go before anything reads them.
+FactoryReset.ApplyIfRequested(paths, Console.WriteLine);
 builder.Configuration.AddArcanistSettingsFile(paths);
 builder.Services.AddSingleton(paths);
 // ASP.NET Core creates these keys anyway; keep them with the rest of the state instead of the user profile. Arcanist
@@ -105,6 +107,7 @@ builder.Services.AddScoped<FfmpegService>();
 builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<TrackMatchService>();
+builder.Services.AddScoped<Arcanist.Core.Application.Server.ServerAdminService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Listening.ListeningSignals>();
 builder.Services.Configure<Arcanist.Core.Application.Libraries.UploadOptions>(builder.Configuration.GetSection("Arcanist:Uploads"));
 builder.Services.AddScoped<Arcanist.Core.Application.Libraries.UploadService>();

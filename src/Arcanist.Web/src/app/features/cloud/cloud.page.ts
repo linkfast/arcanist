@@ -39,13 +39,7 @@ import { qrPath } from '../../shared/invitation';
 type Metrics = MetricsResult['ultimateCloudMetrics'];
 type Service = keyof UltimateCloudServicesInput;
 
-const SERVICES: Service[] = [
-  'personalPlays',
-  'sharedPlays',
-  'albumPlaythroughs',
-  'starTracks',
-  'metrics',
-];
+const SERVICES: Service[] = ['personalPlays', 'albumPlaythroughs', 'starTracks', 'metrics'];
 const PERIODS = ['ThisMonth', 'ThisYear', 'AllTime'] as const;
 
 const ALL_CAPABILITIES: Capability[] = [
@@ -203,7 +197,6 @@ export class CloudPage implements OnInit {
     if (!current) return;
     const input: UltimateCloudServicesInput = {
       personalPlays: current.personalPlays,
-      sharedPlays: current.sharedPlays,
       albumPlaythroughs: current.albumPlaythroughs,
       starTracks: current.starTracks,
       metrics: current.metrics,

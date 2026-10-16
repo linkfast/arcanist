@@ -353,6 +353,73 @@ export const FfmpegStatusFields = graphql(`
   }
 `);
 
+export const ServerConfigurationFields = graphql(`
+  fragment ServerConfigurationFields on ServerConfiguration {
+    defaultLanguage
+    ratingMode
+    shareAnonymousStatistics
+    ffmpegPath
+    onlineServices {
+      musicBrainz
+      acoustId
+      coverArtArchive
+      lyrics
+    }
+  }
+`);
+
+export const ServerConfigurationQuery = graphql(`
+  query ServerConfiguration {
+    serverConfiguration {
+      ...ServerConfigurationFields
+    }
+  }
+`);
+
+export const ReconfigureServerMutation = graphql(`
+  mutation ReconfigureServer($input: ReconfigureServerInput!) {
+    reconfigureServer(input: $input) {
+      ...ServerConfigurationFields
+    }
+  }
+`);
+
+export const AnonymousStatisticsQuery = graphql(`
+  query AnonymousStatistics {
+    anonymousStatistics
+  }
+`);
+
+export const SetAnonymousStatisticsMutation = graphql(`
+  mutation SetAnonymousStatistics($enabled: Boolean!) {
+    setAnonymousStatistics(enabled: $enabled)
+  }
+`);
+
+export const ResetSettingsMutation = graphql(`
+  mutation ResetSettings {
+    resetSettings {
+      restartRequired
+    }
+  }
+`);
+
+export const ResetUserDataMutation = graphql(`
+  mutation ResetUserData {
+    resetUserData {
+      restartRequired
+    }
+  }
+`);
+
+export const FactoryResetMutation = graphql(`
+  mutation FactoryReset($input: FactoryResetInput!) {
+    factoryReset(input: $input) {
+      restartRequired
+    }
+  }
+`);
+
 export const FfmpegQuery = graphql(`
   query Ffmpeg {
     ffmpeg {
@@ -1529,7 +1596,6 @@ export const UltimateCloudStatusFields = graphql(`
     enabled
     services {
       personalPlays
-      sharedPlays
       albumPlaythroughs
       starTracks
       metrics

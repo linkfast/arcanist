@@ -10,36 +10,37 @@ using Microsoft.Extensions.Options;
 namespace Arcanist.Core.Cloud;
 
 /// <summary>
-/// Ultimate Cloud's online services this server takes part in, each one on or off (<see cref="SettingKeys.UltimateCloudServices"/>).
+/// The linked account's online services this server takes part in, each one on or off
+/// (<see cref="SettingKeys.UltimateCloudServices"/>). Anonymous statistics are apart: a server setting
+/// (<see cref="SettingKeys.ShareAnonymousStatistics"/>), asked by the setup wizard, that works without an account.
 /// </summary>
 /// <param name="PersonalPlays">The plays of the administrator who linked the account count as theirs: personal statistics and rankings.</param>
-/// <param name="SharedPlays">The plays of everyone else feed the global rankings, anonymously (never anyone's statistics).
-/// By default, what the setup wizard was told about anonymous statistics.</param>
-/// <param name="AlbumPlaythroughs">Albums listened to from start to finish feed the album rankings (for the plays that are sent).</param>
+/// <param name="AlbumPlaythroughs">Their albums listened to from start to finish feed the album rankings.</param>
 /// <param name="StarTracks">The stars of the administrator who linked the account are their StarTracks, shared with their Ultimate apps.</param>
 /// <param name="Metrics">The account's statistics are shown in the panel.</param>
-public sealed record UltimateCloudServicesConfig(bool PersonalPlays, bool SharedPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
+public sealed record UltimateCloudServicesConfig(bool PersonalPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
 
 public sealed class UltimateCloudServicesSettings(SettingsStore settings)
 {
     public async Task<UltimateCloudServicesConfig> GetAsync(CancellationToken cancellationToken) =>
         await settings.GetAsync<UltimateCloudServicesConfig?>(SettingKeys.UltimateCloudServices, null, cancellationToken)
-        ?? new UltimateCloudServicesConfig(true, await settings.GetAsync(SettingKeys.ShareAnonymousStatistics, true, cancellationToken), true, true, true);
+        ?? new UltimateCloudServicesConfig(true, true, true, true);
 
     public Task SetAsync(UltimateCloudServicesConfig config, CancellationToken cancellationToken) =>
         settings.SetAsync(SettingKeys.UltimateCloudServices, config, cancellationToken);
 }
 
 /// <summary>
-/// Feeds Ultimate Cloud's online services with a linked account: plays (the linking administrator's as their own,
-/// everyone else's anonymously for the rankings), albums heard from start to finish, and the linking administrator's
-/// stars as their StarTracks (both ways). Plays are sent from where it left off (it starts with the plays made once
-/// it is on, never the history); only tracks identified by AcoustID can take part, as in every Ultimate app.
+/// Feeds Ultimate Cloud: with a linked account, the linking administrator's plays as their own, their albums heard
+/// from start to finish and their stars as StarTracks (both ways); and, with anonymous statistics on (with or without
+/// an account), everyone else's plays and albums heard whole, anonymously, for the global rankings. Plays are sent
+/// from where it left off (it starts with the plays made once it is on, never the history); only tracks identified by
+/// AcoustID take part, as in every Ultimate app. Nothing while the Ultimate Cloud extension is off.
 /// </summary>
 public sealed class UltimateCloudReporter(
     UltimateCloudClient client,
     UltimateCloudAuth auth,
-    ICloudLinkState link,
+    UltimateCloudAccount account,
     UltimateCloudServicesSettings services,
     SettingsStore settings,
     ListeningSignals signals,
@@ -82,7 +83,7 @@ public sealed class UltimateCloudReporter(
         {
             try
             {
-                if (setup.CurrentValue.Completed && databases.IsConfigured && link.Tier != CloudTier.None)
+                if (setup.CurrentValue.Completed && databases.IsConfigured && account.Enabled && account.IsConfigured)
                     await RunAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -127,14 +128,17 @@ public sealed class UltimateCloudReporter(
 
     private async Task RunOnceAsync(CancellationToken cancellationToken)
     {
-        if (link.Tier == CloudTier.None)
+        if (!account.Enabled || !account.IsConfigured)
             return;
+        var linked = account.Tier != CloudTier.None;
+        var anonymous = await settings.GetAsync(SettingKeys.ShareAnonymousStatistics, false, cancellationToken);
         var config = await services.GetAsync(cancellationToken);
-        var linker = await LinkerAsync(cancellationToken);
-        await ReportPlaysAsync(config, linker, cancellationToken);
+        var linker = linked ? await LinkerAsync(cancellationToken) : null;
+        // The cursor moves even with nothing to send: turning something on later never sends the plays before.
+        await ReportPlaysAsync(config, linker, anonymous, cancellationToken);
 
         var now = time.GetUtcNow().UtcDateTime;
-        if (config.StarTracks && linker is { } user && (_starsDue || now - _starsCheckedAt > StarInterval))
+        if (linked && config.StarTracks && linker is { } user && (_starsDue || now - _starsCheckedAt > StarInterval))
         {
             _starsDue = false;
             _starsCheckedAt = now;
@@ -159,13 +163,13 @@ public sealed class UltimateCloudReporter(
         Guid Id, Guid UserId, Guid? TrackId, DateTime PlayedAt, Guid? AcoustId, Guid? RecordingMbid, string? Title, string? Artist,
         Guid? ArtistMbid, string? Album, string? AlbumArtist, Guid? AlbumId, string? Genre);
 
-    private async Task ReportPlaysAsync(UltimateCloudServicesConfig config, Guid? linker, CancellationToken cancellationToken)
+    private async Task ReportPlaysAsync(UltimateCloudServicesConfig config, Guid? linker, bool anonymous, CancellationToken cancellationToken)
     {
         var cursor = await settings.GetAsync<Guid?>(SettingKeys.UltimateCloudPlaysCursor, null, cancellationToken);
         await using var db = databases.CreateDbContext();
         if (cursor is null)
         {
-            // From now on: the plays made before the account was linked are not sent.
+            // From now on: the plays made before are not sent.
             var last = await db.PlayEvents.OrderByDescending(e => e.Id).Select(e => (Guid?)e.Id).FirstOrDefaultAsync(cancellationToken);
             await SaveCursorAsync(last ?? Guid.Empty, cancellationToken);
             return;
@@ -194,15 +198,19 @@ public sealed class UltimateCloudReporter(
                 return;
 
             // The anonymous ones go together; before one of the linker's (sent alone), those before it are sent.
-            var shared = new List<(Guid Id, object Input)>();
+            var plays = new List<(Guid Id, object Input)>();
+            var albums = new List<object>();
             async Task FlushAsync()
             {
-                if (shared.Count == 0)
+                if (plays.Count == 0 && albums.Count == 0)
                     return;
-                await SendAsync("mutation Shared($p: [SharedPlayInput!]!) { recordSharedPlays(plays: $p) }",
-                    new { p = shared.Select(s => s.Input).ToList() }, cancellationToken);
-                await SaveCursorAsync(shared[^1].Id, cancellationToken);
-                shared.Clear();
+                await SendAsync(
+                    "mutation Anonymous($p: [SharedPlayInput!]!, $a: [AnonymousAlbumInput!]) { recordAnonymousPlays(plays: $p, albums: $a) }",
+                    new { p = plays.Select(s => s.Input).ToList(), a = albums }, cancellationToken, anonymous: true);
+                if (plays.Count > 0)
+                    await SaveCursorAsync(plays[^1].Id, cancellationToken);
+                plays.Clear();
+                albums.Clear();
             }
 
             foreach (var play in rows)
@@ -211,38 +219,39 @@ public sealed class UltimateCloudReporter(
                 if (play.TrackId is null || play.AcoustId is not { } acoustId)
                     continue;
 
-                var mine = play.UserId == linker;
-                if (mine ? config.PersonalPlays : config.SharedPlays)
+                if (linker is not null && play.UserId == linker && config.PersonalPlays)
                 {
-                    if (mine)
-                    {
-                        await FlushAsync();
-                        await SendAsync(
-                            """
-                            mutation Play($a: String!, $title: String, $artist: String, $album: String, $genre: String, $rec: String, $art: String, $at: DateTime) {
-                              recordPlay(acoustId: $a, title: $title, artist: $artist, album: $album, genre: $genre, musicBrainzRecordingId: $rec, musicBrainzArtistId: $art, playedAt: $at)
-                            }
-                            """,
-                            new
-                            {
-                                a = acoustId.ToString(), title = play.Title, artist = play.Artist, album = play.Album, genre = play.Genre,
-                                rec = play.RecordingMbid?.ToString(), art = play.ArtistMbid?.ToString(), at = play.PlayedAt,
-                            },
-                            cancellationToken);
-                    }
-                    else
-                    {
-                        shared.Add((play.Id, new
+                    // The account's own: its statistics and the rankings.
+                    await FlushAsync();
+                    await SendAsync(
+                        """
+                        mutation Play($a: String!, $title: String, $artist: String, $album: String, $genre: String, $rec: String, $art: String, $at: DateTime) {
+                          recordPlay(acoustId: $a, title: $title, artist: $artist, album: $album, genre: $genre, musicBrainzRecordingId: $rec, musicBrainzArtistId: $art, playedAt: $at)
+                        }
+                        """,
+                        new
                         {
-                            acoustId = acoustId.ToString(), playedAt = play.PlayedAt, title = play.Title, artist = play.Artist, album = play.Album,
-                            genre = play.Genre, musicBrainzRecordingId = play.RecordingMbid?.ToString(), musicBrainzArtistId = play.ArtistMbid?.ToString(),
-                        }));
+                            a = acoustId.ToString(), title = play.Title, artist = play.Artist, album = play.Album, genre = play.Genre,
+                            rec = play.RecordingMbid?.ToString(), art = play.ArtistMbid?.ToString(), at = play.PlayedAt,
+                        },
+                        cancellationToken);
+                    if (config.AlbumPlaythroughs && await PlaythroughAsync(db, play, cancellationToken) is { } whole)
+                    {
+                        await SendAsync("mutation Album($artist: String!, $album: String!) { recordAlbumPlaythrough(artist: $artist, album: $album) }",
+                            new { artist = whole.Artist, album = whole.Album }, cancellationToken);
                     }
 
-                    if (config.AlbumPlaythroughs)
-                        await PlaythroughAsync(db, play, cancellationToken);
-                    if (mine)
-                        await SaveCursorAsync(play.Id, cancellationToken);
+                    await SaveCursorAsync(play.Id, cancellationToken);
+                }
+                else if (anonymous)
+                {
+                    plays.Add((play.Id, new
+                    {
+                        acoustId = acoustId.ToString(), playedAt = play.PlayedAt, title = play.Title, artist = play.Artist, album = play.Album,
+                        genre = play.Genre, musicBrainzRecordingId = play.RecordingMbid?.ToString(), musicBrainzArtistId = play.ArtistMbid?.ToString(),
+                    }));
+                    if (await PlaythroughAsync(db, play, cancellationToken) is { } whole)
+                        albums.Add(new { artist = whole.Artist, album = whole.Album });
                 }
             }
 
@@ -258,17 +267,17 @@ public sealed class UltimateCloudReporter(
     /// A play of an album's last track that ends the whole album heard in order (the user's plays before it are its
     /// other tracks, from the first): Ultimate Cloud's album rankings count it as listened from start to finish.
     /// </summary>
-    private async Task PlaythroughAsync(ArcanistDbContext db, PlayRow play, CancellationToken cancellationToken)
+    private static async Task<(string Artist, string Album)?> PlaythroughAsync(ArcanistDbContext db, PlayRow play, CancellationToken cancellationToken)
     {
         if (play.AlbumId is not { } albumId || play.Album is null)
-            return;
+            return null;
         var album = await db.Tracks.AsNoTracking()
             .Where(t => t.AlbumId == albumId && t.Files.Any(f => f.MissingSince == null))
             .OrderBy(t => t.DiscNumber ?? 1).ThenBy(t => t.TrackNumber).ThenBy(t => t.NormalizedTitle)
             .Select(t => t.Id)
             .ToListAsync(cancellationToken);
         if (album.Count < 2 || album[^1] != play.TrackId)
-            return;
+            return null;
 
         var heard = await db.PlayEvents.AsNoTracking()
             .Where(e => e.UserId == play.UserId && e.Counted && e.PlayedAt <= play.PlayedAt && e.Id != play.Id)
@@ -277,11 +286,9 @@ public sealed class UltimateCloudReporter(
             .Select(e => e.TrackId)
             .ToListAsync(cancellationToken);
         heard.Reverse();
-        if (!heard.SequenceEqual(album.Take(album.Count - 1).Select(id => (Guid?)id)))
-            return;
-
-        await SendAsync("mutation Album($artist: String!, $album: String!) { recordAlbumPlaythrough(artist: $artist, album: $album) }",
-            new { artist = play.AlbumArtist ?? play.Artist ?? "", album = play.Album }, cancellationToken);
+        return heard.SequenceEqual(album.Take(album.Count - 1).Select(id => (Guid?)id))
+            ? (play.AlbumArtist ?? play.Artist ?? "", play.Album)
+            : null;
     }
 
     private Task SaveCursorAsync(Guid cursor, CancellationToken cancellationToken) =>
@@ -294,11 +301,13 @@ public sealed class UltimateCloudReporter(
     }
 
     /// <summary>Sends to Ultimate Cloud; anything but not reaching it (or the link being gone) is logged and passed over.</summary>
-    private async Task<JsonNode?> SendAsync(string query, object variables, CancellationToken cancellationToken)
+    private async Task<JsonNode?> SendAsync(string query, object variables, CancellationToken cancellationToken, bool anonymous = false)
     {
         try
         {
-            return await client.SendAsync(query, variables, cancellationToken);
+            return anonymous
+                ? await client.SendAnonymousAsync(query, variables, cancellationToken)
+                : await client.SendAsync(query, variables, cancellationToken);
         }
         catch (UltimateCloudException e) when (e.Code is not (Application.ErrorCodes.CloudUnreachable or Application.ErrorCodes.CloudLinkExpired
                                                    or Application.ErrorCodes.CloudNotLinked or Application.ErrorCodes.CloudNotConfigured))

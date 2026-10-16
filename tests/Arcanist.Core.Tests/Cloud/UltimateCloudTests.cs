@@ -86,6 +86,19 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
         {
             var query = JsonNode.Parse(body)!["query"]!.GetValue<string>();
             Api.Enqueue((query.Contains("touchSyncedDevice") ? "touch" : "plan", request, body));
+            if (query.Contains("recordAnonymousPlays("))
+            {
+                // No account: anonymous statistics, from the server's device.
+                Assert.Null(request.Headers.Authorization);
+                Assert.StartsWith("arcanist-", request.Headers.GetValues("X-Device-Id").Single());
+                var anonymous = JsonNode.Parse(body)!["variables"]!;
+                foreach (var play in anonymous["p"]!.AsArray())
+                    SharedPlays.Enqueue((play!["acoustId"]!.GetValue<string>(), play["title"]?.GetValue<string>(), play["playedAt"]?.GetValue<DateTime>()));
+                foreach (var album in anonymous["a"]?.AsArray() ?? [])
+                    AnonymousAlbums.Enqueue((album!["artist"]!.GetValue<string>(), album["album"]!.GetValue<string>()));
+                return Json(new { data = new { recordAnonymousPlays = anonymous["p"]!.AsArray().Count } });
+            }
+
             if (request.Headers.Authorization is not { Scheme: "Bearer", Parameter: not null })
                 return new HttpResponseMessage(HttpStatusCode.Unauthorized);
             if (query.Contains("touchSyncedDevice"))
@@ -97,13 +110,6 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             if (query.Contains("library {"))
                 return Json(new { data = new { library = Tracks.Select(t => t.Payload).ToArray() } });
             var variables = JsonNode.Parse(body)!["variables"];
-            if (query.Contains("recordSharedPlays("))
-            {
-                foreach (var play in variables!["p"]!.AsArray())
-                    SharedPlays.Enqueue((play!["acoustId"]!.GetValue<string>(), play["title"]?.GetValue<string>(), play["playedAt"]?.GetValue<DateTime>()));
-                return Json(new { data = new { recordSharedPlays = variables["p"]!.AsArray().Count } });
-            }
-
             if (query.Contains("recordPlay("))
             {
                 Plays.Enqueue((variables!["a"]!.GetValue<string>(), variables["title"]?.GetValue<string>(), variables["at"]?.GetValue<DateTime>()));
@@ -355,8 +361,11 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     /// <summary>The account's own plays (<c>recordPlay</c>): AcoustID, title and when.</summary>
     public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt)> Plays { get; } = new();
 
-    /// <summary>Plays reported anonymously for the rankings (<c>recordSharedPlays</c>).</summary>
+    /// <summary>Plays reported anonymously for the rankings, without an account (<c>recordAnonymousPlays</c>).</summary>
     public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt)> SharedPlays { get; } = new();
+
+    /// <summary>Albums heard whole, reported anonymously.</summary>
+    public ConcurrentQueue<(string Artist, string Album)> AnonymousAlbums { get; } = new();
 
     /// <summary>Albums heard from start to finish (<c>recordAlbumPlaythrough</c>).</summary>
     public ConcurrentQueue<(string Artist, string Album)> Playthroughs { get; } = new();

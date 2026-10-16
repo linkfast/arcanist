@@ -42,7 +42,7 @@ The setup code is in `journalctl -u arcanist`.
 ### Docker
 
 ```bash
-docker run -d --name arcanist -p 8484:8484 -v arcanist-data:/data -v /path/to/music:/music:ro ghcr.io/linkfast/arcanist
+docker run -d --name arcanist --restart unless-stopped -p 8484:8484 -v arcanist-data:/data -v /path/to/music:/music:ro ghcr.io/linkfast/arcanist
 ```
 
 The image supports linux/amd64 and linux/arm64. The setup code is in `docker logs arcanist`. Add `/music` as a

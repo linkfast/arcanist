@@ -4,13 +4,12 @@ namespace Arcanist.Core.Application.Cloud;
 
 /// <summary>Which of Ultimate Cloud's online services this server takes part in.</summary>
 /// <param name="PersonalPlays">The plays of the administrator who linked the account count as theirs (their statistics and the rankings).</param>
-/// <param name="SharedPlays">Everyone else's plays feed the global rankings anonymously, never anyone's statistics.</param>
 /// <param name="AlbumPlaythroughs">Albums heard from start to finish feed the album rankings.</param>
 /// <param name="StarTracks">The stars of the administrator who linked the account are their StarTracks, both ways.</param>
 /// <param name="Metrics">The account's listening statistics are shown here.</param>
-public sealed record UltimateCloudServices(bool PersonalPlays, bool SharedPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
+public sealed record UltimateCloudServices(bool PersonalPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
 
-public sealed record UltimateCloudServicesInput(bool PersonalPlays, bool SharedPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
+public sealed record UltimateCloudServicesInput(bool PersonalPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
 
 /// <summary>An Ultimate Cloud account linked to this server, as a destination for uploads.</summary>
 /// <param name="Id">The account's id in Ultimate Cloud.</param>

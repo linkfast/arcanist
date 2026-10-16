@@ -1,6 +1,7 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { toast } from '@spartan-ng/brain/sonner';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideCheck, lucideFolderPlus, lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
@@ -31,7 +32,17 @@ import type {
   MstreamImportJobFieldsFragment as MstreamImportJob,
   ScanJobFieldsFragment as ScanJob,
 } from '../../graphql/generated/graphql';
-import { LibrariesQuery, MstreamImportsQuery, ScanJobsQuery } from '../../graphql/operations';
+import {
+  CreateLibraryMutation,
+  CreateServerDirectoryMutation,
+  FfmpegQuery,
+  LibrariesQuery,
+  MstreamImportsQuery,
+  ReconfigureServerMutation,
+  ScanJobsQuery,
+  ServerConfigurationQuery,
+  ServerDirectoriesQuery,
+} from '../../graphql/operations';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { CountPipe } from '../../shared/format';
 import {
@@ -98,6 +109,12 @@ export class SetupPage implements OnInit {
   private readonly gql = inject(Gql);
   private readonly destroyRef = inject(DestroyRef);
 
+  /**
+   * Run again on a server already set up (from Settings): only its answers (language, libraries to add, ffmpeg,
+   * ratings, online services and anonymous statistics); the database, the account and the users stay.
+   */
+  protected readonly reconfigure = inject(ActivatedRoute).snapshot.data['reconfigure'] === true;
+
   protected readonly status = signal<SetupStatus | null>(null);
   protected readonly step = signal<Step>('welcome');
   protected readonly busy = signal(false);
@@ -105,6 +122,7 @@ export class SetupPage implements OnInit {
   protected readonly fieldErrors = signal<Record<string, string[]>>({});
 
   protected readonly steps = computed<Step[]>(() => {
+    if (this.reconfigure) return ['welcome', 'libraries', 'media', 'ratings', 'privacy', 'review'];
     const status = this.status();
     const steps: Step[] = [
       'welcome',
@@ -185,11 +203,32 @@ export class SetupPage implements OnInit {
 
   // Folder picker
   protected readonly pickingFor = signal<number | null>(null);
-  protected readonly loadDirectories: DirectoryLoader = (path) => this.setup.directories(path);
-  protected readonly createDirectory: DirectoryCreator = (parent, name) =>
-    this.setup.createDirectory(parent, name);
+  protected readonly loadDirectories: DirectoryLoader = async (path) =>
+    this.reconfigure
+      ? (await this.gql.query(ServerDirectoriesQuery, { path })).serverDirectories
+      : this.setup.directories(path);
+  protected readonly createDirectory: DirectoryCreator = async (parent, name) =>
+    this.reconfigure
+      ? (await this.gql.mutate(CreateServerDirectoryMutation, { input: { parent, name } }))
+          .createServerDirectory
+      : this.setup.createDirectory(parent, name);
 
   async ngOnInit(): Promise<void> {
+    if (this.reconfigure) {
+      // The answers as they are now.
+      const current = (await this.gql.query(ServerConfigurationQuery)).serverConfiguration;
+      this.ratingMode = current.ratingMode;
+      this.shareStatistics = current.shareAnonymousStatistics ? 'yes' : 'no';
+      this.ffmpegPath = current.ffmpegPath ?? '';
+      const { __typename, ...online } = current.onlineServices as typeof current.onlineServices & {
+        __typename?: string;
+      };
+      void __typename;
+      Object.assign(this.onlineServices, online);
+      this.status.set({ requiresCode: false } as SetupStatus);
+      this.step.set('welcome');
+      return;
+    }
     const status = await this.setup.loadStatus();
     this.status.set(status);
     this.step.set(status.requiresCode ? 'code' : 'welcome');
@@ -212,6 +251,20 @@ export class SetupPage implements OnInit {
   }
 
   private async detectFfmpeg(): Promise<void> {
+    if (this.reconfigure) {
+      try {
+        const ffmpeg = (await this.gql.query(FfmpegQuery)).ffmpeg;
+        this.ffmpegDetected.set({
+          available: ffmpeg.available,
+          path: ffmpeg.path ?? null,
+          version: ffmpeg.version ?? null,
+          source: ffmpeg.source ?? null,
+        } as SetupFfmpegCheck);
+      } catch {
+        this.ffmpegDetected.set({ available: false, path: null, version: null, source: null });
+      }
+      return;
+    }
     try {
       this.ffmpegDetected.set(await this.setup.checkFfmpeg(null));
     } catch {
@@ -221,7 +274,8 @@ export class SetupPage implements OnInit {
 
   protected async checkFfmpeg(): Promise<boolean> {
     const path = this.ffmpegPath.trim();
-    if (!path) {
+    // Reconfiguring, the server checks it when the answers are saved.
+    if (!path || this.reconfigure) {
       this.ffmpegCheck.set(null);
       return true;
     }
@@ -359,7 +413,46 @@ export class SetupPage implements OnInit {
     });
   }
 
+  /** Saves the answers again, adds the new libraries and goes back to the panel. */
+  private async finishReconfigure(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    this.fieldErrors.set({});
+    try {
+      await this.gql.mutate(ReconfigureServerMutation, {
+        input: {
+          defaultLanguage: this.i18n.language(),
+          ratingMode: this.ratingMode,
+          onlineServices: { ...this.onlineServices },
+          shareAnonymousStatistics: this.shareStatistics === 'yes',
+          ffmpegPath: this.ffmpegPath.trim() || null,
+        },
+      });
+      for (const library of this.libraries().filter((l) => l.folders.length > 0)) {
+        await this.gql.mutate(CreateLibraryMutation, {
+          input: {
+            name: library.name.trim(),
+            visibleToAll: library.visibleToAll,
+            scanIntervalMinutes: null,
+            watchForChanges: false,
+            sources: library.folders.map((location) => ({ location })),
+          },
+        });
+      }
+      toast.success(this.i18n.t('setup.reconfigured'));
+      await this.router.navigateByUrl('/settings');
+    } catch (error) {
+      const apiError = ApiError.from(error);
+      this.fieldErrors.set(apiError.fields);
+      this.error.set(this.i18n.error(apiError.code));
+      if (Object.keys(apiError.fields).some((field) => field === 'path')) this.step.set('media');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   protected async finish(): Promise<void> {
+    if (this.reconfigure) return this.finishReconfigure();
     this.busy.set(true);
     this.error.set(null);
     this.fieldErrors.set({});

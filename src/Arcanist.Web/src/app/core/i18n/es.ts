@@ -185,6 +185,14 @@ export const es: Dictionary = {
       label: 'Código',
       help: 'Lo encontrarás en el registro (log) del servidor, o en el archivo setup-code.txt de su carpeta de datos. Desde el propio servidor no hace falta.',
     },
+    reconfigure: {
+      title: 'El asistente, de nuevo',
+      description: 'Cambia lo que elegiste al instalar Arcanist.',
+      intro:
+        'Repasa el idioma, añade bibliotecas, el ffmpeg, las valoraciones, los servicios en línea y las estadísticas anónimas. La base de datos, las cuentas, las bibliotecas que ya tienes y su música no cambian.',
+      afterwards: 'Al terminar se guardan estas respuestas y se crean las bibliotecas nuevas.',
+    },
+    reconfigured: 'Configuración guardada',
     welcome: {
       intro:
         'En unos pasos tendrás Arcanist funcionando: elegiremos la base de datos, crearemos tu cuenta y añadiremos tu música.',
@@ -325,6 +333,54 @@ export const es: Dictionary = {
       'Arcanist compara la huella acústica de cada canción al analizarla. Las copias evidentes se unen solas; aquí solo aparecen los casos dudosos.',
   },
   settings: {
+    statistics: {
+      title: 'Estadísticas anónimas',
+      description:
+        'Qué canciones se escuchan en este servidor, sin decir quién, para los rankings globales de Ultimate Cloud.',
+      share: 'Enviar estadísticas anónimas',
+      help: 'Solo se envían el identificador AcoustID de cada canción, su título, artista y álbum, y cuándo se escuchó; nunca usuarios ni rutas. No hace falta una cuenta de Ultimate Cloud. Lo que se envía a la cuenta vinculada (tus reproducciones, StarTracks) se elige en la página Ultimate Cloud.',
+      saved: 'Ajuste guardado',
+    },
+    maintenance: {
+      title: 'Mantenimiento',
+      description:
+        'Volver a configurar el servidor o restablecerlo. Tus archivos de música nunca se tocan.',
+      wizard: 'Ejecutar el asistente de nuevo',
+      wizardHelp:
+        'Repasa el idioma, las bibliotecas, ffmpeg, las valoraciones, los servicios en línea y las estadísticas anónimas sin perder nada.',
+      wizardRun: 'Abrir el asistente',
+      word: 'restablecer',
+      type: 'Para confirmar, escribe {word}:',
+      restarting: 'Restableciendo: el servidor se reinicia y abrirá el asistente inicial…',
+      settings: {
+        title: 'Restablecer los ajustes',
+        help: 'Ajustes del servidor a sus valores iniciales: valoraciones, servicios en línea, DLNA, mStream, red P2P, extensiones… Las bibliotecas, los usuarios y sus datos se conservan.',
+        button: 'Restablecer ajustes',
+        confirmTitle: '¿Restablecer los ajustes?',
+        confirm:
+          'Los ajustes vuelven a como estaban al instalar Arcanist. Bibliotecas, usuarios, valoraciones y playlists no cambian.',
+        done: 'Ajustes restablecidos',
+      },
+      userData: {
+        title: 'Borrar los datos de los usuarios',
+        help: 'Valoraciones, reproducciones, historial y playlists de todos los usuarios. Las bibliotecas, los usuarios y los ajustes se conservan.',
+        button: 'Borrar datos',
+        confirmTitle: '¿Borrar los datos de todos los usuarios?',
+        confirm:
+          'Se borran las valoraciones, las reproducciones, el historial y las playlists de todos. No se puede deshacer. Los StarTracks de Ultimate Cloud no se tocan.',
+        done: 'Datos de los usuarios borrados',
+      },
+      factory: {
+        title: 'Restablecimiento de fábrica',
+        help: 'Todo vuelve a como recién instalado: base de datos, usuarios, ajustes, claves y caché. La cuenta de Ultimate Cloud se desvincula y el servidor se reinicia en el asistente inicial.',
+        button: 'Restablecer de fábrica',
+        confirmTitle: '¿Restablecer Arcanist de fábrica?',
+        confirm:
+          'Se borran la base de datos (usuarios, bibliotecas, valoraciones, playlists…), los ajustes, las claves y la caché, y el servidor se reinicia en el asistente inicial. Tus archivos de música no se tocan. No se puede deshacer.',
+        addons:
+          'Quitar también los reproductores y extensiones instalados y las herramientas descargadas (ffmpeg, ultimate-audio)',
+      },
+    },
     ratings: {
       title: 'Valoraciones',
       description: 'Cómo califican los usuarios las canciones en todos los reproductores.',
@@ -1066,14 +1122,10 @@ export const es: Dictionary = {
     services: {
       title: 'Servicios en línea',
       description:
-        'Lo que este servidor comparte con Ultimate Cloud. Solo participan las canciones identificadas con AcoustID.',
+        'Lo que comparte la cuenta vinculada. Solo participan las canciones identificadas con AcoustID. Las estadísticas anónimas del servidor están en Ajustes.',
       personalPlays: {
         name: 'Mis reproducciones',
         help: 'Las reproducciones del administrador que vinculó la cuenta cuentan como suyas: sus estadísticas y los rankings.',
-      },
-      sharedPlays: {
-        name: 'Las de los demás, de forma anónima',
-        help: 'Alimentan los rankings de Ultimate Cloud sin decir quién escuchó: nunca las estadísticas de nadie.',
       },
       albumPlaythroughs: {
         name: 'Álbumes escuchados enteros',

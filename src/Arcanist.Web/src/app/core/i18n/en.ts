@@ -176,6 +176,14 @@ export const en: Dictionary = {
       label: 'Code',
       help: "You'll find it in the server log, or in the setup-code.txt file in its data folder. It is not needed on the server itself.",
     },
+    reconfigure: {
+      title: 'The setup wizard, again',
+      description: 'Change what you chose when you installed Arcanist.',
+      intro:
+        'Go over the language, add libraries, ffmpeg, ratings, online services and anonymous statistics. The database, the accounts, the libraries you already have and their music do not change.',
+      afterwards: 'When you finish, these answers are saved and the new libraries are created.',
+    },
+    reconfigured: 'Settings saved',
     welcome: {
       intro:
         "In a few steps Arcanist will be running: we'll pick the database, create your account and add your music.",
@@ -317,6 +325,53 @@ export const en: Dictionary = {
       'Arcanist compares the acoustic fingerprint of every song when it analyzes it. Obvious copies are joined automatically; only doubtful cases show up here.',
   },
   settings: {
+    statistics: {
+      title: 'Anonymous statistics',
+      description:
+        'Which songs are played on this server, without saying who, for Ultimate Cloud’s global rankings.',
+      share: 'Send anonymous statistics',
+      help: 'Only each song’s AcoustID, its title, artist and album, and when it was played are sent; never users or paths. No Ultimate Cloud account is needed. What goes to the linked account (your plays, StarTracks) is chosen on the Ultimate Cloud page.',
+      saved: 'Setting saved',
+    },
+    maintenance: {
+      title: 'Maintenance',
+      description: 'Set the server up again, or reset it. Your music files are never touched.',
+      wizard: 'Run the setup wizard again',
+      wizardHelp:
+        'Go over the language, libraries, ffmpeg, ratings, online services and anonymous statistics without losing anything.',
+      wizardRun: 'Open the wizard',
+      word: 'reset',
+      type: 'To confirm, type {word}:',
+      restarting: 'Resetting: the server restarts and will open the setup wizard…',
+      settings: {
+        title: 'Reset the settings',
+        help: 'Server settings back to how they start: ratings, online services, DLNA, mStream, P2P network, extensions… Libraries, users and their data stay.',
+        button: 'Reset settings',
+        confirmTitle: 'Reset the settings?',
+        confirm:
+          'The settings go back to how they were when Arcanist was installed. Libraries, users, ratings and playlists do not change.',
+        done: 'Settings reset',
+      },
+      userData: {
+        title: 'Delete the users’ data',
+        help: 'Every user’s ratings, plays, history and playlists. Libraries, users and settings stay.',
+        button: 'Delete data',
+        confirmTitle: 'Delete every user’s data?',
+        confirm:
+          'Everyone’s ratings, plays, history and playlists are deleted. This cannot be undone. StarTracks in Ultimate Cloud are not touched.',
+        done: 'Users’ data deleted',
+      },
+      factory: {
+        title: 'Factory reset',
+        help: 'Everything back to freshly installed: database, users, settings, keys and cache. The Ultimate Cloud account is unlinked and the server restarts into the setup wizard.',
+        button: 'Factory reset',
+        confirmTitle: 'Factory reset Arcanist?',
+        confirm:
+          'The database (users, libraries, ratings, playlists…), the settings, the keys and the cache are deleted, and the server restarts into the setup wizard. Your music files are not touched. This cannot be undone.',
+        addons:
+          'Also remove the installed players and extensions and the downloaded tools (ffmpeg, ultimate-audio)',
+      },
+    },
     ratings: {
       title: 'Ratings',
       description: 'How users rate tracks, in every player.',
@@ -1057,14 +1112,10 @@ export const en: Dictionary = {
     services: {
       title: 'Online services',
       description:
-        'What this server shares with Ultimate Cloud. Only songs identified by AcoustID take part.',
+        'What the linked account shares. Only songs identified by AcoustID take part. The server’s anonymous statistics are in Settings.',
       personalPlays: {
         name: 'My plays',
         help: 'The plays of the administrator who linked the account count as theirs: their statistics, and the rankings.',
-      },
-      sharedPlays: {
-        name: 'Everyone else’s plays, anonymously',
-        help: 'They feed Ultimate Cloud’s rankings without saying who listened: never anyone’s statistics.',
       },
       albumPlaythroughs: {
         name: 'Albums heard whole',

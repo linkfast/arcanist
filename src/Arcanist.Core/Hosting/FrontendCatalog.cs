@@ -100,6 +100,14 @@ public sealed partial class FrontendCatalog(
         return (_defaultId is { } id ? Find(id) : null) ?? BuiltIn;
     }
 
+    /// <summary>Back to the bundled player at <c>/</c>.</summary>
+    public async Task ResetDefaultAsync(CancellationToken cancellationToken)
+    {
+        await settings.SetAsync<string?>(SettingKeys.DefaultFrontend, null, cancellationToken);
+        _defaultId = null;
+        _defaultLoaded = true;
+    }
+
     public async Task SetDefaultAsync(string id, CancellationToken cancellationToken)
     {
         if (Find(id) is null)

@@ -222,7 +222,7 @@ public sealed class UltimateCloudService(
     private async Task<UltimateCloudServices> ServicesAsync(CancellationToken cancellationToken)
     {
         var config = await services.GetAsync(cancellationToken);
-        return new UltimateCloudServices(config.PersonalPlays, config.SharedPlays, config.AlbumPlaythroughs, config.StarTracks, config.Metrics);
+        return new UltimateCloudServices(config.PersonalPlays, config.AlbumPlaythroughs, config.StarTracks, config.Metrics);
     }
 
     /// <summary>Chooses which online services this server takes part in. Administrators only, with a recent authentication.</summary>
@@ -230,7 +230,7 @@ public sealed class UltimateCloudService(
     {
         guard.Admin();
         guard.RecentAuthentication();
-        await services.SetAsync(new UltimateCloudServicesConfig(input.PersonalPlays, input.SharedPlays, input.AlbumPlaythroughs, input.StarTracks, input.Metrics),
+        await services.SetAsync(new UltimateCloudServicesConfig(input.PersonalPlays, input.AlbumPlaythroughs, input.StarTracks, input.Metrics),
             cancellationToken);
         reporter.StarsChanged();
         return await CurrentAsync(cancellationToken);

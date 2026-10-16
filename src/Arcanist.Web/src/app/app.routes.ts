@@ -14,6 +14,13 @@ export const routes: Routes = [
     loadComponent: () => import('./features/setup/setup.page').then((m) => m.SetupPage),
   },
   {
+    // The setup wizard again, on a server already set up: its answers, without the database or the account.
+    path: 'reconfigure',
+    canActivate: [setupCompletedGuard, authGuard, adminGuard],
+    data: { reconfigure: true },
+    loadComponent: () => import('./features/setup/setup.page').then((m) => m.SetupPage),
+  },
+  {
     path: 'login',
     canActivate: [setupCompletedGuard],
     loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage),

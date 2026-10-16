@@ -6,8 +6,22 @@
           {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}
         </p>
       }
-      <h1 hlmCardTitle class="text-xl">{{ 'setup.steps.' + step() + '.title' | t }}</h1>
-      <p hlmCardDescription>{{ 'setup.steps.' + step() + '.description' | t }}</p>
+      <h1 hlmCardTitle class="text-xl">
+        {{
+          (reconfigure && step() === 'welcome'
+            ? 'setup.reconfigure.title'
+            : 'setup.steps.' + step() + '.title'
+          ) | t
+        }}
+      </h1>
+      <p hlmCardDescription>
+        {{
+          (reconfigure && step() === 'welcome'
+            ? 'setup.reconfigure.description'
+            : 'setup.steps.' + step() + '.description'
+          ) | t
+        }}
+      </p>
     </div>
 
     <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-5">
@@ -33,7 +47,9 @@
         }
 
         @case ('welcome') {
-          <p class="text-sm">{{ 'setup.welcome.intro' | t }}</p>
+          <p class="text-sm">
+            {{ (reconfigure ? 'setup.reconfigure.intro' : 'setup.welcome.intro') | t }}
+          </p>
           <hlm-field>
             <span hlmFieldLabel>{{ 'setup.welcome.language' | t }}</span>
             <hlm-radio-group
@@ -434,40 +450,42 @@
 
         @case ('review') {
           <dl class="grid gap-3 text-sm sm:grid-cols-[10rem_1fr]">
-            <dt class="text-muted-foreground">{{ 'setup.review.database' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{
-                status()?.database?.lockedByEnvironment
-                  ? ('setup.database.locked' | t)
-                  : provider === 'SQLITE'
-                    ? 'SQLite'
-                    : 'PostgreSQL'
-              }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('database')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.admin' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ userName }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('admin')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.import' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{
-                migrateFrom === 'mstream'
-                  ? ((mstream.importUsers
-                      ? 'setup.review.mstreamWithUsers'
-                      : 'setup.review.mstreamWithoutUsers'
-                    ) | t: { count: mstreamLibraries().length })
-                  : ('setup.review.importNone' | t)
-              }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('import')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
+            @if (!reconfigure) {
+              <dt class="text-muted-foreground">{{ 'setup.review.database' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{
+                  status()?.database?.lockedByEnvironment
+                    ? ('setup.database.locked' | t)
+                    : provider === 'SQLITE'
+                      ? 'SQLite'
+                      : 'PostgreSQL'
+                }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('database')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.admin' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{ userName }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('admin')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.import' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{
+                  migrateFrom === 'mstream'
+                    ? ((mstream.importUsers
+                        ? 'setup.review.mstreamWithUsers'
+                        : 'setup.review.mstreamWithoutUsers'
+                      ) | t: { count: mstreamLibraries().length })
+                    : ('setup.review.importNone' | t)
+                }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('import')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+            }
             <dt class="text-muted-foreground">{{ 'setup.review.libraries' | t }}</dt>
             <dd class="flex items-start justify-between gap-2">
               <ul class="grid gap-1">
@@ -520,7 +538,9 @@
               </button>
             </dd>
           </dl>
-          <p class="text-sm text-muted-foreground">{{ 'setup.review.afterwards' | t }}</p>
+          <p class="text-sm text-muted-foreground">
+            {{ (reconfigure ? 'setup.reconfigure.afterwards' : 'setup.review.afterwards') | t }}
+          </p>
         }
 
         @case ('progress') {

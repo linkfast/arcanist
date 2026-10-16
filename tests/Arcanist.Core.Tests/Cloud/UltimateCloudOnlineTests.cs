@@ -50,7 +50,7 @@ public sealed class UltimateCloudOnlineTests : IAsyncDisposable
     }
 
     private async Task<JsonElement> StatusAsync() =>
-        (await _admin.GraphQLAsync("query { ultimateCloud { enabled tier plan { name } services { personalPlays sharedPlays albumPlaythroughs starTracks metrics } } }"))
+        (await _admin.GraphQLAsync("query { ultimateCloud { enabled tier plan { name } services { personalPlays albumPlaythroughs starTracks metrics } } }"))
         .GetProperty("data").GetProperty("ultimateCloud");
 
     private async Task<Guid> AdminIdAsync()
@@ -85,9 +85,8 @@ public sealed class UltimateCloudOnlineTests : IAsyncDisposable
         var status = await StatusAsync();
         Assert.True(status.GetProperty("enabled").GetBoolean());
         // The setup wizard was told not to share anonymous statistics: that is the default.
-        Assert.False(status.GetProperty("services").GetProperty("sharedPlays").GetBoolean());
-        await _admin.GraphQLAsync(
-            "mutation { setUltimateCloudServices(input: {personalPlays: true, sharedPlays: true, albumPlaythroughs: true, starTracks: true, metrics: true}) { enabled } }");
+        Assert.False((await _admin.GraphQLAsync("query { anonymousStatistics }")).GetProperty("data").GetProperty("anonymousStatistics").GetBoolean());
+        await _admin.GraphQLAsync("mutation { setAnonymousStatistics(enabled: true) }");
 
         // Plays made before are never sent.
         await PlayAsync(_admin, "Single", 30);
@@ -101,19 +100,34 @@ public sealed class UltimateCloudOnlineTests : IAsyncDisposable
         await PlayAsync(listener, "Single", 3);
         await Reporter.RunAsync(Cancel);
 
+        // The administrator who linked the account: theirs. Everyone else: anonymous.
         Assert.Equal([_tracks["Opening"].AcoustId.ToString(), _tracks["Closing"].AcoustId.ToString()], _cloud.Plays.Select(p => p.AcoustId));
         Assert.Equal("Opening", _cloud.Plays.First().Title);
-        var shared = Assert.Single(_cloud.SharedPlays);
-        Assert.Equal(_tracks["Single"].AcoustId.ToString(), shared.AcoustId);
+        Assert.Equal(_tracks["Single"].AcoustId.ToString(), Assert.Single(_cloud.SharedPlays).AcoustId);
         Assert.Equal(("Band", "Whole"), Assert.Single(_cloud.Playthroughs));
 
-        // The anonymous ones, switched off.
-        var off = await _admin.GraphQLAsync(
-            "mutation { setUltimateCloudServices(input: {personalPlays: true, sharedPlays: false, albumPlaythroughs: true, starTracks: true, metrics: true}) { services { sharedPlays } } }");
-        Assert.False(off.GetProperty("data").GetProperty("setUltimateCloudServices").GetProperty("services").GetProperty("sharedPlays").GetBoolean());
+        // Anonymous statistics off: nothing for the others.
+        await _admin.GraphQLAsync("mutation { setAnonymousStatistics(enabled: false) }");
         await PlayAsync(listener, "Opening", 1);
         await Reporter.RunAsync(Cancel);
         Assert.Single(_cloud.SharedPlays);
+    }
+
+    [Fact]
+    public async Task Anonymous_statistics_need_no_account()
+    {
+        await StartAsync();
+        await _admin.GraphQLAsync("mutation { setAnonymousStatistics(enabled: true) }");
+        Assert.Equal(HttpStatusCode.OK, (await _admin.PostAsync("/rest/v1/ultimate-cloud/unlink", null, Cancel)).StatusCode);
+        await Reporter.RunAsync(Cancel);
+
+        // Unlinked, even the administrator's plays go anonymously, with the albums heard whole.
+        await PlayAsync(_admin, "Opening", 10);
+        await PlayAsync(_admin, "Closing", 5);
+        await Reporter.RunAsync(Cancel);
+        Assert.Equal(2, _cloud.SharedPlays.Count);
+        Assert.Equal(("Band", "Whole"), Assert.Single(_cloud.AnonymousAlbums));
+        Assert.Empty(_cloud.Plays);
     }
 
     [Fact]

@@ -292,6 +292,10 @@ public static class BackupServiceCollectionExtensions
     public static IServiceCollection AddBackups(this IServiceCollection services)
     {
         services.AddSingleton<BackupEvents>();
+        services.AddSingleton<RestoreEvents>();
+        services.AddSingleton<RestoreWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<RestoreWorker>());
+        services.AddScoped<RestoreService>();
         services.AddSingleton<BackupGate>();
         services.AddSingleton<BackupPlanner>();
         services.AddSingleton<IBackupExtra, BackupDataExtra>();

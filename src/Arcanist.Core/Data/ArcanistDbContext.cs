@@ -78,6 +78,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
 
     public DbSet<BackupRunFailure> BackupRunFailures => Set<BackupRunFailure>();
 
+    public DbSet<RestoreJob> RestoreJobs => Set<RestoreJob>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // SQLite cannot compare DateTimeOffset and Npgsql requires UTC for timestamptz: store UTC DateTime
@@ -206,6 +208,16 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         {
             failure.Property(f => f.Path).HasMaxLength(PathLength);
             failure.Property(f => f.Code).HasMaxLength(64);
+        });
+        modelBuilder.Entity<RestoreJob>(job =>
+        {
+            job.Property(j => j.BackupFolder).HasMaxLength(NameLength);
+            job.Property(j => j.BackupName).HasMaxLength(NameLength);
+            job.Property(j => j.Snapshot).HasMaxLength(32);
+            job.Property(j => j.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            job.Property(j => j.ErrorCode).HasMaxLength(64);
+            job.HasOne<BackupDestination>().WithMany().HasForeignKey(j => j.DestinationId).OnDelete(DeleteBehavior.Cascade);
+            job.HasIndex(j => j.Status);
         });
     }
 

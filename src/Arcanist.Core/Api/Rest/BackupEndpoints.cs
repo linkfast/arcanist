@@ -68,6 +68,32 @@ public static class BackupEndpoints
             .WithName("BackupRuns")
             .WithSummary("The 20 latest runs of a backup. Administrators only.");
 
+        backups.MapGet("/destinations/{id:guid}/stored", (Guid id, RestoreService service, CancellationToken ct) => service.StoredBackupsAsync(id, ct))
+            .WithName("StoredBackups")
+            .WithSummary("The backups in a destination (this server's or another's), with the snapshots that can be restored. Administrators only.");
+
+        backups.MapGet("/destinations/{id:guid}/stored/{folder}/{snapshot}", (Guid id, string folder, string snapshot, RestoreService service, CancellationToken ct) =>
+                service.SnapshotContentsAsync(id, folder, snapshot, ct))
+            .WithName("BackupSnapshotContents")
+            .WithSummary("What a snapshot holds (libraries, albums, playlists and users), to choose what to restore. Administrators only.");
+
+        backups.MapGet("/restores", (RestoreService service, CancellationToken ct) => service.JobsAsync(ct))
+            .WithName("RestoreJobs")
+            .WithSummary("The latest restores and how far they got. Administrators only.");
+
+        backups.MapGet("/restores/{id:guid}", (Guid id, RestoreService service, CancellationToken ct) => service.JobAsync(id, ct))
+            .WithName("RestoreJob")
+            .WithSummary("A restore and how far it got. Administrators only.");
+
+        backups.MapPost("/restores", (StartRestoreInput input, RestoreService service, CancellationToken ct) => service.StartAsync(input, ct))
+            .WithName("StartRestore")
+            .WithSummary("Restores files and user data from a snapshot, in the background, without overwriting anything. " +
+                         "Administrators only, with a recent authentication.");
+
+        backups.MapPost("/restores/{id:guid}/cancel", (Guid id, RestoreService service, CancellationToken ct) => service.CancelAsync(id, ct))
+            .WithName("CancelRestore")
+            .WithSummary("Stops a restore; what it restored stays. Administrators only.");
+
         backups.MapGet("/runs/{id:guid}", (Guid id, BackupService service, CancellationToken ct) => service.RunInfoAsync(id, ct))
             .WithName("BackupRun")
             .WithSummary("A run of a backup and how far it got. Administrators only.");
@@ -125,6 +151,12 @@ public static class BackupEndpoints
             await foreach (var file in target.ListAsync(folder ?? "", ct))
                 files.Add(file);
             return Results.Ok(files);
+        });
+
+        backups.MapGet("/folders", async (HttpContext context, string? folder, PeerBackupStore store, CancellationToken ct) =>
+        {
+            var (target, _, _) = await store.OpenAsync(Caller(context), ct);
+            return Results.Ok(await target.FoldersAsync(folder ?? "", ct));
         });
 
         backups.MapGet("/file", async (HttpContext context, string path, PeerBackupStore store, CancellationToken ct) =>

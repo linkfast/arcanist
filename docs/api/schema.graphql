@@ -13,6 +13,14 @@ type Query {
   backupRuns(backupId: ID!): [BackupJob!]!
   "Other Arcanist servers that keep their backups here, with the space they take. Administrators only."
   backupGuests: [BackupGuest!]!
+  "The backups in a destination (this server's or another's), with the snapshots that can be restored. Administrators only."
+  storedBackups(destinationId: ID!): [StoredBackup!]!
+  "What a snapshot holds (libraries, albums, playlists and users), to choose what to restore. Administrators only."
+  backupSnapshotContents(destinationId: ID!, folder: String!, snapshot: String!): BackupSnapshotContents!
+  "The latest restores and how far they got. Administrators only."
+  restoreJobs: [RestoreJobInfo!]!
+  "A restore and how far it got. Administrators only."
+  restoreJob(id: ID!): RestoreJobInfo!
   "A run of a backup and how far it got. Administrators only."
   backupRun(id: ID!): BackupJob!
   "Performers and album artists with music the user can play, by name; optionally only those with music in a library. Pages of `first` items (default 50, at most 500) after the `after` cursor."
@@ -293,6 +301,105 @@ type BackupGuest {
   quotaBytes: Long
   revoked: Boolean!
   lastSeenAt: DateTime
+}
+
+type StoredBackup {
+  folder: String!
+  id: ID!
+  name: String!
+  scope: String!
+  machine: String!
+  arcanistVersion: String!
+  updatedAt: DateTime!
+  snapshots: [StoredSnapshot!]!
+  libraries: [StoredLibrary!]!
+}
+
+type StoredSnapshot {
+  name: String!
+  createdAt: DateTime!
+  files: Int!
+  bytes: Long!
+  userData: Boolean!
+  server: Boolean!
+}
+
+type StoredLibrary {
+  folder: String!
+  name: String!
+  sourceId: ID
+}
+
+type BackupSnapshotContents {
+  libraries: [SnapshotLibrary!]!
+  albums: [SnapshotAlbum!]!
+  playlists: [SnapshotPlaylist!]!
+  users: [SnapshotUser!]!
+}
+
+type SnapshotLibrary {
+  folder: String!
+  name: String!
+  files: Int!
+  bytes: Long!
+}
+
+type SnapshotAlbum {
+  id: ID!
+  title: String!
+  artist: String!
+  year: Int
+  paths: [String!]!
+}
+
+type SnapshotPlaylist {
+  owner: String!
+  name: String!
+  tracks: Int!
+  paths: [String!]!
+}
+
+type SnapshotUser {
+  userName: String!
+  displayName: String
+  ratings: Int!
+  plays: Int!
+  playlists: Int!
+  userId: ID
+}
+
+type RestoreJobInfo {
+  id: ID!
+  backupName: String!
+  snapshot: String!
+  status: RestoreStatus!
+  files: Boolean!
+  userData: Boolean!
+  filesTotal: Int!
+  restored: Int!
+  identical: Int!
+  renamed: Int!
+  filesFailed: Int!
+  ratings: Int!
+  playCounts: Int!
+  plays: Int!
+  playlists: Int!
+  unmatched: Int!
+  requestedAt: DateTime!
+  finishedAt: DateTime
+  errorCode: String
+  failures: [BackupJobFailure!]!
+}
+
+enum RestoreStatus {
+  QUEUED
+  COPYING
+  WAITING_FOR_SCANS
+  APPLYING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+  CANCELLED
 }
 
 type ArtistPage {
@@ -1675,6 +1782,10 @@ type Mutation {
   createBackupInvitation(input: CreateBackupInvitationInput!): P2PInvitationLink!
   "Runs a backup now, in the background. Administrators only."
   runBackup(id: ID!): BackupJob!
+  "Restores files and user data from a snapshot, in the background, without overwriting anything. Administrators only, with a recent authentication."
+  startRestore(input: StartRestoreInput!): RestoreJobInfo!
+  "Stops a restore; what it restored stays. Administrators only."
+  cancelRestore(id: ID!): RestoreJobInfo!
   "Stops a run; what it copied stays, and the next run finishes its snapshot. Administrators only."
   cancelBackupRun(id: ID!): BackupJob!
   "Checks that PostgreSQL answers with a connection string. Administrators only."
@@ -1941,6 +2052,22 @@ input CreateBackupInvitationInput {
   name: String!
   folder: String!
   quotaGb: Float
+}
+
+input StartRestoreInput {
+  destinationId: ID!
+  folder: String!
+  snapshot: String!
+  files: Boolean!
+  userData: Boolean!
+  paths: [String!]
+  targetSourceId: ID
+  users: [RestoreUserInput!]
+}
+
+input RestoreUserInput {
+  userName: String!
+  userId: ID
 }
 
 type DatabaseTestResult {
@@ -2325,6 +2452,8 @@ type Subscription {
   analysisProgressChanged: AnalysisProgress!
   "Runs of backups as they change: their state at once, their progress about once a second. Administrators only."
   backupJobUpdated: BackupJob!
+  "Restores as they change: their state at once, their progress about once a second. Administrators only."
+  restoreJobUpdated: RestoreJobInfo!
   "The user's StarTracks (or other ratings) changed, here or through their Ultimate Cloud account."
   starTracksChanged: StarTracksChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."

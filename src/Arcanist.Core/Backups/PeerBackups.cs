@@ -159,6 +159,9 @@ internal sealed class PeerTarget(PeerClient client, NodeTicket ticket) : IBackup
             yield return file;
     }
 
+    public async Task<IReadOnlyList<string>> FoldersAsync(string folder, CancellationToken cancellationToken) =>
+        await client.GetAsync<List<string>>(ticket, $"{Base}/folders?{Query("folder", folder)}", cancellationToken);
+
     public async Task DeleteAsync(string path, CancellationToken cancellationToken)
     {
         using var response = await client.SendAsync(ticket, b => new HttpRequestMessage(HttpMethod.Delete, new Uri(b, $"{Base}/file?{Query("path", path)}")),

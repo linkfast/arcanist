@@ -28,6 +28,9 @@ internal interface IBackupTarget
     /// <summary>Every file under a folder (recursively); none when it does not exist.</summary>
     IAsyncEnumerable<BackupObject> ListAsync(string folder, CancellationToken cancellationToken);
 
+    /// <summary>The names of the folders directly in a folder ("" for the destination's root).</summary>
+    Task<IReadOnlyList<string>> FoldersAsync(string folder, CancellationToken cancellationToken);
+
     Task DeleteAsync(string path, CancellationToken cancellationToken);
 
     Task DeleteFolderAsync(string folder, CancellationToken cancellationToken);

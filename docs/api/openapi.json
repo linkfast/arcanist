@@ -6426,6 +6426,206 @@
         }
       }
     },
+    "/rest/v1/backups/destinations/{id}/stored": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "The backups in a destination (this server\u0027s or another\u0027s), with the snapshots that can be restored. Administrators only.",
+        "operationId": "StoredBackups",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StoredBackup"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/destinations/{id}/stored/{folder}/{snapshot}": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "What a snapshot holds (libraries, albums, playlists and users), to choose what to restore. Administrators only.",
+        "operationId": "BackupSnapshotContents",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "folder",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "snapshot",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSnapshotContents"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/restores": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "The latest restores and how far they got. Administrators only.",
+        "operationId": "RestoreJobs",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RestoreJobInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Restores files and user data from a snapshot, in the background, without overwriting anything. Administrators only, with a recent authentication.",
+        "operationId": "StartRestore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRestoreInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreJobInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/restores/{id}": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "A restore and how far it got. Administrators only.",
+        "operationId": "RestoreJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreJobInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/restores/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Stops a restore; what it restored stays. Administrators only.",
+        "operationId": "CancelRestore",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreJobInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/backups/runs/{id}": {
       "get": {
         "tags": [
@@ -8188,6 +8388,41 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "BackupSnapshotContents": {
+        "required": [
+          "libraries",
+          "albums",
+          "playlists",
+          "users"
+        ],
+        "type": "object",
+        "properties": {
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SnapshotLibrary"
+            }
+          },
+          "albums": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SnapshotAlbum"
+            }
+          },
+          "playlists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SnapshotPlaylist"
+            }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SnapshotUser"
+            }
           }
         }
       },
@@ -13670,6 +13905,186 @@
           }
         }
       },
+      "RestoreJobInfo": {
+        "required": [
+          "id",
+          "backupName",
+          "snapshot",
+          "status",
+          "files",
+          "userData",
+          "filesTotal",
+          "restored",
+          "identical",
+          "renamed",
+          "filesFailed",
+          "ratings",
+          "playCounts",
+          "plays",
+          "playlists",
+          "unmatched",
+          "requestedAt",
+          "finishedAt",
+          "errorCode",
+          "failures"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "backupName": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RestoreStatus"
+          },
+          "files": {
+            "type": "boolean"
+          },
+          "userData": {
+            "type": "boolean"
+          },
+          "filesTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "restored": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "identical": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "renamed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesFailed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ratings": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playCounts": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playlists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unmatched": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupJobFailure"
+            }
+          }
+        }
+      },
+      "RestoreStatus": {
+        "enum": [
+          "QUEUED",
+          "COPYING",
+          "WAITING_FOR_SCANS",
+          "APPLYING",
+          "COMPLETED",
+          "COMPLETED_WITH_ERRORS",
+          "FAILED",
+          "CANCELLED"
+        ]
+      },
+      "RestoreUserInput": {
+        "required": [
+          "userName",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userName": {
+            "type": "string"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "S3ConnectionInput": {
         "required": [
           "endpoint",
@@ -14746,6 +15161,160 @@
           "FAILED"
         ]
       },
+      "SnapshotAlbum": {
+        "required": [
+          "id",
+          "title",
+          "artist",
+          "year",
+          "paths"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SnapshotLibrary": {
+        "required": [
+          "folder",
+          "name",
+          "files",
+          "bytes"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "SnapshotPlaylist": {
+        "required": [
+          "owner",
+          "name",
+          "tracks",
+          "paths"
+        ],
+        "type": "object",
+        "properties": {
+          "owner": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SnapshotUser": {
+        "required": [
+          "userName",
+          "displayName",
+          "ratings",
+          "plays",
+          "playlists",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ratings": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playlists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "StartDlnaImportInput": {
         "required": [
           "location",
@@ -14923,6 +15492,62 @@
           }
         }
       },
+      "StartRestoreInput": {
+        "required": [
+          "destinationId",
+          "folder",
+          "snapshot",
+          "files",
+          "userData",
+          "paths",
+          "targetSourceId",
+          "users"
+        ],
+        "type": "object",
+        "properties": {
+          "destinationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "files": {
+            "type": "boolean"
+          },
+          "userData": {
+            "type": "boolean"
+          },
+          "paths": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "targetSourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "users": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RestoreUserInput"
+            }
+          }
+        }
+      },
       "StartScanInput": {
         "type": "object",
         "properties": {
@@ -14945,6 +15570,122 @@
           "YEAR",
           "ALL"
         ]
+      },
+      "StoredBackup": {
+        "required": [
+          "folder",
+          "id",
+          "name",
+          "scope",
+          "machine",
+          "arcanistVersion",
+          "updatedAt",
+          "snapshots",
+          "libraries"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "machine": {
+            "type": "string"
+          },
+          "arcanistVersion": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoredSnapshot"
+            }
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoredLibrary"
+            }
+          }
+        }
+      },
+      "StoredLibrary": {
+        "required": [
+          "folder",
+          "name",
+          "sourceId"
+        ],
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "StoredSnapshot": {
+        "required": [
+          "name",
+          "createdAt",
+          "files",
+          "bytes",
+          "userData",
+          "server"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "userData": {
+            "type": "boolean"
+          },
+          "server": {
+            "type": "boolean"
+          }
+        }
       },
       "Stream": {
         "type": "string",

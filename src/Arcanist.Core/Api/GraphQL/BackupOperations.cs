@@ -31,6 +31,27 @@ public sealed partial class Query
     public static Task<IReadOnlyList<BackupGuest>> BackupGuests([FromServices] BackupService backups, CancellationToken cancellationToken) =>
         backups.GuestsAsync(cancellationToken);
 
+    [Name("storedBackups")]
+    [Description("The backups in a destination (this server's or another's), with the snapshots that can be restored. Administrators only.")]
+    public static Task<IReadOnlyList<StoredBackup>> StoredBackups([Id] Guid destinationId, [FromServices] RestoreService restores, CancellationToken cancellationToken) =>
+        restores.StoredBackupsAsync(destinationId, cancellationToken);
+
+    [Name("backupSnapshotContents")]
+    [Description("What a snapshot holds (libraries, albums, playlists and users), to choose what to restore. Administrators only.")]
+    public static Task<BackupSnapshotContents> BackupSnapshotContents(
+        [Id] Guid destinationId, string folder, string snapshot, [FromServices] RestoreService restores, CancellationToken cancellationToken) =>
+        restores.SnapshotContentsAsync(destinationId, folder, snapshot, cancellationToken);
+
+    [Name("restoreJobs")]
+    [Description("The latest restores and how far they got. Administrators only.")]
+    public static Task<IReadOnlyList<RestoreJobInfo>> RestoreJobs([FromServices] RestoreService restores, CancellationToken cancellationToken) =>
+        restores.JobsAsync(cancellationToken);
+
+    [Name("restoreJob")]
+    [Description("A restore and how far it got. Administrators only.")]
+    public static Task<RestoreJobInfo> RestoreJob([Id] Guid id, [FromServices] RestoreService restores, CancellationToken cancellationToken) =>
+        restores.JobAsync(id, cancellationToken);
+
     [Name("backupRun")]
     [Description("A run of a backup and how far it got. Administrators only.")]
     public static Task<BackupJob> BackupRun([Id] Guid id, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
@@ -82,6 +103,17 @@ public sealed partial class Mutation
     public static Task<BackupJob> RunBackup([Id] Guid id, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
         backups.RunAsync(id, cancellationToken);
 
+    [Name("startRestore")]
+    [Description("Restores files and user data from a snapshot, in the background, without overwriting anything. " +
+                 "Administrators only, with a recent authentication.")]
+    public static Task<RestoreJobInfo> StartRestore(StartRestoreInput input, [FromServices] RestoreService restores, CancellationToken cancellationToken) =>
+        restores.StartAsync(input, cancellationToken);
+
+    [Name("cancelRestore")]
+    [Description("Stops a restore; what it restored stays. Administrators only.")]
+    public static Task<RestoreJobInfo> CancelRestore([Id] Guid id, [FromServices] RestoreService restores, CancellationToken cancellationToken) =>
+        restores.CancelAsync(id, cancellationToken);
+
     [Name("cancelBackupRun")]
     [Description("Stops a run; what it copied stays, and the next run finishes its snapshot. Administrators only.")]
     public static Task<BackupJob> CancelBackupRun([Id] Guid id, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
@@ -93,4 +125,8 @@ public sealed partial class Subscription
     [Name("backupJobUpdated")]
     [Description("Runs of backups as they change: their state at once, their progress about once a second. Administrators only.")]
     public static IObservable<BackupJob> BackupJobUpdated([FromServices] BackupService backups) => backups.Watch();
+
+    [Name("restoreJobUpdated")]
+    [Description("Restores as they change: their state at once, their progress about once a second. Administrators only.")]
+    public static IObservable<RestoreJobInfo> RestoreJobUpdated([FromServices] RestoreService restores) => restores.Watch();
 }

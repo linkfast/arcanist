@@ -14,7 +14,8 @@ internal sealed record S3Connection(Uri Endpoint, string Region, string Bucket, 
 
 internal sealed record S3Object(string Key, long Size, DateTime LastModified);
 
-internal sealed record S3ListPage(IReadOnlyList<S3Object> Objects, string? ContinuationToken);
+/// <param name="Prefixes">With a delimiter: the "folders" directly under the prefix.</param>
+internal sealed record S3ListPage(IReadOnlyList<S3Object> Objects, string? ContinuationToken, IReadOnlyList<string>? Prefixes = null);
 
 /// <summary>An error answered by the S3 service (its <c>Code</c>, e.g. <c>NoSuchBucket</c>, <c>AccessDenied</c>).</summary>
 internal sealed class S3Exception(HttpStatusCode status, string? code) : IOException($"S3 answered {(int)status} {code}")
@@ -35,11 +36,14 @@ internal sealed class S3Client(HttpClient http, S3Connection connection, TimePro
     private const string UnsignedPayload = "UNSIGNED-PAYLOAD";
 
     /// <summary>One page of the objects under a prefix (ListObjectsV2).</summary>
-    public async Task<S3ListPage> ListAsync(string prefix, string? continuationToken, int maxKeys, CancellationToken cancellationToken)
+    public async Task<S3ListPage> ListAsync(
+        string prefix, string? continuationToken, int maxKeys, CancellationToken cancellationToken, string? delimiter = null)
     {
         var query = new SortedDictionary<string, string>(StringComparer.Ordinal) { ["list-type"] = "2", ["max-keys"] = maxKeys.ToString(CultureInfo.InvariantCulture) };
         if (prefix.Length > 0)
             query["prefix"] = prefix;
+        if (delimiter is not null)
+            query["delimiter"] = delimiter;
         if (continuationToken is not null)
             query["continuation-token"] = continuationToken;
 
@@ -66,7 +70,8 @@ internal sealed class S3Client(HttpClient http, S3Connection connection, TimePro
                     : DateTime.UnixEpoch))
             .ToList();
         var truncated = root.Element(Ns + "IsTruncated")?.Value == "true";
-        return new S3ListPage(objects, truncated ? root.Element(Ns + "NextContinuationToken")?.Value : null);
+        var prefixes = root.Elements(Ns + "CommonPrefixes").Select(p => p.Element(Ns + "Prefix")?.Value).OfType<string>().ToList();
+        return new S3ListPage(objects, truncated ? root.Element(Ns + "NextContinuationToken")?.Value : null, prefixes);
     }
 
     /// <summary>The size and date of an object; null when there is none.</summary>

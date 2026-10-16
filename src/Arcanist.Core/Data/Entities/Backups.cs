@@ -184,3 +184,96 @@ public sealed class BackupRunFailure : Entity
     /// <summary>An <c>ErrorCodes</c> value.</summary>
     public required string Code { get; init; }
 }
+
+public enum RestoreStatus
+{
+    Queued,
+
+    /// <summary>Copying files from the backup into the libraries.</summary>
+    Copying,
+
+    /// <summary>Waiting for the libraries' scans, so the user data finds the restored music.</summary>
+    WaitingForScans,
+
+    /// <summary>Restoring ratings, play counts, history and playlists.</summary>
+    Applying,
+
+    Completed,
+
+    /// <summary>Finished, but some files could not be restored (see the failures).</summary>
+    CompletedWithErrors,
+
+    Failed,
+
+    Cancelled,
+}
+
+/// <summary>
+/// Bringing back files and user data from a snapshot of a backup (this server's or another's). Nothing is overwritten:
+/// a different file where one goes is kept, and the restored one gets another name.
+/// </summary>
+public sealed class RestoreJob : Entity
+{
+    public Guid DestinationId { get; init; }
+
+    /// <summary>The backup's folder in the destination.</summary>
+    public required string BackupFolder { get; init; }
+
+    public required string BackupName { get; init; }
+
+    public required string Snapshot { get; init; }
+
+    public bool Files { get; init; }
+
+    public bool UserData { get; init; }
+
+    /// <summary>What to restore: paths (or folders) relative to the backup's <c>current/</c>, as a JSON array; all when empty.</summary>
+    public required string Paths { get; init; }
+
+    /// <summary>Everything into this library folder; null brings each library's files back to the folder they came from.</summary>
+    public Guid? TargetSourceId { get; init; }
+
+    /// <summary>Whose data goes to whom: <c>{"backup user name": "user id or null"}</c>.</summary>
+    public required string UserMap { get; init; }
+
+    public RestoreStatus Status { get; set; }
+
+    public Guid? RequestedByUserId { get; init; }
+
+    public DateTime RequestedAt { get; init; }
+
+    public DateTime? StartedAt { get; set; }
+
+    public DateTime? FinishedAt { get; set; }
+
+    public int FilesTotal { get; set; }
+
+    public int Restored { get; set; }
+
+    /// <summary>Already there, the same.</summary>
+    public int Identical { get; set; }
+
+    /// <summary>Restored under another name: a different file was where it went.</summary>
+    public int Renamed { get; set; }
+
+    public int FilesFailed { get; set; }
+
+    public int Ratings { get; set; }
+
+    public int PlayCounts { get; set; }
+
+    public int Plays { get; set; }
+
+    public int Playlists { get; set; }
+
+    /// <summary>Data of songs this server does not have (or did not recognize).</summary>
+    public int Unmatched { get; set; }
+
+    /// <summary>The libraries the restored files went to, as a JSON array of ids (their scans are awaited).</summary>
+    public string Libraries { get; set; } = "[]";
+
+    /// <summary>The first files that failed, as JSON (<c>[{"path": "…", "code": "…"}]</c>).</summary>
+    public string Failures { get; set; } = "[]";
+
+    public string? ErrorCode { get; set; }
+}

@@ -2,18 +2,18 @@ using System.Collections.Concurrent;
 
 namespace Arcanist.Core.Application.Backups;
 
-/// <summary>Live feed of backup runs for subscriptions: changes of state at once, progress about once a second.</summary>
-public sealed class BackupEvents : IObservable<BackupJob>
+/// <summary>A live feed for subscriptions: whatever is published reaches every subscriber.</summary>
+public class LiveFeed<T> : IObservable<T>
 {
-    private readonly ConcurrentDictionary<Guid, IObserver<BackupJob>> _observers = new();
+    private readonly ConcurrentDictionary<Guid, IObserver<T>> _observers = new();
 
-    public void Publish(BackupJob job)
+    public void Publish(T value)
     {
         foreach (var observer in _observers.Values)
-            observer.OnNext(job);
+            observer.OnNext(value);
     }
 
-    public IDisposable Subscribe(IObserver<BackupJob> observer)
+    public IDisposable Subscribe(IObserver<T> observer)
     {
         var id = Guid.NewGuid();
         _observers[id] = observer;
@@ -31,3 +31,9 @@ public sealed class BackupEvents : IObservable<BackupJob>
         }
     }
 }
+
+/// <summary>Backup runs as they change: their state at once, their progress about once a second.</summary>
+public sealed class BackupEvents : LiveFeed<BackupJob>;
+
+/// <summary>Restores as they change: their state at once, their progress about once a second.</summary>
+public sealed class RestoreEvents : LiveFeed<RestoreJobInfo>;

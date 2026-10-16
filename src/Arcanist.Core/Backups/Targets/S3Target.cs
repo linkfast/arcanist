@@ -102,6 +102,21 @@ internal sealed class S3Target(S3Client client, string prefix) : IBackupTarget
         } while (token is not null);
     }
 
+    public async Task<IReadOnlyList<string>> FoldersAsync(string folder, CancellationToken cancellationToken)
+    {
+        var listed = folder.Length == 0 ? (prefix.Length == 0 ? "" : prefix + "/") : Key(folder) + "/";
+        var folders = new List<string>();
+        string? token = null;
+        do
+        {
+            var page = await client.ListAsync(listed, token, 1000, cancellationToken, delimiter: "/");
+            folders.AddRange((page.Prefixes ?? []).Select(p => p[listed.Length..].TrimEnd('/')).Where(n => n.Length > 0 && !n.StartsWith('.')));
+            token = page.ContinuationToken;
+        } while (token is not null);
+
+        return folders.Order(StringComparer.Ordinal).ToList();
+    }
+
     public Task DeleteAsync(string path, CancellationToken cancellationToken) => client.DeleteAsync(Key(path), cancellationToken);
 
     public async Task DeleteFolderAsync(string folder, CancellationToken cancellationToken)
@@ -130,6 +145,8 @@ internal sealed class UnavailableTarget(string code) : IBackupTarget
     public Task<Stream> OpenReadAsync(string path, CancellationToken cancellationToken) => throw Unavailable();
 
     public IAsyncEnumerable<BackupObject> ListAsync(string folder, CancellationToken cancellationToken) => throw Unavailable();
+
+    public Task<IReadOnlyList<string>> FoldersAsync(string folder, CancellationToken cancellationToken) => throw Unavailable();
 
     public Task DeleteAsync(string path, CancellationToken cancellationToken) => throw Unavailable();
 

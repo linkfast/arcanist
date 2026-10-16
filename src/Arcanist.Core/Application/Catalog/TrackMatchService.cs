@@ -63,9 +63,35 @@ public sealed class TrackMatchService(ArcanistDbContext db, AccessGuard guard, C
             throw ArcanistException.Field("candidates", ErrorCodes.TooMany);
 
         var visible = catalog.Visible(access, input.LibraryId);
+        var found = await FindAsync(visible, input.Candidates, cancellationToken);
+
+        // Uploaded audio becomes a track once its library is scanned: until then, say so.
+        var scanning = false;
+        if (input.Candidates.Any(c => c.ContentHash is not null && !found.ContainsKey(c.Key)))
+        {
+            var libraries = input.LibraryId is { } one ? [one] : access.IsAdmin ? null : access.LibraryIds.ToList();
+            scanning = await db.ScanJobs.AnyAsync(j => (j.Status == Data.Entities.ScanStatus.Queued || j.Status == Data.Entities.ScanStatus.Running)
+                                                       && (libraries == null || libraries.Contains(j.LibraryId)), cancellationToken);
+        }
+
+        return input.Candidates
+            .Select(c => found.TryGetValue(c.Key, out var m)
+                ? new TrackMatch(c.Key, m.TrackId, m.By)
+                : new TrackMatch(c.Key, null, null, c.ContentHash is { } hash && (scanning || uploads.IsPendingAnywhere(hash))))
+            .ToList();
+    }
+
+    /// <summary>
+    /// The matching itself, among <paramref name="tracks"/>: by audio, MusicBrainz recording, AcoustID and, last,
+    /// title, artist and album. Candidates may share a key (several hashes of one track): the first match counts.
+    /// Also restoring backups, which matches every track of the server.
+    /// </summary>
+    internal static async Task<Dictionary<string, (Guid TrackId, TrackMatchKind By)>> FindAsync(
+        IQueryable<Data.Entities.Track> visible, IReadOnlyList<TrackCandidate> candidates, CancellationToken cancellationToken)
+    {
         var found = new Dictionary<string, (Guid TrackId, TrackMatchKind By)>(StringComparer.Ordinal);
 
-        var hashes = input.Candidates.Select(c => c.ContentHash).OfType<string>().Distinct().ToList();
+        var hashes = candidates.Select(c => c.ContentHash).OfType<string>().Distinct().ToList();
         if (hashes.Count > 0)
         {
             var byHash = (await visible.SelectMany(t => t.Files)
@@ -73,24 +99,24 @@ public sealed class TrackMatchService(ArcanistDbContext db, AccessGuard guard, C
                     .Select(f => new { f.ContentHash, f.TrackId })
                     .ToListAsync(cancellationToken))
                 .ToLookup(f => f.ContentHash, f => f.TrackId);
-            foreach (var c in input.Candidates)
+            foreach (var c in candidates)
                 if (c.ContentHash is { } hash && byHash[hash].FirstOrDefault() is var id && id != Guid.Empty)
                     found.TryAdd(c.Key, (id, TrackMatchKind.ContentHash));
         }
 
-        var mbids = input.Candidates.Where(c => !found.ContainsKey(c.Key)).Select(c => c.MusicBrainzRecordingId).OfType<Guid>().Distinct().ToList();
+        var mbids = candidates.Where(c => !found.ContainsKey(c.Key)).Select(c => c.MusicBrainzRecordingId).OfType<Guid>().Distinct().ToList();
         if (mbids.Count > 0)
         {
             var byMbid = (await visible.Where(t => t.Recording != null && t.Recording.MusicBrainzId != null && mbids.Contains(t.Recording.MusicBrainzId.Value))
                     .Select(t => new { Mbid = t.Recording!.MusicBrainzId!.Value, t.Id })
                     .ToListAsync(cancellationToken))
                 .ToLookup(t => t.Mbid, t => t.Id);
-            foreach (var c in input.Candidates)
+            foreach (var c in candidates)
                 if (c.MusicBrainzRecordingId is { } mbid && byMbid[mbid].FirstOrDefault() is var id && id != Guid.Empty)
                     found.TryAdd(c.Key, (id, TrackMatchKind.MusicBrainz));
         }
 
-        var acoustIds = input.Candidates.Where(c => !found.ContainsKey(c.Key))
+        var acoustIds = candidates.Where(c => !found.ContainsKey(c.Key))
             .Select(c => Guid.TryParse(c.AcoustId, out var a) ? a : (Guid?)null).OfType<Guid>().Distinct().ToList();
         if (acoustIds.Count > 0)
         {
@@ -98,12 +124,12 @@ public sealed class TrackMatchService(ArcanistDbContext db, AccessGuard guard, C
                     .Select(t => new { AcoustId = t.Recording!.AcoustId!.Value, t.Id })
                     .ToListAsync(cancellationToken))
                 .ToLookup(t => t.AcoustId, t => t.Id);
-            foreach (var c in input.Candidates)
+            foreach (var c in candidates)
                 if (Guid.TryParse(c.AcoustId, out var acoustId) && byAcoustId[acoustId].FirstOrDefault() is var id && id != Guid.Empty)
                     found.TryAdd(c.Key, (id, TrackMatchKind.AcoustId));
         }
 
-        var byTitle = input.Candidates.Where(c => !found.ContainsKey(c.Key) && !string.IsNullOrWhiteSpace(c.Title))
+        var byTitle = candidates.Where(c => !found.ContainsKey(c.Key) && !string.IsNullOrWhiteSpace(c.Title))
             .ToLookup(c => TextNormalizer.Normalize(c.Title!));
         var titles = byTitle.Select(g => g.Key).Where(t => t.Length > 0).ToList();
         if (titles.Count > 0)
@@ -140,20 +166,7 @@ public sealed class TrackMatchService(ArcanistDbContext db, AccessGuard guard, C
             }
         }
 
-        // Uploaded audio becomes a track once its library is scanned: until then, say so.
-        var scanning = false;
-        if (input.Candidates.Any(c => c.ContentHash is not null && !found.ContainsKey(c.Key)))
-        {
-            var libraries = input.LibraryId is { } one ? [one] : access.IsAdmin ? null : access.LibraryIds.ToList();
-            scanning = await db.ScanJobs.AnyAsync(j => (j.Status == Data.Entities.ScanStatus.Queued || j.Status == Data.Entities.ScanStatus.Running)
-                                                       && (libraries == null || libraries.Contains(j.LibraryId)), cancellationToken);
-        }
-
-        return input.Candidates
-            .Select(c => found.TryGetValue(c.Key, out var m)
-                ? new TrackMatch(c.Key, m.TrackId, m.By)
-                : new TrackMatch(c.Key, null, null, c.ContentHash is { } hash && (scanning || uploads.IsPendingAnywhere(hash))))
-            .ToList();
+        return found;
     }
 
     private static string? Normalized(string? text) =>

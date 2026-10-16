@@ -1767,6 +1767,114 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("Recordings");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.RestoreJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BackupFolder")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("BackupName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid>("DestinationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Failures")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Files")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("FilesFailed")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesTotal")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Identical")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Libraries")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Paths")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PlayCounts")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Playlists")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Ratings")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Renamed")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Restored")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("TargetSourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Unmatched")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("UserData")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UserMap")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinationId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("RestoreJobs");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.ScanJob", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2417,6 +2525,15 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Playlist");
 
                     b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.RestoreJob", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.BackupDestination", null)
+                        .WithMany()
+                        .HasForeignKey("DestinationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.ScanJob", b =>

@@ -93,6 +93,14 @@ internal sealed class FolderTarget(string root) : IBackupTarget
         await Task.CompletedTask;
     }
 
+    public Task<IReadOnlyList<string>> FoldersAsync(string folder, CancellationToken cancellationToken)
+    {
+        var full = folder.Length == 0 ? _root : Resolve(folder);
+        return Task.FromResult<IReadOnlyList<string>>(Directory.Exists(full)
+            ? Directory.EnumerateDirectories(full).Select(Path.GetFileName).OfType<string>().Where(n => !n.StartsWith('.')).Order(StringComparer.Ordinal).ToList()
+            : []);
+    }
+
     public Task DeleteAsync(string path, CancellationToken cancellationToken)
     {
         var full = Resolve(path);

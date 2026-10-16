@@ -27,6 +27,41 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     public ConcurrentQueue<(string Operation, HttpRequestMessage Request, string Body)> Api { get; } = new();
     public ConcurrentQueue<string> Revoked { get; } = new();
     public string? RefreshToken { get; private set; }
+
+    /// <summary>The account the next approved code links: <c>user-1</c> (Ana, the default) or <c>user-2</c> (Bruno).</summary>
+    public string ApprovingAs { get; set; } = "user-1";
+
+    /// <summary>The refresh tokens still valid (each is used once), and whose account they are.</summary>
+    private readonly ConcurrentDictionary<string, string> _refreshTokens = new();
+
+    /// <summary>The library, StarTracks, devices and plan of accounts other than <c>user-1</c> (whose are the plain ones).</summary>
+    public ConcurrentDictionary<string, List<(string Id, object Payload, byte[] Audio)>> AccountTracks { get; } = new();
+
+    public ConcurrentDictionary<string, ConcurrentDictionary<string, bool>> AccountStars { get; } = new();
+
+    public ConcurrentDictionary<string, ConcurrentDictionary<string, string>> AccountDevices { get; } = new();
+
+    public ConcurrentDictionary<string, string> Plans { get; } = new();
+
+    /// <summary>Every recorded play, with the account it was recorded for.</summary>
+    public ConcurrentQueue<(string Account, string AcoustId)> PlaysBy { get; } = new();
+
+    /// <summary>The servers' nodes each account registered.</summary>
+    public ConcurrentQueue<(string Account, string NodeId)> RegisteredBy { get; } = new();
+
+    private ConcurrentDictionary<string, bool> StarsOf(string account) => account == "user-1" ? Stars : AccountStars.GetOrAdd(account, _ => new());
+
+    private List<(string Id, object Payload, byte[] Audio)> TracksOf(string account) => account == "user-1" ? Tracks : AccountTracks.GetOrAdd(account, _ => []);
+
+    private ConcurrentDictionary<string, string> DevicesOf(string account) => account == "user-1" ? DeviceNodes : AccountDevices.GetOrAdd(account, _ => new());
+
+    /// <summary>The account of a request's access token.</summary>
+    private static string AccountOf(HttpRequestMessage request)
+    {
+        var payload = request.Headers.Authorization!.Parameter!.Split('.')[1].Replace('-', '+').Replace('_', '/');
+        payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+        return JsonNode.Parse(Convert.FromBase64String(payload))!["sub"]!.GetValue<string>();
+    }
     private int _issued;
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -69,11 +104,11 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             {
                 if (Deny)
                     return Error("access_denied");
-                return Approve ? Tokens() : Error("authorization_pending");
+                return Approve ? Tokens(ApprovingAs) : Error("authorization_pending");
             }
 
             Assert.Equal("refresh_token", form["grant_type"]);
-            return SessionEnded || form["refresh_token"] != RefreshToken ? Error("invalid_grant") : Tokens();
+            return SessionEnded || !_refreshTokens.TryRemove(form["refresh_token"], out var owner) ? Error("invalid_grant") : Tokens(owner);
         }
 
         if (url == $"{Authority}/revoke")
@@ -101,6 +136,8 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
             if (request.Headers.Authorization is not { Scheme: "Bearer", Parameter: not null })
                 return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+            var account = AccountOf(request);
+            var plan = Plans.GetValueOrDefault(account) ?? Plan;
             if (query.Contains("touchSyncedDevice"))
                 return Json(new { data = new { touchSyncedDevice = true } });
             if (query.Contains("myLibrary"))
@@ -108,11 +145,12 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             if (query.Contains("cloudDropTracks"))
                 return Json(new { data = new { cloudDropTracks = DropTracks.Select(t => t.Payload).ToArray() } });
             if (query.Contains("library {"))
-                return Json(new { data = new { library = Tracks.Select(t => t.Payload).ToArray() } });
+                return Json(new { data = new { library = TracksOf(account).Select(t => t.Payload).ToArray() } });
             var variables = JsonNode.Parse(body)!["variables"];
             if (query.Contains("recordPlay("))
             {
                 Plays.Enqueue((variables!["a"]!.GetValue<string>(), variables["title"]?.GetValue<string>(), variables["at"]?.GetValue<DateTime>()));
+                PlaysBy.Enqueue((account, variables["a"]!.GetValue<string>()));
                 return Json(new { data = new { recordPlay = true } });
             }
 
@@ -128,16 +166,16 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 foreach (var id in ids)
                 {
                     if (query.Contains("addStarTracks("))
-                        Stars[id] = true;
+                        StarsOf(account)[id] = true;
                     else
-                        Stars.TryRemove(id, out _);
+                        StarsOf(account).TryRemove(id, out _);
                 }
 
                 return Json(new { data = new Dictionary<string, object> { [query.Contains("addStarTracks(") ? "addStarTracks" : "removeStarTracks"] = ids.Count } });
             }
 
             if (query.Contains("starTracks {"))
-                return Json(new { data = new { starTracks = Stars.Keys.Select(id => new { acoustId = id }).ToArray() } });
+                return Json(new { data = new { starTracks = StarsOf(account).Keys.Select(id => new { acoustId = id }).ToArray() } });
 
             if (query.Contains("myMusicMetrics"))
             {
@@ -163,7 +201,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 {
                     data = new
                     {
-                        myP2PNodes = DeviceNodes.Select(d => new { nodeId = d.Key, kind = "DEVICE", name = d.Value })
+                        myP2PNodes = DevicesOf(account).Select(d => new { nodeId = d.Key, kind = "DEVICE", name = d.Value })
                             .Concat(RegisteredNodes.Select(n => new { nodeId = n.Key, kind = "SERVER", name = n.Value })).ToArray(),
                     },
                 });
@@ -171,9 +209,10 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
             if (query.Contains("registerP2PNode"))
             {
-                if (Plan != "Cloud")
+                if (plan != "Cloud")
                     return Json(new { errors = new[] { new { message = "Needs the Cloud plan.", extensions = new { code = "PLAN_REQUIRED" } } } });
                 RegisteredNodes[variables!["n"]!.GetValue<string>()] = variables["name"]!.GetValue<string>();
+                RegisteredBy.Enqueue((account, variables["n"]!.GetValue<string>()));
                 RegisteredTickets.Enqueue(variables["t"]?.GetValue<string>());
                 return Json(new { data = new { registerP2PNode = new { nodeId = variables["n"]!.GetValue<string>() } } });
             }
@@ -243,7 +282,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             {
                 var id = variables!["id"]!.GetValue<string>();
                 Interlocked.Increment(ref _streamUrls);
-                return Tracks.Any(t => t.Id == id)
+                return TracksOf(account).Any(t => t.Id == id)
                     ? Json(new { data = new { streamUrl = new { url = $"{FilesBase}/file/bucket/{id}?Authorization=token", validForSeconds = 3600 } } })
                     : Json(new { errors = new[] { new { message = $"Track '{id}' not found in library." } } });
             }
@@ -256,11 +295,11 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 {
                     myPlan = new
                     {
-                        plan = Plan,
-                        featuresUnlocked = Plan != "Standard",
-                        cloudStatus = Plan == "Cloud" ? "Active" : "None",
+                        plan,
+                        featuresUnlocked = plan != "Standard",
+                        cloudStatus = plan == "Cloud" ? "Active" : "None",
                         renewsAt = (DateTime?)null,
-                        storage = new { usedBytes = 1024L, limitBytes = Plan == "Cloud" ? 1L << 40 : 0L, isReadOnly = Plan != "Cloud" },
+                        storage = new { usedBytes = 1024L, limitBytes = plan == "Cloud" ? 1L << 40 : 0L, isReadOnly = plan != "Cloud" },
                     },
                 },
             });
@@ -314,7 +353,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             var name = request.RequestUri!.AbsolutePath["/file/bucket/".Length..];
             if (name.StartsWith("cover-", StringComparison.Ordinal))
                 return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Cover) };
-            if (Tracks.Concat(DropTracks).FirstOrDefault(t => t.Id == name) is not { Audio: not null } track)
+            if (Tracks.Concat(DropTracks).Concat(AccountTracks.Values.SelectMany(t => t)).FirstOrDefault(t => t.Id == name) is not { Audio: not null } track)
                 return new HttpResponseMessage(HttpStatusCode.NotFound);
             Ranges.Enqueue(request.Headers.Range?.ToString());
             if (request.Headers.Range?.Ranges.SingleOrDefault() is { } range)
@@ -385,10 +424,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     /// <summary>A song in Cloud Drop, described like the library's.</summary>
     public void AddDropTrack(string id, string title, string artist, string album, int track, byte[] audio)
     {
-        AddDescribed(id, title, artist, album, track, audio, null, "WAV");
-        var added = Tracks[^1];
-        Tracks.RemoveAt(Tracks.Count - 1);
-        DropTracks.Add(added);
+        AddDescribed(DropTracks, id, title, artist, album, track, audio, null, "WAV");
     }
 
     public byte[] Cover { get; set; } = [];
@@ -423,11 +459,16 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
         string format = "FLAC")
     {
         TrackHashes[id] = hash ?? Convert.ToHexStringLower(System.Security.Cryptography.SHA1.HashData(audio));
-        AddDescribed(id, title, artist, album, track, audio, cover, format);
+        AddDescribed(Tracks, id, title, artist, album, track, audio, cover, format);
     }
 
-    private void AddDescribed(string id, string title, string artist, string album, int track, byte[] audio, string? cover, string format) =>
-        Tracks.Add((id, new
+    /// <summary>A track of another account's library (<see cref="ApprovingAs"/>).</summary>
+    public void AddAccountTrack(string account, string id, string title, string artist, string album, int track, byte[] audio) =>
+        AddDescribed(TracksOf(account), id, title, artist, album, track, audio, null, "FLAC");
+
+    private static void AddDescribed(
+        List<(string Id, object Payload, byte[] Audio)> tracks, string id, string title, string artist, string album, int track, byte[] audio, string? cover, string format) =>
+        tracks.Add((id, new
         {
             cloudTrackId = id, title, artist, album, genre = "Ambient", trackNumber = track, discNumber = 1, year = 2020,
             duration = 8.5, audioBitrate = 900, audioSampleRate = 44100, audioFormat = format, size = (long)audio.Length,
@@ -436,11 +477,15 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
         }, audio));
 
     /// <summary>A new access token (expiring at once, so every call refreshes) and a rotated refresh token.</summary>
-    private HttpResponseMessage Tokens()
+    private HttpResponseMessage Tokens(string account)
     {
         var n = Interlocked.Increment(ref _issued);
         RefreshToken = $"refresh-{n}";
-        var payload = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(new { sub = "user-1", preferred_username = "ana", email = "ana@example.com", given_name = "Ana", family_name = "Pérez" }))
+        _refreshTokens[RefreshToken] = account;
+        object claims = account == "user-1"
+            ? new { sub = account, preferred_username = "ana", email = "ana@example.com", given_name = "Ana", family_name = "Pérez" }
+            : new { sub = account, preferred_username = "bruno", email = "bruno@example.com", given_name = "Bruno", family_name = "Díaz" };
+        var payload = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(claims))
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
         return Json(new { access_token = $"eyJhbGciOiJub25lIn0.{payload}.", expires_in = 10, refresh_token = RefreshToken, token_type = "Bearer" });
     }

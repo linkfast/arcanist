@@ -159,7 +159,9 @@ public sealed class ServerAdminService(
         await db.TrackPlayStats.ExecuteDeleteAsync(cancellationToken);
         await db.PlayEvents.ExecuteDeleteAsync(cancellationToken);
         // Never "unstar" the account's StarTracks because the stars here were deleted: the next sync starts over.
-        await db.Settings.Where(s => s.Key == SettingKeys.UltimateCloudStars).ExecuteDeleteAsync(cancellationToken);
+        await db.Settings.Where(s => s.Key == SettingKeys.UltimateCloudStars
+                                     || s.Key.StartsWith(SettingKeys.UltimateCloudUserPrefix) && s.Key.EndsWith(".stars"))
+            .ExecuteDeleteAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         logger.LogWarning("{User} deleted every user's ratings, plays and playlists", guard.Authenticated().UserName);
         return new ResetResult(false);
@@ -179,11 +181,13 @@ public sealed class ServerAdminService(
         var stop = configuration.GetValue("Arcanist:Hosting:StopAfterFactoryReset", true);
 
         // In the background: this request is work the maintenance mode would wait for.
-        _ = Task.Run(() => RunFactoryResetAsync(input, user, account, stop));
+        var auth = services.GetRequiredService<Core.Cloud.UltimateCloudAuth>();
+        _ = Task.Run(() => RunFactoryResetAsync(input, user, account, auth, stop));
         return Task.FromResult(new ResetResult(true));
     }
 
-    private async Task RunFactoryResetAsync(FactoryResetInput input, string user, Core.Cloud.UltimateCloudAccount account, bool stop)
+    private async Task RunFactoryResetAsync(
+        FactoryResetInput input, string user, Core.Cloud.UltimateCloudAccount account, Core.Cloud.UltimateCloudAuth auth, bool stop)
     {
         var cancellationToken = lifetime.ApplicationStopping;
         try
@@ -193,6 +197,17 @@ public sealed class ServerAdminService(
         catch (Exception e) when (e is Core.Cloud.UltimateCloudException or HttpRequestException or ArcanistException)
         {
             logger.LogInformation("The Ultimate Cloud account could not be unlinked before the reset: {Message}", e.Message);
+        }
+
+        // The users' own accounts too: their sessions in Ultimate Cloud end with the server's data.
+        try
+        {
+            foreach (var linked in await auth.LinkedUsersAsync(cancellationToken))
+                await auth.UnlinkAsync(cancellationToken, linked);
+        }
+        catch (Exception e) when (e is Core.Cloud.UltimateCloudException or HttpRequestException or ArcanistException)
+        {
+            logger.LogInformation("The users' Ultimate Cloud accounts could not all be unlinked before the reset: {Message}", e.Message);
         }
 
         // Nothing else writes from now on; the restart ends it.

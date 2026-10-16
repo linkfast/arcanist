@@ -236,13 +236,20 @@ public sealed class UltimateCloudService(
         return await CurrentAsync(cancellationToken);
     }
 
-    /// <summary>The Ultimate Cloud accounts linked to this server (one for now), for choosing where uploads go. Administrators only.</summary>
+    /// <summary>
+    /// The Ultimate Cloud accounts an administrator can send music to: the server's, and their own. Administrators only.
+    /// </summary>
     public async Task<IReadOnlyList<LinkedCloudAccount>> AccountsAsync(CancellationToken cancellationToken)
     {
-        guard.Admin();
-        if (!account.Enabled || await auth.LinkAsync(cancellationToken) is not { } link)
+        var actor = guard.Admin();
+        if (!account.Enabled)
             return [];
-        return [new LinkedCloudAccount(link.Subject, link.UserName ?? link.Email, link.DisplayFirstName)];
+        var accounts = new List<LinkedCloudAccount>();
+        if (await auth.LinkAsync(cancellationToken) is { } link)
+            accounts.Add(new LinkedCloudAccount(link.Subject, link.UserName ?? link.Email, link.DisplayFirstName));
+        if (await auth.LinkAsync(cancellationToken, actor.UserId) is { } own && accounts.All(a => a.Id != own.Subject))
+            accounts.Add(new LinkedCloudAccount(own.Subject, own.UserName ?? own.Email, own.DisplayFirstName, actor.UserId));
+        return accounts;
     }
 
     /// <summary>The linked account's listening statistics, as Ultimate Cloud counts them. Administrators only.</summary>
@@ -254,7 +261,12 @@ public sealed class UltimateCloudService(
             throw new ArcanistException.Conflict(ErrorCodes.CloudServiceOff);
         if (await auth.LinkAsync(cancellationToken) is null)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
+        return await FetchMetricsAsync(client, cancellationToken);
+    }
 
+    /// <summary>The statistics of the account of this flow (<see cref="UltimateCloudClient.As"/>).</summary>
+    internal static async Task<UltimateCloudMetrics> FetchMetricsAsync(UltimateCloudClient client, CancellationToken cancellationToken)
+    {
         const string song = "{ acoustId title artist playCount }";
         const string artist = "{ artist playCount }";
         const string album = "{ title artist playCount }";

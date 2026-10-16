@@ -23,12 +23,14 @@ public sealed record CloudSyncProgress(Guid LibraryId, string Phase, int Done, i
 /// and downloads what only the account has (<see cref="CloudSyncMode.Download"/>: tagged again, and placed with the
 /// library's template). <b>Nothing is ever deleted on either side</b>: removing a song from one does not remove it
 /// from the other. Pairings are kept (<see cref="CloudSyncItem"/>), so each song is hashed, uploaded or downloaded once.
+/// A library syncs with the server's account, or with an administrator's own (<see cref="LibraryCloudSync.AccountUserId"/>).
 /// </summary>
 public sealed class CloudSyncWorker(
     IArcanistDbContextFactory databases,
     UltimateCloudClient client,
     IUltimateAudio audio,
     ICapabilityService capabilities,
+    UserCloudAccounts accounts,
     ILibraryStorageResolver storages,
     LibraryLocks locks,
     ScanCoordinator scans,
@@ -108,7 +110,8 @@ public sealed class CloudSyncWorker(
         string? error;
         try
         {
-            error = !capabilities.IsEnabled(Capability.CloudSync) ? ErrorCodes.CloudSyncUnavailable
+            using var as_ = UltimateCloudClient.As(sync.AccountUserId);
+            error = !capabilities.IsEnabled(Capability.CloudSync) || accounts.TierOf(sync.AccountUserId) != CloudTier.Paid ? ErrorCodes.CloudSyncUnavailable
                 : !audio.IsInstalled ? ErrorCodes.CloudToolMissing
                 : await SyncAsync(sync, cancellationToken);
         }
@@ -259,13 +262,22 @@ public sealed class CloudSyncWorker(
             return (null, ErrorCodes.NotFound);
 
         var libraryId = await DbAsync(db => db.LibrarySources.Where(s => s.Id == song.SourceId).Select(s => s.LibraryId).SingleAsync(cancellationToken), cancellationToken);
-        var item = await DbAsync(db => db.CloudSyncItems.AsNoTracking().FirstOrDefaultAsync(i => i.LibraryId == libraryId && i.ContentHash == song.ContentHash, cancellationToken),
+        // The library's pairings are with the account it syncs with (the server's when it does not): uploads to
+        // another account are not kept among them.
+        var syncAccount = await DbAsync(db => db.LibraryCloudSyncs.Where(s => s.LibraryId == libraryId).Select(s => s.AccountUserId).FirstOrDefaultAsync(cancellationToken),
             cancellationToken);
+        var kept = syncAccount == UltimateCloudClient.CurrentUser;
+        var item = kept
+            ? await DbAsync(db => db.CloudSyncItems.AsNoTracking().FirstOrDefaultAsync(i => i.LibraryId == libraryId && i.ContentHash == song.ContentHash, cancellationToken),
+                cancellationToken)
+            : null;
         if (item is { CloudTrackId: { } known, Status: CloudSyncItemStatus.Uploaded or CloudSyncItemStatus.Matched })
             return (known, null);
 
         item ??= await AddItemAsync(new CloudSyncItem { LibraryId = libraryId, ContentHash = song.ContentHash, Title = Cut(song.Title)! }, cancellationToken);
         var stop = await LocalAsync(song, item, upload: true, cancellationToken);
+        if (!kept)
+            await DbAsync(db => db.CloudSyncItems.Where(i => i.Id == item.Id).ExecuteDeleteAsync(cancellationToken), cancellationToken);
         return item.Status is CloudSyncItemStatus.Uploaded or CloudSyncItemStatus.Matched
             ? (item.CloudTrackId, null)
             : (null, stop ?? item.Reason ?? ErrorCodes.UploadFailed);

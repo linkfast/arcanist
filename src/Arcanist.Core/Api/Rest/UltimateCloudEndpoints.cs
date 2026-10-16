@@ -52,6 +52,37 @@ public static class UltimateCloudEndpoints
             .WithName("CloudSyncs")
             .WithSummary("How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only.");
 
+        var mine = rest.MapGroup("/me/ultimate-cloud").WithTags("Ultimate Cloud");
+
+        mine.MapGet("", (MyUltimateCloudService service, CancellationToken ct) => service.StatusAsync(ct))
+            .WithName("MyUltimateCloud")
+            .WithSummary("The caller's own Ultimate Cloud account and what it brings them: their music as a personal library, their plays, statistics, StarTracks and devices.");
+
+        mine.MapPost("/link", (StartMyUltimateCloudLinkInput input, MyUltimateCloudService service, CancellationToken ct) => service.StartLinkAsync(input, ct))
+            .WithName("StartMyUltimateCloudLink")
+            .WithSummary("Asks Ultimate Cloud for a code to approve on its site, to link the caller's own account; the server waits for the approval. " +
+                         "Needs a recent authentication.");
+
+        mine.MapPost("/link/cancel", (MyUltimateCloudService service, CancellationToken ct) => service.CancelLinkAsync(ct))
+            .WithName("CancelMyUltimateCloudLink")
+            .WithSummary("Stops waiting for the approval of the caller's code.");
+
+        mine.MapPost("/unlink", (MyUltimateCloudService service, CancellationToken ct) => service.UnlinkAsync(ct))
+            .WithName("UnlinkMyUltimateCloud")
+            .WithSummary("Forgets the caller's own account and removes their personal library; nothing is touched in Ultimate Cloud. Needs a recent authentication.");
+
+        mine.MapPost("/refresh", (MyUltimateCloudService service, CancellationToken ct) => service.RefreshAsync(ct))
+            .WithName("RefreshMyUltimateCloud")
+            .WithSummary("Reads the plan of the caller's own account again now.");
+
+        mine.MapPut("/services", (UltimateCloudServicesInput input, MyUltimateCloudService service, CancellationToken ct) => service.SetServicesAsync(input, ct))
+            .WithName("SetMyUltimateCloudServices")
+            .WithSummary("Chooses what the caller's own account gets from this server: their plays, albums heard whole, StarTracks, statistics.");
+
+        mine.MapGet("/metrics", (MyUltimateCloudService service, CancellationToken ct) => service.MetricsAsync(ct))
+            .WithName("MyUltimateCloudMetrics")
+            .WithSummary("The caller's own account's listening statistics as Ultimate Cloud counts them.");
+
         rest.MapPut("/libraries/{libraryId:guid}/cloud-sync", (Guid libraryId, SetLibraryCloudSyncInput input, CloudSyncService service, CancellationToken ct) =>
                 service.SetAsync(libraryId, input, ct))
             .WithTags("Ultimate Cloud")

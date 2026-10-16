@@ -5287,6 +5287,173 @@
         }
       }
     },
+    "/rest/v1/me/ultimate-cloud": {
+      "get": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "The caller\u0027s own Ultimate Cloud account and what it brings them: their music as a personal library, their plays, statistics, StarTracks and devices.",
+        "operationId": "MyUltimateCloud",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/ultimate-cloud/link": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Asks Ultimate Cloud for a code to approve on its site, to link the caller\u0027s own account; the server waits for the approval. Needs a recent authentication.",
+        "operationId": "StartMyUltimateCloudLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartMyUltimateCloudLinkInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/ultimate-cloud/link/cancel": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Stops waiting for the approval of the caller\u0027s code.",
+        "operationId": "CancelMyUltimateCloudLink",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/ultimate-cloud/unlink": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Forgets the caller\u0027s own account and removes their personal library; nothing is touched in Ultimate Cloud. Needs a recent authentication.",
+        "operationId": "UnlinkMyUltimateCloud",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/ultimate-cloud/refresh": {
+      "post": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Reads the plan of the caller\u0027s own account again now.",
+        "operationId": "RefreshMyUltimateCloud",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/ultimate-cloud/services": {
+      "put": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Chooses what the caller\u0027s own account gets from this server: their plays, albums heard whole, StarTracks, statistics.",
+        "operationId": "SetMyUltimateCloudServices",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UltimateCloudServicesInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/ultimate-cloud/metrics": {
+      "get": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "The caller\u0027s own account\u0027s listening statistics as Ultimate Cloud counts them.",
+        "operationId": "MyUltimateCloudMetrics",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/server/configuration": {
       "get": {
         "tags": [
@@ -9193,6 +9360,10 @@
           "disabled": {
             "type": "boolean",
             "default": false
+          },
+          "personal": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -9200,6 +9371,7 @@
         "required": [
           "libraryId",
           "mode",
+          "accountUserId",
           "downloadSourceId",
           "lastRunAt",
           "requested",
@@ -9220,6 +9392,13 @@
           },
           "mode": {
             "$ref": "#/components/schemas/CloudSyncMode"
+          },
+          "accountUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           },
           "downloadSourceId": {
             "type": [
@@ -9556,6 +9735,13 @@
               "null",
               "string"
             ]
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10429,6 +10615,88 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "MyUltimateCloudStatus": {
+        "required": [
+          "enabled",
+          "state",
+          "account",
+          "ownerFirstName",
+          "linkedAt",
+          "pending",
+          "plan",
+          "tier",
+          "errorCode",
+          "libraryId",
+          "services"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/UltimateCloudLinkState"
+          },
+          "account": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ownerFirstName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "linkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "pending": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UltimateCloudPendingLink"
+              }
+            ]
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UltimateCloudPlan"
+              }
+            ]
+          },
+          "tier": {
+            "$ref": "#/components/schemas/CloudTier"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "services": {
+            "$ref": "#/components/schemas/UltimateCloudServices"
           }
         }
       },
@@ -12644,6 +12912,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "accountUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -13126,6 +13401,20 @@
             ]
           },
           "newLibraryPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StartMyUltimateCloudLinkInput": {
+        "required": [
+          "libraryName"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryName": {
             "type": [
               "null",
               "string"

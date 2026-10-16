@@ -24,6 +24,7 @@ import {
   RevokeMySessionMutation,
   ServerInfoQuery,
 } from '../../graphql/operations';
+import { MyCloud } from './my-cloud';
 import { MyDevices } from './my-devices';
 import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
@@ -41,6 +42,7 @@ type Session = SessionsResult['mySessions'][number];
     TranslatePipe,
     DateTimePipe,
     RelativeTimePipe,
+    MyCloud,
     MyDevices,
   ],
   template: `
@@ -240,6 +242,7 @@ type Session = SessionsResult['mySessions'][number];
         </div>
       </section>
 
+      <app-my-cloud />
       <app-my-devices />
 
       <section hlmCard>

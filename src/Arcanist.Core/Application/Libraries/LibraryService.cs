@@ -133,7 +133,13 @@ public sealed class LibraryService(
         var actor = guard.Permission(Permissions.ManageLibraries);
         guard.RecentAuthentication();
         var library = await FindManageableAsync(actor, id, cancellationToken);
+        await RemoveAsync(db, scans, library, cancellationToken);
+        accessCache.InvalidateAll();
+    }
 
+    /// <summary>Removes a library from the catalog (never its files); its number is never given again.</summary>
+    internal static async Task RemoveAsync(ArcanistDbContext db, ScanCoordinator scans, LibraryEntity library, CancellationToken cancellationToken)
+    {
         await scans.CancelLibraryAsync(library.Id, cancellationToken);
         if (library.Number > await LastNumberAsync(db, cancellationToken))
         {
@@ -146,7 +152,6 @@ public sealed class LibraryService(
 
         db.Libraries.Remove(library);
         await db.SaveChangesAsync(cancellationToken);
-        accessCache.InvalidateAll();
     }
 
     public async Task<Library> AddSourceAsync(Guid libraryId, LibrarySourceInput input, CancellationToken cancellationToken)
@@ -274,8 +279,9 @@ public sealed class LibraryService(
     /// <summary>The libraries a user can access (all of them for administrators).</summary>
     internal static IQueryable<LibraryEntity> Visible(ArcanistDbContext db, UserAccess access)
     {
+        // Other users' personal libraries (their own Ultimate Cloud) are theirs alone, even for administrators.
         if (access.IsAdmin)
-            return db.Libraries;
+            return db.Libraries.Where(l => l.OwnerUserId == null || l.OwnerUserId == access.UserId);
 
         var ids = access.LibraryIds.ToList();
         return db.Libraries.Where(l => ids.Contains(l.Id));

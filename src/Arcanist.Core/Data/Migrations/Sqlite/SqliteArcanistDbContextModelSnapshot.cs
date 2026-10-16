@@ -713,6 +713,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("ScanIntervalMinutes")
                         .HasColumnType("INTEGER");
 
@@ -726,6 +729,8 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("Number")
                         .IsUnique();
+
+                    b.HasIndex("OwnerUserId");
 
                     b.ToTable("Libraries");
                 });
@@ -748,6 +753,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
             modelBuilder.Entity("Arcanist.Core.Data.Entities.LibraryCloudSync", b =>
                 {
                     b.Property<Guid>("LibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AccountUserId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("DownloadSourceId")
@@ -1946,6 +1954,16 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("DropFolder");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.LibraryAccess", b =>

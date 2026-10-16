@@ -15,13 +15,16 @@ public sealed record UserAccess(
     Permissions Permissions,
     string SecurityStamp,
     bool IsDisabled,
-    IReadOnlySet<Guid> LibraryIds)
+    IReadOnlySet<Guid> LibraryIds,
+    IReadOnlySet<Guid>? OthersPersonalLibraryIds = null)
 {
     public bool IsAdmin => Role == UserRole.Admin;
 
     public bool Has(Permissions permission) => IsAdmin || (Permissions & permission) == permission;
 
-    public bool CanAccessLibrary(Guid libraryId) => IsAdmin || LibraryIds.Contains(libraryId);
+    /// <summary>Administrators reach every library but other users' personal ones (their own Ultimate Cloud).</summary>
+    public bool CanAccessLibrary(Guid libraryId) =>
+        IsAdmin ? OthersPersonalLibraryIds?.Contains(libraryId) != true : LibraryIds.Contains(libraryId);
 }
 
 /// <summary>
@@ -52,8 +55,11 @@ public sealed class UserAccessCache(
                 .Select(l => l.Id)
                 .ToListAsync(cancellationToken);
 
+            var othersPersonal = user.Role == UserRole.Admin
+                ? (await db.Libraries.Where(l => l.OwnerUserId != null && l.OwnerUserId != userId).Select(l => l.Id).ToListAsync(cancellationToken)).ToHashSet()
+                : null;
             return new UserAccess(user.Id, user.UserName, user.DisplayName, user.Role, user.Permissions,
-                user.SecurityStamp, user.IsDisabled, libraryIds.ToHashSet());
+                user.SecurityStamp, user.IsDisabled, libraryIds.ToHashSet(), othersPersonal);
         });
 
     public async Task<bool> IsSessionActiveAsync(Guid sessionId, CancellationToken cancellationToken) =>

@@ -21,9 +21,11 @@ public sealed record CloudSyncRun(string Phase, int Done, int Total);
 /// <param name="Running">The run in progress; null between runs.</param>
 /// <param name="ErrorCode">Why the last run stopped early: <c>cloud_sync_unavailable</c> (no Cloud plan), <c>cloud_quota_exceeded</c>, <c>cloud_tool_missing</c>…</param>
 /// <param name="Failures">The first 50 songs that failed; they are tried again on each run.</param>
+/// <param name="AccountUserId">Whose account it syncs with: an administrator's own; the server's when null.</param>
 public sealed record LibraryCloudSyncState(
     Guid LibraryId,
     CloudSyncMode Mode,
+    Guid? AccountUserId,
     Guid? DownloadSourceId,
     DateTime? LastRunAt,
     bool Requested,
@@ -37,13 +39,14 @@ public sealed record LibraryCloudSyncState(
     IReadOnlyList<CloudSyncFailure> Failures);
 
 /// <param name="DownloadSourceId">The library folder downloads go to; its first folder by default.</param>
-public sealed record SetLibraryCloudSyncInput(CloudSyncMode Mode, Guid? DownloadSourceId);
+/// <param name="AccountUserId">Sync with the caller's own account (their id; it needs the Cloud plan); with the server's when null.</param>
+public sealed record SetLibraryCloudSyncInput(CloudSyncMode Mode, Guid? DownloadSourceId, Guid? AccountUserId = null);
 
 /// <summary>
 /// Syncing libraries with the linked Ultimate Cloud account (Cloud plan). Administrators only: it sends the
 /// server's music to the account; turning it on needs a recent authentication.
 /// </summary>
-public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, ICapabilityService capabilities, IServiceProvider services)
+public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, ICapabilityService capabilities, UserCloudAccounts accounts, IServiceProvider services)
 {
     private CloudSyncWorker Worker => services.GetRequiredService<CloudSyncWorker>();
 
@@ -60,20 +63,25 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
 
     public async Task<LibraryCloudSyncState> SetAsync(Guid libraryId, SetLibraryCloudSyncInput input, CancellationToken cancellationToken)
     {
-        guard.Admin();
+        var actor = guard.Admin();
         var library = await db.Libraries.Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == libraryId, cancellationToken)
                       ?? throw new ArcanistException.NotFound();
+        var previous = await db.LibraryCloudSyncs.AsNoTracking().Where(s => s.LibraryId == libraryId).Select(s => s.AccountUserId).FirstOrDefaultAsync(cancellationToken);
         if (input.Mode != CloudSyncMode.Off)
         {
             guard.RecentAuthentication();
-            if (!capabilities.IsEnabled(Capability.CloudSync))
+            // Another user's account is theirs: only the server's, or the caller's own (unless it was chosen already).
+            if (input.AccountUserId is { } user && user != actor.UserId && user != previous)
+                throw ArcanistException.Field("accountUserId", ErrorCodes.NotFound);
+            if (!capabilities.IsEnabled(Capability.CloudSync) || accounts.TierOf(input.AccountUserId) != CloudTier.Paid)
                 throw new ArcanistException.Conflict(ErrorCodes.CloudSyncUnavailable);
             if (library.Sources.Count == 0 || library.Sources.Any(s => s.Kind != LibrarySourceKind.Local))
                 throw ArcanistException.Field("mode", ErrorCodes.ReadOnly);
             if (input.DownloadSourceId is { } sourceId && library.Sources.All(s => s.Id != sourceId))
                 throw ArcanistException.Field("downloadSourceId", ErrorCodes.NotFound);
             if (input.Mode is CloudSyncMode.Download or CloudSyncMode.Both
-                && await db.LibraryCloudSyncs.AnyAsync(s => s.LibraryId != libraryId && (s.Mode == CloudSyncMode.Download || s.Mode == CloudSyncMode.Both), cancellationToken))
+                && await db.LibraryCloudSyncs.AnyAsync(s => s.LibraryId != libraryId && s.AccountUserId == input.AccountUserId
+                                                            && (s.Mode == CloudSyncMode.Download || s.Mode == CloudSyncMode.Both), cancellationToken))
                 throw ArcanistException.Field("mode", ErrorCodes.CloudSyncDownloadTaken);
         }
 
@@ -82,6 +90,13 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
         {
             sync = new LibraryCloudSync { LibraryId = libraryId };
             db.LibraryCloudSyncs.Add(sync);
+        }
+
+        if (input.Mode != CloudSyncMode.Off && previous != input.AccountUserId)
+        {
+            // What was paired was with another account: everything is looked at again with this one.
+            await db.CloudSyncItems.Where(i => i.LibraryId == libraryId).ExecuteDeleteAsync(cancellationToken);
+            sync.AccountUserId = input.AccountUserId;
         }
 
         sync.Mode = input.Mode;
@@ -127,6 +142,7 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
             return new LibraryCloudSyncState(
                 id,
                 sync?.Mode ?? CloudSyncMode.Off,
+                sync?.AccountUserId,
                 sync?.DownloadSourceId,
                 sync?.LastRunAt,
                 sync?.Requested ?? false,

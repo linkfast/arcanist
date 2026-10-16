@@ -15,6 +15,8 @@ namespace Arcanist.Core.Application.Libraries;
 /// hidden and it can only be deleted (<c>library_disabled</c>) until the extension is on again.</param>
 /// <param name="CanUpload">The caller may upload files to it: they have the UPLOAD permission and it has a folder Arcanist
 /// writes to (on this server or in S3). A folder that turns out read-only still answers <c>read_only</c>.</param>
+/// <param name="Personal">The caller's own Ultimate Cloud music (<c>myUltimateCloud</c>): only they see it, and it goes
+/// when they unlink their account.</param>
 public sealed record Library(
     Guid Id,
     string Name,
@@ -26,7 +28,8 @@ public sealed record Library(
     IReadOnlyList<LibrarySource>? Sources,
     LibraryOrganization? Organization,
     bool CanUpload = false,
-    bool Disabled = false);
+    bool Disabled = false,
+    bool Personal = false);
 
 public sealed record LibrarySource(Guid Id, LibrarySourceKind Kind, string Location);
 
@@ -76,7 +79,8 @@ internal static class LibraryMapping
         access is not null && access.Has(Permissions.Upload)
                             && library.Sources.Any(s => s.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3)
                             && cloud?.IsDisabled(library.Sources.Select(s => s.Kind)) != true,
-        cloud?.IsDisabled(library.Sources.Select(s => s.Kind)) == true);
+        cloud?.IsDisabled(library.Sources.Select(s => s.Kind)) == true,
+        library.OwnerUserId is not null);
 
     public static LibraryOrganization ToOrganization(this LibraryEntity library) => new(
         string.IsNullOrEmpty(library.OrganizeTemplate) ? PathTemplate.Default : library.OrganizeTemplate,

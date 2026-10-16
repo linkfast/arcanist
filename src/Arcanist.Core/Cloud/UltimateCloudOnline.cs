@@ -20,14 +20,17 @@ namespace Arcanist.Core.Cloud;
 /// <param name="Metrics">The account's statistics are shown in the panel.</param>
 public sealed record UltimateCloudServicesConfig(bool PersonalPlays, bool AlbumPlaythroughs, bool StarTracks, bool Metrics);
 
+/// <summary>The services of the server's account, or of a user's own (<c>user</c>).</summary>
 public sealed class UltimateCloudServicesSettings(SettingsStore settings)
 {
-    public async Task<UltimateCloudServicesConfig> GetAsync(CancellationToken cancellationToken) =>
-        await settings.GetAsync<UltimateCloudServicesConfig?>(SettingKeys.UltimateCloudServices, null, cancellationToken)
+    public async Task<UltimateCloudServicesConfig> GetAsync(CancellationToken cancellationToken, Guid? user = null) =>
+        await settings.GetAsync<UltimateCloudServicesConfig?>(Key(user), null, cancellationToken)
         ?? new UltimateCloudServicesConfig(true, true, true, true);
 
-    public Task SetAsync(UltimateCloudServicesConfig config, CancellationToken cancellationToken) =>
-        settings.SetAsync(SettingKeys.UltimateCloudServices, config, cancellationToken);
+    public Task SetAsync(UltimateCloudServicesConfig config, CancellationToken cancellationToken, Guid? user = null) =>
+        settings.SetAsync(Key(user), config, cancellationToken);
+
+    private static string Key(Guid? user) => user is { } id ? SettingKeys.UltimateCloudUser(id, "services") : SettingKeys.UltimateCloudServices;
 }
 
 /// <summary>
@@ -35,12 +38,14 @@ public sealed class UltimateCloudServicesSettings(SettingsStore settings)
 /// from start to finish and their stars as StarTracks (both ways); and, with anonymous statistics on (with or without
 /// an account), everyone else's plays and albums heard whole, anonymously, for the global rankings. Plays are sent
 /// from where it left off (it starts with the plays made once it is on, never the history); only tracks identified by
-/// AcoustID take part, as in every Ultimate app. Nothing while the Ultimate Cloud extension is off.
+/// AcoustID take part, as in every Ultimate app. Nothing while the Ultimate Cloud extension is off. Users who linked
+/// their own account send theirs to it, with the services they chose (the server's account then is not theirs).
 /// </summary>
 public sealed class UltimateCloudReporter(
     UltimateCloudClient client,
     UltimateCloudAuth auth,
     UltimateCloudAccount account,
+    UserCloudAccounts accounts,
     UltimateCloudServicesSettings services,
     SettingsStore settings,
     ListeningSignals signals,
@@ -134,15 +139,32 @@ public sealed class UltimateCloudReporter(
         var anonymous = await settings.GetAsync(SettingKeys.ShareAnonymousStatistics, false, cancellationToken);
         var config = await services.GetAsync(cancellationToken);
         var linker = linked ? await LinkerAsync(cancellationToken) : null;
+        var own = new Dictionary<Guid, UltimateCloudServicesConfig>();
+        foreach (var user in accounts.Linked.Where(u => accounts.TierOf(u) != CloudTier.None))
+            own[user] = await services.GetAsync(cancellationToken, user);
         // The cursor moves even with nothing to send: turning something on later never sends the plays before.
-        await ReportPlaysAsync(config, linker, anonymous, cancellationToken);
+        await ReportPlaysAsync(config, linker, own, anonymous, cancellationToken);
 
         var now = time.GetUtcNow().UtcDateTime;
-        if (linked && config.StarTracks && linker is { } user && (_starsDue || now - _starsCheckedAt > StarInterval))
+        if (_starsDue || now - _starsCheckedAt > StarInterval)
         {
             _starsDue = false;
             _starsCheckedAt = now;
-            await SyncStarsAsync(user, cancellationToken);
+            foreach (var (user, userConfig) in own.Where(o => o.Value.StarTracks))
+            {
+                try
+                {
+                    await SyncStarsAsync(user, cancellationToken, user);
+                }
+                catch (UltimateCloudException e)
+                {
+                    logger.LogDebug("The StarTracks of user {User} wait: {Error}", user, e.Code);
+                }
+            }
+
+            // The server's account is the linking administrator's, unless they linked their own.
+            if (linked && config.StarTracks && linker is { } admin && !own.ContainsKey(admin))
+                await SyncStarsAsync(admin, cancellationToken);
         }
     }
 
@@ -163,7 +185,8 @@ public sealed class UltimateCloudReporter(
         Guid Id, Guid UserId, Guid? TrackId, DateTime PlayedAt, Guid? AcoustId, Guid? RecordingMbid, string? Title, string? Artist,
         Guid? ArtistMbid, string? Album, string? AlbumArtist, Guid? AlbumId, string? Genre);
 
-    private async Task ReportPlaysAsync(UltimateCloudServicesConfig config, Guid? linker, bool anonymous, CancellationToken cancellationToken)
+    private async Task ReportPlaysAsync(
+        UltimateCloudServicesConfig config, Guid? linker, IReadOnlyDictionary<Guid, UltimateCloudServicesConfig> own, bool anonymous, CancellationToken cancellationToken)
     {
         var cursor = await settings.GetAsync<Guid?>(SettingKeys.UltimateCloudPlaysCursor, null, cancellationToken);
         await using var db = databases.CreateDbContext();
@@ -219,10 +242,15 @@ public sealed class UltimateCloudReporter(
                 if (play.TrackId is null || play.AcoustId is not { } acoustId)
                     continue;
 
-                if (linker is not null && play.UserId == linker && config.PersonalPlays)
+                // Whose account the play is: the user's own, or the server's when they linked it.
+                var (playAccount, playConfig) = own.TryGetValue(play.UserId, out var userConfig) ? ((Guid?)play.UserId, userConfig)
+                    : linker is not null && play.UserId == linker ? (null, config)
+                    : ((Guid?)null, (UltimateCloudServicesConfig?)null);
+                if (playConfig is { PersonalPlays: true })
                 {
                     // The account's own: its statistics and the rankings.
                     await FlushAsync();
+                    using var as_ = UltimateCloudClient.As(playAccount);
                     await SendAsync(
                         """
                         mutation Play($a: String!, $title: String, $artist: String, $album: String, $genre: String, $rec: String, $art: String, $at: DateTime) {
@@ -235,7 +263,7 @@ public sealed class UltimateCloudReporter(
                             rec = play.RecordingMbid?.ToString(), art = play.ArtistMbid?.ToString(), at = play.PlayedAt,
                         },
                         cancellationToken);
-                    if (config.AlbumPlaythroughs && await PlaythroughAsync(db, play, cancellationToken) is { } whole)
+                    if (playConfig.AlbumPlaythroughs && await PlaythroughAsync(db, play, cancellationToken) is { } whole)
                     {
                         await SendAsync("mutation Album($artist: String!, $album: String!) { recordAlbumPlaythrough(artist: $artist, album: $album) }",
                             new { artist = whole.Artist, album = whole.Album }, cancellationToken);
@@ -324,14 +352,17 @@ public sealed class UltimateCloudReporter(
     /// on: a star added or removed on one side is added or removed on the other. Only tracks with an AcoustID take
     /// part; StarTracks of songs this server does not have stay as they are.
     /// </summary>
-    public async Task SyncStarsAsync(Guid user, CancellationToken cancellationToken)
+    /// <param name="account">A user's own account (theirs); the server's with null.</param>
+    public async Task SyncStarsAsync(Guid user, CancellationToken cancellationToken, Guid? account = null)
     {
+        using var as_ = UltimateCloudClient.As(account);
+        var agreedKey = account is { } owner ? SettingKeys.UltimateCloudUser(owner, "stars") : SettingKeys.UltimateCloudStars;
         var data = await client.SendAsync("query Stars { starTracks { acoustId } }", null, cancellationToken);
         var cloud = (data["starTracks"]?.AsArray() ?? [])
             .Select(s => Guid.TryParse(s?["acoustId"]?.GetValue<string>(), out var id) ? id : (Guid?)null)
             .OfType<Guid>()
             .ToHashSet();
-        var agreed = (await settings.GetAsync<List<Guid>?>(SettingKeys.UltimateCloudStars, null, cancellationToken))?.ToHashSet();
+        var agreed = (await settings.GetAsync<List<Guid>?>(agreedKey, null, cancellationToken))?.ToHashSet();
 
         await using var db = databases.CreateDbContext();
         var local = (await db.TrackRatings.AsNoTracking()
@@ -418,7 +449,7 @@ public sealed class UltimateCloudReporter(
         var cloudNow = new HashSet<Guid>(cloud);
         cloudNow.ExceptWith(removeFromCloud);
         cloudNow.UnionWith(addToCloud);
-        await Unit(() => settings.SetAsync(SettingKeys.UltimateCloudStars, localNow.Intersect(cloudNow).Order().ToList(), cancellationToken), cancellationToken);
+        await Unit(() => settings.SetAsync(agreedKey, localNow.Intersect(cloudNow).Order().ToList(), cancellationToken), cancellationToken);
         if (addToCloud.Count + removeFromCloud.Count + starHere.Count + unstarHere.Count > 0)
             logger.LogInformation("StarTracks synced: {Added} up, {Removed} removed there, {Starred} starred here, {Unstarred} unstarred here",
                 addToCloud.Count, removeFromCloud.Count, starHere.Count, unstarHere.Count);

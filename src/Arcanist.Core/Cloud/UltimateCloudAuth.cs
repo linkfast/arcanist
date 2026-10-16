@@ -30,9 +30,10 @@ public sealed record StoredCloudLink(
 public sealed record CloudLinkRequest(string UserCode, string VerificationUri, string? VerificationUriComplete, DateTime ExpiresAt);
 
 /// <summary>
-/// Signs this server in to Ultimate Cloud with the OAuth 2.0 device authorization grant (RFC 8628): Arcanist shows a
-/// code, the administrator approves it on Ultimate Cloud's site, and Arcanist never sees the password. The refresh
-/// token (offline, long lived) is kept protected in the settings; access tokens only in memory.
+/// Signs in to Ultimate Cloud with the OAuth 2.0 device authorization grant (RFC 8628): Arcanist shows a code, the
+/// account's owner approves it on Ultimate Cloud's site, and Arcanist never sees the password. The refresh token
+/// (offline, long lived) is kept protected in the settings; access tokens only in memory. There is the server's
+/// account (linked by an administrator; <c>user</c> null) and each user's own (<c>user</c> = their id).
 /// </summary>
 public sealed class UltimateCloudAuth(
     IHttpClientFactory clients,
@@ -46,23 +47,48 @@ public sealed class UltimateCloudAuth(
     private readonly SemaphoreSlim _tokens = new(1, 1);
     private JsonNode? _discovery;
     private string? _discoveredFor;
-    private string? _accessToken;
-    private DateTimeOffset _accessExpires;
-    private StoredCloudLink? _link;
-    private bool _linkLoaded;
+
+    /// <summary>Per account (<see cref="Guid.Empty"/>: the server's): its link as stored, and its access token.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, StoredCloudLink?> _links = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (string Token, DateTimeOffset Expires)> _access = new();
+
+    private static Guid Key(Guid? user) => user ?? Guid.Empty;
+
+    private static string SettingKey(Guid? user) => user is { } id ? SettingKeys.UltimateCloudUser(id, "link") : SettingKeys.UltimateCloudLink;
 
     private HttpClient Http => clients.CreateClient(UltimateCloudClient.HttpClientName);
 
-    public async Task<StoredCloudLink?> LinkAsync(CancellationToken cancellationToken)
+    /// <param name="user">A user's own account; the server's when null.</param>
+    public async Task<StoredCloudLink?> LinkAsync(CancellationToken cancellationToken, Guid? user = null)
     {
-        if (!_linkLoaded)
+        if (_links.TryGetValue(Key(user), out var link))
+            return link;
+        link = await settings.GetAsync<StoredCloudLink?>(SettingKey(user), null, cancellationToken);
+        _links[Key(user)] = link;
+        return link;
+    }
+
+    /// <summary>The linked account with this Ultimate Cloud id: the server's (user null) or a user's own.</summary>
+    public async Task<(bool Found, Guid? User)> AccountOfAsync(string subject, CancellationToken cancellationToken)
+    {
+        if ((await LinkAsync(cancellationToken))?.Subject == subject)
+            return (true, null);
+        foreach (var user in await LinkedUsersAsync(cancellationToken))
         {
-            _link = await settings.GetAsync<StoredCloudLink?>(SettingKeys.UltimateCloudLink, null, cancellationToken);
-            _linkLoaded = true;
+            if ((await LinkAsync(cancellationToken, user))?.Subject == subject)
+                return (true, user);
         }
 
-        return _link;
+        return (false, null);
     }
+
+    /// <summary>The users who linked their own account.</summary>
+    public async Task<IReadOnlyList<Guid>> LinkedUsersAsync(CancellationToken cancellationToken) =>
+        (await settings.KeysAsync(SettingKeys.UltimateCloudUserPrefix, cancellationToken))
+            .Where(k => k.EndsWith(".link", StringComparison.Ordinal))
+            .Select(k => Guid.TryParseExact(k[SettingKeys.UltimateCloudUserPrefix.Length..^".link".Length], "N", out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            .ToList();
 
     /// <summary>The id this server uses as its device in Ultimate Cloud, created once.</summary>
     public async Task<string> DeviceIdAsync(CancellationToken cancellationToken)
@@ -106,7 +132,7 @@ public sealed class UltimateCloudAuth(
     /// Polls until the administrator approves (the account is stored and returned), refuses or the code expires
     /// (<see cref="UltimateCloudException"/> with <c>cloud_link_denied</c> or <c>cloud_link_expired</c>).
     /// </summary>
-    public async Task<StoredCloudLink> WaitForApprovalAsync(string deviceCode, TimeSpan interval, DateTime expiresAt, CancellationToken cancellationToken)
+    public async Task<StoredCloudLink> WaitForApprovalAsync(string deviceCode, TimeSpan interval, DateTime expiresAt, CancellationToken cancellationToken, Guid? user = null)
     {
         var endpoint = await TokenEndpointAsync(cancellationToken);
         while (true)
@@ -123,7 +149,17 @@ public sealed class UltimateCloudAuth(
             }, cancellationToken);
             var body = await ReadAsync(response, cancellationToken);
             if (response.IsSuccessStatusCode)
-                return await StoreAsync(body!, cancellationToken);
+            {
+                await _tokens.WaitAsync(cancellationToken);
+                try
+                {
+                    return await StoreAsync(body!, cancellationToken, user, null);
+                }
+                finally
+                {
+                    _tokens.Release();
+                }
+            }
 
             switch (body?["error"]?.GetValue<string>())
             {
@@ -142,15 +178,15 @@ public sealed class UltimateCloudAuth(
 
     /// <summary>A valid access token, refreshed (and the refresh token rotated) when it is about to expire.</summary>
     /// <exception cref="UltimateCloudException"><c>cloud_not_linked</c>, <c>cloud_link_expired</c> (the account must be linked again) or <c>cloud_unreachable</c>.</exception>
-    public async Task<string> AccessTokenAsync(CancellationToken cancellationToken)
+    public async Task<string> AccessTokenAsync(CancellationToken cancellationToken, Guid? user = null)
     {
         await _tokens.WaitAsync(cancellationToken);
         try
         {
-            if (_accessToken is not null && time.GetUtcNow() < _accessExpires - TimeSpan.FromSeconds(30))
-                return _accessToken;
+            if (_access.TryGetValue(Key(user), out var access) && time.GetUtcNow() < access.Expires - TimeSpan.FromSeconds(30))
+                return access.Token;
 
-            var link = await LinkAsync(cancellationToken) ?? throw new UltimateCloudException(ErrorCodes.CloudNotLinked);
+            var link = await LinkAsync(cancellationToken, user) ?? throw new UltimateCloudException(ErrorCodes.CloudNotLinked);
             string refreshToken;
             try
             {
@@ -187,8 +223,8 @@ public sealed class UltimateCloudAuth(
                         : ErrorCodes.CloudUnreachable);
                 }
 
-                await StoreAsync(body!, cancellationToken, link);
-                return _accessToken!;
+                await StoreAsync(body!, cancellationToken, user, link);
+                return _access[Key(user)].Token;
             }
         }
         finally
@@ -202,17 +238,17 @@ public sealed class UltimateCloudAuth(
     {
         if (await LinkAsync(cancellationToken) is not { } link || link.LinkedByUserId == userId)
             return;
-        _link = link with { LinkedByUserId = userId };
-        await settings.SetAsync(SettingKeys.UltimateCloudLink, _link, cancellationToken);
+        _links[Guid.Empty] = link with { LinkedByUserId = userId };
+        await settings.SetAsync(SettingKeys.UltimateCloudLink, _links[Guid.Empty], cancellationToken);
     }
 
     /// <summary>Forgets the account, and tells Ultimate Cloud to end the session (best effort).</summary>
-    public async Task UnlinkAsync(CancellationToken cancellationToken)
+    public async Task UnlinkAsync(CancellationToken cancellationToken, Guid? user = null)
     {
         await _tokens.WaitAsync(cancellationToken);
         try
         {
-            var link = await LinkAsync(cancellationToken);
+            var link = await LinkAsync(cancellationToken, user);
             if (link is not null)
             {
                 try
@@ -233,8 +269,12 @@ public sealed class UltimateCloudAuth(
                 }
             }
 
-            await settings.SetAsync<StoredCloudLink?>(SettingKeys.UltimateCloudLink, null, cancellationToken);
-            (_link, _linkLoaded, _accessToken) = (null, true, null);
+            if (user is null)
+                await settings.SetAsync<StoredCloudLink?>(SettingKeys.UltimateCloudLink, null, cancellationToken);
+            else
+                await settings.DeleteAsync(SettingKey(user), cancellationToken);
+            _links[Key(user)] = null;
+            _access.TryRemove(Key(user), out _);
         }
         finally
         {
@@ -243,12 +283,12 @@ public sealed class UltimateCloudAuth(
     }
 
     /// <summary>Keeps the tokens of a token response; the account's identity comes from the access token.</summary>
-    private async Task<StoredCloudLink> StoreAsync(JsonNode body, CancellationToken cancellationToken, StoredCloudLink? current = null)
+    private async Task<StoredCloudLink> StoreAsync(JsonNode body, CancellationToken cancellationToken, Guid? user, StoredCloudLink? current)
     {
-        _accessToken = body["access_token"]!.GetValue<string>();
-        _accessExpires = time.GetUtcNow().AddSeconds(body["expires_in"]?.GetValue<int>() ?? 300);
+        var accessToken = body["access_token"]!.GetValue<string>();
+        _access[Key(user)] = (accessToken, time.GetUtcNow().AddSeconds(body["expires_in"]?.GetValue<int>() ?? 300));
         var refresh = body["refresh_token"]?.GetValue<string>();
-        var claims = Claims(_accessToken);
+        var claims = Claims(accessToken);
         var link = new StoredCloudLink(
             claims?["sub"]?.GetValue<string>() ?? current?.Subject ?? "",
             claims?["preferred_username"]?.GetValue<string>() ?? current?.UserName,
@@ -261,8 +301,8 @@ public sealed class UltimateCloudAuth(
                 ?? current?.FirstName);
         if (link != current)
         {
-            await settings.SetAsync(SettingKeys.UltimateCloudLink, link, cancellationToken);
-            (_link, _linkLoaded) = (link, true);
+            await settings.SetAsync(SettingKey(user), link, cancellationToken);
+            _links[Key(user)] = link;
         }
 
         return link;

@@ -160,18 +160,7 @@ public sealed class UltimateCloudAccount(
 
         try
         {
-            var data = await client.SendAsync(PlanQuery, null, cancellationToken);
-            var plan = data["myPlan"]!;
-            var storage = plan["storage"]!;
-            _plan = new CloudPlanSnapshot(
-                plan["plan"]!.GetValue<string>(),
-                plan["cloudStatus"]!.GetValue<string>(),
-                plan["featuresUnlocked"]!.GetValue<bool>(),
-                storage["usedBytes"]!.GetValue<long>(),
-                storage["limitBytes"]!.GetValue<long>(),
-                storage["isReadOnly"]!.GetValue<bool>(),
-                plan["renewsAt"]?.GetValue<DateTime>(),
-                time.GetUtcNow().UtcDateTime);
+            _plan = ParsePlan(await client.SendAsync(PlanQuery, null, cancellationToken), time);
             ErrorCode = null;
             await settings.SetAsync(SettingKeys.UltimateCloudPlan, _plan, cancellationToken);
             // Installed with the account, and updated when Ultimate Cloud serves a new version.
@@ -285,7 +274,23 @@ public sealed class UltimateCloudAccount(
         }
     }
 
-    private const string PlanQuery = """
+    /// <summary>Reads the answer to <see cref="PlanQuery"/>.</summary>
+    internal static CloudPlanSnapshot ParsePlan(JsonNode data, TimeProvider time)
+    {
+        var plan = data["myPlan"]!;
+        var storage = plan["storage"]!;
+        return new CloudPlanSnapshot(
+            plan["plan"]!.GetValue<string>(),
+            plan["cloudStatus"]!.GetValue<string>(),
+            plan["featuresUnlocked"]!.GetValue<bool>(),
+            storage["usedBytes"]!.GetValue<long>(),
+            storage["limitBytes"]!.GetValue<long>(),
+            storage["isReadOnly"]!.GetValue<bool>(),
+            plan["renewsAt"]?.GetValue<DateTime>(),
+            time.GetUtcNow().UtcDateTime);
+    }
+
+    internal const string PlanQuery = """
         query Plan {
           myPlan {
             plan

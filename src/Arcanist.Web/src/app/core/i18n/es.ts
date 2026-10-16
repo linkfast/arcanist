@@ -470,6 +470,9 @@ export const es: Dictionary = {
       'Algunos formatos (como Opus o WMA) se analizarán cuando ffmpeg esté disponible.',
   },
   libraries: {
+    personal: 'Personal',
+    personalHelp:
+      'Tu música de Ultimate Cloud: solo la ves tú y desaparece al desvincular tu cuenta.',
     disabled: 'Desactivada',
     disabledHelp:
       'Su música está en Ultimate Cloud o S3 y la extensión Ultimate Cloud está desactivada: solo se puede eliminar. Activa la extensión en Extensiones para volver a usarla.',
@@ -617,6 +620,45 @@ export const es: Dictionary = {
       'Añadir música a las bibliotecas a las que tiene acceso, desde las apps (por ejemplo, al migrar la biblioteca de Ultimate Desktop).',
   },
   account: {
+    cloud: {
+      title: 'Mi Ultimate Cloud',
+      description: 'Vincula tu propia cuenta de Ultimate Cloud con este servidor.',
+      notes: {
+        library: 'Tu música de Ultimate Cloud aparece aquí como una biblioteca que solo ves tú.',
+        listening:
+          'Tus reproducciones, estadísticas y StarTracks se comparten con tus apps de Ultimate.',
+        devices:
+          'Tus dispositivos de Ultimate se conectan a este servidor por la red P2P sin emparejarlos.',
+      },
+      link: 'Vincular mi cuenta',
+      library: 'Biblioteca',
+      libraryReady: 'Mi Ultimate Cloud, solo para ti',
+      libraryNone: 'Preparando…',
+      libraryName: 'Mi Ultimate Cloud',
+      topSong: 'Canción más escuchada: {name} — {by} ({plays})',
+      topArtist: 'Artista más escuchado: {name} ({plays})',
+      unlinkTitle: '¿Desvincular tu cuenta de Ultimate Cloud?',
+      unlinkHelp:
+        'Tu biblioteca de Ultimate Cloud desaparece de este servidor y dejan de enviarse tus reproducciones y StarTracks. En Ultimate Cloud no se borra nada.',
+      services: {
+        personalPlays: {
+          name: 'Mis reproducciones',
+          help: 'Lo que escuchas aquí cuenta en tus estadísticas y en los rankings de Ultimate Cloud.',
+        },
+        albumPlaythroughs: {
+          name: 'Álbumes completos',
+          help: 'Los álbumes que escuchas de principio a fin alimentan los rankings de álbumes.',
+        },
+        starTracks: {
+          name: 'StarTracks',
+          help: 'Tus estrellas de aquí y tus StarTracks de Ultimate son las mismas, en los dos sentidos.',
+        },
+        metrics: {
+          name: 'Mis estadísticas',
+          help: 'Muestra aquí lo que Ultimate Cloud cuenta de tu música.',
+        },
+      },
+    },
     appPasswords: {
       title: 'Contraseñas de aplicación',
       description:
@@ -1012,6 +1054,9 @@ export const es: Dictionary = {
     created: 'Biblioteca creada; se está leyendo su contenido',
   },
   cloudSync: {
+    account: 'Cuenta',
+    serverAccount: 'Ultimate Cloud de {owner} (del servidor)',
+    ownAccount: 'Mi Ultimate Cloud ({name})',
     title: 'Ultimate Cloud',
     needsPlan: 'Sincronizar con Ultimate Cloud necesita el plan Cloud de la cuenta vinculada.',
     downloadTo: 'Bajar a',

@@ -53,6 +53,24 @@ public sealed class UltimateCloudClient(IHttpClientFactory clients, UltimateClou
     public const string HttpClientName = "ultimate-cloud";
     public const string ClientApp = "arcanist-server";
 
+    private static readonly AsyncLocal<Guid?> Account = new();
+
+    /// <summary>The user whose own account the calls in this flow use; the server's account when null.</summary>
+    public static Guid? CurrentUser => Account.Value;
+
+    /// <summary>Makes the calls of this flow (until disposed) use a user's own account, or the server's with null.</summary>
+    public static IDisposable As(Guid? user)
+    {
+        var previous = Account.Value;
+        Account.Value = user;
+        return new Restore(previous);
+    }
+
+    private sealed class Restore(Guid? previous) : IDisposable
+    {
+        public void Dispose() => Account.Value = previous;
+    }
+
     /// <summary>Runs a query or mutation and returns its <c>data</c>.</summary>
     /// <exception cref="UltimateCloudException">The API answered with errors, or could not be reached (<c>cloud_unreachable</c>).</exception>
     public Task<JsonNode> SendAsync(string query, object? variables, CancellationToken cancellationToken) =>
@@ -71,7 +89,7 @@ public sealed class UltimateCloudClient(IHttpClientFactory clients, UltimateClou
             Content = new StringContent(JsonSerializer.Serialize(new { query, variables }, Json), System.Text.Encoding.UTF8, "application/json"),
         };
         if (signedIn)
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await auth.AccessTokenAsync(cancellationToken));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await auth.AccessTokenAsync(cancellationToken, Account.Value));
         request.Headers.Add("X-Device-Id", await auth.DeviceIdAsync(cancellationToken));
         request.Headers.Add("X-Client-App", ClientApp);
 

@@ -57,6 +57,12 @@ public static class SettingKeys
     /// <summary>The id this server uses as its device in Ultimate Cloud, created once.</summary>
     public const string UltimateCloudDeviceId = "ultimateCloud.deviceId";
 
+    /// <summary>Per user who linked their own Ultimate Cloud account: <c>ultimateCloud.user.&lt;id&gt;.link</c>, <c>.plan</c>,
+    /// <c>.services</c> and <c>.stars</c>, like the server's.</summary>
+    public static string UltimateCloudUser(Guid userId, string what) => $"{UltimateCloudUserPrefix}{userId:N}.{what}";
+
+    public const string UltimateCloudUserPrefix = "ultimateCloud.user.";
+
     /// <summary>Which of Ultimate Cloud's online services this server takes part in (<c>UltimateCloudServicesConfig</c>).</summary>
     public const string UltimateCloudServices = "ultimateCloud.services";
 

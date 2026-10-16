@@ -137,10 +137,12 @@ public sealed class ImportService(
         string? uploadAccount = null;
         if (folder.Kind == DropFolderKind.UltimateCloudDrop && input.UploadToCloud)
         {
-            // The account's library that receives the uploads: one that is linked.
-            var link = await services.GetRequiredService<Core.Cloud.UltimateCloudAuth>().LinkAsync(cancellationToken);
-            uploadAccount = input.UploadAccount ?? link?.Subject;
-            if (link is null || uploadAccount != link.Subject)
+            // The account's library that receives the uploads: the server's account, or the administrator's own.
+            var auth = services.GetRequiredService<Core.Cloud.UltimateCloudAuth>();
+            var server = (await auth.LinkAsync(cancellationToken))?.Subject;
+            var own = (await auth.LinkAsync(cancellationToken, guard.Authenticated().UserId))?.Subject;
+            uploadAccount = input.UploadAccount ?? server ?? own;
+            if (uploadAccount is null || (uploadAccount != server && uploadAccount != own && uploadAccount != folder.UploadAccount))
                 errors.Add("uploadAccount", ErrorCodes.CloudNotLinked);
         }
 

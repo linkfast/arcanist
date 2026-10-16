@@ -32,6 +32,12 @@ public sealed class LibraryCloudSync
 
     /// <summary>A run was asked for and has not started yet.</summary>
     public bool Requested { get; set; }
+
+    /// <summary>
+    /// Whose library it syncs with: a user's own Ultimate Cloud account (which needs the Cloud plan); the server's
+    /// account when null.
+    /// </summary>
+    public Guid? AccountUserId { get; set; }
 }
 
 public enum CloudSyncItemStatus

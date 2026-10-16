@@ -164,7 +164,8 @@ public sealed class CatalogService(
     /// <summary>Files the caller may play: present (not missing) and in an accessible library.</summary>
     internal IQueryable<MediaFile> VisibleFiles(UserAccess access)
     {
-        var files = db.MediaFiles.Where(f => f.MissingSince == null);
+        var files = db.MediaFiles.Where(f => f.MissingSince == null
+                                             && (f.LibrarySource.Library.OwnerUserId == null || f.LibrarySource.Library.OwnerUserId == access.UserId));
         // Libraries in Ultimate Cloud or S3 are disabled while its extension is off: their tracks are not shown.
         if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id))
             files = files.Where(f => f.LibrarySource.Kind != LibrarySourceKind.UltimateCloud && f.LibrarySource.Kind != LibrarySourceKind.S3);

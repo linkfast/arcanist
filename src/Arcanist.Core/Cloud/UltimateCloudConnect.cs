@@ -13,12 +13,13 @@ namespace Arcanist.Core.Cloud;
 /// The transparent P2P connection, with any linked account (<see cref="Capability.CloudConnect"/>): this server registers its
 /// node in Ultimate Cloud, so the account's apps find it without pairing; the account's devices are trusted here as
 /// they register theirs (<see cref="P2PPeerSource.UltimateCloud"/>), and dropped when they no longer are. The nodes
-/// reach each other through the relays chosen in the P2P settings. Run after every plan check.
+/// reach each other through the relays chosen in the P2P settings. Run after every plan check. Every account takes
+/// part: the server's (its devices belong to the administrator who linked it) and each user's own (theirs).
 /// </summary>
 public sealed class UltimateCloudConnect(
     UltimateCloudClient client,
     UltimateCloudAuth auth,
-    ICloudLinkState link,
+    UserCloudAccounts accounts,
     P2PSettings p2p,
     P2PNode node,
     P2PPeerDirectory directory,
@@ -26,15 +27,60 @@ public sealed class UltimateCloudConnect(
     TimeProvider time,
     ILogger<UltimateCloudConnect> logger)
 {
+    private readonly SemaphoreSlim _run = new(1, 1);
+
     public async Task SyncAsync(CancellationToken cancellationToken)
     {
-        var config = await p2p.GetAsync(cancellationToken);
-        if (link.Tier == CloudTier.None || !config.Enabled)
+        await _run.WaitAsync(cancellationToken);
+        try
         {
-            await TrustAsync([], cancellationToken);
-            return;
+            await SyncAllAsync(cancellationToken);
+        }
+        finally
+        {
+            _run.Release();
+        }
+    }
+
+    private async Task SyncAllAsync(CancellationToken cancellationToken)
+    {
+        var config = await p2p.GetAsync(cancellationToken);
+        var devices = new List<(string Id, string Name, Guid? Owner)>();
+        if (config.Enabled)
+        {
+            await using var db = databases.CreateDbContext();
+            foreach (var account in new Guid?[] { null }.Concat(accounts.Linked.Select(u => (Guid?)u)))
+            {
+                if (accounts.TierOf(account) == CloudTier.None)
+                    continue;
+                var owner = account ?? await OwnerAsync(db, cancellationToken);
+                try
+                {
+                    using (UltimateCloudClient.As(account))
+                    {
+                        foreach (var (id, name) in await AccountDevicesAsync(config, cancellationToken))
+                            devices.Add((id, name, owner));
+                    }
+                }
+                catch (UltimateCloudException e) when (account is not null)
+                {
+                    // A user's account that cannot be reached keeps its devices until it can.
+                    logger.LogDebug("The P2P nodes of user {User} could not be read: {Error}", account, e.Code);
+                    devices.AddRange((await db.P2PPeers.AsNoTracking()
+                            .Where(p => p.Source == P2PPeerSource.UltimateCloud && p.UserId == account)
+                            .Select(p => new { p.NodeId, p.Name })
+                            .ToListAsync(cancellationToken))
+                        .Select(p => (p.NodeId, p.Name, account)));
+                }
+            }
         }
 
+        await TrustAsync(devices.DistinctBy(d => d.Id).ToList(), cancellationToken);
+    }
+
+    /// <summary>Registers this server's node in the account (of this flow), and returns the account's devices.</summary>
+    private async Task<List<(string Id, string Name)>> AccountDevicesAsync(P2PConfig config, CancellationToken cancellationToken)
+    {
         var data = await client.SendAsync("query Connect { myP2PNodes { nodeId kind name } }", null, cancellationToken);
 
         var state = node.State;
@@ -46,21 +92,21 @@ public sealed class UltimateCloudConnect(
                 cancellationToken);
         }
 
-        var devices = (data["myP2PNodes"]?.AsArray() ?? [])
+        return (data["myP2PNodes"]?.AsArray() ?? [])
             .OfType<JsonNode>()
             .Where(n => n["kind"]?.GetValue<string>() == "DEVICE" && n["nodeId"]?.GetValue<string>() is { Length: 64 } id && id != state.NodeId)
             .Select(n => (Id: n["nodeId"]!.GetValue<string>().ToLowerInvariant(), Name: n["name"]?.GetValue<string>() ?? "Ultimate"))
             .DistinctBy(n => n.Id)
             .ToList();
-        await TrustAsync(devices, cancellationToken);
     }
 
-    /// <summary>Makes the account's devices the peers that came from Ultimate Cloud: adds the new, drops the gone.</summary>
-    private async Task TrustAsync(IReadOnlyList<(string Id, string Name)> devices, CancellationToken cancellationToken)
+    /// <summary>Makes the accounts' devices the peers that came from Ultimate Cloud: adds the new, drops the gone.</summary>
+    private async Task TrustAsync(IReadOnlyList<(string Id, string Name, Guid? Owner)> devices, CancellationToken cancellationToken)
     {
         await using var db = databases.CreateDbContext();
         var current = await db.P2PPeers.Where(p => p.Source == P2PPeerSource.UltimateCloud).ToListAsync(cancellationToken);
         var wanted = devices.ToDictionary(d => d.Id, d => d.Name, StringComparer.Ordinal);
+        var owners = devices.ToDictionary(d => d.Id, d => d.Owner, StringComparer.Ordinal);
         var changed = false;
 
         foreach (var peer in current.Where(p => !wanted.ContainsKey(p.NodeId)))
@@ -74,7 +120,6 @@ public sealed class UltimateCloudConnect(
         {
             // Nodes paired by hand stay as they are.
             var paired = await db.P2PPeers.Where(p => newIds.Contains(p.NodeId)).Select(p => p.NodeId).ToListAsync(cancellationToken);
-            var owner = await OwnerAsync(db, cancellationToken);
             foreach (var id in newIds.Except(paired))
             {
                 db.P2PPeers.Add(new P2PPeer
@@ -82,7 +127,7 @@ public sealed class UltimateCloudConnect(
                     Kind = P2PPeerKind.Device,
                     NodeId = id,
                     Name = Cut(wanted[id]),
-                    UserId = owner,
+                    UserId = owners[id],
                     Source = P2PPeerSource.UltimateCloud,
                     Rules = new P2PRules { AllowDownload = true },
                     CreatedAt = time.GetUtcNow().UtcDateTime,
@@ -91,6 +136,7 @@ public sealed class UltimateCloudConnect(
             }
         }
 
+        // A device keeps the owner it came with (one in several accounts belongs to the first).
         foreach (var peer in current.Where(p => wanted.TryGetValue(p.NodeId, out var name) && p.Name != Cut(name)))
         {
             peer.Name = Cut(wanted[peer.NodeId]);

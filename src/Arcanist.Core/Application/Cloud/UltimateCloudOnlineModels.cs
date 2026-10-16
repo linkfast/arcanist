@@ -15,7 +15,8 @@ public sealed record UltimateCloudServicesInput(bool PersonalPlays, bool AlbumPl
 /// <param name="Id">The account's id in Ultimate Cloud.</param>
 /// <param name="Name">Its user name or email.</param>
 /// <param name="OwnerFirstName">Its owner's first name, which names its library ("Ana's Ultimate Cloud").</param>
-public sealed record LinkedCloudAccount(string Id, string? Name, string? OwnerFirstName);
+/// <param name="UserId">The user whose own account it is (the caller); null for the server's.</param>
+public sealed record LinkedCloudAccount(string Id, string? Name, string? OwnerFirstName, Guid? UserId = null);
 
 public sealed record CloudSongRanking(string AcoustId, string? Title, string? Artist, long PlayCount);
 

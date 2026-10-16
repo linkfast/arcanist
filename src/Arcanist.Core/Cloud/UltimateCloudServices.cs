@@ -11,8 +11,10 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddSingleton<UltimateCloudAuth>();
         services.AddSingleton<UltimateCloudClient>();
         services.AddSingleton<UltimateCloudAccount>();
-        services.AddSingleton<ICloudLinkState>(provider => provider.GetRequiredService<UltimateCloudAccount>());
         services.AddHostedService(provider => provider.GetRequiredService<UltimateCloudAccount>());
+        services.AddSingleton<UserCloudAccounts>();
+        services.AddHostedService(provider => provider.GetRequiredService<UserCloudAccounts>());
+        services.AddSingleton<ICloudLinkState, CloudTiers>();
         services.AddHttpClient(UltimateCloudClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddSingleton<UltimateCloudConnect>();
         services.AddSingleton<UltimateAudioTool>();
@@ -33,6 +35,7 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddHttpClient(UltimateCloudStorage.FilesClientName, client => client.Timeout = Timeout.InfiniteTimeSpan);
         services.AddScoped<Application.Cloud.UltimateCloudService>();
         services.AddScoped<Application.Cloud.CloudSyncService>();
+        services.AddScoped<Application.Cloud.MyUltimateCloudService>();
         return services;
     }
 }

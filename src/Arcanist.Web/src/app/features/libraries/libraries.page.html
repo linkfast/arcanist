@@ -63,6 +63,11 @@
             @if (library.disabled) {
               <span hlmBadge variant="destructive">{{ 'libraries.disabled' | t }}</span>
             }
+            @if (library.personal) {
+              <span hlmBadge variant="outline" [title]="'libraries.personalHelp' | t">{{
+                'libraries.personal' | t
+              }}</span>
+            }
           </h2>
           @if (library.disabled) {
             <p hlmCardDescription>{{ 'libraries.disabledHelp' | t }}</p>
@@ -206,6 +211,7 @@
               [sources]="library.sources ?? []"
               [state]="cloudSyncs()[library.id]"
               [available]="cloudSyncAvailable()"
+              [accounts]="cloudAccounts()"
               (changed)="cloudSyncChanged($event)"
             />
           }

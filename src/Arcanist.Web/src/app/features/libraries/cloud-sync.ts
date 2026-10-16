@@ -13,6 +13,14 @@ import type {
   CloudSyncMode,
   CloudSyncStateFieldsFragment as SyncState,
 } from '../../graphql/generated/graphql';
+
+/** An account a library can sync with: the server's (no userId) or the administrator's own. */
+export interface CloudAccount {
+  id: string;
+  name?: string | null;
+  ownerFirstName?: string | null;
+  userId?: string | null;
+}
 import {
   SetLibraryCloudSyncMutation,
   SyncLibraryWithCloudMutation,
@@ -58,6 +66,24 @@ import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
           }
         </hlm-native-select>
       </div>
+
+      @if (accounts().length > 1) {
+        <label class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {{ 'cloudSync.account' | t }}
+          <hlm-native-select
+            size="sm"
+            [value]="account() ?? ''"
+            [disabled]="busy()"
+            (change)="setAccount($any($event.target).value)"
+          >
+            @for (option of accounts(); track option.id) {
+              <option hlmNativeSelectOption [value]="option.userId ?? ''">
+                {{ accountName(option) }}
+              </option>
+            }
+          </hlm-native-select>
+        </label>
+      }
 
       @if (!available() && mode() === 'OFF') {
         <p class="text-xs text-muted-foreground">{{ 'cloudSync.needsPlan' | t }}</p>
@@ -161,6 +187,9 @@ export class CloudSyncPanel {
   readonly state = input<SyncState | undefined>();
   /** The account has the Cloud plan. */
   readonly available = input(false);
+  readonly accounts = input<CloudAccount[]>([]);
+  /** Chosen while the sync is off, for when it is turned on. */
+  private readonly chosen = signal<string | null | undefined>(undefined);
   readonly changed = output<SyncState>();
 
   protected readonly modes: CloudSyncMode[] = ['OFF', 'UPLOAD', 'DOWNLOAD', 'BOTH'];
@@ -168,6 +197,33 @@ export class CloudSyncPanel {
 
   protected mode(): CloudSyncMode {
     return this.state()?.mode ?? 'OFF';
+  }
+
+  /** The account's user (null: the server's): the one it syncs with, or the first linked. */
+  protected account(): string | null {
+    const state = this.state();
+    if (state && state.mode !== 'OFF') return state.accountUserId ?? null;
+    const chosen = this.chosen();
+    return chosen !== undefined ? chosen : (this.accounts()[0]?.userId ?? null);
+  }
+
+  /** "Ultimate Cloud de Ana" for the server's account, "Mi Ultimate Cloud (ana)" for the administrator's own. */
+  protected accountName(account: CloudAccount): string {
+    const name = account.name ?? account.id;
+    return account.userId
+      ? this.i18n.t('cloudSync.ownAccount', { name })
+      : account.ownerFirstName
+        ? this.i18n.t('cloudSync.serverAccount', { owner: account.ownerFirstName })
+        : name;
+  }
+
+  protected async setAccount(value: string): Promise<void> {
+    const user = value || null;
+    if (this.mode() === 'OFF') {
+      this.chosen.set(user);
+      return;
+    }
+    await this.setMode(this.mode(), undefined, user);
   }
 
   protected reason(code: string): string {
@@ -178,7 +234,11 @@ export class CloudSyncPanel {
         : this.i18n.error(code);
   }
 
-  protected async setMode(mode: CloudSyncMode, downloadSourceId?: string): Promise<void> {
+  protected async setMode(
+    mode: CloudSyncMode,
+    downloadSourceId?: string,
+    accountUserId: string | null = this.account(),
+  ): Promise<void> {
     await this.run(
       async () =>
         (
@@ -187,6 +247,7 @@ export class CloudSyncPanel {
             input: {
               mode,
               downloadSourceId: downloadSourceId ?? this.state()?.downloadSourceId ?? null,
+              accountUserId,
             },
           })
         ).setLibraryCloudSync,

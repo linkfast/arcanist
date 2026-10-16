@@ -23,7 +23,7 @@ internal static class UltimateCloudStreaming
             string url;
             try
             {
-                url = await storage.AudioUrlAsync(target.RelativePath, cancellationToken);
+                url = await storage.AudioUrlAsync(target.Location, target.RelativePath, cancellationToken);
             }
             catch (FileNotFoundException)
             {

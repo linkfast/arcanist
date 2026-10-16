@@ -37,6 +37,14 @@ public sealed class Library : Entity
     /// </summary>
     public DateTime? AutoOrganizeSince { get; set; }
 
+    /// <summary>
+    /// A personal library: the music of this user's own Ultimate Cloud account, which only they see (administrators
+    /// included). Null for the server's libraries. It goes with the user, and when they unlink the account.
+    /// </summary>
+    public Guid? OwnerUserId { get; set; }
+
+    public User? Owner { get; set; }
+
     public List<LibrarySource> Sources { get; } = [];
 
     public List<LibraryAccess> Access { get; } = [];

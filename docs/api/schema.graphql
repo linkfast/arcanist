@@ -114,6 +114,10 @@ type Query {
   ultimateCloudAccounts: [LinkedCloudAccount!]!
   "The linked account's listening statistics as Ultimate Cloud counts them. Administrators only."
   ultimateCloudMetrics: UltimateCloudMetrics!
+  "The caller's own Ultimate Cloud account and what it brings them: their music as a personal library, their plays, statistics, StarTracks and devices."
+  myUltimateCloud: MyUltimateCloudStatus!
+  "The caller's own account's listening statistics as Ultimate Cloud counts them."
+  myUltimateCloudMetrics: UltimateCloudMetrics!
   "How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only."
   cloudSyncs: [LibraryCloudSyncState!]!
   "Public description of the server. Does not require authentication."
@@ -642,6 +646,7 @@ type Library {
   organization: LibraryOrganization
   canUpload: Boolean!
   disabled: Boolean!
+  personal: Boolean!
 }
 
 type LibrarySource {
@@ -1332,6 +1337,7 @@ type LinkedCloudAccount {
   id: String!
   name: String
   ownerFirstName: String
+  userId: ID
 }
 
 type UltimateCloudMetrics {
@@ -1382,9 +1388,24 @@ type CloudDecadeRanking {
   playCount: Long!
 }
 
+type MyUltimateCloudStatus {
+  enabled: Boolean!
+  state: UltimateCloudLinkState!
+  account: String
+  ownerFirstName: String
+  linkedAt: DateTime
+  pending: UltimateCloudPendingLink
+  plan: UltimateCloudPlan
+  tier: CloudTier!
+  errorCode: String
+  libraryId: ID
+  services: UltimateCloudServices!
+}
+
 type LibraryCloudSyncState {
   libraryId: ID!
   mode: CloudSyncMode!
+  accountUserId: ID
   downloadSourceId: ID
   lastRunAt: DateTime
   requested: Boolean!
@@ -1643,6 +1664,16 @@ type Mutation {
   syncLibraryWithCloud(libraryId: ID!): LibraryCloudSyncState!
   "Chooses which of Ultimate Cloud's online services this server takes part in: plays for the statistics and rankings, albums heard whole, StarTracks, the account's statistics. Administrators only, with a recent authentication."
   setUltimateCloudServices(input: UltimateCloudServicesInput!): UltimateCloudStatus!
+  "Asks Ultimate Cloud for a code to approve on its site, to link the caller's own account; the server waits for the approval. Needs a recent authentication."
+  startMyUltimateCloudLink(input: StartMyUltimateCloudLinkInput!): MyUltimateCloudStatus!
+  "Stops waiting for the approval of the caller's code."
+  cancelMyUltimateCloudLink: MyUltimateCloudStatus!
+  "Forgets the caller's own account and removes their personal library; nothing is touched in Ultimate Cloud. Needs a recent authentication."
+  unlinkMyUltimateCloud: MyUltimateCloudStatus!
+  "Reads the plan of the caller's own account again now."
+  refreshMyUltimateCloud: MyUltimateCloudStatus!
+  "Chooses what the caller's own account gets from this server: their plays, albums heard whole, StarTracks, statistics."
+  setMyUltimateCloudServices(input: UltimateCloudServicesInput!): MyUltimateCloudStatus!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
   "Requires MANAGE_USERS and a recent authentication."
@@ -1995,6 +2026,7 @@ input AddUltimateCloudLibraryInput {
 input SetLibraryCloudSyncInput {
   mode: CloudSyncMode!
   downloadSourceId: ID
+  accountUserId: ID
 }
 
 input UltimateCloudServicesInput {
@@ -2002,6 +2034,10 @@ input UltimateCloudServicesInput {
   albumPlaythroughs: Boolean!
   starTracks: Boolean!
   metrics: Boolean!
+}
+
+input StartMyUltimateCloudLinkInput {
+  libraryName: String
 }
 
 input CreateUserInput {

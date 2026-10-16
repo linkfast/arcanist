@@ -464,6 +464,9 @@ export const en: Dictionary = {
       'Some formats (such as Opus or WMA) will be analyzed once ffmpeg is available.',
   },
   libraries: {
+    personal: 'Personal',
+    personalHelp:
+      'Your Ultimate Cloud music: only you see it, and it goes when you unlink your account.',
     disabled: 'Disabled',
     disabledHelp:
       'Its music is in Ultimate Cloud or S3 and the Ultimate Cloud extension is off: it can only be deleted. Switch the extension on in Extensions to use it again.',
@@ -610,6 +613,43 @@ export const en: Dictionary = {
       'Add music to the libraries they can access, from apps (for example, migrating Ultimate Desktop’s library).',
   },
   account: {
+    cloud: {
+      title: 'My Ultimate Cloud',
+      description: 'Link your own Ultimate Cloud account with this server.',
+      notes: {
+        library: 'Your Ultimate Cloud music shows here as a library only you see.',
+        listening: 'Your plays, statistics and StarTracks are shared with your Ultimate apps.',
+        devices: 'Your Ultimate devices reach this server through the P2P network without pairing.',
+      },
+      link: 'Link my account',
+      library: 'Library',
+      libraryReady: 'My Ultimate Cloud, only for you',
+      libraryNone: 'Getting it ready…',
+      libraryName: 'My Ultimate Cloud',
+      topSong: 'Most played song: {name} — {by} ({plays})',
+      topArtist: 'Most played artist: {name} ({plays})',
+      unlinkTitle: 'Unlink your Ultimate Cloud account?',
+      unlinkHelp:
+        'Your Ultimate Cloud library leaves this server, and your plays and StarTracks are no longer sent. Nothing is deleted in Ultimate Cloud.',
+      services: {
+        personalPlays: {
+          name: 'My plays',
+          help: 'What you listen to here counts in your statistics and in Ultimate Cloud’s rankings.',
+        },
+        albumPlaythroughs: {
+          name: 'Whole albums',
+          help: 'Albums you listen to from start to finish feed the album rankings.',
+        },
+        starTracks: {
+          name: 'StarTracks',
+          help: 'Your stars here and your Ultimate StarTracks are the same, both ways.',
+        },
+        metrics: {
+          name: 'My statistics',
+          help: 'Shows here what Ultimate Cloud counts of your music.',
+        },
+      },
+    },
     appPasswords: {
       title: 'App passwords',
       description:
@@ -1002,6 +1042,9 @@ export const en: Dictionary = {
     created: 'Library created; its content is being read',
   },
   cloudSync: {
+    account: 'Account',
+    serverAccount: '{owner}’s Ultimate Cloud (the server’s)',
+    ownAccount: 'My Ultimate Cloud ({name})',
     title: 'Ultimate Cloud',
     needsPlan: 'Syncing with Ultimate Cloud needs the Cloud plan on the linked account.',
     downloadTo: 'Download to',

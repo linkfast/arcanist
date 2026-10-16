@@ -65,6 +65,7 @@ export const LibrariesQuery = graphql(`
       createdAt
       lastScanAt
       disabled
+      personal
       sources {
         id
         kind
@@ -1617,6 +1618,104 @@ export const UltimateCloudAccountsQuery = graphql(`
       id
       name
       ownerFirstName
+      userId
+    }
+  }
+`);
+
+export const MyUltimateCloudStatusFields = graphql(`
+  fragment MyUltimateCloudStatusFields on MyUltimateCloudStatus {
+    enabled
+    state
+    account
+    ownerFirstName
+    linkedAt
+    pending {
+      userCode
+      verificationUri
+      verificationUriComplete
+      expiresAt
+    }
+    plan {
+      name
+      cloudStatus
+      readOnly
+      checkedAt
+    }
+    tier
+    errorCode
+    libraryId
+    services {
+      personalPlays
+      albumPlaythroughs
+      starTracks
+      metrics
+    }
+  }
+`);
+
+export const MyUltimateCloudQuery = graphql(`
+  query MyUltimateCloud {
+    myUltimateCloud {
+      ...MyUltimateCloudStatusFields
+    }
+  }
+`);
+
+export const StartMyUltimateCloudLinkMutation = graphql(`
+  mutation StartMyUltimateCloudLink($input: StartMyUltimateCloudLinkInput!) {
+    startMyUltimateCloudLink(input: $input) {
+      ...MyUltimateCloudStatusFields
+    }
+  }
+`);
+
+export const CancelMyUltimateCloudLinkMutation = graphql(`
+  mutation CancelMyUltimateCloudLink {
+    cancelMyUltimateCloudLink {
+      ...MyUltimateCloudStatusFields
+    }
+  }
+`);
+
+export const UnlinkMyUltimateCloudMutation = graphql(`
+  mutation UnlinkMyUltimateCloud {
+    unlinkMyUltimateCloud {
+      ...MyUltimateCloudStatusFields
+    }
+  }
+`);
+
+export const RefreshMyUltimateCloudMutation = graphql(`
+  mutation RefreshMyUltimateCloud {
+    refreshMyUltimateCloud {
+      ...MyUltimateCloudStatusFields
+    }
+  }
+`);
+
+export const SetMyUltimateCloudServicesMutation = graphql(`
+  mutation SetMyUltimateCloudServices($input: UltimateCloudServicesInput!) {
+    setMyUltimateCloudServices(input: $input) {
+      ...MyUltimateCloudStatusFields
+    }
+  }
+`);
+
+export const MyUltimateCloudMetricsQuery = graphql(`
+  query MyUltimateCloudMetrics {
+    myUltimateCloudMetrics {
+      totalPlays
+      totalStreams
+      topSongAllTime {
+        title
+        artist
+        playCount
+      }
+      topArtistAllTime {
+        artist
+        playCount
+      }
     }
   }
 `);
@@ -1733,6 +1832,7 @@ export const CloudSyncStateFields = graphql(`
   fragment CloudSyncStateFields on LibraryCloudSyncState {
     libraryId
     mode
+    accountUserId
     downloadSourceId
     lastRunAt
     requested
@@ -1759,6 +1859,12 @@ export const CloudSyncsQuery = graphql(`
   query CloudSyncs {
     cloudSyncs {
       ...CloudSyncStateFields
+    }
+    ultimateCloudAccounts {
+      id
+      name
+      ownerFirstName
+      userId
     }
     serverInfo {
       capabilities

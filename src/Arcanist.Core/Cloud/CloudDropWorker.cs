@@ -20,7 +20,7 @@ namespace Arcanist.Core.Cloud;
 public sealed class CloudDropWorker(
     IArcanistDbContextFactory databases,
     UltimateCloudClient client,
-    ICapabilityService capabilities,
+    UltimateCloudAccount account,
     CloudTrackDownloader downloader,
     CloudSyncWorker uploads,
     UltimateCloudAuth auth,
@@ -50,7 +50,7 @@ public sealed class CloudDropWorker(
         {
             try
             {
-                if (setup.CurrentValue.Completed && databases.IsConfigured && capabilities.IsEnabled(Capability.UltimateCloudSource))
+                if (setup.CurrentValue.Completed && databases.IsConfigured && account.Tier >= CloudTier.Free)
                     await RunAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -122,9 +122,16 @@ public sealed class CloudDropWorker(
     /// <summary>Songs brought from Cloud Drop, now in the library and identified, go to the account's library.</summary>
     private async Task UploadAsync(DropFolder folder, CancellationToken cancellationToken)
     {
-        // Only to the account chosen: with another one linked, the songs wait.
-        if (folder.UploadAccount is { } account && (await auth.LinkAsync(cancellationToken))?.Subject != account)
-            return;
+        // Only to the account chosen (the server's, or an administrator's own): while it is not linked, the songs wait.
+        Guid? user = null;
+        if (folder.UploadAccount is { } subject)
+        {
+            (var found, user) = await auth.AccountOfAsync(subject, cancellationToken);
+            if (!found)
+                return;
+        }
+
+        using var as_ = UltimateCloudClient.As(user);
 
         List<CloudDropFetch> waiting;
         await using (var db = databases.CreateDbContext())

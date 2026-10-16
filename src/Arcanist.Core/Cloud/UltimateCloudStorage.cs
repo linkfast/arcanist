@@ -26,12 +26,13 @@ public enum UltimateCloudCollection
 /// The music an Ultimate Cloud account keeps, as a library source (<see cref="LibrarySourceKind.UltimateCloud"/>; its
 /// location is the <see cref="UltimateCloudCollection"/>). Nothing is downloaded to catalog it: Ultimate Cloud
 /// describes every track, and audio is fetched when someone plays it, through short-lived signed URLs. Paths are the
-/// track's id and format, which never change. Read only; unavailable while no account is linked.
+/// track's id and format, which never change. Read only; unavailable while no account is linked. A source is of the
+/// server's account, or of a user's own when its settings name them (<see cref="UserCloudAccounts.UserOf"/>).
 /// </summary>
 internal sealed class UltimateCloudStorage(
     UltimateCloudClient client,
     UltimateCloudAuth auth,
-    ICloudLinkState link,
+    UserCloudAccounts accounts,
     IHttpClientFactory clients,
     TimeProvider time,
     ILogger<UltimateCloudStorage> logger) : ILibraryStorage, IDescribedStorage
@@ -49,11 +50,13 @@ internal sealed class UltimateCloudStorage(
     {
         if (!Enum.TryParse<UltimateCloudCollection>(location.Location, out _))
             return new StorageProbe(StorageProblem.Invalid);
-        if (link.Tier < CloudTier.Free || await auth.LinkAsync(cancellationToken) is null)
+        var user = UserCloudAccounts.UserOf(location.Settings);
+        if (accounts.TierOf(user) < CloudTier.Free || await auth.LinkAsync(cancellationToken, user) is null)
             return new StorageProbe(StorageProblem.NotFound);
         try
         {
-            await client.SendAsync("query Probe { myLibrary { id } }", null, cancellationToken);
+            using (UltimateCloudClient.As(user))
+                await client.SendAsync("query Probe { myLibrary { id } }", null, cancellationToken);
             return StorageProbe.Available;
         }
         catch (UltimateCloudException e)
@@ -69,7 +72,8 @@ internal sealed class UltimateCloudStorage(
         JsonNode data;
         try
         {
-            data = await client.SendAsync($"query Tracks {{ {field} {{ {TrackFields} }} }}", null, cancellationToken);
+            using (UltimateCloudClient.As(UserCloudAccounts.UserOf(location.Settings)))
+                data = await client.SendAsync($"query Tracks {{ {field} {{ {TrackFields} }} }}", null, cancellationToken);
         }
         catch (UltimateCloudException e)
         {
@@ -150,6 +154,7 @@ internal sealed class UltimateCloudStorage(
     {
         try
         {
+            using var account = UltimateCloudClient.As(UserCloudAccounts.UserOf(location.Settings));
             var data = await client.SendAsync("query Cover($id: String!) { coverImageUrl(coverImageId: $id) { url } }", new { id = artwork }, cancellationToken);
             if (data["coverImageUrl"]?["url"]?.GetValue<string>() is not { } url)
                 return null;
@@ -166,7 +171,7 @@ internal sealed class UltimateCloudStorage(
     /// <summary>A signed URL of the track's audio, reused while it is valid.</summary>
     /// <exception cref="FileNotFoundException">The track is gone from Ultimate Cloud.</exception>
     /// <exception cref="IOException">Ultimate Cloud could not be reached, or refuses (no account, a lapsed subscription…).</exception>
-    public async Task<string> AudioUrlAsync(string relativePath, CancellationToken cancellationToken)
+    public async Task<string> AudioUrlAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken)
     {
         var id = AudioFormats.WithoutExtension(relativePath);
         if (_urls.TryGetValue(id, out var known) && time.GetUtcNow() < known.Until)
@@ -175,7 +180,8 @@ internal sealed class UltimateCloudStorage(
         JsonNode data;
         try
         {
-            data = await client.SendAsync("mutation Stream($id: String!) { streamUrl(trackId: $id) { url validForSeconds } }", new { id }, cancellationToken);
+            using (UltimateCloudClient.As(UserCloudAccounts.UserOf(location.Settings)))
+                data = await client.SendAsync("mutation Stream($id: String!) { streamUrl(trackId: $id) { url validForSeconds } }", new { id }, cancellationToken);
         }
         catch (UltimateCloudException e) when (e.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
         {
@@ -208,7 +214,7 @@ internal sealed class UltimateCloudStorage(
     /// <summary>The whole audio, for conversions and analysis; players get it through <see cref="UltimateCloudStreaming"/>.</summary>
     public async Task<Stream> OpenReadAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken)
     {
-        var url = await AudioUrlAsync(relativePath, cancellationToken);
+        var url = await AudioUrlAsync(location, relativePath, cancellationToken);
         var response = await Files.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {

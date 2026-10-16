@@ -129,6 +129,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             library.Property(l => l.Name).HasMaxLength(NameLength);
             library.Property(l => l.OrganizeTemplate).HasMaxLength(TemplateLength);
             library.HasIndex(l => l.Number).IsUnique();
+            library.HasOne(l => l.Owner).WithMany().HasForeignKey(l => l.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LibrarySource>(source =>

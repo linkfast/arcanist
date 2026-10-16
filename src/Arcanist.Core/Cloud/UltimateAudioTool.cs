@@ -346,7 +346,7 @@ public sealed class UltimateAudioTool(
     private async Task<HttpResponseMessage> SendAsync(Uri url, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await auth.AccessTokenAsync(cancellationToken));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await auth.AccessTokenAsync(cancellationToken, UltimateCloudClient.CurrentUser));
         request.Headers.Add("X-Device-Id", await auth.DeviceIdAsync(cancellationToken));
         request.Headers.Add("X-Client-App", UltimateCloudClient.ClientApp);
         return await clients.CreateClient(UltimateCloudStorage.FilesClientName).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);

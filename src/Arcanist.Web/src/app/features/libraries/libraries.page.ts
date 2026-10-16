@@ -57,7 +57,7 @@ import {
 } from '../../graphql/operations';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { OrganizeDialog } from './organize-dialog';
-import { CloudSyncPanel } from './cloud-sync';
+import { CloudAccount, CloudSyncPanel } from './cloud-sync';
 import { S3LibraryForm } from './s3-library';
 import { BytesPipe, CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
@@ -162,6 +162,8 @@ export class LibrariesPage implements OnInit {
   protected readonly libraries = signal<Library[] | null>(null);
   /** How each library syncs with Ultimate Cloud (administrators only). */
   protected readonly cloudSyncs = signal<Record<string, CloudSyncState>>({});
+  /** The accounts a library can sync with: the server's and the administrator's own. */
+  protected readonly cloudAccounts = signal<CloudAccount[]>([]);
   /** The linked account has the Cloud plan. */
   protected readonly cloudSyncAvailable = signal(false);
   /** The linked account has the Cloud plan's storage on other clouds (S3). */
@@ -488,6 +490,7 @@ export class LibrariesPage implements OnInit {
     try {
       const result = await this.gql.query(CloudSyncsQuery);
       this.cloudSyncs.set(Object.fromEntries(result.cloudSyncs.map((s) => [s.libraryId, s])));
+      this.cloudAccounts.set(result.ultimateCloudAccounts);
       this.cloudSyncAvailable.set(result.serverInfo.capabilities.includes('CLOUD_SYNC'));
       this.s3Available.set(result.serverInfo.capabilities.includes('THIRD_PARTY_STORAGE'));
     } catch {

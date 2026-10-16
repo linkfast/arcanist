@@ -18,10 +18,11 @@ namespace Arcanist.Core.Cloud;
 /// libraries that watch for changes (a few seconds after the last notice). GraphQL over WebSocket
 /// (<c>graphql-transport-ws</c>), signed in like every request; reconnects with a fresh token every half hour, and
 /// after a failure, waiting longer each time. Polling and scheduled scans still catch what a lost connection misses.
+/// One subscription per account: the server's, and each user's own (whose notices scan their personal library).
 /// </summary>
 public sealed class UltimateCloudEvents(
     UltimateCloudAuth auth,
-    ICloudLinkState link,
+    UserCloudAccounts accounts,
     IOptionsMonitor<UltimateCloudOptions> options,
     IArcanistDbContextFactory databases,
     ScanCoordinator scans,
@@ -40,21 +41,70 @@ public sealed class UltimateCloudEvents(
     /// <summary>Library notices that come together scan once, this long after the last.</summary>
     public static readonly TimeSpan ScanDelay = TimeSpan.FromSeconds(5);
 
-    private int _scanRequests;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, int> _scanRequests = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, bool> _listening = new();
 
-    /// <summary>Whether the subscription is open now.</summary>
-    public bool Listening { get; private set; }
+    /// <summary>Whether the subscription of the server's account is open now.</summary>
+    public bool Listening => IsListening(null);
 
+    /// <summary>Whether the subscription of an account (a user's own, or the server's with null) is open now.</summary>
+    public bool IsListening(Guid? account) => _listening.GetValueOrDefault(account ?? Guid.Empty);
+
+    /// <summary>Keeps a listener running for each account with a tier, and stops those whose account went.</summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var running = new Dictionary<Guid, (Task Task, CancellationTokenSource Cancel)>();
+        try
+        {
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                var wanted = new HashSet<Guid>();
+                if (setup.CurrentValue.Completed && databases.IsConfigured)
+                {
+                    if (accounts.TierOf(null) != CloudTier.None)
+                        wanted.Add(Guid.Empty);
+                    foreach (var user in accounts.Linked.Where(u => accounts.TierOf(u) != CloudTier.None))
+                        wanted.Add(user);
+                }
+
+                foreach (var (key, listener) in running.Where(r => !wanted.Contains(r.Key) || r.Value.Task.IsCompleted).ToList())
+                {
+                    await listener.Cancel.CancelAsync();
+                    listener.Cancel.Dispose();
+                    running.Remove(key);
+                }
+
+                foreach (var key in wanted.Where(k => !running.ContainsKey(k)))
+                {
+                    var cancel = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                    running[key] = (RunAsync(key == Guid.Empty ? null : key, cancel.Token), cancel);
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            foreach (var listener in running.Values)
+                await listener.Cancel.CancelAsync();
+        }
+    }
+
+    /// <summary>One account's subscription, made again after each end while the account has a tier.</summary>
+    private async Task RunAsync(Guid? account, CancellationToken stoppingToken)
+    {
+        await Task.Yield();
         var wait = TimeSpan.FromSeconds(5);
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (setup.CurrentValue.Completed && databases.IsConfigured && link.Tier != CloudTier.None && EventsUri() is { } uri)
+            if (accounts.TierOf(account) != CloudTier.None && EventsUri() is { } uri)
             {
                 try
                 {
-                    await ListenAsync(uri, stoppingToken);
+                    await ListenAsync(account, uri, stoppingToken);
                     wait = TimeSpan.FromSeconds(5);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -68,7 +118,7 @@ public sealed class UltimateCloudEvents(
                 }
                 finally
                 {
-                    Listening = false;
+                    _listening[account ?? Guid.Empty] = false;
                 }
             }
 
@@ -84,14 +134,14 @@ public sealed class UltimateCloudEvents(
     }
 
     /// <summary>Ends the subscription when the account is gone or the extension is switched off.</summary>
-    private async Task CloseWhenUnlinkedAsync(CancellationTokenSource lifetime)
+    private async Task CloseWhenUnlinkedAsync(Guid? account, CancellationTokenSource lifetime)
     {
         try
         {
             while (!lifetime.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromSeconds(5), lifetime.Token);
-                if (link.Tier == CloudTier.None)
+                if (accounts.TierOf(account) == CloudTier.None)
                     await lifetime.CancelAsync();
             }
         }
@@ -111,12 +161,12 @@ public sealed class UltimateCloudEvents(
         return builder.Uri;
     }
 
-    private async Task ListenAsync(Uri uri, CancellationToken stoppingToken)
+    private async Task ListenAsync(Guid? account, Uri uri, CancellationToken stoppingToken)
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         lifetime.CancelAfter(Lifetime);
         var cancellationToken = lifetime.Token;
-        _ = CloseWhenUnlinkedAsync(lifetime);
+        _ = CloseWhenUnlinkedAsync(account, lifetime);
 
         using var socket = new ClientWebSocket();
         socket.Options.AddSubProtocol("graphql-transport-ws");
@@ -127,7 +177,7 @@ public sealed class UltimateCloudEvents(
             type = "connection_init",
             payload = new
             {
-                authorization = "Bearer " + await auth.AccessTokenAsync(cancellationToken),
+                authorization = "Bearer " + await auth.AccessTokenAsync(cancellationToken, account),
                 deviceId = await auth.DeviceIdAsync(cancellationToken),
                 clientApp = UltimateCloudClient.ClientApp,
             },
@@ -145,8 +195,8 @@ public sealed class UltimateCloudEvents(
 
         await SendAsync(socket, new { id = "library", type = "subscribe", payload = new { query = Subscription } }, cancellationToken);
         await SendAsync(socket, new { id = "stars", type = "subscribe", payload = new { query = StarsSubscription } }, cancellationToken);
-        Listening = true;
-        logger.LogInformation("Listening to Ultimate Cloud's change notices");
+        _listening[account ?? Guid.Empty] = true;
+        logger.LogInformation("Listening to Ultimate Cloud's change notices ({Account})", account?.ToString() ?? "server");
 
         try
         {
@@ -158,7 +208,7 @@ public sealed class UltimateCloudEvents(
                         await SendAsync(socket, new { type = "pong" }, cancellationToken);
                         break;
                     case "next" when (message["payload"]?["data"]?["cloudLibraryChanged"]) is { } change:
-                        await HandleAsync(change, cancellationToken);
+                        await HandleAsync(change, cancellationToken, account);
                         break;
                     case "next" when (message["payload"]?["data"]?["starTracksChanged"] is not null):
                         services.GetService<UltimateCloudReporter>()?.StarsChanged();
@@ -177,31 +227,33 @@ public sealed class UltimateCloudEvents(
         }
     }
 
-    internal async Task HandleAsync(JsonNode change, CancellationToken cancellationToken)
+    internal async Task HandleAsync(JsonNode change, CancellationToken cancellationToken, Guid? account = null)
     {
         int Count(string name) => change[name]?.AsArray().Count ?? 0;
         var any = Count("added") + Count("updated") + Count("removed") > 0;
         switch (change["library"]?.GetValue<string>())
         {
-            case "CLOUD_DROP" when any:
+            // Cloud Drop comes in through the server's account only.
+            case "CLOUD_DROP" when any && account is null:
                 services.GetService<CloudDropWorker>()?.Wake();
                 break;
             case "STANDARD" when any:
                 // Not awaited: the next notices are read meanwhile, and only the last one scans.
-                _ = ScanSoonAsync(Interlocked.Increment(ref _scanRequests), cancellationToken);
+                var key = account ?? Guid.Empty;
+                _ = ScanSoonAsync(account, _scanRequests.AddOrUpdate(key, 1, (_, n) => n + 1), cancellationToken);
                 break;
         }
 
         await Task.CompletedTask;
     }
 
-    private async Task ScanSoonAsync(int request, CancellationToken cancellationToken)
+    private async Task ScanSoonAsync(Guid? account, int request, CancellationToken cancellationToken)
     {
         try
         {
             await Task.Delay(ScanDelay, cancellationToken);
-            if (request == Volatile.Read(ref _scanRequests))
-                await ScanWatchingLibrariesAsync(cancellationToken);
+            if (request == _scanRequests.GetValueOrDefault(account ?? Guid.Empty))
+                await ScanWatchingLibrariesAsync(account, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -213,17 +265,20 @@ public sealed class UltimateCloudEvents(
     }
 
     /// <summary>Scans the libraries of the account's music that watch for changes.</summary>
-    private async Task ScanWatchingLibrariesAsync(CancellationToken cancellationToken)
+    private async Task ScanWatchingLibrariesAsync(Guid? account, CancellationToken cancellationToken)
     {
         var location = UltimateCloudCollection.Library.ToString();
         List<Guid> libraries;
         await using (var db = databases.CreateDbContext())
         {
-            libraries = await db.LibrarySources.AsNoTracking()
-                .Where(s => s.Kind == LibrarySourceKind.UltimateCloud && s.Location == location && s.Library.WatchForChanges)
+            libraries = (await db.LibrarySources.AsNoTracking()
+                    .Where(s => s.Kind == LibrarySourceKind.UltimateCloud && s.Location == location && s.Library.WatchForChanges)
+                    .Select(s => new { s.LibraryId, s.Settings })
+                    .ToListAsync(cancellationToken))
+                .Where(s => UserCloudAccounts.UserOf(s.Settings) == account)
                 .Select(s => s.LibraryId)
                 .Distinct()
-                .ToListAsync(cancellationToken);
+                .ToList();
         }
 
         foreach (var library in libraries)

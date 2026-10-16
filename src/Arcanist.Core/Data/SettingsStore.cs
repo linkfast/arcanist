@@ -27,6 +27,19 @@ public sealed class SettingsStore(IArcanistDbContextFactory databases, TimeProvi
         }
     }
 
+    /// <summary>The keys that start with <paramref name="prefix"/>.</summary>
+    public async Task<IReadOnlyList<string>> KeysAsync(string prefix, CancellationToken cancellationToken)
+    {
+        await using var db = databases.CreateDbContext();
+        return await db.Settings.AsNoTracking().Where(s => s.Key.StartsWith(prefix)).Select(s => s.Key).ToListAsync(cancellationToken);
+    }
+
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken)
+    {
+        await using var db = databases.CreateDbContext();
+        await db.Settings.Where(s => s.Key == key).ExecuteDeleteAsync(cancellationToken);
+    }
+
     public async Task SetAsync<T>(string key, T value, CancellationToken cancellationToken)
     {
         await using var db = databases.CreateDbContext();

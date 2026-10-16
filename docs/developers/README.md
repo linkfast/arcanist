@@ -161,20 +161,31 @@ null (and the waveform answers `not_found`); clients should cope with that.
 (`timeMs`, `text`; each shown until the next) when known, `instrumental` for tracks without words, and `source`:
 `SIDECAR` (a `.lrc` file next to the audio), `EMBEDDED` (the file's tags) or `ONLINE`.
 
-## Ratings
+## Ratings and StarTracks
 
-`serverInfo.ratingMode` says how this server rates tracks, and your interface should follow it:
+The songs a user loves are their **StarTracks**, as every Ultimate app calls them. `serverInfo.ratingMode` says how
+this server rates tracks, and your interface should follow it:
 
-- `STARS`: one to five stars. `rateTrack(trackId, rating)` / `PUT /rest/v1/tracks/{trackId}/rating` with 1–5, or
-  null to clear it.
-- `STAR`: a single star. `starTrack(trackId, starred)` / `PUT /rest/v1/tracks/{trackId}/star`. `rateTrack` only
-  accepts 5 here.
+- `STARS`: one to five stars; five stars is a StarTrack. `rateTrack(trackId, rating)` /
+  `PUT /rest/v1/tracks/{trackId}/rating` with 1–5, or null to clear it.
+- `STAR`: the StarTrack alone. `starTrack(trackId, starred)` / `PUT /rest/v1/tracks/{trackId}/star`. `rateTrack`
+  only accepts 5 here.
 
-A starred track is a five-star track, so `starTrack` works in both modes and the administrator can switch modes
-without anyone losing their favorites. `Track.rating` (null when unrated; only 5 in `STAR` mode), `Track.starred`,
+A StarTrack is a five-star track, so `starTrack` works in both modes and the administrator can switch modes without
+anyone losing theirs. `Track.rating` (null when unrated; only 5 in `STAR` mode), `Track.starred` (a StarTrack),
 `Track.playCount` and `Track.lastPlayedAt` are the signed-in user's. `ratedTracks(minRating)` /
-`GET /rest/v1/me/rated-tracks` lists their rated tracks, most recently rated first, with `after`/`nextCursor`
-paging; with `minRating: 5` it is the user's starred tracks.
+`GET /rest/v1/me/rated-tracks` lists their rated tracks, most recently rated first, with `after`/`nextCursor` paging.
+
+With the `STAR_TRACKS` feature in `serverInfo.features`:
+
+- `starTracks(after, first)` / `GET /rest/v1/me/star-tracks`: the user's StarTracks, most recently starred first,
+  each with its `track`, the song's `acoustId` (when identified) and `starredAt`.
+- `addStarTracks(input: { items })` / `POST /rest/v1/me/star-tracks` and `removeStarTracks` /
+  `POST /rest/v1/me/star-tracks/remove`: up to 1000 items, each a `trackId` or an `acoustId` (as Ultimate Cloud's
+  StarTracks name songs). Adding by AcoustID stars one of the song's tracks here, unless one already is; removing
+  takes every track of the song. The answer says how many `changed` and which items were `notFound`.
+- The `starTracksChanged` subscription tells when the user's StarTracks (or other ratings) change, here or through
+  their Ultimate Cloud account: read them again then.
 
 ## Reporting plays
 

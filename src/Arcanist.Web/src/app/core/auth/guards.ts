@@ -34,5 +34,10 @@ export const permissionGuard =
   () =>
     inject(AuthService).can(permission) ? true : inject(Router).parseUrl('/');
 
-export const adminGuard: CanActivateFn = () =>
-  inject(AuthService).isAdmin() ? true : inject(Router).parseUrl('/');
+/** Administrators only. Waits for the session to be restored, as it runs beside authGuard on top-level routes. */
+export const adminGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (!auth.isAuthenticated()) await auth.refresh();
+  return auth.isAdmin() ? true : router.parseUrl('/');
+};

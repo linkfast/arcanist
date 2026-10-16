@@ -239,6 +239,34 @@
         }
 
         @case ('libraries') {
+          @if (existingLibraries().length > 0) {
+            <div class="grid gap-2">
+              <span class="text-sm font-medium">{{ 'setup.libraries.current' | t }}</span>
+              <ul class="grid gap-2">
+                @for (existing of existingLibraries(); track $index) {
+                  <li class="grid gap-1 rounded-lg border bg-muted/40 p-3 text-sm">
+                    <span class="flex flex-wrap items-center gap-2 font-medium">
+                      {{ existing.name }}
+                      <span hlmBadge [variant]="existing.visibleToAll ? 'secondary' : 'outline'">
+                        {{
+                          (existing.visibleToAll ? 'libraries.everyone' : 'libraries.restricted')
+                            | t
+                        }}
+                      </span>
+                    </span>
+                    @for (location of existing.locations; track location) {
+                      <span
+                        class="min-w-0 truncate font-mono text-xs text-muted-foreground"
+                        [title]="location"
+                        >{{ location }}</span
+                      >
+                    }
+                  </li>
+                }
+              </ul>
+              <p class="text-xs text-muted-foreground">{{ 'setup.libraries.currentHelp' | t }}</p>
+            </div>
+          }
           @for (library of libraries(); track $index; let index = $index) {
             <div class="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-lg border p-4">
               @if (library.mstream; as from) {
@@ -258,7 +286,7 @@
                     [placeholder]="'setup.libraries.namePlaceholder' | t"
                   />
                 </hlm-field>
-                @if (libraries().length > 1) {
+                @if (libraries().length > 1 || existingLibraries().length > 0) {
                   <button
                     hlmBtn
                     variant="ghost"
@@ -331,7 +359,12 @@
             (click)="addLibrary()"
           >
             <ng-icon name="lucidePlus" />
-            {{ 'setup.libraries.another' | t }}
+            {{
+              (existingLibraries().length > 0 && libraries().length === 0
+                ? 'setup.libraries.add'
+                : 'setup.libraries.another'
+              ) | t
+            }}
           </button>
           <p class="text-xs text-muted-foreground">{{ 'setup.libraries.networkHelp' | t }}</p>
         }
@@ -489,6 +522,11 @@
             <dt class="text-muted-foreground">{{ 'setup.review.libraries' | t }}</dt>
             <dd class="flex items-start justify-between gap-2">
               <ul class="grid gap-1">
+                @for (existing of existingLibraries(); track $index) {
+                  <li class="text-muted-foreground">
+                    {{ existing.name }} · {{ 'setup.review.existing' | t }}
+                  </li>
+                }
                 @for (library of libraries(); track $index) {
                   @if (library.folders.length) {
                     <li>
@@ -497,7 +535,9 @@
                     </li>
                   }
                 } @empty {
-                  <li class="text-muted-foreground">{{ 'setup.review.noLibraries' | t }}</li>
+                  @if (existingLibraries().length === 0) {
+                    <li class="text-muted-foreground">{{ 'setup.review.noLibraries' | t }}</li>
+                  }
                 }
               </ul>
               <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('libraries')">

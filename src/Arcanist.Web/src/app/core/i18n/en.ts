@@ -30,13 +30,13 @@ export const en: Dictionary = {
     ratings: {
       title: 'Ratings',
       description:
-        'mStream rates from 1 to 5 stars. In single-star mode, choose from how many mStream stars a song gets the star.',
-      threshold: 'The star is given from',
+        'mStream rates from 1 to 5 stars. In StarTrack mode, choose from how many mStream stars a song is a StarTrack.',
+      threshold: 'A StarTrack from',
       from: '{stars} ★ in mStream',
-      anyHelp: 'Any rating gives the star.',
+      anyHelp: 'Any rating makes it a StarTrack.',
       thresholdHelp:
-        'From {stars} stars the song gets the star; fewer are kept as a rating, unseen in single-star mode.',
-      singleStarNow: 'The server uses single-star mode now.',
+        'From {stars} stars the song is a StarTrack; fewer are kept as a rating, unseen in StarTrack mode.',
+      singleStarNow: 'The server uses StarTrack mode now.',
       fiveStarsNow:
         'The server uses five stars now: mStream ratings are kept as they are and this is not used.',
     },
@@ -220,6 +220,10 @@ export const en: Dictionary = {
       incomplete: 'Give each library you import a name and a folder.',
     },
     libraries: {
+      current: 'Current libraries',
+      currentHelp:
+        'They stay as they are; to change or remove them, go to Libraries. You can add others here.',
+      add: 'Add a library',
       fromMstream: 'From mStream: {vpath}',
       namePlaceholder: 'Music, Audiobooks…',
       nameRequired: 'Name every library that has folders.',
@@ -239,13 +243,13 @@ export const en: Dictionary = {
     },
     ratings: {
       explanation:
-        'Users rate tracks for their favorites, their mixes and their statistics. Choose how:',
+        'Users rate tracks for their StarTracks, their mixes and their statistics. Choose how:',
       stars: 'One to five stars',
-      starsHelp: 'More nuance. Five stars is the same as starring a track.',
-      star: 'A single star',
-      starHelp: 'Simpler: a track is a favorite or it is not.',
+      starsHelp: 'More nuance. Five stars is a StarTrack.',
+      star: 'StarTrack',
+      starHelp: 'Simpler: a song is a StarTrack or it is not.',
       later:
-        'You can change it in Settings at any time without losing anything: stars become five stars and back.',
+        'You can change it in Settings at any time without losing anything: StarTracks become five stars and back.',
     },
     privacy: {
       explanation:
@@ -271,6 +275,7 @@ export const en: Dictionary = {
       },
     },
     review: {
+      existing: 'already there',
       import: 'Import',
       importNone: 'Nothing',
       mstreamWithUsers: 'mStream: {count} library(ies), with their users',
@@ -376,8 +381,8 @@ export const en: Dictionary = {
       title: 'Ratings',
       description: 'How users rate tracks, in every player.',
       stars: 'One to five stars',
-      star: 'A single star',
-      help: 'Nothing is lost when switching: stars become five stars and back, and other ratings are kept for when you return to five stars.',
+      star: 'StarTrack',
+      help: 'Nothing is lost when switching: StarTracks become five stars and back, and other ratings are kept for when you return to five stars.',
       saved: 'Rating mode saved.',
     },
     title: 'Settings',
@@ -642,7 +647,7 @@ export const en: Dictionary = {
         },
         starTracks: {
           name: 'StarTracks',
-          help: 'Your stars here and your Ultimate StarTracks are the same, both ways.',
+          help: 'Your StarTracks here and in your Ultimate apps are the same, both ways.',
         },
         metrics: {
           name: 'My statistics',
@@ -976,7 +981,7 @@ export const en: Dictionary = {
       up: 'Move up',
       down: 'Move down',
       onlyFiveStars: '(only with the five-star rating mode)',
-      ratingsUser: 'Stars and ratings of',
+      ratingsUser: 'StarTracks and ratings of',
       ratingsUserHelp: 'DLNA has no sign-in: StarTracks and Rated show this user’s.',
       names: {
         ARTISTS: 'Artists',
@@ -987,7 +992,7 @@ export const en: Dictionary = {
         PLAYLISTS: 'Public playlists',
         RECENTLY_ADDED: 'Recently added',
         MIXES: 'Genre and decade mixes',
-        STARRED: 'StarTracks (starred songs)',
+        STARRED: 'StarTracks',
         RATED: 'Rated, by stars',
       },
     },
@@ -1166,7 +1171,7 @@ export const en: Dictionary = {
       },
       starTracks: {
         name: 'StarTracks',
-        help: 'Your stars here and your StarTracks in the Ultimate apps are the same: starring or unstarring on either side does it on the other.',
+        help: 'Your StarTracks here and in the Ultimate apps are the same: adding or removing one on either side does it on the other.',
       },
       metrics: {
         name: 'My statistics',

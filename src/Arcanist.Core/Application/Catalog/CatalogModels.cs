@@ -89,7 +89,7 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// the current session, so it works where headers cannot be sent (e.g. an HTML audio element).</param>
 /// <param name="Rating">The user's rating, 1–5; null when unrated. With the single-star rating mode only 5 (starred)
 /// is reported.</param>
-/// <param name="Starred">The user starred it (rated it 5).</param>
+/// <param name="Starred">It is one of the user's StarTracks (the star, or five stars).</param>
 /// <param name="PlayCount">How many times the user played it.</param>
 /// <param name="LibraryIds">The libraries the user can access with a copy of it.</param>
 public sealed record Track(

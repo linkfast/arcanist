@@ -25,13 +25,29 @@ public static class ListeningEndpoints
                 service.StarTrackAsync(trackId, input.Starred, ct))
             .WithTags("Listening")
             .WithName("StarTrack")
-            .WithSummary("Stars a track for the user (rates it 5) or unstars it (clears a 5). Works with both rating modes.");
+            .WithSummary("Makes a track one of the user's StarTracks (rates it 5), or not (clears a 5). Works with both rating modes.");
+
+        rest.MapGet("/me/star-tracks", (string? after, int? first, ListeningService service, CancellationToken ct) =>
+                service.StarTracksAsync(after, first, ct))
+            .WithTags("Listening")
+            .WithName("StarTracks")
+            .WithSummary("The user's StarTracks (the star in single-star mode, five stars otherwise), most recently starred first, with each song's AcoustID.");
+
+        rest.MapPost("/me/star-tracks", (StarTracksInput input, ListeningService service, CancellationToken ct) => service.AddStarTracksAsync(input, ct))
+            .WithTags("Listening")
+            .WithName("AddStarTracks")
+            .WithSummary("Adds songs to the user's StarTracks, by track or by AcoustID (as Ultimate Cloud names them), at most 1000. By AcoustID, one of the song's tracks, unless one already is.");
+
+        rest.MapPost("/me/star-tracks/remove", (StarTracksInput input, ListeningService service, CancellationToken ct) => service.RemoveStarTracksAsync(input, ct))
+            .WithTags("Listening")
+            .WithName("RemoveStarTracks")
+            .WithSummary("Takes songs from the user's StarTracks, by track or by AcoustID (every track of the song), at most 1000.");
 
         rest.MapGet("/me/rated-tracks", (int? minRating, string? after, int? first, ListeningService service, CancellationToken ct) =>
                 service.RatedTracksAsync(minRating, after, first, ct))
             .WithTags("Listening")
             .WithName("RatedTracks")
-            .WithSummary("The user's tracks rated at least minRating (5 for starred ones), most recently rated first. With the single-star rating mode, only starred tracks.");
+            .WithSummary("The user's tracks rated at least minRating (5 for StarTracks), most recently rated first. With the single-star rating mode, only StarTracks.");
 
         rest.MapPost("/plays", (RecordPlayInput input, ListeningService service, CancellationToken ct) => service.RecordPlayAsync(input, ct))
             .WithTags("Listening")

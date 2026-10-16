@@ -30,13 +30,13 @@ export const es: Dictionary = {
     ratings: {
       title: 'Valoraciones',
       description:
-        'mStream valora de 1 a 5 estrellas. En modo de una estrella, decide desde cuántas estrellas de mStream una canción recibe la estrella.',
-      threshold: 'La estrella se pone desde',
+        'mStream valora de 1 a 5 estrellas. En el modo StarTrack, decide desde cuántas estrellas de mStream una canción es un StarTrack.',
+      threshold: 'Es StarTrack desde',
       from: '{stars} ★ de mStream',
-      anyHelp: 'Cualquier valoración pone la estrella.',
+      anyHelp: 'Cualquier valoración la hace StarTrack.',
       thresholdHelp:
-        'Desde {stars} estrellas se pone la estrella; menos se guarda como valoración, sin mostrarse en modo de una estrella.',
-      singleStarNow: 'El servidor usa ahora el modo de una estrella.',
+        'Desde {stars} estrellas es un StarTrack; menos se guarda como valoración, sin mostrarse en el modo StarTrack.',
+      singleStarNow: 'El servidor usa ahora el modo StarTrack.',
       fiveStarsNow:
         'El servidor usa ahora cinco estrellas: las valoraciones de mStream se guardan tal cual y esto no se usa.',
     },
@@ -230,6 +230,10 @@ export const es: Dictionary = {
       incomplete: 'Pon nombre y carpeta a cada biblioteca que vayas a importar.',
     },
     libraries: {
+      current: 'Bibliotecas actuales',
+      currentHelp:
+        'Se quedan como están; para cambiarlas o quitarlas, ve a Bibliotecas. Aquí puedes añadir otras.',
+      add: 'Añadir una biblioteca',
       fromMstream: 'De mStream: {vpath}',
       namePlaceholder: 'Música, Audiolibros…',
       nameRequired: 'Pon un nombre a cada biblioteca con carpetas.',
@@ -250,13 +254,13 @@ export const es: Dictionary = {
     },
     ratings: {
       explanation:
-        'Los usuarios valoran las canciones para sus favoritos, sus mixes y sus estadísticas. Elige cómo:',
+        'Los usuarios valoran las canciones para sus StarTracks, sus mixes y sus estadísticas. Elige cómo:',
       stars: 'De una a cinco estrellas',
-      starsHelp: 'Más matices. Cinco estrellas equivale a marcar una canción con estrella.',
-      star: 'Una estrella',
-      starHelp: 'Más simple: una canción está marcada como favorita o no.',
+      starsHelp: 'Más matices. Cinco estrellas es un StarTrack.',
+      star: 'StarTrack',
+      starHelp: 'Más simple: una canción es un StarTrack o no.',
       later:
-        'Puedes cambiarlo en Ajustes cuando quieras, sin perder nada: las estrellas pasan a ser cinco estrellas y al revés.',
+        'Puedes cambiarlo en Ajustes cuando quieras, sin perder nada: los StarTracks pasan a ser cinco estrellas y al revés.',
     },
     privacy: {
       explanation:
@@ -279,6 +283,7 @@ export const es: Dictionary = {
       },
     },
     review: {
+      existing: 'ya existe',
       import: 'Importar',
       importNone: 'Nada',
       mstreamWithUsers: 'mStream: {count} biblioteca(s), con sus usuarios',
@@ -385,8 +390,8 @@ export const es: Dictionary = {
       title: 'Valoraciones',
       description: 'Cómo califican los usuarios las canciones en todos los reproductores.',
       stars: 'De una a cinco estrellas',
-      star: 'Una estrella',
-      help: 'Al cambiar no se pierde nada: las estrellas pasan a ser cinco estrellas y al revés, y las demás valoraciones se guardan para cuando vuelvas a las cinco estrellas.',
+      star: 'StarTrack',
+      help: 'Al cambiar no se pierde nada: los StarTracks pasan a ser cinco estrellas y al revés, y las demás valoraciones se guardan para cuando vuelvas a las cinco estrellas.',
       saved: 'Modo de valoración guardado.',
     },
     title: 'Ajustes',
@@ -651,7 +656,7 @@ export const es: Dictionary = {
         },
         starTracks: {
           name: 'StarTracks',
-          help: 'Tus estrellas de aquí y tus StarTracks de Ultimate son las mismas, en los dos sentidos.',
+          help: 'Tus StarTracks de aquí y los de tus apps Ultimate son los mismos, en los dos sentidos.',
         },
         metrics: {
           name: 'Mis estadísticas',
@@ -986,7 +991,7 @@ export const es: Dictionary = {
       up: 'Subir',
       down: 'Bajar',
       onlyFiveStars: '(solo con el modo de cinco estrellas)',
-      ratingsUser: 'Estrellas y valoraciones de',
+      ratingsUser: 'StarTracks y valoraciones de',
       ratingsUserHelp:
         'DLNA no tiene inicio de sesión: StarTracks y Valoradas muestran las de este usuario.',
       names: {
@@ -998,7 +1003,7 @@ export const es: Dictionary = {
         PLAYLISTS: 'Playlists públicas',
         RECENTLY_ADDED: 'Añadido recientemente',
         MIXES: 'Mixes por género y década',
-        STARRED: 'StarTracks (canciones con estrella)',
+        STARRED: 'StarTracks',
         RATED: 'Valoradas, por estrellas',
       },
     },
@@ -1178,7 +1183,7 @@ export const es: Dictionary = {
       },
       starTracks: {
         name: 'StarTracks',
-        help: 'Tus estrellas aquí y tus StarTracks en las apps Ultimate son las mismas: poner o quitar una en un lado lo hace en el otro.',
+        help: 'Tus StarTracks aquí y en las apps Ultimate son los mismos: añadir o quitar uno en un lado lo hace en el otro.',
       },
       metrics: {
         name: 'Mis estadísticas',

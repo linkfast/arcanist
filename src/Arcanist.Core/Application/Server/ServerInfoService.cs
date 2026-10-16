@@ -51,6 +51,12 @@ public enum ApiFeature
 
     /// <summary><c>importListening</c>: bringing an app's ratings and play counts.</summary>
     ListeningImport,
+
+    /// <summary>
+    /// The user's StarTracks: <c>starTracks</c>, <c>addStarTracks</c>/<c>removeStarTracks</c> (also by AcoustID) and the
+    /// <c>starTracksChanged</c> subscription.
+    /// </summary>
+    StarTracks,
 }
 
 public sealed class ServerInfoService(

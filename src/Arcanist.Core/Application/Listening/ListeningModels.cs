@@ -37,8 +37,32 @@ public sealed record PlayHistoryItem(Guid Id, Track Track, DateTime PlayedAt, in
 /// <param name="NextCursor">Pass as <c>after</c> to get older plays; null on the last page.</param>
 public sealed record PlayHistoryPage(IReadOnlyList<PlayHistoryItem> Items, string? NextCursor);
 
-/// <summary>A rated (or starred) track.</summary>
+/// <summary>A rated track (five stars: a StarTrack).</summary>
 public sealed record RatedTrack(Track Track, int Rating, DateTime RatedAt);
+
+/// <summary>
+/// One of the user's StarTracks: the songs they love, as every Ultimate app calls them. With the single-star rating mode
+/// a StarTrack is the star; with five stars, a five-star rating. Ultimate apps match them with Ultimate Cloud's by AcoustID.
+/// </summary>
+/// <param name="AcoustId">The song's AcoustID, when it was identified.</param>
+public sealed record StarTrack(Track Track, string? AcoustId, DateTime StarredAt);
+
+/// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
+public sealed record StarTrackPage(IReadOnlyList<StarTrack> Items, string? NextCursor, int TotalCount);
+
+/// <summary>A song to add to (or take from) the StarTracks: a track of this server, or a song by its AcoustID.</summary>
+/// <param name="AcoustId">As Ultimate Cloud's StarTracks name songs: one of its tracks here (adding), or all of them (removing).</param>
+public sealed record StarTrackItemInput(Guid? TrackId, string? AcoustId);
+
+/// <param name="Items">At most 1000.</param>
+public sealed record StarTracksInput(IReadOnlyList<StarTrackItemInput> Items);
+
+/// <param name="Changed">Tracks that became StarTracks, or stopped being.</param>
+/// <param name="NotFound">The items (their trackId or acoustId) that match no track the user can see.</param>
+public sealed record StarTracksResult(int Changed, IReadOnlyList<string> NotFound);
+
+/// <summary>The user's StarTracks (or other ratings) changed, here or through Ultimate Cloud.</summary>
+public sealed record StarTracksChange(DateTime ChangedAt);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record RatedTrackPage(IReadOnlyList<RatedTrack> Items, string? NextCursor, int TotalCount);

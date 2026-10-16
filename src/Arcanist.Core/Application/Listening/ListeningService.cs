@@ -75,7 +75,7 @@ public sealed class ListeningService(
         return await catalog.TrackAsync(trackId, cancellationToken);
     }
 
-    /// <summary>Stars a track (rates it 5) or unstars it (clears a 5). Works in both rating modes.</summary>
+    /// <summary>Makes a track one of the user's StarTracks (rates it 5), or not (clears a 5). Works in both rating modes.</summary>
     public async Task<Track> StarTrackAsync(Guid trackId, bool starred, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
@@ -88,9 +88,123 @@ public sealed class ListeningService(
         return await catalog.TrackAsync(trackId, cancellationToken);
     }
 
+    public const int MaxStarTracksChange = 1000;
+
+    /// <summary>The user's StarTracks, most recently starred first.</summary>
+    public async Task<StarTrackPage> StarTracksAsync(string? after, int? first, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var visible = catalog.Visible(access);
+        var starred = db.TrackRatings.AsNoTracking()
+            .Where(r => r.UserId == access.UserId && r.Rating == 5 && visible.Any(t => t.Id == r.TrackId));
+        var total = await starred.CountAsync(cancellationToken);
+        if (after is not null)
+        {
+            var (at, id) = TimeCursor.Decode(after);
+            starred = starred.Where(r => r.RatedAt < at || (r.RatedAt == at && r.TrackId.CompareTo(id) < 0));
+        }
+
+        var size = PageSize(first);
+        var page = await starred.OrderByDescending(r => r.RatedAt).ThenByDescending(r => r.TrackId)
+            .Select(r => new { r.TrackId, r.RatedAt, r.Track.Recording.AcoustId })
+            .Take(size + 1)
+            .ToListAsync(cancellationToken);
+        var next = page.Count > size ? TimeCursor.Encode(page[size - 1].RatedAt, page[size - 1].TrackId) : null;
+        page = page.Take(size).ToList();
+
+        var tracks = await catalog.VisibleTracksAsync(access, page.Select(r => r.TrackId).ToList(), cancellationToken);
+        return new StarTrackPage(
+            page.Where(r => tracks.ContainsKey(r.TrackId)).Select(r => new StarTrack(tracks[r.TrackId], r.AcoustId?.ToString(), r.RatedAt)).ToList(),
+            next,
+            total);
+    }
+
     /// <summary>
-    /// The user's rated tracks with at least <paramref name="minRating"/> (5 for starred ones), most recently rated
-    /// first. In single-star mode only starred tracks are listed.
+    /// Adds songs to the user's StarTracks, by track or by AcoustID (one of the song's tracks; none if one already is).
+    /// What an Ultimate app brings from Ultimate Cloud's StarTracks matches by AcoustID.
+    /// </summary>
+    public Task<StarTracksResult> AddStarTracksAsync(StarTracksInput input, CancellationToken cancellationToken) =>
+        ChangeStarTracksAsync(input, star: true, cancellationToken);
+
+    /// <summary>Takes songs from the user's StarTracks, by track or by AcoustID (every track of the song).</summary>
+    public Task<StarTracksResult> RemoveStarTracksAsync(StarTracksInput input, CancellationToken cancellationToken) =>
+        ChangeStarTracksAsync(input, star: false, cancellationToken);
+
+    /// <summary>Follows the user's StarTracks: a notice each time they (or other ratings of theirs) change.</summary>
+    public IObservable<StarTracksChange> WatchStarTracks() => signals.StarTracksOf(guard.Authenticated().UserId, time);
+
+    private async Task<StarTracksResult> ChangeStarTracksAsync(StarTracksInput input, bool star, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        if (input.Items.Count > MaxStarTracksChange)
+            throw ArcanistException.Field("items", ErrorCodes.TooMany);
+        var acoustIds = new Dictionary<Guid, string>();
+        foreach (var item in input.Items.Where(i => i.TrackId is null))
+        {
+            if (!Guid.TryParse(item.AcoustId, out var acoustId))
+                throw ArcanistException.Field("items", ErrorCodes.InvalidFormat);
+            acoustIds[acoustId] = item.AcoustId!;
+        }
+
+        var ids = input.Items.Where(i => i.TrackId is not null).Select(i => i.TrackId!.Value).Distinct().ToList();
+        var songs = acoustIds.Keys.ToList();
+        var visible = catalog.Visible(access);
+        var found = (await visible.Where(t => ids.Contains(t.Id)).Select(t => t.Id).ToListAsync(cancellationToken)).ToHashSet();
+        var bySong = (await visible.Where(t => t.Recording.AcoustId != null && songs.Contains(t.Recording.AcoustId.Value))
+                .Select(t => new { t.Id, AcoustId = t.Recording.AcoustId!.Value, t.AddedAt })
+                .ToListAsync(cancellationToken))
+            .GroupBy(t => t.AcoustId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(t => t.AddedAt).Select(t => t.Id).ToList());
+        var notFound = ids.Where(id => !found.Contains(id)).Select(id => id.ToString())
+            .Concat(acoustIds.Where(a => !bySong.ContainsKey(a.Key)).Select(a => a.Value))
+            .ToList();
+
+        var everyTrack = found.Concat(bySong.Values.SelectMany(t => t)).Distinct().ToList();
+        var ratings = await db.TrackRatings.Where(r => r.UserId == access.UserId && everyTrack.Contains(r.TrackId))
+            .ToDictionaryAsync(r => r.TrackId, cancellationToken);
+        var changed = 0;
+        if (star)
+        {
+            // By song: the track that came first, unless one of them already is a StarTrack (or is starred in this call).
+            var targets = found.Concat(bySong.Values
+                    .Where(tracks => !tracks.Any(id => found.Contains(id) || ratings.TryGetValue(id, out var r) && r.Rating == 5))
+                    .Select(tracks => tracks[0]))
+                .Distinct();
+            foreach (var trackId in targets)
+            {
+                if (ratings.TryGetValue(trackId, out var rating))
+                {
+                    if (rating.Rating == 5)
+                        continue;
+                    rating.Rating = 5;
+                    rating.RatedAt = Now();
+                }
+                else
+                    db.TrackRatings.Add(new TrackRating { UserId = access.UserId, TrackId = trackId, Rating = 5, RatedAt = Now() });
+                changed++;
+            }
+        }
+        else
+        {
+            foreach (var rating in ratings.Values.Where(r => r.Rating == 5))
+            {
+                db.TrackRatings.Remove(rating);
+                changed++;
+            }
+        }
+
+        if (changed > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            signals.OnRated(access.UserId);
+        }
+
+        return new StarTracksResult(changed, notFound);
+    }
+
+    /// <summary>
+    /// The user's rated tracks with at least <paramref name="minRating"/> (5 for StarTracks), most recently rated
+    /// first. In single-star mode only StarTracks are listed.
     /// </summary>
     public async Task<RatedTrackPage> RatedTracksAsync(int? minRating, string? after, int? first, CancellationToken cancellationToken)
     {

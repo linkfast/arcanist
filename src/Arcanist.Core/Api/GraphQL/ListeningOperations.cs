@@ -8,8 +8,13 @@ namespace Arcanist.Core.Api.GraphQL;
 
 public sealed partial class Query
 {
+    [Name("starTracks")]
+    [Description("The user's StarTracks (the star in single-star mode, five stars otherwise), most recently starred first, with each song's AcoustID.")]
+    public static Task<StarTrackPage> StarTracks(string? after, int? first, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
+        listening.StarTracksAsync(after, first, cancellationToken);
+
     [Name("ratedTracks")]
-    [Description("The user's tracks rated at least minRating (5 for starred ones), most recently rated first. With the single-star rating mode, only starred tracks.")]
+    [Description("The user's tracks rated at least minRating (5 for StarTracks), most recently rated first. With the single-star rating mode, only StarTracks.")]
     public static Task<RatedTrackPage> RatedTracks(int? minRating, string? after, int? first,
         [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
         listening.RatedTracksAsync(minRating, after, first, cancellationToken);
@@ -44,9 +49,19 @@ public sealed partial class Mutation
         listening.RateTrackAsync(trackId, rating, cancellationToken);
 
     [Name("starTrack")]
-    [Description("Stars a track for the user (rates it 5) or unstars it (clears a 5). Works with both rating modes.")]
+    [Description("Makes a track one of the user's StarTracks (rates it 5), or not (clears a 5). Works with both rating modes.")]
     public static Task<Track> StarTrack([Id] Guid trackId, bool starred, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
         listening.StarTrackAsync(trackId, starred, cancellationToken);
+
+    [Name("addStarTracks")]
+    [Description("Adds songs to the user's StarTracks, by track or by AcoustID (as Ultimate Cloud names them), at most 1000. By AcoustID, one of the song's tracks, unless one already is.")]
+    public static Task<StarTracksResult> AddStarTracks(StarTracksInput input, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
+        listening.AddStarTracksAsync(input, cancellationToken);
+
+    [Name("removeStarTracks")]
+    [Description("Takes songs from the user's StarTracks, by track or by AcoustID (every track of the song), at most 1000.")]
+    public static Task<StarTracksResult> RemoveStarTracks(StarTracksInput input, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
+        listening.RemoveStarTracksAsync(input, cancellationToken);
 
     [Name("recordPlay")]
     [Description("Reports that the user listened to a track. The server decides whether it counts as a play (30 seconds, and half the track or four minutes) or a skip.")]
@@ -54,7 +69,14 @@ public sealed partial class Mutation
         listening.RecordPlayAsync(input, cancellationToken);
 
     [Name("setRatingMode")]
-    [Description("Chooses how users rate tracks: STARS (one to five) or STAR (a single star, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS.")]
+    [Description("Chooses how users rate tracks: STARS (one to five, five being a StarTrack) or STAR (the StarTrack alone, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS.")]
     public static Task<RatingMode> SetRatingMode(RatingMode mode, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
         listening.SetRatingModeAsync(mode, cancellationToken);
+}
+
+public sealed partial class Subscription
+{
+    [Name("starTracksChanged")]
+    [Description("The user's StarTracks (or other ratings) changed, here or through their Ultimate Cloud account.")]
+    public static IObservable<StarTracksChange> StarTracksChanged([FromServices] ListeningService listening) => listening.WatchStarTracks();
 }

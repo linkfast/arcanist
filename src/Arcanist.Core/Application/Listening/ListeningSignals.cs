@@ -12,4 +12,33 @@ public sealed class ListeningSignals
     internal void OnRated(Guid userId) => Rated?.Invoke(userId);
 
     internal void OnPlayed() => Played?.Invoke();
+
+    /// <summary>The changes of a user's StarTracks, for the <c>starTracksChanged</c> subscription.</summary>
+    internal IObservable<StarTracksChange> StarTracksOf(Guid userId, TimeProvider time) => new StarTracksFeed(this, userId, time);
+
+    private sealed class StarTracksFeed(ListeningSignals signals, Guid userId, TimeProvider time) : IObservable<StarTracksChange>
+    {
+        public IDisposable Subscribe(IObserver<StarTracksChange> observer)
+        {
+            void Handle(Guid user)
+            {
+                if (user == userId)
+                    observer.OnNext(new StarTracksChange(time.GetUtcNow().UtcDateTime));
+            }
+
+            signals.Rated += Handle;
+            return new Unsubscriber(() => signals.Rated -= Handle);
+        }
+    }
+
+    private sealed class Unsubscriber(Action dispose) : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+                dispose();
+        }
+    }
 }

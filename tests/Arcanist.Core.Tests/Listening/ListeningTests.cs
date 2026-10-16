@@ -90,6 +90,76 @@ public sealed class ListeningTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task StarTracks_are_listed_and_changed_by_track_or_by_AcoustID()
+    {
+        var acoustId = Guid.NewGuid();
+        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
+        {
+            var recording = await db.Tracks.Where(t => t.Id == _other).Select(t => t.Recording).SingleAsync(Cancel);
+            recording.AcoustId = acoustId;
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        var info = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, Cancel);
+        Assert.Contains("STAR_TRACKS", info.GetProperty("features").EnumerateArray().Select(f => f.GetString()));
+
+        var unknown = Guid.NewGuid().ToString();
+        var added = (await _admin.GraphQLAsync(
+                "mutation($i: [StarTrackItemInput!]!) { addStarTracks(input: {items: $i}) { changed notFound } }",
+                new { i = new object[] { new { trackId = _long }, new { acoustId = acoustId.ToString() }, new { acoustId = unknown } } }))
+            .GetProperty("data").GetProperty("addStarTracks");
+        Assert.Equal(2, added.GetProperty("changed").GetInt32());
+        Assert.Equal([unknown], added.GetProperty("notFound").EnumerateArray().Select(n => n.GetString()));
+
+        var page = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/me/star-tracks", ArcanistFactory.Json, Cancel);
+        Assert.Equal(2, page.GetProperty("totalCount").GetInt32());
+        var items = page.GetProperty("items").EnumerateArray().ToDictionary(i => i.GetProperty("track").GetProperty("id").GetGuid());
+        Assert.Equal(new[] { _long, _other }.Order(), items.Keys.Order());
+        Assert.Equal(acoustId.ToString(), items[_other].GetProperty("acoustId").GetString());
+        Assert.True(items[_other].GetProperty("track").GetProperty("starred").GetBoolean());
+
+        // Again: nothing changes.
+        var again = await _admin.PostAsJsonAsync("/rest/v1/me/star-tracks", new { items = new[] { new { acoustId = acoustId.ToString() } } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(0, (await again.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("changed").GetInt32());
+
+        var removed = await _admin.PostAsJsonAsync("/rest/v1/me/star-tracks/remove", new { items = new[] { new { acoustId = acoustId.ToString() } } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(1, (await removed.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("changed").GetInt32());
+        page = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/me/star-tracks", ArcanistFactory.Json, Cancel);
+        Assert.Equal([_long], page.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("track").GetProperty("id").GetGuid()));
+
+        Assert.Equal("validation_failed", (await _admin.GraphQLAsync(
+            "mutation { addStarTracks(input: {items: [{acoustId: \"not-an-id\"}]}) { changed } }")).ErrorCode());
+    }
+
+    [Fact]
+    public async Task StarTracks_changes_are_told_to_who_follows_them()
+    {
+        var signals = _factory.Services.GetRequiredService<Arcanist.Core.Application.Listening.ListeningSignals>();
+        Guid adminId;
+        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
+            adminId = await db.Users.Where(u => u.UserName == ArcanistFactory.AdminUserName).Select(u => u.Id).SingleAsync(Cancel);
+        var seen = new List<Arcanist.Core.Application.Listening.StarTracksChange>();
+        using var subscription = signals.StarTracksOf(adminId, TimeProvider.System).Subscribe(new Observer(seen.Add));
+        using var other = signals.StarTracksOf(Guid.NewGuid(), TimeProvider.System).Subscribe(new Observer(_ => Assert.Fail("Another user's")));
+
+        await _admin.PutAsJsonAsync($"/rest/v1/tracks/{_long}/star", new { starred = true }, ArcanistFactory.Json, Cancel);
+        Assert.Single(seen);
+    }
+
+    private sealed class Observer(Action<Arcanist.Core.Application.Listening.StarTracksChange> next) : IObserver<Arcanist.Core.Application.Listening.StarTracksChange>
+    {
+        public void OnNext(Arcanist.Core.Application.Listening.StarTracksChange value) => next(value);
+
+        public void OnError(Exception error)
+        {
+        }
+
+        public void OnCompleted()
+        {
+        }
+    }
+
+    [Fact]
     public async Task Rated_tracks_are_listed_newest_first_page_by_page()
     {
         foreach (var id in new[] { _long, _short, _other })

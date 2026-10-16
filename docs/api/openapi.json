@@ -637,7 +637,7 @@
         "tags": [
           "Listening"
         ],
-        "summary": "Stars a track for the user (rates it 5) or unstars it (clears a 5). Works with both rating modes.",
+        "summary": "Makes a track one of the user\u0027s StarTracks (rates it 5), or not (clears a 5). Works with both rating modes.",
         "operationId": "StarTrack",
         "parameters": [
           {
@@ -674,12 +674,114 @@
         }
       }
     },
+    "/rest/v1/me/star-tracks": {
+      "get": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "The user\u0027s StarTracks (the star in single-star mode, five stars otherwise), most recently starred first, with each song\u0027s AcoustID.",
+        "operationId": "StarTracks",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StarTrackPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Adds songs to the user\u0027s StarTracks, by track or by AcoustID (as Ultimate Cloud names them), at most 1000. By AcoustID, one of the song\u0027s tracks, unless one already is.",
+        "operationId": "AddStarTracks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StarTracksResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/star-tracks/remove": {
+      "post": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Takes songs from the user\u0027s StarTracks, by track or by AcoustID (every track of the song), at most 1000.",
+        "operationId": "RemoveStarTracks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StarTracksResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/me/rated-tracks": {
       "get": {
         "tags": [
           "Listening"
         ],
-        "summary": "The user\u0027s tracks rated at least minRating (5 for starred ones), most recently rated first. With the single-star rating mode, only starred tracks.",
+        "summary": "The user\u0027s tracks rated at least minRating (5 for StarTracks), most recently rated first. With the single-star rating mode, only StarTracks.",
         "operationId": "RatedTracks",
         "parameters": [
           {
@@ -6582,7 +6684,8 @@
           "LIBRARY_FILTER",
           "UPLOADS",
           "TRACK_MATCHING",
-          "LISTENING_IMPORT"
+          "LISTENING_IMPORT",
+          "STAR_TRACKS"
         ]
       },
       "AppPassword": {
@@ -13422,6 +13525,29 @@
           }
         }
       },
+      "StarTrack": {
+        "required": [
+          "track",
+          "acoustId",
+          "starredAt"
+        ],
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "acoustId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "starredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "StarTrackInput": {
         "required": [
           "starred"
@@ -13430,6 +13556,95 @@
         "properties": {
           "starred": {
             "type": "boolean"
+          }
+        }
+      },
+      "StarTrackItemInput": {
+        "required": [
+          "trackId",
+          "acoustId"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "acoustId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StarTrackPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StarTrack"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "StarTracksInput": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StarTrackItemInput"
+            }
+          }
+        }
+      },
+      "StarTracksResult": {
+        "required": [
+          "changed",
+          "notFound"
+        ],
+        "type": "object",
+        "properties": {
+          "changed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "notFound": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

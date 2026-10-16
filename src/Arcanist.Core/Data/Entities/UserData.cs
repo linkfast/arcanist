@@ -6,10 +6,10 @@ namespace Arcanist.Core.Data.Entities;
 /// <summary>How users rate tracks, chosen for the whole server. Part of the API contract.</summary>
 public enum RatingMode
 {
-    /// <summary>One to five stars. Five stars is the same as a starred track.</summary>
+    /// <summary>One to five stars. Five stars is a StarTrack.</summary>
     Stars,
 
-    /// <summary>A single star: a track is starred or not. Starring stores five stars, so switching modes keeps it.</summary>
+    /// <summary>The StarTrack alone: a track is one or not. It is stored as five stars, so switching modes keeps it.</summary>
     Star,
 }
 

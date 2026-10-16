@@ -56,7 +56,9 @@ type Query {
   librarySourceMoves: [LibrarySourceMove!]!
   "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only."
   serverDirectories(path: String): ServerDirectoryListing!
-  "The user's tracks rated at least minRating (5 for starred ones), most recently rated first. With the single-star rating mode, only starred tracks."
+  "The user's StarTracks (the star in single-star mode, five stars otherwise), most recently starred first, with each song's AcoustID."
+  starTracks(after: String, first: Int): StarTrackPage!
+  "The user's tracks rated at least minRating (5 for StarTracks), most recently rated first. With the single-star rating mode, only StarTracks."
   ratedTracks(minRating: Int, after: String, first: Int): RatedTrackPage!
   "The user's counted plays, newest first."
   playHistory(after: String, first: Int): PlayHistoryPage!
@@ -703,6 +705,18 @@ type ServerDirectory {
   name: String!
   path: String!
   isHidden: Boolean!
+}
+
+type StarTrackPage {
+  items: [StarTrack!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type StarTrack {
+  track: Track!
+  acoustId: String
+  starredAt: DateTime!
 }
 
 type RatedTrackPage {
@@ -1456,6 +1470,7 @@ enum ApiFeature {
   UPLOADS
   TRACK_MATCHING
   LISTENING_IMPORT
+  STAR_TRACKS
 }
 
 type UserAccount {
@@ -1559,11 +1574,15 @@ type Mutation {
   importListening(input: ImportListeningInput!): ListeningImportResult!
   "Rates a track 1–5 for the user, or clears the rating with null. With the single-star rating mode only 5 is accepted."
   rateTrack(trackId: ID!, rating: Int): Track!
-  "Stars a track for the user (rates it 5) or unstars it (clears a 5). Works with both rating modes."
+  "Makes a track one of the user's StarTracks (rates it 5), or not (clears a 5). Works with both rating modes."
   starTrack(trackId: ID!, starred: Boolean!): Track!
+  "Adds songs to the user's StarTracks, by track or by AcoustID (as Ultimate Cloud names them), at most 1000. By AcoustID, one of the song's tracks, unless one already is."
+  addStarTracks(input: StarTracksInput!): StarTracksResult!
+  "Takes songs from the user's StarTracks, by track or by AcoustID (every track of the song), at most 1000."
+  removeStarTracks(input: StarTracksInput!): StarTracksResult!
   "Reports that the user listened to a track. The server decides whether it counts as a play (30 seconds, and half the track or four minutes) or a skip."
   recordPlay(input: RecordPlayInput!): RecordedPlay!
-  "Chooses how users rate tracks: STARS (one to five) or STAR (a single star, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS."
+  "Chooses how users rate tracks: STARS (one to five, five being a StarTrack) or STAR (the StarTrack alone, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS."
   setRatingMode(mode: RatingMode!): RatingMode!
   "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password."
   setFfmpegPath(path: String): FfmpegStatus!
@@ -1803,6 +1822,20 @@ input ImportedPlayCount {
   trackId: ID!
   playCount: Int!
   lastPlayedAt: DateTime
+}
+
+type StarTracksResult {
+  changed: Int!
+  notFound: [String!]!
+}
+
+input StarTracksInput {
+  items: [StarTrackItemInput!]!
+}
+
+input StarTrackItemInput {
+  trackId: ID
+  acoustId: String
 }
 
 type RecordedPlay {
@@ -2072,6 +2105,12 @@ input ChangeMyPasswordInput {
 type Subscription {
   "Progress of the background audio analysis, at most once a second. Requires MANAGE_LIBRARIES."
   analysisProgressChanged: AnalysisProgress!
+  "The user's StarTracks (or other ratings) changed, here or through their Ultimate Cloud account."
+  starTracksChanged: StarTracksChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobUpdated(libraryId: ID): ScanJob!
+}
+
+type StarTracksChange {
+  changedAt: DateTime!
 }

@@ -73,6 +73,13 @@ interface DraftLibrary {
   mstream?: { vpath: string; folder: string };
 }
 
+/** A library the server already has, shown when the wizard runs again. */
+interface ExistingLibrary {
+  name: string;
+  visibleToAll: boolean;
+  locations: string[];
+}
+
 /** How often the last screen refreshes the first scans and the import. */
 const PROGRESS_MS = 1500;
 
@@ -151,6 +158,8 @@ export class SetupPage implements OnInit {
   protected readonly libraries = signal<DraftLibrary[]>([
     { name: '', folders: [], visibleToAll: true },
   ]);
+  /** Running the wizard again: the libraries the server already has (changed in Libraries, not here). */
+  protected readonly existingLibraries = signal<ExistingLibrary[]>([]);
   protected shareStatistics: 'yes' | 'no' | null = null;
   /** Another server to bring music, users and their data from. */
   protected migrateFrom: 'none' | 'mstream' = 'none';
@@ -225,6 +234,16 @@ export class SetupPage implements OnInit {
       };
       void __typename;
       Object.assign(this.onlineServices, online);
+      const existing = (await this.gql.query(LibrariesQuery)).libraries.filter((l) => !l.personal);
+      this.existingLibraries.set(
+        existing.map((l) => ({
+          name: l.name,
+          visibleToAll: l.visibleToAll,
+          locations: (l.sources ?? []).map((s) => s.location),
+        })),
+      );
+      // Only new libraries are added here: none to start with when there are some.
+      if (existing.length > 0) this.libraries.set([]);
       this.status.set({ requiresCode: false } as SetupStatus);
       this.step.set('welcome');
       return;

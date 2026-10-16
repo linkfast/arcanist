@@ -20,7 +20,7 @@ public enum HomeSectionKind
     /// <summary>The user's most played albums of the last three months.</summary>
     MostPlayed,
 
-    /// <summary>The user's starred tracks, latest first.</summary>
+    /// <summary>The user's StarTracks, latest first.</summary>
     Starred,
 
     /// <summary>Albums the user played often, but not for two months.</summary>

@@ -441,6 +441,9 @@ public sealed class UltimateCloudReporter(
                     await db.SaveChangesAsync(cancellationToken);
                 }
             }
+
+            // Apps following the user's StarTracks hear of it.
+            signals.OnRated(user);
         }
 
         var localNow = new HashSet<Guid>(local);

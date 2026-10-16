@@ -42,6 +42,7 @@ import {
   DlnaRendererQuery,
   DlnaRenderersQuery,
   PlayOnDlnaRendererMutation,
+  SetDlnaRecordPlaysMutation,
   SetDlnaRendererVolumeMutation,
   SetDlnaSettingsMutation,
   SetExtensionEnabledMutation,
@@ -128,6 +129,19 @@ const AllSections: DlnaSection[] = [
             @if (!current.convertsFormats) {
               <p class="text-xs text-muted-foreground">{{ 'dlna.server.noFfmpeg' | t }}</p>
             }
+            <div class="grid gap-1">
+              <label class="flex items-center gap-2 text-sm font-medium">
+                <hlm-switch
+                  [checked]="current.recordPlays"
+                  [disabled]="busy()"
+                  (checkedChange)="setRecordPlays($event)"
+                />
+                {{
+                  (current.recordPlays ? 'dlna.server.recordPlays' : 'dlna.server.playsPaused') | t
+                }}
+              </label>
+              <p class="text-xs text-muted-foreground">{{ 'dlna.server.recordPlaysHint' | t }}</p>
+            </div>
           </div>
         </section>
 
@@ -498,6 +512,15 @@ export class DlnaPage implements OnInit, OnDestroy {
       await this.enabledExtensions.refresh();
       await this.load();
       if (enabled) await this.loadRenderers();
+    });
+  }
+
+  protected async setRecordPlays(record: boolean): Promise<void> {
+    await this.run(async () => {
+      const result = await this.gql.mutate(SetDlnaRecordPlaysMutation, { record });
+      this.status.update((current) =>
+        current ? { ...current, recordPlays: result.setDlnaRecordPlays.recordPlays } : current,
+      );
     });
   }
 

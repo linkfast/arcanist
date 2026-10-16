@@ -120,13 +120,14 @@ type Documents = {
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.ImportMstreamDocument,
-    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n  }\n": typeof types.DlnaStatusFieldsFragmentDoc,
+    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n": typeof types.DlnaStatusFieldsFragmentDoc,
     "\n  fragment MstreamStatusFields on MstreamStatus {\n    enabled\n    starThreshold\n    passwordSignIn\n    features\n    quickConnect\n    p2pEnabled\n    pairingCode\n  }\n": typeof types.MstreamStatusFieldsFragmentDoc,
     "\n  query Mstream {\n    mstream {\n      ...MstreamStatusFields\n    }\n    serverInfo {\n      ratingMode\n    }\n  }\n": typeof types.MstreamDocument,
     "\n  mutation SetMstreamSettings($input: MstreamSettingsInput!) {\n    setMstreamSettings(input: $input) {\n      ...MstreamStatusFields\n    }\n  }\n": typeof types.SetMstreamSettingsDocument,
     "\n  mutation RotateMstreamQuickConnect {\n    rotateMstreamQuickConnect {\n      ...MstreamStatusFields\n    }\n  }\n": typeof types.RotateMstreamQuickConnectDocument,
     "\n  query Dlna {\n    dlna {\n      ...DlnaStatusFields\n    }\n    libraries {\n      id\n      name\n    }\n    users {\n      id\n      userName\n      displayName\n    }\n    serverInfo {\n      ratingMode\n    }\n  }\n": typeof types.DlnaDocument,
     "\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n": typeof types.SetDlnaSettingsDocument,
+    "\n  mutation SetDlnaRecordPlays($record: Boolean!) {\n    setDlnaRecordPlays(record: $record) {\n      ...DlnaStatusFields\n    }\n  }\n": typeof types.SetDlnaRecordPlaysDocument,
     "\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n": typeof types.DlnaRendererFieldsFragmentDoc,
     "\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n": typeof types.DlnaRenderersDocument,
     "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": typeof types.DlnaRendererStateFieldsFragmentDoc,
@@ -311,13 +312,14 @@ const documents: Documents = {
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamServerDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.ImportMstreamDocument,
-    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n  }\n": types.DlnaStatusFieldsFragmentDoc,
+    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n": types.DlnaStatusFieldsFragmentDoc,
     "\n  fragment MstreamStatusFields on MstreamStatus {\n    enabled\n    starThreshold\n    passwordSignIn\n    features\n    quickConnect\n    p2pEnabled\n    pairingCode\n  }\n": types.MstreamStatusFieldsFragmentDoc,
     "\n  query Mstream {\n    mstream {\n      ...MstreamStatusFields\n    }\n    serverInfo {\n      ratingMode\n    }\n  }\n": types.MstreamDocument,
     "\n  mutation SetMstreamSettings($input: MstreamSettingsInput!) {\n    setMstreamSettings(input: $input) {\n      ...MstreamStatusFields\n    }\n  }\n": types.SetMstreamSettingsDocument,
     "\n  mutation RotateMstreamQuickConnect {\n    rotateMstreamQuickConnect {\n      ...MstreamStatusFields\n    }\n  }\n": types.RotateMstreamQuickConnectDocument,
     "\n  query Dlna {\n    dlna {\n      ...DlnaStatusFields\n    }\n    libraries {\n      id\n      name\n    }\n    users {\n      id\n      userName\n      displayName\n    }\n    serverInfo {\n      ratingMode\n    }\n  }\n": types.DlnaDocument,
     "\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n": types.SetDlnaSettingsDocument,
+    "\n  mutation SetDlnaRecordPlays($record: Boolean!) {\n    setDlnaRecordPlays(record: $record) {\n      ...DlnaStatusFields\n    }\n  }\n": types.SetDlnaRecordPlaysDocument,
     "\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n": types.DlnaRendererFieldsFragmentDoc,
     "\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n": types.DlnaRenderersDocument,
     "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": types.DlnaRendererStateFieldsFragmentDoc,
@@ -837,7 +839,7 @@ export function graphql(source: "\n  mutation ImportMstream($input: ImportMstrea
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n  }\n"): (typeof documents)["\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n  }\n"];
+export function graphql(source: "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n"): (typeof documents)["\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -862,6 +864,10 @@ export function graphql(source: "\n  query Dlna {\n    dlna {\n      ...DlnaStat
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetDlnaSettings($input: DlnaSettingsInput!) {\n    setDlnaSettings(input: $input) {\n      ...DlnaStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetDlnaRecordPlays($record: Boolean!) {\n    setDlnaRecordPlays(record: $record) {\n      ...DlnaStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetDlnaRecordPlays($record: Boolean!) {\n    setDlnaRecordPlays(record: $record) {\n      ...DlnaStatusFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

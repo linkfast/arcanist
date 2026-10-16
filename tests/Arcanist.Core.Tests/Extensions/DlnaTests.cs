@@ -310,6 +310,41 @@ public sealed class DlnaTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Paused_statistics_leave_the_plays_on_renderers_out()
+    {
+        Assert.True((await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/dlna", ArcanistFactory.Json, Cancel)).GetProperty("recordPlays").GetBoolean());
+        var paused = await _admin.PutAsJsonAsync("/rest/v1/dlna/record-plays", new { record = false }, ArcanistFactory.Json, Cancel);
+        Assert.False((await paused.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("recordPlays").GetBoolean());
+
+        // Saving the other settings keeps them paused.
+        await _admin.PutAsJsonAsync("/rest/v1/dlna/settings", new { friendlyName = "Den", libraryIds = new[] { _libraryId }, sections = new[] { "ALBUMS" } },
+            ArcanistFactory.Json, Cancel);
+        Assert.False((await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/dlna", ArcanistFactory.Json, Cancel)).GetProperty("recordPlays").GetBoolean());
+
+        await _admin.PostAsJsonAsync("/rest/v1/dlna/renderers", new { url = FakeRenderer.Description }, ArcanistFactory.Json, Cancel);
+        var rendererId = Assert.Single((await _admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/dlna/renderers", ArcanistFactory.Json, Cancel))!)
+            .GetProperty("id").GetString()!;
+        var tracks = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items").EnumerateArray()
+            .ToDictionary(t => t.GetProperty("title").GetString()!, t => t.GetProperty("id").GetString()!);
+        await _admin.PostAsJsonAsync("/rest/v1/dlna/play", new { rendererId, trackIds = new[] { tracks["Opening"], tracks["Closing"] } }, ArcanistFactory.Json, Cancel);
+
+        // The renderer still moves on to the next track, but the first one does not count.
+        _renderer.TrackUri = _renderer.Actions.First(a => a.Action == "SetNextAVTransportURI").Arguments["NextURI"];
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while ((await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/dlna/renderers/{rendererId}", ArcanistFactory.Json, Cancel)).GetProperty("queueIndex").GetInt32() == 0)
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The renderer did not move on.");
+            await Task.Delay(200, Cancel);
+        }
+
+        Assert.Equal(0, (await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/tracks/{tracks["Opening"]}", ArcanistFactory.Json, Cancel)).GetProperty("playCount").GetInt32());
+        Assert.Empty((await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/me/plays", ArcanistFactory.Json, Cancel)).GetProperty("items").EnumerateArray());
+
+        var resumed = await _admin.GraphQLAsync("mutation { setDlnaRecordPlays(record: true) { recordPlays } }");
+        Assert.True(resumed.GetProperty("data").GetProperty("setDlnaRecordPlays").GetProperty("recordPlays").GetBoolean());
+    }
+
+    [Fact]
     public async Task StarTracks_and_rated_tracks_show_the_chosen_user_s_ratings()
     {
         await PublishAsync("STARRED", "RATED");

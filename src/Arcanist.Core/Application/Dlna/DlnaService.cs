@@ -22,6 +22,7 @@ namespace Arcanist.Core.Application.Dlna;
 /// <param name="Sections">The top-level folders of the tree devices browse, in order.</param>
 /// <param name="Addresses">The description URLs devices find through SSDP, one per local network.</param>
 /// <param name="ConvertsFormats">ffmpeg is available, so devices that do not play a format get it converted.</param>
+/// <param name="RecordPlays">Plays on renderers ("play to") count in their users' statistics; false while paused.</param>
 public sealed record DlnaStatus(
     bool Enabled,
     string Name,
@@ -30,7 +31,8 @@ public sealed record DlnaStatus(
     IReadOnlyList<DlnaSection> Sections,
     Guid? RatingsUserId,
     IReadOnlyList<string> Addresses,
-    bool ConvertsFormats);
+    bool ConvertsFormats,
+    bool RecordPlays);
 
 /// <param name="RatingsUserId">Whose stars and ratings the StarTracks and rated sections show; the first administrator when null.</param>
 public sealed record DlnaSettingsInput(string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null);
@@ -109,7 +111,7 @@ public sealed class DlnaService(
         var libraryIds = await db.Libraries.Where(l => config.LibraryIds.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
         return new DlnaStatus(Enabled, config.Name, config.FriendlyName, config.LibraryIds.Where(libraryIds.Contains).ToList(), config.Sections,
             await RatingsUserAsync(config, cancellationToken),
-            Enabled ? Endpoint.DescriptionUrls() : [], DlnaFormats.Convertible(ffmpeg.Current).Count > 0);
+            Enabled ? Endpoint.DescriptionUrls() : [], DlnaFormats.Convertible(ffmpeg.Current).Count > 0, config.RecordPlays);
     }
 
     public async Task<DlnaStatus> SetSettingsAsync(DlnaSettingsInput input, CancellationToken cancellationToken)
@@ -131,7 +133,22 @@ public sealed class DlnaService(
             errors.Add("ratingsUserId", ErrorCodes.NotFound);
         errors.ThrowIfAny();
 
-        await Settings.SetAsync(new DlnaConfig(name, libraries, sections, input.RatingsUserId), cancellationToken);
+        var config = await Settings.GetAsync(cancellationToken);
+        await Settings.SetAsync(config with { FriendlyName = name, LibraryIds = libraries, Sections = sections, RatingsUserId = input.RatingsUserId },
+            cancellationToken);
+        return await StatusAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Pauses or resumes counting the plays of "play to" in users' statistics: renderers keep playing either way. For
+    /// when Arcanist's plays should not count for a while, such as while it is the source of a migration.
+    /// </summary>
+    public async Task<DlnaStatus> SetRecordPlaysAsync(bool record, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var config = await Settings.GetAsync(cancellationToken);
+        if (config.RecordPlays != record)
+            await Settings.SetAsync(config with { RecordPlays = record }, cancellationToken);
         return await StatusAsync(cancellationToken);
     }
 

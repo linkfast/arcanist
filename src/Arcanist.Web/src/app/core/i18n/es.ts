@@ -1137,6 +1137,10 @@ export const es: Dictionary = {
       noFfmpeg:
         'Sin ffmpeg solo se envían los archivos originales: algunos dispositivos no reproducirán ciertos formatos.',
       name: 'Nombre que ven los dispositivos',
+      recordPlays: 'Registrar las reproducciones en las estadísticas',
+      playsPaused: 'Estadísticas en pausa: las reproducciones no cuentan',
+      recordPlaysHint:
+        'Lo que suena con «Reproducir en» cuenta en las estadísticas de quien lo pone. Pausa el registro mientras otro programa lea Arcanist por DLNA, por ejemplo durante una migración: los dispositivos siguen reproduciendo.',
     },
     settings: {
       title: 'Lo que ven los dispositivos',

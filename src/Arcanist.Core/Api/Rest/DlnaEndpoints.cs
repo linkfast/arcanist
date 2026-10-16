@@ -6,6 +6,8 @@ public sealed record AddDlnaRendererInput(string Url);
 
 public sealed record SetDlnaRendererVolumeInput(int Volume);
 
+public sealed record SetDlnaRecordPlaysInput(bool Record);
+
 public static class DlnaEndpoints
 {
     public static IEndpointRouteBuilder MapDlnaEndpoints(this IEndpointRouteBuilder rest)
@@ -20,6 +22,10 @@ public static class DlnaEndpoints
             .WithName("SetDlnaSettings")
             .WithSummary("Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) " +
                          "and the folders of the tree. Administrators only, with a recent authentication.");
+
+        dlna.MapPut("/record-plays", (SetDlnaRecordPlaysInput input, DlnaService service, CancellationToken ct) => service.SetRecordPlaysAsync(input.Record, ct))
+            .WithName("SetDlnaRecordPlays")
+            .WithSummary("Pauses (false) or resumes (true) counting the plays of \"play to\" in users' statistics; renderers keep playing. Administrators only.");
 
         dlna.MapGet("/renderers", (DlnaService service) => service.Renderers())
             .WithName("DlnaRenderers")

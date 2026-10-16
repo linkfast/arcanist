@@ -1122,6 +1122,10 @@ export const en: Dictionary = {
       noFfmpeg:
         'Without ffmpeg only the original files are sent: some devices will not play some formats.',
       name: 'Name devices show',
+      recordPlays: 'Record plays in the statistics',
+      playsPaused: 'Statistics paused: plays do not count',
+      recordPlaysHint:
+        'What plays through “Play to” counts in the statistics of whoever started it. Pause it while another program reads Arcanist through DLNA, for example during a migration: devices keep playing.',
     },
     settings: {
       title: 'What devices see',

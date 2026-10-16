@@ -27,6 +27,11 @@ public sealed partial class Mutation
     public static Task<DlnaStatus> SetDlnaSettings(DlnaSettingsInput input, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
         dlna.SetSettingsAsync(input, cancellationToken);
 
+    [Name("setDlnaRecordPlays")]
+    [Description("Pauses (false) or resumes (true) counting the plays of \"play to\" in users' statistics; renderers keep playing. Administrators only.")]
+    public static Task<DlnaStatus> SetDlnaRecordPlays(bool record, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
+        dlna.SetRecordPlaysAsync(record, cancellationToken);
+
     [Name("addDlnaRenderer")]
     [Description("Adds a renderer by the URL of its UPnP description, for networks where it is not found by itself. Administrators only.")]
     public static Task<DlnaRenderer> AddDlnaRenderer(string url, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>

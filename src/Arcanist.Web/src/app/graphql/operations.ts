@@ -1212,6 +1212,7 @@ export const DlnaStatusFields = graphql(`
     ratingsUserId
     addresses
     convertsFormats
+    recordPlays
   }
 `);
 
@@ -1277,6 +1278,14 @@ export const DlnaQuery = graphql(`
 export const SetDlnaSettingsMutation = graphql(`
   mutation SetDlnaSettings($input: DlnaSettingsInput!) {
     setDlnaSettings(input: $input) {
+      ...DlnaStatusFields
+    }
+  }
+`);
+
+export const SetDlnaRecordPlaysMutation = graphql(`
+  mutation SetDlnaRecordPlays($record: Boolean!) {
+    setDlnaRecordPlays(record: $record) {
       ...DlnaStatusFields
     }
   }

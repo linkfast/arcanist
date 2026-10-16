@@ -429,6 +429,8 @@ internal sealed class RendererSessions(
         try
         {
             await using var scope = scopes.CreateAsyncScope();
+            if (!(await scope.ServiceProvider.GetRequiredService<DlnaSettings>().GetAsync(CancellationToken.None)).RecordPlays)
+                return;
             if (await scope.ServiceProvider.GetRequiredService<UserAccessCache>().GetUserAsync(session.UserId, CancellationToken.None) is not { } access)
                 return;
             await scope.ServiceProvider.GetRequiredService<ListeningService>()

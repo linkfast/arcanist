@@ -4423,6 +4423,37 @@
         }
       }
     },
+    "/rest/v1/dlna/record-plays": {
+      "put": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Pauses (false) or resumes (true) counting the plays of \u0022play to\u0022 in users\u0027 statistics; renderers keep playing. Administrators only.",
+        "operationId": "SetDlnaRecordPlays",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDlnaRecordPlaysInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DlnaStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/dlna/renderers": {
       "get": {
         "tags": [
@@ -9851,7 +9882,8 @@
           "sections",
           "ratingsUserId",
           "addresses",
-          "convertsFormats"
+          "convertsFormats",
+          "recordPlays"
         ],
         "type": "object",
         "properties": {
@@ -9894,6 +9926,9 @@
             }
           },
           "convertsFormats": {
+            "type": "boolean"
+          },
+          "recordPlays": {
             "type": "boolean"
           }
         }
@@ -14845,6 +14880,17 @@
         "type": "object",
         "properties": {
           "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetDlnaRecordPlaysInput": {
+        "required": [
+          "record"
+        ],
+        "type": "object",
+        "properties": {
+          "record": {
             "type": "boolean"
           }
         }

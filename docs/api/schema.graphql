@@ -779,6 +779,7 @@ type DlnaStatus {
   ratingsUserId: ID
   addresses: [String!]!
   convertsFormats: Boolean!
+  recordPlays: Boolean!
 }
 
 enum DlnaSection {
@@ -1815,6 +1816,8 @@ type Mutation {
   retryDlnaImport(id: ID!): DlnaImportJob!
   "Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication."
   setDlnaSettings(input: DlnaSettingsInput!): DlnaStatus!
+  "Pauses (false) or resumes (true) counting the plays of \"play to\" in users' statistics; renderers keep playing. Administrators only."
+  setDlnaRecordPlays(record: Boolean!): DlnaStatus!
   "Adds a renderer by the URL of its UPnP description, for networks where it is not found by itself. Administrators only."
   addDlnaRenderer(url: String!): DlnaRenderer!
   "Plays tracks on a renderer, in the best format it plays (lossless first). The plays count for the caller."

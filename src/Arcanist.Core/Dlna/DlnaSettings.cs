@@ -39,7 +39,9 @@ public enum DlnaSection
 /// <param name="LibraryIds">Libraries published on the local network. None until an administrator picks them.</param>
 /// <param name="RatingsUserId">Whose stars and ratings the StarTracks and rated sections show (DLNA has no sign-in); the
 /// first administrator when null.</param>
-internal sealed record DlnaConfig(string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null)
+/// <param name="RecordPlays">"Play to" counts the plays for their users; paused while Arcanist is, for example, the source of a migration.</param>
+internal sealed record DlnaConfig(
+    string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null, bool RecordPlays = true)
 {
     public static readonly DlnaConfig Default = new(null, [],
         [DlnaSection.Artists, DlnaSection.Albums, DlnaSection.Genres, DlnaSection.Folders, DlnaSection.Playlists, DlnaSection.Starred]);

@@ -887,6 +887,10 @@ export const es: Dictionary = {
       description: 'Lo que ven los dispositivos al entrar en Arcanist, en este orden.',
       up: 'Subir',
       down: 'Bajar',
+      onlyFiveStars: '(solo con el modo de cinco estrellas)',
+      ratingsUser: 'Estrellas y valoraciones de',
+      ratingsUserHelp:
+        'DLNA no tiene inicio de sesión: StarTracks y Valoradas muestran las de este usuario.',
       names: {
         ARTISTS: 'Artistas',
         ALBUMS: 'Álbumes',
@@ -896,6 +900,8 @@ export const es: Dictionary = {
         PLAYLISTS: 'Playlists públicas',
         RECENTLY_ADDED: 'Añadido recientemente',
         MIXES: 'Mixes por género y década',
+        STARRED: 'StarTracks (canciones con estrella)',
+        RATED: 'Valoradas, por estrellas',
       },
     },
     renderers: {

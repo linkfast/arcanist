@@ -77,7 +77,9 @@ public sealed class ArcanistFactory(
             new SetupAdmin(AdminUserName, Password, "Administrator"),
             libraries,
             ShareAnonymousStatistics: false,
-            Language: null), Json);
+            Language: null,
+            // Five stars, which the tests rate with (servers start with a single star).
+            RatingMode: Core.Data.Entities.RatingMode.Stars), Json);
 
         response.EnsureSuccessStatusCode();
     }

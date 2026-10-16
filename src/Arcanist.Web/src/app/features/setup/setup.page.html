@@ -379,17 +379,17 @@
           <p class="text-sm">{{ 'setup.ratings.explanation' | t }}</p>
           <hlm-radio-group class="grid gap-3" name="ratingMode" [(ngModel)]="ratingMode">
             <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="STARS" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
-              <span class="grid gap-1">
-                <span class="font-medium">★★★★★ {{ 'setup.ratings.stars' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.ratings.starsHelp' | t }}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
               <hlm-radio value="STAR" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
               <span class="grid gap-1">
                 <span class="font-medium">★ {{ 'setup.ratings.star' | t }}</span>
                 <span class="text-muted-foreground">{{ 'setup.ratings.starHelp' | t }}</span>
+              </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio value="STARS" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+              <span class="grid gap-1">
+                <span class="font-medium">★★★★★ {{ 'setup.ratings.stars' | t }}</span>
+                <span class="text-muted-foreground">{{ 'setup.ratings.starsHelp' | t }}</span>
               </span>
             </label>
           </hlm-radio-group>

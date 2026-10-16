@@ -1082,6 +1082,7 @@ export const DlnaStatusFields = graphql(`
     friendlyName
     libraryIds
     sections
+    ratingsUserId
     addresses
     convertsFormats
   }
@@ -1134,6 +1135,14 @@ export const DlnaQuery = graphql(`
     libraries {
       id
       name
+    }
+    users {
+      id
+      userName
+      displayName
+    }
+    serverInfo {
+      ratingMode
     }
   }
 `);

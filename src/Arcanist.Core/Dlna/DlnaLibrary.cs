@@ -26,7 +26,9 @@ internal sealed class DlnaLibrary(
     DlnaConfig config,
     IReadOnlySet<DlnaFormat> convertible,
     string baseUrl,
-    bool spanish)
+    bool spanish,
+    Guid? ratingsUser,
+    RatingMode ratingMode)
 {
     public const string Root = "0";
 
@@ -43,7 +45,7 @@ internal sealed class DlnaLibrary(
             case Root:
             {
                 var sections = new List<DidlObject>();
-                foreach (var section in config.Sections.Distinct())
+                foreach (var section in Sections())
                     sections.Add(await SectionAsync(section, cancellationToken));
                 return (sections.Skip(start).Take(count).ToList(), sections.Count);
             }
@@ -138,6 +140,26 @@ internal sealed class DlnaLibrary(
                 var tracks = (await discovery.MixAsync(rest, cancellationToken)).Tracks;
                 return (await ItemsAsync(id, tracks.Skip(start).Take(count).ToList(), cancellationToken), tracks.Count);
             }
+            case "starred":
+                return await RatedPageAsync(id, 5, start, count, cancellationToken);
+            case "rated" when rest.Length == 0:
+            {
+                if (ratingMode != RatingMode.Stars)
+                    throw new UpnpException(701, "No such object");
+                var visible = catalog.Visible(access);
+                var counts = await Ratings().Where(r => visible.Any(t => t.Id == r.TrackId))
+                    .GroupBy(r => r.Rating).Select(g => new { Rating = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(g => g.Rating, g => g.Count, cancellationToken);
+                var levels = Enumerable.Range(1, 5).Reverse().Where(counts.ContainsKey).ToList();
+                return (levels.Skip(start).Take(count).Select(r => (DidlObject)new DidlContainer($"rated/{r}", id, Stars(r),
+                    "object.container.storageFolder", counts[r])).ToList(), levels.Count);
+            }
+            case "rated":
+            {
+                if (ratingMode != RatingMode.Stars || !int.TryParse(rest, out var rating) || rating is < 1 or > 5)
+                    throw new UpnpException(701, "No such object");
+                return await RatedPageAsync(id, rating, start, count, cancellationToken);
+            }
             case "folders":
             {
                 var sources = await FolderRootsAsync(cancellationToken);
@@ -154,7 +176,7 @@ internal sealed class DlnaLibrary(
     public async Task<DidlObject> ObjectAsync(string id, CancellationToken cancellationToken)
     {
         if (id == Root)
-            return new DidlContainer(Root, "-1", config.Name, "object.container.storageFolder", config.Sections.Distinct().Count());
+            return new DidlContainer(Root, "-1", config.Name, "object.container.storageFolder", Sections().Count());
 
         var bar = id.LastIndexOf('|');
         if (bar > 0)
@@ -195,6 +217,7 @@ internal sealed class DlnaLibrary(
                     "decade" => ("decades", int.TryParse(rest, out var decade) ? DecadeTitle(decade) : null),
                     "playlist" => ("playlists", (await playlists.GetAsync(ParseId(rest), cancellationToken)).Name),
                     "mix" => ("mixes", MixTitle((await discovery.MixAsync(rest, cancellationToken)).Mix)),
+                    "rated" => ("rated", int.TryParse(rest, out var stars) && stars is >= 1 and <= 5 ? Stars(stars) : null),
                     _ => (Root, null),
                 };
                 if (title is null)
@@ -222,9 +245,32 @@ internal sealed class DlnaLibrary(
     private static string? SectionOf(string id) => id switch
     {
         "recent" => nameof(DlnaSection.RecentlyAdded),
-        "artists" or "albums" or "genres" or "decades" or "folders" or "playlists" or "mixes" => char.ToUpperInvariant(id[0]) + id[1..],
+        "artists" or "albums" or "genres" or "decades" or "folders" or "playlists" or "mixes" or "starred" or "rated" => char.ToUpperInvariant(id[0]) + id[1..],
         _ => null,
     };
+
+    /// <summary>The sections in the menu: rated tracks only exist with five stars.</summary>
+    private IEnumerable<DlnaSection> Sections() =>
+        config.Sections.Distinct().Where(s => s != DlnaSection.Rated || ratingMode == RatingMode.Stars);
+
+    /// <summary>The ratings DLNA shows: those of one user, as DLNA has no sign-in.</summary>
+    private IQueryable<TrackRating> Ratings() =>
+        ratingsUser is { } user ? db.TrackRatings.Where(r => r.UserId == user) : db.TrackRatings.Where(_ => false);
+
+    /// <summary>The tracks rated <paramref name="rating"/> (5: StarTracks), most recently rated first.</summary>
+    private async Task<(IReadOnlyList<DidlObject> Children, int Total)> RatedPageAsync(
+        string parent, int rating, int start, int count, CancellationToken cancellationToken)
+    {
+        var visible = catalog.Visible(access);
+        var rated = Ratings().Where(r => r.Rating == rating && visible.Any(t => t.Id == r.TrackId));
+        var total = await rated.CountAsync(cancellationToken);
+        var ids = await rated.OrderByDescending(r => r.RatedAt).ThenBy(r => r.TrackId).Skip(start).Take(count)
+            .Select(r => r.TrackId).ToListAsync(cancellationToken);
+        var tracks = await catalog.VisibleTracksAsync(access, ids, cancellationToken);
+        return (await ItemsAsync(parent, ids.Where(tracks.ContainsKey).Select(i => tracks[i]).ToList(), cancellationToken), total);
+    }
+
+    private static string Stars(int rating) => new string('★', rating) + new string('☆', 5 - rating);
 
     private async Task<(IReadOnlyList<DidlObject> Children, int Total)> AlbumPageAsync(
         string parent, IQueryable<AlbumEntity> albums, int start, int count, CancellationToken cancellationToken)
@@ -435,6 +481,9 @@ internal sealed class DlnaLibrary(
         (DlnaSection.Playlists, true) => "Playlists",
         (DlnaSection.RecentlyAdded, true) => "Añadido recientemente",
         (DlnaSection.Mixes, true) => "Mixes",
+        (DlnaSection.Starred, _) => "StarTracks",
+        (DlnaSection.Rated, true) => "Valoradas",
+        (DlnaSection.Rated, false) => "Rated",
         (DlnaSection.RecentlyAdded, false) => "Recently added",
         _ => section.ToString(),
     };

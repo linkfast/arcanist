@@ -272,6 +272,7 @@ public sealed class MstreamImportTests : IAsyncDisposable
             [new SetupLibrary("Music", [_music], VisibleToAll: false)],
             ShareAnonymousStatistics: false,
             Language: null,
+            RatingMode: Core.Data.Entities.RatingMode.Stars,
             Mstream: new SetupMstreamImport(_install, null, [new SetupMstreamLibrary("music", folder)], ImportUsers: true));
 
         // The vpath must go to one of the new libraries' folders; nothing is set up otherwise.

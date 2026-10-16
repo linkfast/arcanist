@@ -880,6 +880,9 @@ export const en: Dictionary = {
       description: 'What devices see when they open Arcanist, in this order.',
       up: 'Move up',
       down: 'Move down',
+      onlyFiveStars: '(only with the five-star rating mode)',
+      ratingsUser: 'Stars and ratings of',
+      ratingsUserHelp: 'DLNA has no sign-in: StarTracks and Rated show this user’s.',
       names: {
         ARTISTS: 'Artists',
         ALBUMS: 'Albums',
@@ -889,6 +892,8 @@ export const en: Dictionary = {
         PLAYLISTS: 'Public playlists',
         RECENTLY_ADDED: 'Recently added',
         MIXES: 'Genre and decade mixes',
+        STARRED: 'StarTracks (starred songs)',
+        RATED: 'Rated, by stars',
       },
     },
     renderers: {

@@ -140,7 +140,7 @@ export class SetupPage implements OnInit {
   protected readonly analyzeMstream = (source: MstreamSourceInput) =>
     this.setup.analyzeMstream(source);
   protected ffmpegPath = '';
-  protected ratingMode: RatingMode = 'STARS';
+  protected ratingMode: RatingMode = 'STAR';
   /** Off until the user turns each on: they contact other servers. */
   protected readonly onlineServices: OnlineServicesChoice = {
     musicBrainz: false,

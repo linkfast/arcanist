@@ -97,7 +97,9 @@ internal sealed class DlnaExtension : IBuiltInExtension
                     var library = new DlnaLibrary(db, services.GetRequiredService<CatalogService>(), services.GetRequiredService<PlaylistService>(),
                         services.GetRequiredService<DiscoveryService>(), DlnaAccess.For(config), config,
                         DlnaFormats.Convertible(services.GetRequiredService<FfmpegLocator>().Current),
-                        $"{context.Request.Scheme}://{context.Request.Host}", language?.StartsWith("es", StringComparison.OrdinalIgnoreCase) == true);
+                        $"{context.Request.Scheme}://{context.Request.Host}", language?.StartsWith("es", StringComparison.OrdinalIgnoreCase) == true,
+                        await Application.Dlna.DlnaService.RatingsUserAsync(db, config, cancellationToken),
+                        await services.GetRequiredService<Application.Listening.RatingSettings>().GetAsync(cancellationToken));
                     var id = action.Argument("ObjectID") is { Length: > 0 } objectId ? objectId : DlnaLibrary.Root;
                     _ = int.TryParse(action.Argument("StartingIndex"), out var start);
                     _ = int.TryParse(action.Argument("RequestedCount"), out var count);

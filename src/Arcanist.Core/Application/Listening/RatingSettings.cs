@@ -13,13 +13,16 @@ public sealed class RatingSettings(SettingsStore settings, IArcanistDbContextFac
 {
     private volatile object? _mode;
 
-    /// <summary>The mode as last loaded; <see cref="RatingMode.Stars"/> until then.</summary>
-    public RatingMode Current => _mode is RatingMode mode ? mode : RatingMode.Stars;
+    /// <summary>The mode servers start with: a single star (decided with the project's owner).</summary>
+    public const RatingMode Default = RatingMode.Star;
+
+    /// <summary>The mode as last loaded; <see cref="Default"/> until then.</summary>
+    public RatingMode Current => _mode is RatingMode mode ? mode : Default;
 
     public async Task<RatingMode> GetAsync(CancellationToken cancellationToken)
     {
         if (_mode is null && setup.CurrentValue.Completed && databases.IsConfigured)
-            _mode = await settings.GetAsync(SettingKeys.RatingMode, RatingMode.Stars, cancellationToken);
+            _mode = await settings.GetAsync(SettingKeys.RatingMode, Default, cancellationToken);
         return Current;
     }
 

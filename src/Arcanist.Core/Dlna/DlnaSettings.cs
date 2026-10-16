@@ -26,15 +26,23 @@ public enum DlnaSection
     RecentlyAdded,
     /// <summary>Genre and decade mixes.</summary>
     Mixes,
+
+    /// <summary>StarTracks: the starred tracks (five stars) of the user whose ratings DLNA shows.</summary>
+    Starred,
+
+    /// <summary>Tracks by rating, five stars to one. Only with the five-star rating mode.</summary>
+    Rated,
 }
 
 /// <summary>DLNA settings, kept in the database.</summary>
 /// <param name="FriendlyName">The name devices show; null for "Arcanist (machine)".</param>
 /// <param name="LibraryIds">Libraries published on the local network. None until an administrator picks them.</param>
-internal sealed record DlnaConfig(string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections)
+/// <param name="RatingsUserId">Whose stars and ratings the StarTracks and rated sections show (DLNA has no sign-in); the
+/// first administrator when null.</param>
+internal sealed record DlnaConfig(string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null)
 {
     public static readonly DlnaConfig Default = new(null, [],
-        [DlnaSection.Artists, DlnaSection.Albums, DlnaSection.Genres, DlnaSection.Folders, DlnaSection.Playlists]);
+        [DlnaSection.Artists, DlnaSection.Albums, DlnaSection.Genres, DlnaSection.Folders, DlnaSection.Playlists, DlnaSection.Starred]);
 
     public string Name => string.IsNullOrWhiteSpace(FriendlyName) ? $"Arcanist ({Environment.MachineName})" : FriendlyName;
 }

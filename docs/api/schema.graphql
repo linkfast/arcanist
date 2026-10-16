@@ -527,6 +527,7 @@ type DlnaStatus {
   friendlyName: String
   libraryIds: [ID!]!
   sections: [DlnaSection!]!
+  ratingsUserId: ID
   addresses: [String!]!
   convertsFormats: Boolean!
 }
@@ -540,6 +541,8 @@ enum DlnaSection {
   PLAYLISTS
   RECENTLY_ADDED
   MIXES
+  STARRED
+  RATED
 }
 
 type DlnaRenderer {
@@ -1675,6 +1678,7 @@ input DlnaSettingsInput {
   friendlyName: String
   libraryIds: [ID!]!
   sections: [DlnaSection!]!
+  ratingsUserId: ID
 }
 
 input PlayOnDlnaRendererInput {

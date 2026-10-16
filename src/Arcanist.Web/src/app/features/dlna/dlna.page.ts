@@ -20,6 +20,7 @@ import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { ApiError } from '../../core/api/rest';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
@@ -57,6 +58,8 @@ const AllSections: DlnaSection[] = [
   'PLAYLISTS',
   'RECENTLY_ADDED',
   'MIXES',
+  'STARRED',
+  'RATED',
 ];
 
 /**
@@ -76,6 +79,7 @@ const AllSections: DlnaSection[] = [
     HlmFieldImports,
     HlmInputImports,
     HlmSwitchImports,
+    HlmNativeSelectImports,
     TranslatePipe,
   ],
   providers: [
@@ -176,6 +180,11 @@ const AllSections: DlnaSection[] = [
                         (checkedChange)="toggleSection(section, $event)"
                       />
                       {{ 'dlna.sections.names.' + section | t }}
+                      @if (section === 'RATED' && !fiveStars()) {
+                        <span class="text-xs text-muted-foreground">{{
+                          'dlna.sections.onlyFiveStars' | t
+                        }}</span>
+                      }
                     </label>
                     @if (sections().includes(section)) {
                       <span class="flex gap-1">
@@ -208,6 +217,25 @@ const AllSections: DlnaSection[] = [
               </ul>
             </div>
           </div>
+          @if (sections().includes('STARRED') || sections().includes('RATED')) {
+            <hlm-field class="px-6 pb-2">
+              <label hlmFieldLabel for="dlnaRatingsUser">{{
+                'dlna.sections.ratingsUser' | t
+              }}</label>
+              <hlm-native-select
+                id="dlnaRatingsUser"
+                [value]="ratingsUser() ?? ''"
+                (change)="ratingsUser.set($any($event.target).value || null)"
+              >
+                @for (user of users(); track user.id) {
+                  <option hlmNativeSelectOption [value]="user.id">
+                    {{ user.displayName || user.userName }}
+                  </option>
+                }
+              </hlm-native-select>
+              <p hlmFieldDescription>{{ 'dlna.sections.ratingsUserHelp' | t }}</p>
+            </hlm-field>
+          }
           <div hlmCardFooter>
             <button hlmBtn type="button" [disabled]="busy()" (click)="save()">
               {{ 'common.save' | t }}
@@ -416,6 +444,12 @@ export class DlnaPage implements OnInit, OnDestroy {
   protected readonly status = signal<Status | null>(null);
   protected readonly libraries = signal<{ id: string; name: string }[]>([]);
   protected readonly published = signal<string[]>([]);
+  protected readonly users = signal<
+    { id: string; userName: string; displayName?: string | null }[]
+  >([]);
+  /** Whose stars and ratings the StarTracks and rated folders show. */
+  protected readonly ratingsUser = signal<string | null>(null);
+  protected readonly fiveStars = signal(false);
   protected readonly sections = signal<DlnaSection[]>([]);
   protected readonly renderers = signal<Renderer[]>([]);
   protected readonly selected = signal<RendererState | null>(null);
@@ -446,6 +480,8 @@ export class DlnaPage implements OnInit, OnDestroy {
     const result = await this.gql.query(DlnaQuery);
     this.apply(result.dlna);
     this.libraries.set(result.libraries);
+    this.users.set(result.users);
+    this.fiveStars.set(result.serverInfo.ratingMode === 'STARS');
   }
 
   private apply(status: Status): void {
@@ -453,6 +489,7 @@ export class DlnaPage implements OnInit, OnDestroy {
     this.friendlyName = status.friendlyName ?? '';
     this.published.set([...status.libraryIds]);
     this.sections.set([...status.sections]);
+    this.ratingsUser.set(status.ratingsUserId ?? null);
   }
 
   protected async setEnabled(enabled: boolean): Promise<void> {
@@ -493,6 +530,7 @@ export class DlnaPage implements OnInit, OnDestroy {
           // Only libraries that still exist (one may have been deleted meanwhile).
           libraryIds: this.published().filter((id) => this.libraries().some((l) => l.id === id)),
           sections: this.sections(),
+          ratingsUserId: this.ratingsUser(),
         },
       });
       this.apply(result.setDlnaSettings);

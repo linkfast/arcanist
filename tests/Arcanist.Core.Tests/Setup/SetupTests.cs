@@ -20,6 +20,21 @@ public sealed class SetupTests : IAsyncLifetime
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
     [Fact]
+    public async Task Servers_start_rating_with_a_single_star()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
+            new SetupDatabase(DatabaseProvider.Sqlite, null),
+            new SetupAdmin("admin", "correct horse battery", null),
+            [new SetupLibrary("Music", [_musicFolder])],
+            ShareAnonymousStatistics: false,
+            Language: null), ArcanistFactory.Json, TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        var info = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, TestContext.Current.CancellationToken);
+        Assert.Equal("STAR", info.GetProperty("ratingMode").GetString());
+    }
+
+    [Fact]
     public async Task Before_setup_the_browser_is_sent_to_the_wizard_and_apis_are_unavailable()
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

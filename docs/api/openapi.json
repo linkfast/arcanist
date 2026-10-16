@@ -7734,7 +7734,9 @@
           "FOLDERS",
           "PLAYLISTS",
           "RECENTLY_ADDED",
-          "MIXES"
+          "MIXES",
+          "STARRED",
+          "RATED"
         ]
       },
       "DlnaSettingsInput": {
@@ -7763,6 +7765,13 @@
             "items": {
               "$ref": "#/components/schemas/DlnaSection"
             }
+          },
+          "ratingsUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -7773,6 +7782,7 @@
           "friendlyName",
           "libraryIds",
           "sections",
+          "ratingsUserId",
           "addresses",
           "convertsFormats"
         ],
@@ -7802,6 +7812,13 @@
             "items": {
               "$ref": "#/components/schemas/DlnaSection"
             }
+          },
+          "ratingsUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           },
           "addresses": {
             "type": "array",

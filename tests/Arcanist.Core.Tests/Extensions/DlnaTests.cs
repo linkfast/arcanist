@@ -310,6 +310,38 @@ public sealed class DlnaTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task StarTracks_and_rated_tracks_show_the_chosen_user_s_ratings()
+    {
+        await PublishAsync("STARRED", "RATED");
+        var tracks = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items").EnumerateArray()
+            .ToDictionary(t => t.GetProperty("title").GetString()!, t => t.GetProperty("id").GetString()!);
+        await _admin.PutAsJsonAsync($"/rest/v1/tracks/{tracks["Closing"]}/star", new { starred = true }, ArcanistFactory.Json, Cancel);
+        await _admin.PutAsJsonAsync($"/rest/v1/tracks/{tracks["Alone"]}/rating", new { rating = 3 }, ArcanistFactory.Json, Cancel);
+
+        // By default, the first administrator's.
+        var (root, _) = await BrowseAsync("0");
+        Assert.Equal(["StarTracks", "Rated"], Titles(root));
+        var (starred, total) = await BrowseAsync("starred");
+        Assert.Equal(["Closing"], Titles(starred));
+        Assert.Equal(1, total);
+        var (rated, _) = await BrowseAsync("rated");
+        Assert.Equal(["★★★★★", "★★★☆☆"], Titles(rated));
+        var (three, _) = await BrowseAsync("rated/3");
+        Assert.Equal(["Alone"], Titles(three));
+
+        // With a single star, only StarTracks.
+        await _admin.PutAsJsonAsync("/rest/v1/settings/rating-mode", new { mode = "STAR" }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(["StarTracks"], Titles((await BrowseAsync("0")).Didl));
+
+        // Another user's, when chosen: they starred nothing.
+        var listener = await _factory.CreateUserAsync("listener");
+        var saved = await _admin.PutAsJsonAsync("/rest/v1/dlna/settings",
+            new { friendlyName = (string?)null, libraryIds = new[] { _libraryId }, sections = new[] { "STARRED" }, ratingsUserId = listener.Id }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(listener.Id.ToString(), (await saved.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("ratingsUserId").GetString());
+        Assert.Equal(0, (await BrowseAsync("starred")).Total);
+    }
+
+    [Fact]
     public async Task A_deleted_library_is_no_longer_published_and_saving_still_works()
     {
         var other = Directory.CreateDirectory(Path.Combine(_music + "-other")).FullName;

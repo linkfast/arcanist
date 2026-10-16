@@ -28,10 +28,12 @@ public sealed record DlnaStatus(
     string? FriendlyName,
     IReadOnlyList<Guid> LibraryIds,
     IReadOnlyList<DlnaSection> Sections,
+    Guid? RatingsUserId,
     IReadOnlyList<string> Addresses,
     bool ConvertsFormats);
 
-public sealed record DlnaSettingsInput(string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections);
+/// <param name="RatingsUserId">Whose stars and ratings the StarTracks and rated sections show; the first administrator when null.</param>
+public sealed record DlnaSettingsInput(string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null);
 
 /// <summary>A device on the local network Arcanist can play to (a DLNA media renderer).</summary>
 /// <param name="Manual">Added by an administrator from its address rather than found on the network.</param>
@@ -106,6 +108,7 @@ public sealed class DlnaService(
         // Libraries deleted since they were published are not any more.
         var libraryIds = await db.Libraries.Where(l => config.LibraryIds.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
         return new DlnaStatus(Enabled, config.Name, config.FriendlyName, config.LibraryIds.Where(libraryIds.Contains).ToList(), config.Sections,
+            await RatingsUserAsync(config, cancellationToken),
             Enabled ? Endpoint.DescriptionUrls() : [], DlnaFormats.Convertible(ffmpeg.Current).Count > 0);
     }
 
@@ -124,9 +127,11 @@ public sealed class DlnaService(
         var sections = (input.Sections ?? []).Distinct().ToList();
         if (sections.Any(s => !Enum.IsDefined(s)))
             errors.Add("sections", ErrorCodes.InvalidFormat);
+        if (input.RatingsUserId is { } user && !await db.Users.AnyAsync(u => u.Id == user, cancellationToken))
+            errors.Add("ratingsUserId", ErrorCodes.NotFound);
         errors.ThrowIfAny();
 
-        await Settings.SetAsync(new DlnaConfig(name, libraries, sections), cancellationToken);
+        await Settings.SetAsync(new DlnaConfig(name, libraries, sections, input.RatingsUserId), cancellationToken);
         return await StatusAsync(cancellationToken);
     }
 
@@ -297,6 +302,17 @@ public sealed class DlnaService(
         RequireEnabled();
         return Registry.Find(id ?? "") ?? throw new ArcanistException.NotFound();
     }
+
+    /// <summary>Whose stars and ratings DLNA shows: the chosen user while they exist, or else the first administrator.</summary>
+    internal static async Task<Guid?> RatingsUserAsync(ArcanistDbContext db, DlnaConfig config, CancellationToken cancellationToken)
+    {
+        if (config.RatingsUserId is { } chosen && await db.Users.AnyAsync(u => u.Id == chosen, cancellationToken))
+            return chosen;
+        return await db.Users.Where(u => u.Role == UserRole.Admin && !u.IsDisabled).OrderBy(u => u.CreatedAt)
+            .Select(u => (Guid?)u.Id).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private Task<Guid?> RatingsUserAsync(DlnaConfig config, CancellationToken cancellationToken) => RatingsUserAsync(db, config, cancellationToken);
 
     private void RequireEnabled()
     {

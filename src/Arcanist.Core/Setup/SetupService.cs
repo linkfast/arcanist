@@ -302,7 +302,7 @@ public sealed class SetupService(
         if (request.OnlineServices is { } online)
             db.Settings.Add(new Setting { Key = SettingKeys.OnlineServices, Value = JsonSerializer.Serialize(online, JsonSerializerOptions.Web) });
 
-        db.Settings.Add(new Setting { Key = SettingKeys.RatingMode, Value = JsonSerializer.Serialize(request.RatingMode ?? RatingMode.Stars, JsonSerializerOptions.Web) });
+        db.Settings.Add(new Setting { Key = SettingKeys.RatingMode, Value = JsonSerializer.Serialize(request.RatingMode ?? Application.Listening.RatingSettings.Default, JsonSerializerOptions.Web) });
 
         return (admin.Id, created);
     }

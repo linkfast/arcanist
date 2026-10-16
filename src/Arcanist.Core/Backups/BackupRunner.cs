@@ -504,7 +504,13 @@ internal sealed class HashingStream(Stream inner) : Stream
 
     public override long Length => throw new NotSupportedException();
 
-    public string Hash() => Convert.ToHexStringLower(_hash.GetHashAndReset());
+    /// <summary>The SHA-256 of what was read; callable once, also after the stream was disposed (HTTP content disposes it).</summary>
+    public string Hash()
+    {
+        var hash = Convert.ToHexStringLower(_hash.GetHashAndReset());
+        _hash.Dispose();
+        return hash;
+    }
 
     public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
 
@@ -545,10 +551,5 @@ internal sealed class HashingStream(Stream inner) : Stream
     public override void SetLength(long value) => throw new NotSupportedException();
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-            _hash.Dispose();
-        base.Dispose(disposing);
-    }
+
 }

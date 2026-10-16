@@ -8,10 +8,10 @@ using Arcanist.Core.Storage.S3;
 namespace Arcanist.Core.Backups.Targets;
 
 /// <summary>Opens S3 destinations with the S3 libraries' client and settings (the Cloud plan).</summary>
-internal sealed class S3BackupTargets(S3Storage storage)
+internal sealed class S3BackupTargets(ILibraryStorageResolver storages)
 {
     public IBackupTarget Open(BackupDestination destination) =>
-        storage.Open(new StorageLocation(LibrarySourceKind.S3, destination.Location, destination.Settings)) is { } opened
+        ((S3Storage)storages.For(LibrarySourceKind.S3)).Open(new StorageLocation(LibrarySourceKind.S3, destination.Location, destination.Settings)) is { } opened
             ? new S3Target(opened.Client, opened.Prefix)
             : new UnavailableTarget(ErrorCodes.S3Unavailable);
 }

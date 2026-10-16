@@ -195,6 +195,30 @@ public static class ErrorCodes
     public const string CloudLinkUnsupported = "cloud_link_unsupported";
     /// <summary>Changes in this library cannot be noticed as they happen (it is shared by another server, or in S3): scan it on an interval.</summary>
     public const string WatchUnsupported = "watch_unsupported";
+    /// <summary>The backup destination cannot be reached or written (a missing folder, a disconnected drive or share, a server that does not answer).</summary>
+    public const string BackupDestinationUnavailable = "backup_destination_unavailable";
+    /// <summary>A backup folder cannot be inside a library (scans would find the copies) nor inside the server's data folder.</summary>
+    public const string BackupDestinationOverlaps = "backup_destination_overlaps";
+    /// <summary>Backing up the server (its database, settings and keys) needs a password of at least 8 characters to encrypt them.</summary>
+    public const string BackupPasswordRequired = "backup_password_required";
+    /// <summary>The password does not open the backup's encrypted server data.</summary>
+    public const string BackupPasswordInvalid = "backup_password_invalid";
+    /// <summary>There is no such backup (or snapshot) in the destination.</summary>
+    public const string BackupNotFound = "backup_not_found";
+    /// <summary>The backup was made by a newer version of Arcanist, or is damaged.</summary>
+    public const string BackupFormatUnsupported = "backup_format_unsupported";
+    /// <summary>The other server's space for this server's backups is full.</summary>
+    public const string BackupQuotaExceeded = "backup_quota_exceeded";
+    /// <summary>The file is larger than the destination accepts in one piece (5 GB in S3).</summary>
+    public const string BackupFileTooLarge = "backup_file_too_large";
+    /// <summary>The backup is already running or queued.</summary>
+    public const string BackupBusy = "backup_busy";
+    /// <summary>The other server does not keep this server's backups (it never agreed, or stopped).</summary>
+    public const string BackupsNotAccepted = "backups_not_accepted";
+    /// <summary>The backup failed because of an unexpected error; see the server log.</summary>
+    public const string BackupFailed = "backup_failed";
+    /// <summary>Only queued or running backups can be cancelled.</summary>
+    public const string BackupNotActive = "backup_not_active";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

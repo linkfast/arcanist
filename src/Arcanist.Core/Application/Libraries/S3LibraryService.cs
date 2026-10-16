@@ -92,9 +92,7 @@ public sealed partial class S3LibraryService(
             Library = library,
             Kind = LibrarySourceKind.S3,
             Location = Storage.NormalizeLocation($"{S3Storage.Scheme}{connection.Bucket}/{prefix}"),
-            Settings = JsonSerializer.Serialize(new S3SourceSettings(
-                connection.Endpoint.ToString().TrimEnd('/'), connection.Region, connection.AccessKeyId, Storage.Protect(connection.SecretAccessKey),
-                connection.PathStyle), JsonSerializerOptions.Web),
+            Settings = SettingsJson(Storage, connection),
         });
         db.Libraries.Add(library);
         await db.SaveChangesAsync(cancellationToken);
@@ -102,6 +100,12 @@ public sealed partial class S3LibraryService(
         await scans.EnqueueAsync(library.Id, ScanKind.Full, actor.UserId, cancellationToken);
         return library.ToModel(includeSources: true);
     }
+
+    /// <summary>A connection's settings as libraries (and backup destinations) keep them: the secret protected.</summary>
+    internal static string SettingsJson(S3Storage storage, S3Connection connection) =>
+        JsonSerializer.Serialize(new S3SourceSettings(
+            connection.Endpoint.ToString().TrimEnd('/'), connection.Region, connection.AccessKeyId, storage.Protect(connection.SecretAccessKey),
+            connection.PathStyle), JsonSerializerOptions.Web);
 
     private void RequirePlan()
     {
@@ -136,7 +140,7 @@ public sealed partial class S3LibraryService(
     }
 
     /// <summary>Checks the fields, reporting them as <paramref name="field"/>-prefixed errors (thrown at once when <paramref name="errors"/> is null).</summary>
-    private static (S3Connection Connection, string Prefix) Validate(S3ConnectionInput? input, ValidationErrors? errors, string field = "")
+    internal static (S3Connection Connection, string Prefix) Validate(S3ConnectionInput? input, ValidationErrors? errors, string field = "")
     {
         var own = errors ?? new ValidationErrors();
         if (input is null)

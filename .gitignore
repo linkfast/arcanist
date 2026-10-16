@@ -266,6 +266,8 @@ Generated_Code/
 # because we have git ;-)
 _UpgradeReport_Files/
 Backup*/
+# Not Visual Studio's: Arcanist's backups feature.
+!**/Backups/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/

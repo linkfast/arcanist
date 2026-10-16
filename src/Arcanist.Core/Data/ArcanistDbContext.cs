@@ -70,6 +70,14 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<PlaylistEntry> PlaylistEntries => Set<PlaylistEntry>();
     public DbSet<PlaylistCollaborator> PlaylistCollaborators => Set<PlaylistCollaborator>();
 
+    public DbSet<BackupDestination> BackupDestinations => Set<BackupDestination>();
+
+    public DbSet<Backup> Backups => Set<Backup>();
+
+    public DbSet<BackupRun> BackupRuns => Set<BackupRun>();
+
+    public DbSet<BackupRunFailure> BackupRunFailures => Set<BackupRunFailure>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // SQLite cannot compare DateTimeOffset and Npgsql requires UTC for timestamptz: store UTC DateTime
@@ -85,6 +93,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         ConfigureCatalog(modelBuilder);
         ConfigureOrganization(modelBuilder);
         ConfigureUserData(modelBuilder);
+        ConfigureBackups(modelBuilder);
 
         // Keys come from Entity.Id (UUIDv7), never from the database.
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -154,6 +163,46 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             job.Property(j => j.ErrorCode).HasMaxLength(64);
             job.HasIndex(j => new { j.LibraryId, j.RequestedAt });
             job.HasIndex(j => j.Status);
+        });
+    }
+
+    private static void ConfigureBackups(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<BackupDestination>(destination =>
+        {
+            destination.Property(d => d.Name).HasMaxLength(NameLength);
+            destination.Property(d => d.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            destination.Property(d => d.Location).HasMaxLength(PathLength);
+        });
+
+        modelBuilder.Entity<Backup>(backup =>
+        {
+            backup.Property(b => b.Name).HasMaxLength(NameLength);
+            backup.Property(b => b.Folder).HasMaxLength(NameLength);
+            backup.Property(b => b.Scope).HasConversion<string>().HasMaxLength(EnumLength);
+            backup.Property(b => b.Schedule).HasConversion<string>().HasMaxLength(EnumLength);
+            backup.Property(b => b.DayOfWeek).HasConversion<string>().HasMaxLength(EnumLength);
+            backup.Property(b => b.TimeZone).HasMaxLength(64);
+            backup.Property(b => b.ProtectedPassword).HasMaxLength(1000);
+            backup.HasOne(b => b.Destination).WithMany().HasForeignKey(b => b.DestinationId).OnDelete(DeleteBehavior.Cascade);
+            backup.HasMany(b => b.Runs).WithOne(r => r.Backup).HasForeignKey(r => r.BackupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BackupRun>(run =>
+        {
+            run.Property(r => r.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            run.Property(r => r.Trigger).HasConversion<string>().HasMaxLength(EnumLength);
+            run.Property(r => r.Snapshot).HasMaxLength(32);
+            run.Property(r => r.ErrorCode).HasMaxLength(64);
+            run.HasMany(r => r.Failures).WithOne().HasForeignKey(f => f.RunId).OnDelete(DeleteBehavior.Cascade);
+            run.HasIndex(r => r.Status);
+            run.HasIndex(r => new { r.BackupId, r.RequestedAt });
+        });
+
+        modelBuilder.Entity<BackupRunFailure>(failure =>
+        {
+            failure.Property(f => f.Path).HasMaxLength(PathLength);
+            failure.Property(f => f.Code).HasMaxLength(64);
         });
     }
 

@@ -80,6 +80,7 @@ public static class RestSetup
         rest.MapUltimateCloudEndpoints()
             .MapServerAdminEndpoints();
         rest.MapDlnaImportEndpoints();
+        rest.MapBackupEndpoints();
         rest.MapOnlineEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();

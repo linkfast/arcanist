@@ -6032,6 +6032,409 @@
         }
       }
     },
+    "/rest/v1/backups/destinations": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Where backups go: folders of this server, S3 buckets and other Arcanist servers. Administrators only.",
+        "operationId": "BackupDestinations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupDestinationInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Adds a destination for backups (it must be writable). Administrators only, with a recent authentication.",
+        "operationId": "CreateBackupDestination",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBackupDestinationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupDestinationInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/destinations/{id}/test": {
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Whether a destination can be written now. Administrators only.",
+        "operationId": "TestBackupDestination",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupDestinationTest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/destinations/{id}": {
+      "delete": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Removes a destination and its backups from this server; what is in the destination stays. Administrators only, with a recent authentication.",
+        "operationId": "DeleteBackupDestination",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "The backups of the server, its libraries, albums or playlists, with their latest run. Administrators only.",
+        "operationId": "Backups",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupDefinition"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Creates a backup. Administrators only, with a recent authentication.",
+        "operationId": "CreateBackup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBackupInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupDefinition"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/{id}": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "A backup, with its latest run. Administrators only.",
+        "operationId": "Backup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupDefinition"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Changes a backup (not its destination nor its kind of scope). Administrators only, with a recent authentication.",
+        "operationId": "UpdateBackup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBackupInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupDefinition"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Removes a backup from this server; its copies in the destination stay. Administrators only, with a recent authentication.",
+        "operationId": "DeleteBackup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/{id}/run": {
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Runs a backup now, in the background. Administrators only.",
+        "operationId": "RunBackup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/{id}/runs": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "The 20 latest runs of a backup. Administrators only.",
+        "operationId": "BackupRuns",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/runs/{id}": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "A run of a backup and how far it got. Administrators only.",
+        "operationId": "BackupRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/runs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "Stops a run; what it copied stays, and the next run finishes its snapshot. Administrators only.",
+        "operationId": "CancelBackupRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/online-services": {
       "get": {
         "tags": [
@@ -7308,6 +7711,385 @@
           }
         }
       },
+      "BackupDefinition": {
+        "required": [
+          "id",
+          "name",
+          "destination",
+          "scope",
+          "items",
+          "includeUserData",
+          "includeServer",
+          "schedule",
+          "intervalHours",
+          "timeOfDay",
+          "dayOfWeek",
+          "timeZone",
+          "retentionDays",
+          "enabled",
+          "folder",
+          "createdAt",
+          "nextRunAt",
+          "lastRun"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/BackupDestinationInfo"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/BackupScope"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupScopeItem"
+            }
+          },
+          "includeUserData": {
+            "type": "boolean"
+          },
+          "includeServer": {
+            "type": "boolean"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/BackupSchedule"
+          },
+          "intervalHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "timeOfDay": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dayOfWeek": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DayOfWeek"
+              }
+            ]
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "retentionDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nextRunAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastRun": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BackupJob"
+              }
+            ]
+          }
+        }
+      },
+      "BackupDestinationInfo": {
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "location",
+          "backups",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BackupDestinationKind"
+          },
+          "location": {
+            "type": "string"
+          },
+          "backups": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BackupDestinationKind": {
+        "enum": [
+          "FOLDER",
+          "S3",
+          "PEER"
+        ]
+      },
+      "BackupDestinationTest": {
+        "required": [
+          "success",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BackupJob": {
+        "required": [
+          "id",
+          "backupId",
+          "backupName",
+          "status",
+          "trigger",
+          "snapshot",
+          "requestedAt",
+          "startedAt",
+          "finishedAt",
+          "files",
+          "copied",
+          "unchanged",
+          "versioned",
+          "skipped",
+          "failed",
+          "bytes",
+          "errorCode",
+          "failures"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "backupId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "backupName": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BackupRunStatus"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/BackupTrigger"
+          },
+          "snapshot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "copied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unchanged": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "versioned": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skipped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupJobFailure"
+            }
+          }
+        }
+      },
+      "BackupJobFailure": {
+        "required": [
+          "path",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "BackupRunStatus": {
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "COMPLETED",
+          "COMPLETED_WITH_ERRORS",
+          "FAILED",
+          "CANCELLED"
+        ]
+      },
+      "BackupSchedule": {
+        "enum": [
+          "MANUAL",
+          "HOURS",
+          "DAILY",
+          "WEEKLY"
+        ]
+      },
+      "BackupScope": {
+        "enum": [
+          "SERVER",
+          "LIBRARY",
+          "ALBUM",
+          "PLAYLIST"
+        ]
+      },
+      "BackupScopeItem": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "BackupTrigger": {
+        "enum": [
+          "MANUAL",
+          "SCHEDULED"
+        ]
+      },
       "Capability": {
         "enum": [
           "ULTIMATE_CLOUD_SOURCE",
@@ -7593,6 +8375,147 @@
         "properties": {
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "CreateBackupDestinationInput": {
+        "required": [
+          "name",
+          "kind",
+          "path",
+          "s3",
+          "invitation"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BackupDestinationKind"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "s3": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/S3ConnectionInput"
+              }
+            ]
+          },
+          "invitation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CreateBackupInput": {
+        "required": [
+          "name",
+          "destinationId",
+          "scope",
+          "scopeIds",
+          "includeUserData",
+          "includeServer",
+          "password",
+          "schedule",
+          "intervalHours",
+          "timeOfDay",
+          "dayOfWeek",
+          "timeZone",
+          "retentionDays",
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "destinationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/BackupScope"
+          },
+          "scopeIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "includeUserData": {
+            "type": "boolean"
+          },
+          "includeServer": {
+            "type": "boolean"
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/BackupSchedule"
+          },
+          "intervalHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "timeOfDay": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dayOfWeek": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DayOfWeek"
+              }
+            ]
+          },
+          "timeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retentionDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
           }
         }
       },
@@ -7941,6 +8864,18 @@
             ]
           }
         }
+      },
+      "DayOfWeek": {
+        "enum": [
+          "SUNDAY",
+          "MONDAY",
+          "TUESDAY",
+          "WEDNESDAY",
+          "THURSDAY",
+          "FRIDAY",
+          "SATURDAY",
+          null
+        ]
       },
       "DlnaFolder": {
         "required": [
@@ -14849,6 +15784,98 @@
           }
         }
       },
+      "UpdateBackupInput": {
+        "required": [
+          "name",
+          "scopeIds",
+          "includeUserData",
+          "includeServer",
+          "password",
+          "schedule",
+          "intervalHours",
+          "timeOfDay",
+          "dayOfWeek",
+          "timeZone",
+          "retentionDays",
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "scopeIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "includeUserData": {
+            "type": "boolean"
+          },
+          "includeServer": {
+            "type": "boolean"
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/BackupSchedule"
+          },
+          "intervalHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "timeOfDay": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dayOfWeek": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DayOfWeek"
+              }
+            ]
+          },
+          "timeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retentionDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "UpdateLibraryInput": {
         "required": [
           "name",
@@ -15291,6 +16318,9 @@
     },
     {
       "name": "Peer"
+    },
+    {
+      "name": "Backups"
     },
     {
       "name": "Online services"

@@ -3,6 +3,16 @@ type Query {
   analysisProgress: AnalysisProgress!
   "The user's app passwords, for Subsonic and mStream apps; their secrets are never shown again."
   appPasswords: [AppPassword!]!
+  "Where backups go: folders of this server, S3 buckets and other Arcanist servers. Administrators only."
+  backupDestinations: [BackupDestinationInfo!]!
+  "The backups of the server, its libraries, albums or playlists, with their latest run. Administrators only."
+  backups: [BackupDefinition!]!
+  "A backup, with its latest run. Administrators only."
+  backup(id: ID!): BackupDefinition!
+  "The 20 latest runs of a backup. Administrators only."
+  backupRuns(backupId: ID!): [BackupJob!]!
+  "A run of a backup and how far it got. Administrators only."
+  backupRun(id: ID!): BackupJob!
   "Performers and album artists with music the user can play, by name; optionally only those with music in a library. Pages of `first` items (default 50, at most 500) after the `after` cursor."
   artists(search: String, after: String, first: Int, libraryId: ID): ArtistPage!
   artist(id: ID!): Artist!
@@ -166,6 +176,113 @@ type AppPassword {
   lastUsedAt: DateTime
 }
 
+type BackupDestinationInfo {
+  id: ID!
+  name: String!
+  kind: BackupDestinationKind!
+  location: String!
+  backups: Int!
+  createdAt: DateTime!
+}
+
+enum BackupDestinationKind {
+  FOLDER
+  S3
+  PEER
+}
+
+type BackupDefinition {
+  id: ID!
+  name: String!
+  destination: BackupDestinationInfo!
+  scope: BackupScope!
+  items: [BackupScopeItem!]!
+  includeUserData: Boolean!
+  includeServer: Boolean!
+  schedule: BackupSchedule!
+  intervalHours: Int
+  timeOfDay: Int
+  dayOfWeek: DayOfWeek
+  timeZone: String!
+  retentionDays: Int!
+  enabled: Boolean!
+  folder: String!
+  createdAt: DateTime!
+  nextRunAt: DateTime
+  lastRun: BackupJob
+}
+
+enum BackupScope {
+  SERVER
+  LIBRARY
+  ALBUM
+  PLAYLIST
+}
+
+type BackupScopeItem {
+  id: ID!
+  name: String!
+}
+
+enum BackupSchedule {
+  MANUAL
+  HOURS
+  DAILY
+  WEEKLY
+}
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+type BackupJob {
+  id: ID!
+  backupId: ID!
+  backupName: String!
+  status: BackupRunStatus!
+  trigger: BackupTrigger!
+  snapshot: String
+  requestedAt: DateTime!
+  startedAt: DateTime
+  finishedAt: DateTime
+  files: Int!
+  copied: Int!
+  unchanged: Int!
+  versioned: Int!
+  skipped: Int!
+  failed: Int!
+  bytes: Long!
+  errorCode: String
+  failures: [BackupJobFailure!]!
+}
+
+enum BackupRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+  CANCELLED
+}
+
+enum BackupTrigger {
+  MANUAL
+  SCHEDULED
+}
+
+scalar Long
+
+type BackupJobFailure {
+  path: String!
+  code: String!
+}
+
 type ArtistPage {
   items: [Artist!]!
   nextCursor: String
@@ -201,8 +318,6 @@ type ArtistReference {
   id: ID!
   name: String!
 }
-
-scalar Long
 
 type TrackPage {
   items: [Track!]!
@@ -1532,6 +1647,22 @@ type Mutation {
   createAppPassword(name: String!): CreatedAppPassword!
   "Revokes one of the user's app passwords."
   deleteAppPassword(id: ID!): Boolean!
+  "Adds a destination for backups (it must be writable). Administrators only, with a recent authentication."
+  createBackupDestination(input: CreateBackupDestinationInput!): BackupDestinationInfo!
+  "Whether a destination can be written now. Administrators only."
+  testBackupDestination(id: ID!): BackupDestinationTest!
+  "Removes a destination and its backups from this server; what is in the destination stays. Administrators only, with a recent authentication."
+  deleteBackupDestination(id: ID!): Boolean!
+  "Creates a backup. Administrators only, with a recent authentication."
+  createBackup(input: CreateBackupInput!): BackupDefinition!
+  "Changes a backup (not its destination nor its kind of scope). Administrators only, with a recent authentication."
+  updateBackup(id: ID!, input: UpdateBackupInput!): BackupDefinition!
+  "Removes a backup from this server; its copies in the destination stay. Administrators only, with a recent authentication."
+  deleteBackup(id: ID!): Boolean!
+  "Runs a backup now, in the background. Administrators only."
+  runBackup(id: ID!): BackupJob!
+  "Stops a run; what it copied stays, and the next run finishes its snapshot. Administrators only."
+  cancelBackupRun(id: ID!): BackupJob!
   "Checks that PostgreSQL answers with a connection string. Administrators only."
   testPostgresConnection(connectionString: String!): DatabaseTestResult!
   "Copies everything to an empty PostgreSQL database with the server in maintenance, then switches to it. Administrators only, with a recent authentication."
@@ -1730,6 +1861,61 @@ type Mutation {
 type CreatedAppPassword {
   appPassword: AppPassword!
   secret: String!
+}
+
+input CreateBackupDestinationInput {
+  name: String!
+  kind: BackupDestinationKind!
+  path: String
+  s3: S3ConnectionInput
+  invitation: String
+}
+
+input S3ConnectionInput {
+  endpoint: String!
+  region: String
+  bucket: String!
+  prefix: String
+  accessKeyId: String!
+  secretAccessKey: String!
+  pathStyle: Boolean!
+}
+
+type BackupDestinationTest {
+  success: Boolean!
+  errorCode: String
+}
+
+input CreateBackupInput {
+  name: String!
+  destinationId: ID!
+  scope: BackupScope!
+  scopeIds: [ID!]
+  includeUserData: Boolean!
+  includeServer: Boolean!
+  password: String
+  schedule: BackupSchedule!
+  intervalHours: Int
+  timeOfDay: Int
+  dayOfWeek: DayOfWeek
+  timeZone: String
+  retentionDays: Int!
+  enabled: Boolean!
+}
+
+input UpdateBackupInput {
+  name: String!
+  scopeIds: [ID!]
+  includeUserData: Boolean!
+  includeServer: Boolean!
+  password: String
+  schedule: BackupSchedule!
+  intervalHours: Int
+  timeOfDay: Int
+  dayOfWeek: DayOfWeek
+  timeZone: String
+  retentionDays: Int!
+  enabled: Boolean!
 }
 
 type DatabaseTestResult {
@@ -2036,16 +2222,6 @@ type S3ConnectionTest {
   truncated: Boolean!
 }
 
-input S3ConnectionInput {
-  endpoint: String!
-  region: String
-  bucket: String!
-  prefix: String
-  accessKeyId: String!
-  secretAccessKey: String!
-  pathStyle: Boolean!
-}
-
 input CreateS3LibraryInput {
   name: String!
   connection: S3ConnectionInput!
@@ -2127,6 +2303,8 @@ input ChangeMyPasswordInput {
 type Subscription {
   "Progress of the background audio analysis, at most once a second. Requires MANAGE_LIBRARIES."
   analysisProgressChanged: AnalysisProgress!
+  "Runs of backups as they change: their state at once, their progress about once a second. Administrators only."
+  backupJobUpdated: BackupJob!
   "The user's StarTracks (or other ratings) changed, here or through their Ultimate Cloud account."
   starTracksChanged: StarTracksChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."

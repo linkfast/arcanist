@@ -165,8 +165,10 @@ public sealed partial class FfmpegDownloader(
                     continue;
                 var target = Path.Combine(staging, Path.GetFileName(entry.Name));
                 entry.ExtractToFile(target, overwrite: true);
-                File.SetUnixFileMode(target, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                                             UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+                // The tar.xz builds are Linux's; Windows has no execute bit (and gets the zip).
+                if (!OperatingSystem.IsWindows())
+                    File.SetUnixFileMode(target, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                                                 UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
                 extracted++;
             }
         }

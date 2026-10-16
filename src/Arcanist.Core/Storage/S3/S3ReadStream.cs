@@ -50,7 +50,7 @@ internal sealed class S3ReadStream(S3Client client, string key, long length) : S
 
         // The open response no longer covers the position: a seek happened, or a small range ran out.
         if (_body is not null && (_position != _lastReadEnd || _position >= _bodyEnd))
-            Close();
+            CloseBody();
 
         if (_body is null)
         {
@@ -65,7 +65,7 @@ internal sealed class S3ReadStream(S3Client client, string key, long length) : S
         var read = await _body.ReadAsync(buffer[..(int)Math.Min(buffer.Length, _bodyEnd - _position)], cancellationToken);
         if (read == 0)
         {
-            Close();
+            CloseBody();
             throw new IOException("The object ended before its length.");
         }
 
@@ -74,7 +74,7 @@ internal sealed class S3ReadStream(S3Client client, string key, long length) : S
         return read;
     }
 
-    private void Close()
+    private void CloseBody()
     {
         _body?.Dispose();
         _response?.Dispose();
@@ -85,7 +85,7 @@ internal sealed class S3ReadStream(S3Client client, string key, long length) : S
     protected override void Dispose(bool disposing)
     {
         if (disposing)
-            Close();
+            CloseBody();
         base.Dispose(disposing);
     }
 

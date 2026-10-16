@@ -13,6 +13,7 @@ import type {
 import { OverviewQuery, ServerInfoQuery } from '../../graphql/operations';
 import { CountPipe } from '../../shared/format';
 import { AnalysisCard } from './analysis-card';
+import { BackupsCard } from './backups-card';
 
 @Component({
   selector: 'app-overview-page',
@@ -24,6 +25,7 @@ import { AnalysisCard } from './analysis-card';
     TranslatePipe,
     CountPipe,
     AnalysisCard,
+    BackupsCard,
   ],
   template: `
     <header class="mb-6">
@@ -63,6 +65,10 @@ import { AnalysisCard } from './analysis-card';
     }
 
     <app-analysis-card class="mt-6 block" />
+
+    @if (auth.isAdmin()) {
+      <app-backups-card class="mt-6 block" />
+    }
 
     <footer class="mt-10 text-xs text-muted-foreground">
       @if (server(); as info) {

@@ -33,6 +33,12 @@ import { ThemeSelect } from '../../shared/theme-select';
           <p hlmCardDescription>{{ 'login.subtitle' | t }}</p>
         </div>
         <form hlmCardContent (ngSubmit)="submit()" class="grid gap-4">
+          @if (restored()) {
+            <div hlmAlert>
+              <p hlmAlertTitle>{{ 'login.restoredTitle' | t }}</p>
+              <p hlmAlertDescription>{{ 'login.restored' | t }}</p>
+            </div>
+          }
           @if (error()) {
             <div hlmAlert variant="destructive">
               <p hlmAlertDescription>{{ error() }}</p>
@@ -79,6 +85,8 @@ export class LoginPage {
   private readonly i18n = inject(I18n);
 
   readonly returnUrl = input<string>();
+  /** The server was just restored from a backup in the setup wizard. */
+  readonly restored = input<string>();
 
   protected userName = '';
   protected password = '';

@@ -1144,6 +1144,24 @@ export const StartDlnaImportMutation = graphql(`
   }
 `);
 
+export const DeleteDlnaImportMutation = graphql(`
+  mutation DeleteDlnaImport($id: ID!) {
+    deleteDlnaImport(id: $id)
+  }
+`);
+
+export const DeleteMstreamImportMutation = graphql(`
+  mutation DeleteMstreamImport($id: ID!) {
+    deleteMstreamImport(id: $id)
+  }
+`);
+
+export const ClearImportHistoryMutation = graphql(`
+  mutation ClearImportHistory {
+    clearImportHistory
+  }
+`);
+
 export const CancelDlnaImportMutation = graphql(`
   mutation CancelDlnaImport($id: ID!) {
     cancelDlnaImport(id: $id) {
@@ -1960,6 +1978,372 @@ export const ResolvePreviousSqliteMutation = graphql(`
   mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {
     resolvePreviousSqlite(input: $input) {
       ...DatabaseStatusFields
+    }
+  }
+`);
+
+// Backups
+
+export const BackupJobFields = graphql(`
+  fragment BackupJobFields on BackupJob {
+    id
+    backupId
+    backupName
+    status
+    trigger
+    snapshot
+    requestedAt
+    startedAt
+    finishedAt
+    files
+    copied
+    unchanged
+    versioned
+    skipped
+    failed
+    bytes
+    errorCode
+    failures {
+      path
+      code
+    }
+  }
+`);
+
+export const BackupDestinationFields = graphql(`
+  fragment BackupDestinationFields on BackupDestinationInfo {
+    id
+    name
+    kind
+    location
+    backups
+    createdAt
+  }
+`);
+
+export const BackupFields = graphql(`
+  fragment BackupFields on BackupDefinition {
+    id
+    name
+    destination {
+      id
+      name
+      kind
+    }
+    scope
+    items {
+      id
+      name
+    }
+    includeUserData
+    includeServer
+    schedule
+    intervalHours
+    timeOfDay
+    dayOfWeek
+    timeZone
+    retentionDays
+    enabled
+    folder
+    createdAt
+    nextRunAt
+    lastRun {
+      ...BackupJobFields
+    }
+  }
+`);
+
+export const RestoreJobFields = graphql(`
+  fragment RestoreJobFields on RestoreJobInfo {
+    id
+    backupName
+    snapshot
+    status
+    files
+    userData
+    filesTotal
+    restored
+    identical
+    renamed
+    filesFailed
+    ratings
+    playCounts
+    plays
+    playlists
+    unmatched
+    requestedAt
+    finishedAt
+    errorCode
+    failures {
+      path
+      code
+    }
+  }
+`);
+
+export const BackupGuestFields = graphql(`
+  fragment BackupGuestFields on BackupGuest {
+    peerId
+    name
+    folder
+    usedBytes
+    quotaBytes
+    revoked
+    lastSeenAt
+  }
+`);
+
+export const BackupsPageQuery = graphql(`
+  query BackupsPage {
+    backupDestinations {
+      ...BackupDestinationFields
+    }
+    backups {
+      ...BackupFields
+    }
+    restoreJobs {
+      ...RestoreJobFields
+    }
+    backupGuests {
+      ...BackupGuestFields
+    }
+    serverInfo {
+      capabilities
+    }
+  }
+`);
+
+export const BackupsOverviewQuery = graphql(`
+  query BackupsOverview {
+    backups {
+      id
+      name
+      enabled
+      schedule
+      nextRunAt
+      lastRun {
+        id
+        status
+        finishedAt
+        requestedAt
+      }
+    }
+  }
+`);
+
+/** What a backup can cover, and this server's users (to give restored data to). */
+export const BackupOptionsQuery = graphql(`
+  query BackupOptions {
+    libraries {
+      id
+      name
+      disabled
+      personal
+      sources {
+        id
+        kind
+        location
+      }
+    }
+    playlists {
+      id
+      name
+      trackCount
+      owner {
+        id
+        name
+      }
+    }
+    users {
+      id
+      userName
+      displayName
+    }
+  }
+`);
+
+export const BackupAlbumSearchQuery = graphql(`
+  query BackupAlbumSearch($search: String!) {
+    albums(search: $search, first: 20) {
+      items {
+        id
+        title
+        year
+        artist {
+          name
+        }
+      }
+    }
+  }
+`);
+
+export const BackupRunsQuery = graphql(`
+  query BackupRuns($backupId: ID!) {
+    backupRuns(backupId: $backupId) {
+      ...BackupJobFields
+    }
+  }
+`);
+
+export const BackupJobUpdatedSubscription = graphql(`
+  subscription BackupJobUpdated {
+    backupJobUpdated {
+      ...BackupJobFields
+    }
+  }
+`);
+
+export const RestoreJobUpdatedSubscription = graphql(`
+  subscription RestoreJobUpdated {
+    restoreJobUpdated {
+      ...RestoreJobFields
+    }
+  }
+`);
+
+export const CreateBackupDestinationMutation = graphql(`
+  mutation CreateBackupDestination($input: CreateBackupDestinationInput!) {
+    createBackupDestination(input: $input) {
+      ...BackupDestinationFields
+    }
+  }
+`);
+
+export const TestBackupDestinationMutation = graphql(`
+  mutation TestBackupDestination($id: ID!) {
+    testBackupDestination(id: $id) {
+      success
+      errorCode
+    }
+  }
+`);
+
+export const DeleteBackupDestinationMutation = graphql(`
+  mutation DeleteBackupDestination($id: ID!) {
+    deleteBackupDestination(id: $id)
+  }
+`);
+
+export const CreateBackupMutation = graphql(`
+  mutation CreateBackup($input: CreateBackupInput!) {
+    createBackup(input: $input) {
+      ...BackupFields
+    }
+  }
+`);
+
+export const UpdateBackupMutation = graphql(`
+  mutation UpdateBackup($id: ID!, $input: UpdateBackupInput!) {
+    updateBackup(id: $id, input: $input) {
+      ...BackupFields
+    }
+  }
+`);
+
+export const DeleteBackupMutation = graphql(`
+  mutation DeleteBackup($id: ID!) {
+    deleteBackup(id: $id)
+  }
+`);
+
+export const RunBackupMutation = graphql(`
+  mutation RunBackup($id: ID!) {
+    runBackup(id: $id) {
+      ...BackupJobFields
+    }
+  }
+`);
+
+export const CancelBackupRunMutation = graphql(`
+  mutation CancelBackupRun($id: ID!) {
+    cancelBackupRun(id: $id) {
+      ...BackupJobFields
+    }
+  }
+`);
+
+export const CreateBackupInvitationMutation = graphql(`
+  mutation CreateBackupInvitation($input: CreateBackupInvitationInput!) {
+    createBackupInvitation(input: $input) {
+      link
+      expiresAt
+    }
+  }
+`);
+
+export const StoredBackupsQuery = graphql(`
+  query StoredBackups($destinationId: ID!) {
+    storedBackups(destinationId: $destinationId) {
+      folder
+      id
+      name
+      scope
+      machine
+      arcanistVersion
+      updatedAt
+      snapshots {
+        name
+        createdAt
+        files
+        bytes
+        userData
+        server
+      }
+      libraries {
+        folder
+        name
+        sourceId
+      }
+    }
+  }
+`);
+
+export const BackupSnapshotContentsQuery = graphql(`
+  query BackupSnapshotContents($destinationId: ID!, $folder: String!, $snapshot: String!) {
+    backupSnapshotContents(destinationId: $destinationId, folder: $folder, snapshot: $snapshot) {
+      libraries {
+        folder
+        name
+        files
+        bytes
+      }
+      albums {
+        id
+        title
+        artist
+        year
+        paths
+      }
+      playlists {
+        owner
+        name
+        tracks
+        paths
+      }
+      users {
+        userName
+        displayName
+        ratings
+        plays
+        playlists
+        userId
+      }
+    }
+  }
+`);
+
+export const StartRestoreMutation = graphql(`
+  mutation StartRestore($input: StartRestoreInput!) {
+    startRestore(input: $input) {
+      ...RestoreJobFields
+    }
+  }
+`);
+
+export const CancelRestoreMutation = graphql(`
+  mutation CancelRestore($id: ID!) {
+    cancelRestore(id: $id) {
+      ...RestoreJobFields
     }
   }
 `);

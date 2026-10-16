@@ -99,6 +99,41 @@ export interface ServerDirectoryListing {
   directories: ServerDirectory[];
 }
 
+/** Where the setup wizard looks for a server's backup: a folder of this server or an S3 bucket. */
+export interface SetupRestoreSource {
+  kind: 'FOLDER' | 'S3';
+  path: string | null;
+  s3: {
+    endpoint: string;
+    region: string | null;
+    bucket: string;
+    prefix: string | null;
+    accessKeyId: string;
+    secretAccessKey: string;
+    pathStyle: boolean;
+  } | null;
+}
+
+/** A backup found in a restore source, with the snapshots that carry the server. */
+export interface SetupStoredBackup {
+  folder: string;
+  id: string;
+  name: string;
+  scope: string;
+  machine: string;
+  arcanistVersion: string;
+  updatedAt: string;
+  snapshots: {
+    name: string;
+    createdAt: string;
+    files: number;
+    bytes: number;
+    userData: boolean;
+    server: boolean;
+  }[];
+  libraries: { folder: string; name: string; sourceId: string | null }[];
+}
+
 /** A failed API call: its error code and, for validation failures, the codes per field. */
 export class ApiError extends Error {
   constructor(

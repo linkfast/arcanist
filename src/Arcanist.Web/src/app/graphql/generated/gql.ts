@@ -112,6 +112,9 @@ type Documents = {
     "\n  query DlnaMediaServer($location: String!) {\n    dlnaMediaServer(location: $location) {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n": typeof types.DlnaMediaServerDocument,
     "\n  query BrowseDlnaMediaServer($location: String!, $folderId: String) {\n    browseDlnaMediaServer(location: $location, folderId: $folderId) {\n      id\n      tracks\n      truncated\n      folders {\n        id\n        title\n        childCount\n      }\n    }\n  }\n": typeof types.BrowseDlnaMediaServerDocument,
     "\n  mutation StartDlnaImport($input: StartDlnaImportInput!) {\n    startDlnaImport(input: $input) {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.StartDlnaImportDocument,
+    "\n  mutation DeleteDlnaImport($id: ID!) {\n    deleteDlnaImport(id: $id)\n  }\n": typeof types.DeleteDlnaImportDocument,
+    "\n  mutation DeleteMstreamImport($id: ID!) {\n    deleteMstreamImport(id: $id)\n  }\n": typeof types.DeleteMstreamImportDocument,
+    "\n  mutation ClearImportHistory {\n    clearImportHistory\n  }\n": typeof types.ClearImportHistoryDocument,
     "\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.CancelDlnaImportDocument,
     "\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.RetryDlnaImportDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamFolderDocument,
@@ -175,6 +178,31 @@ type Documents = {
     "\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n": typeof types.CreateS3LibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.ResolvePreviousSqliteDocument,
+    "\n  fragment BackupJobFields on BackupJob {\n    id\n    backupId\n    backupName\n    status\n    trigger\n    snapshot\n    requestedAt\n    startedAt\n    finishedAt\n    files\n    copied\n    unchanged\n    versioned\n    skipped\n    failed\n    bytes\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n": typeof types.BackupJobFieldsFragmentDoc,
+    "\n  fragment BackupDestinationFields on BackupDestinationInfo {\n    id\n    name\n    kind\n    location\n    backups\n    createdAt\n  }\n": typeof types.BackupDestinationFieldsFragmentDoc,
+    "\n  fragment BackupFields on BackupDefinition {\n    id\n    name\n    destination {\n      id\n      name\n      kind\n    }\n    scope\n    items {\n      id\n      name\n    }\n    includeUserData\n    includeServer\n    schedule\n    intervalHours\n    timeOfDay\n    dayOfWeek\n    timeZone\n    retentionDays\n    enabled\n    folder\n    createdAt\n    nextRunAt\n    lastRun {\n      ...BackupJobFields\n    }\n  }\n": typeof types.BackupFieldsFragmentDoc,
+    "\n  fragment RestoreJobFields on RestoreJobInfo {\n    id\n    backupName\n    snapshot\n    status\n    files\n    userData\n    filesTotal\n    restored\n    identical\n    renamed\n    filesFailed\n    ratings\n    playCounts\n    plays\n    playlists\n    unmatched\n    requestedAt\n    finishedAt\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n": typeof types.RestoreJobFieldsFragmentDoc,
+    "\n  fragment BackupGuestFields on BackupGuest {\n    peerId\n    name\n    folder\n    usedBytes\n    quotaBytes\n    revoked\n    lastSeenAt\n  }\n": typeof types.BackupGuestFieldsFragmentDoc,
+    "\n  query BackupsPage {\n    backupDestinations {\n      ...BackupDestinationFields\n    }\n    backups {\n      ...BackupFields\n    }\n    restoreJobs {\n      ...RestoreJobFields\n    }\n    backupGuests {\n      ...BackupGuestFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n": typeof types.BackupsPageDocument,
+    "\n  query BackupsOverview {\n    backups {\n      id\n      name\n      enabled\n      schedule\n      nextRunAt\n      lastRun {\n        id\n        status\n        finishedAt\n        requestedAt\n      }\n    }\n  }\n": typeof types.BackupsOverviewDocument,
+    "\n  query BackupOptions {\n    libraries {\n      id\n      name\n      disabled\n      personal\n      sources {\n        id\n        kind\n        location\n      }\n    }\n    playlists {\n      id\n      name\n      trackCount\n      owner {\n        id\n        name\n      }\n    }\n    users {\n      id\n      userName\n      displayName\n    }\n  }\n": typeof types.BackupOptionsDocument,
+    "\n  query BackupAlbumSearch($search: String!) {\n    albums(search: $search, first: 20) {\n      items {\n        id\n        title\n        year\n        artist {\n          name\n        }\n      }\n    }\n  }\n": typeof types.BackupAlbumSearchDocument,
+    "\n  query BackupRuns($backupId: ID!) {\n    backupRuns(backupId: $backupId) {\n      ...BackupJobFields\n    }\n  }\n": typeof types.BackupRunsDocument,
+    "\n  subscription BackupJobUpdated {\n    backupJobUpdated {\n      ...BackupJobFields\n    }\n  }\n": typeof types.BackupJobUpdatedDocument,
+    "\n  subscription RestoreJobUpdated {\n    restoreJobUpdated {\n      ...RestoreJobFields\n    }\n  }\n": typeof types.RestoreJobUpdatedDocument,
+    "\n  mutation CreateBackupDestination($input: CreateBackupDestinationInput!) {\n    createBackupDestination(input: $input) {\n      ...BackupDestinationFields\n    }\n  }\n": typeof types.CreateBackupDestinationDocument,
+    "\n  mutation TestBackupDestination($id: ID!) {\n    testBackupDestination(id: $id) {\n      success\n      errorCode\n    }\n  }\n": typeof types.TestBackupDestinationDocument,
+    "\n  mutation DeleteBackupDestination($id: ID!) {\n    deleteBackupDestination(id: $id)\n  }\n": typeof types.DeleteBackupDestinationDocument,
+    "\n  mutation CreateBackup($input: CreateBackupInput!) {\n    createBackup(input: $input) {\n      ...BackupFields\n    }\n  }\n": typeof types.CreateBackupDocument,
+    "\n  mutation UpdateBackup($id: ID!, $input: UpdateBackupInput!) {\n    updateBackup(id: $id, input: $input) {\n      ...BackupFields\n    }\n  }\n": typeof types.UpdateBackupDocument,
+    "\n  mutation DeleteBackup($id: ID!) {\n    deleteBackup(id: $id)\n  }\n": typeof types.DeleteBackupDocument,
+    "\n  mutation RunBackup($id: ID!) {\n    runBackup(id: $id) {\n      ...BackupJobFields\n    }\n  }\n": typeof types.RunBackupDocument,
+    "\n  mutation CancelBackupRun($id: ID!) {\n    cancelBackupRun(id: $id) {\n      ...BackupJobFields\n    }\n  }\n": typeof types.CancelBackupRunDocument,
+    "\n  mutation CreateBackupInvitation($input: CreateBackupInvitationInput!) {\n    createBackupInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": typeof types.CreateBackupInvitationDocument,
+    "\n  query StoredBackups($destinationId: ID!) {\n    storedBackups(destinationId: $destinationId) {\n      folder\n      id\n      name\n      scope\n      machine\n      arcanistVersion\n      updatedAt\n      snapshots {\n        name\n        createdAt\n        files\n        bytes\n        userData\n        server\n      }\n      libraries {\n        folder\n        name\n        sourceId\n      }\n    }\n  }\n": typeof types.StoredBackupsDocument,
+    "\n  query BackupSnapshotContents($destinationId: ID!, $folder: String!, $snapshot: String!) {\n    backupSnapshotContents(destinationId: $destinationId, folder: $folder, snapshot: $snapshot) {\n      libraries {\n        folder\n        name\n        files\n        bytes\n      }\n      albums {\n        id\n        title\n        artist\n        year\n        paths\n      }\n      playlists {\n        owner\n        name\n        tracks\n        paths\n      }\n      users {\n        userName\n        displayName\n        ratings\n        plays\n        playlists\n        userId\n      }\n    }\n  }\n": typeof types.BackupSnapshotContentsDocument,
+    "\n  mutation StartRestore($input: StartRestoreInput!) {\n    startRestore(input: $input) {\n      ...RestoreJobFields\n    }\n  }\n": typeof types.StartRestoreDocument,
+    "\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n": typeof types.CancelRestoreDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -275,6 +303,9 @@ const documents: Documents = {
     "\n  query DlnaMediaServer($location: String!) {\n    dlnaMediaServer(location: $location) {\n      id\n      name\n      manufacturer\n      model\n      location\n    }\n  }\n": types.DlnaMediaServerDocument,
     "\n  query BrowseDlnaMediaServer($location: String!, $folderId: String) {\n    browseDlnaMediaServer(location: $location, folderId: $folderId) {\n      id\n      tracks\n      truncated\n      folders {\n        id\n        title\n        childCount\n      }\n    }\n  }\n": types.BrowseDlnaMediaServerDocument,
     "\n  mutation StartDlnaImport($input: StartDlnaImportInput!) {\n    startDlnaImport(input: $input) {\n      ...DlnaImportJobFields\n    }\n  }\n": types.StartDlnaImportDocument,
+    "\n  mutation DeleteDlnaImport($id: ID!) {\n    deleteDlnaImport(id: $id)\n  }\n": types.DeleteDlnaImportDocument,
+    "\n  mutation DeleteMstreamImport($id: ID!) {\n    deleteMstreamImport(id: $id)\n  }\n": types.DeleteMstreamImportDocument,
+    "\n  mutation ClearImportHistory {\n    clearImportHistory\n  }\n": types.ClearImportHistoryDocument,
     "\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": types.CancelDlnaImportDocument,
     "\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": types.RetryDlnaImportDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamFolderDocument,
@@ -338,6 +369,31 @@ const documents: Documents = {
     "\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n": types.CreateS3LibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.RefreshUltimateCloudDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.ResolvePreviousSqliteDocument,
+    "\n  fragment BackupJobFields on BackupJob {\n    id\n    backupId\n    backupName\n    status\n    trigger\n    snapshot\n    requestedAt\n    startedAt\n    finishedAt\n    files\n    copied\n    unchanged\n    versioned\n    skipped\n    failed\n    bytes\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n": types.BackupJobFieldsFragmentDoc,
+    "\n  fragment BackupDestinationFields on BackupDestinationInfo {\n    id\n    name\n    kind\n    location\n    backups\n    createdAt\n  }\n": types.BackupDestinationFieldsFragmentDoc,
+    "\n  fragment BackupFields on BackupDefinition {\n    id\n    name\n    destination {\n      id\n      name\n      kind\n    }\n    scope\n    items {\n      id\n      name\n    }\n    includeUserData\n    includeServer\n    schedule\n    intervalHours\n    timeOfDay\n    dayOfWeek\n    timeZone\n    retentionDays\n    enabled\n    folder\n    createdAt\n    nextRunAt\n    lastRun {\n      ...BackupJobFields\n    }\n  }\n": types.BackupFieldsFragmentDoc,
+    "\n  fragment RestoreJobFields on RestoreJobInfo {\n    id\n    backupName\n    snapshot\n    status\n    files\n    userData\n    filesTotal\n    restored\n    identical\n    renamed\n    filesFailed\n    ratings\n    playCounts\n    plays\n    playlists\n    unmatched\n    requestedAt\n    finishedAt\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n": types.RestoreJobFieldsFragmentDoc,
+    "\n  fragment BackupGuestFields on BackupGuest {\n    peerId\n    name\n    folder\n    usedBytes\n    quotaBytes\n    revoked\n    lastSeenAt\n  }\n": types.BackupGuestFieldsFragmentDoc,
+    "\n  query BackupsPage {\n    backupDestinations {\n      ...BackupDestinationFields\n    }\n    backups {\n      ...BackupFields\n    }\n    restoreJobs {\n      ...RestoreJobFields\n    }\n    backupGuests {\n      ...BackupGuestFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n": types.BackupsPageDocument,
+    "\n  query BackupsOverview {\n    backups {\n      id\n      name\n      enabled\n      schedule\n      nextRunAt\n      lastRun {\n        id\n        status\n        finishedAt\n        requestedAt\n      }\n    }\n  }\n": types.BackupsOverviewDocument,
+    "\n  query BackupOptions {\n    libraries {\n      id\n      name\n      disabled\n      personal\n      sources {\n        id\n        kind\n        location\n      }\n    }\n    playlists {\n      id\n      name\n      trackCount\n      owner {\n        id\n        name\n      }\n    }\n    users {\n      id\n      userName\n      displayName\n    }\n  }\n": types.BackupOptionsDocument,
+    "\n  query BackupAlbumSearch($search: String!) {\n    albums(search: $search, first: 20) {\n      items {\n        id\n        title\n        year\n        artist {\n          name\n        }\n      }\n    }\n  }\n": types.BackupAlbumSearchDocument,
+    "\n  query BackupRuns($backupId: ID!) {\n    backupRuns(backupId: $backupId) {\n      ...BackupJobFields\n    }\n  }\n": types.BackupRunsDocument,
+    "\n  subscription BackupJobUpdated {\n    backupJobUpdated {\n      ...BackupJobFields\n    }\n  }\n": types.BackupJobUpdatedDocument,
+    "\n  subscription RestoreJobUpdated {\n    restoreJobUpdated {\n      ...RestoreJobFields\n    }\n  }\n": types.RestoreJobUpdatedDocument,
+    "\n  mutation CreateBackupDestination($input: CreateBackupDestinationInput!) {\n    createBackupDestination(input: $input) {\n      ...BackupDestinationFields\n    }\n  }\n": types.CreateBackupDestinationDocument,
+    "\n  mutation TestBackupDestination($id: ID!) {\n    testBackupDestination(id: $id) {\n      success\n      errorCode\n    }\n  }\n": types.TestBackupDestinationDocument,
+    "\n  mutation DeleteBackupDestination($id: ID!) {\n    deleteBackupDestination(id: $id)\n  }\n": types.DeleteBackupDestinationDocument,
+    "\n  mutation CreateBackup($input: CreateBackupInput!) {\n    createBackup(input: $input) {\n      ...BackupFields\n    }\n  }\n": types.CreateBackupDocument,
+    "\n  mutation UpdateBackup($id: ID!, $input: UpdateBackupInput!) {\n    updateBackup(id: $id, input: $input) {\n      ...BackupFields\n    }\n  }\n": types.UpdateBackupDocument,
+    "\n  mutation DeleteBackup($id: ID!) {\n    deleteBackup(id: $id)\n  }\n": types.DeleteBackupDocument,
+    "\n  mutation RunBackup($id: ID!) {\n    runBackup(id: $id) {\n      ...BackupJobFields\n    }\n  }\n": types.RunBackupDocument,
+    "\n  mutation CancelBackupRun($id: ID!) {\n    cancelBackupRun(id: $id) {\n      ...BackupJobFields\n    }\n  }\n": types.CancelBackupRunDocument,
+    "\n  mutation CreateBackupInvitation($input: CreateBackupInvitationInput!) {\n    createBackupInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": types.CreateBackupInvitationDocument,
+    "\n  query StoredBackups($destinationId: ID!) {\n    storedBackups(destinationId: $destinationId) {\n      folder\n      id\n      name\n      scope\n      machine\n      arcanistVersion\n      updatedAt\n      snapshots {\n        name\n        createdAt\n        files\n        bytes\n        userData\n        server\n      }\n      libraries {\n        folder\n        name\n        sourceId\n      }\n    }\n  }\n": types.StoredBackupsDocument,
+    "\n  query BackupSnapshotContents($destinationId: ID!, $folder: String!, $snapshot: String!) {\n    backupSnapshotContents(destinationId: $destinationId, folder: $folder, snapshot: $snapshot) {\n      libraries {\n        folder\n        name\n        files\n        bytes\n      }\n      albums {\n        id\n        title\n        artist\n        year\n        paths\n      }\n      playlists {\n        owner\n        name\n        tracks\n        paths\n      }\n      users {\n        userName\n        displayName\n        ratings\n        plays\n        playlists\n        userId\n      }\n    }\n  }\n": types.BackupSnapshotContentsDocument,
+    "\n  mutation StartRestore($input: StartRestoreInput!) {\n    startRestore(input: $input) {\n      ...RestoreJobFields\n    }\n  }\n": types.StartRestoreDocument,
+    "\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n": types.CancelRestoreDocument,
 };
 
 /**
@@ -749,6 +805,18 @@ export function graphql(source: "\n  mutation StartDlnaImport($input: StartDlnaI
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
+export function graphql(source: "\n  mutation DeleteDlnaImport($id: ID!) {\n    deleteDlnaImport(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteDlnaImport($id: ID!) {\n    deleteDlnaImport(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteMstreamImport($id: ID!) {\n    deleteMstreamImport(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteMstreamImport($id: ID!) {\n    deleteMstreamImport(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ClearImportHistory {\n    clearImportHistory\n  }\n"): (typeof documents)["\n  mutation ClearImportHistory {\n    clearImportHistory\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
 export function graphql(source: "\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation CancelDlnaImport($id: ID!) {\n    cancelDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
@@ -998,6 +1066,106 @@ export function graphql(source: "\n  mutation RefreshUltimateCloud {\n    refres
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment BackupJobFields on BackupJob {\n    id\n    backupId\n    backupName\n    status\n    trigger\n    snapshot\n    requestedAt\n    startedAt\n    finishedAt\n    files\n    copied\n    unchanged\n    versioned\n    skipped\n    failed\n    bytes\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n"): (typeof documents)["\n  fragment BackupJobFields on BackupJob {\n    id\n    backupId\n    backupName\n    status\n    trigger\n    snapshot\n    requestedAt\n    startedAt\n    finishedAt\n    files\n    copied\n    unchanged\n    versioned\n    skipped\n    failed\n    bytes\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment BackupDestinationFields on BackupDestinationInfo {\n    id\n    name\n    kind\n    location\n    backups\n    createdAt\n  }\n"): (typeof documents)["\n  fragment BackupDestinationFields on BackupDestinationInfo {\n    id\n    name\n    kind\n    location\n    backups\n    createdAt\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment BackupFields on BackupDefinition {\n    id\n    name\n    destination {\n      id\n      name\n      kind\n    }\n    scope\n    items {\n      id\n      name\n    }\n    includeUserData\n    includeServer\n    schedule\n    intervalHours\n    timeOfDay\n    dayOfWeek\n    timeZone\n    retentionDays\n    enabled\n    folder\n    createdAt\n    nextRunAt\n    lastRun {\n      ...BackupJobFields\n    }\n  }\n"): (typeof documents)["\n  fragment BackupFields on BackupDefinition {\n    id\n    name\n    destination {\n      id\n      name\n      kind\n    }\n    scope\n    items {\n      id\n      name\n    }\n    includeUserData\n    includeServer\n    schedule\n    intervalHours\n    timeOfDay\n    dayOfWeek\n    timeZone\n    retentionDays\n    enabled\n    folder\n    createdAt\n    nextRunAt\n    lastRun {\n      ...BackupJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment RestoreJobFields on RestoreJobInfo {\n    id\n    backupName\n    snapshot\n    status\n    files\n    userData\n    filesTotal\n    restored\n    identical\n    renamed\n    filesFailed\n    ratings\n    playCounts\n    plays\n    playlists\n    unmatched\n    requestedAt\n    finishedAt\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n"): (typeof documents)["\n  fragment RestoreJobFields on RestoreJobInfo {\n    id\n    backupName\n    snapshot\n    status\n    files\n    userData\n    filesTotal\n    restored\n    identical\n    renamed\n    filesFailed\n    ratings\n    playCounts\n    plays\n    playlists\n    unmatched\n    requestedAt\n    finishedAt\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment BackupGuestFields on BackupGuest {\n    peerId\n    name\n    folder\n    usedBytes\n    quotaBytes\n    revoked\n    lastSeenAt\n  }\n"): (typeof documents)["\n  fragment BackupGuestFields on BackupGuest {\n    peerId\n    name\n    folder\n    usedBytes\n    quotaBytes\n    revoked\n    lastSeenAt\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query BackupsPage {\n    backupDestinations {\n      ...BackupDestinationFields\n    }\n    backups {\n      ...BackupFields\n    }\n    restoreJobs {\n      ...RestoreJobFields\n    }\n    backupGuests {\n      ...BackupGuestFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n"): (typeof documents)["\n  query BackupsPage {\n    backupDestinations {\n      ...BackupDestinationFields\n    }\n    backups {\n      ...BackupFields\n    }\n    restoreJobs {\n      ...RestoreJobFields\n    }\n    backupGuests {\n      ...BackupGuestFields\n    }\n    serverInfo {\n      capabilities\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query BackupsOverview {\n    backups {\n      id\n      name\n      enabled\n      schedule\n      nextRunAt\n      lastRun {\n        id\n        status\n        finishedAt\n        requestedAt\n      }\n    }\n  }\n"): (typeof documents)["\n  query BackupsOverview {\n    backups {\n      id\n      name\n      enabled\n      schedule\n      nextRunAt\n      lastRun {\n        id\n        status\n        finishedAt\n        requestedAt\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query BackupOptions {\n    libraries {\n      id\n      name\n      disabled\n      personal\n      sources {\n        id\n        kind\n        location\n      }\n    }\n    playlists {\n      id\n      name\n      trackCount\n      owner {\n        id\n        name\n      }\n    }\n    users {\n      id\n      userName\n      displayName\n    }\n  }\n"): (typeof documents)["\n  query BackupOptions {\n    libraries {\n      id\n      name\n      disabled\n      personal\n      sources {\n        id\n        kind\n        location\n      }\n    }\n    playlists {\n      id\n      name\n      trackCount\n      owner {\n        id\n        name\n      }\n    }\n    users {\n      id\n      userName\n      displayName\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query BackupAlbumSearch($search: String!) {\n    albums(search: $search, first: 20) {\n      items {\n        id\n        title\n        year\n        artist {\n          name\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  query BackupAlbumSearch($search: String!) {\n    albums(search: $search, first: 20) {\n      items {\n        id\n        title\n        year\n        artist {\n          name\n        }\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query BackupRuns($backupId: ID!) {\n    backupRuns(backupId: $backupId) {\n      ...BackupJobFields\n    }\n  }\n"): (typeof documents)["\n  query BackupRuns($backupId: ID!) {\n    backupRuns(backupId: $backupId) {\n      ...BackupJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  subscription BackupJobUpdated {\n    backupJobUpdated {\n      ...BackupJobFields\n    }\n  }\n"): (typeof documents)["\n  subscription BackupJobUpdated {\n    backupJobUpdated {\n      ...BackupJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  subscription RestoreJobUpdated {\n    restoreJobUpdated {\n      ...RestoreJobFields\n    }\n  }\n"): (typeof documents)["\n  subscription RestoreJobUpdated {\n    restoreJobUpdated {\n      ...RestoreJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateBackupDestination($input: CreateBackupDestinationInput!) {\n    createBackupDestination(input: $input) {\n      ...BackupDestinationFields\n    }\n  }\n"): (typeof documents)["\n  mutation CreateBackupDestination($input: CreateBackupDestinationInput!) {\n    createBackupDestination(input: $input) {\n      ...BackupDestinationFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation TestBackupDestination($id: ID!) {\n    testBackupDestination(id: $id) {\n      success\n      errorCode\n    }\n  }\n"): (typeof documents)["\n  mutation TestBackupDestination($id: ID!) {\n    testBackupDestination(id: $id) {\n      success\n      errorCode\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteBackupDestination($id: ID!) {\n    deleteBackupDestination(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteBackupDestination($id: ID!) {\n    deleteBackupDestination(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateBackup($input: CreateBackupInput!) {\n    createBackup(input: $input) {\n      ...BackupFields\n    }\n  }\n"): (typeof documents)["\n  mutation CreateBackup($input: CreateBackupInput!) {\n    createBackup(input: $input) {\n      ...BackupFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UpdateBackup($id: ID!, $input: UpdateBackupInput!) {\n    updateBackup(id: $id, input: $input) {\n      ...BackupFields\n    }\n  }\n"): (typeof documents)["\n  mutation UpdateBackup($id: ID!, $input: UpdateBackupInput!) {\n    updateBackup(id: $id, input: $input) {\n      ...BackupFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteBackup($id: ID!) {\n    deleteBackup(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteBackup($id: ID!) {\n    deleteBackup(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RunBackup($id: ID!) {\n    runBackup(id: $id) {\n      ...BackupJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation RunBackup($id: ID!) {\n    runBackup(id: $id) {\n      ...BackupJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CancelBackupRun($id: ID!) {\n    cancelBackupRun(id: $id) {\n      ...BackupJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation CancelBackupRun($id: ID!) {\n    cancelBackupRun(id: $id) {\n      ...BackupJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateBackupInvitation($input: CreateBackupInvitationInput!) {\n    createBackupInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n"): (typeof documents)["\n  mutation CreateBackupInvitation($input: CreateBackupInvitationInput!) {\n    createBackupInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query StoredBackups($destinationId: ID!) {\n    storedBackups(destinationId: $destinationId) {\n      folder\n      id\n      name\n      scope\n      machine\n      arcanistVersion\n      updatedAt\n      snapshots {\n        name\n        createdAt\n        files\n        bytes\n        userData\n        server\n      }\n      libraries {\n        folder\n        name\n        sourceId\n      }\n    }\n  }\n"): (typeof documents)["\n  query StoredBackups($destinationId: ID!) {\n    storedBackups(destinationId: $destinationId) {\n      folder\n      id\n      name\n      scope\n      machine\n      arcanistVersion\n      updatedAt\n      snapshots {\n        name\n        createdAt\n        files\n        bytes\n        userData\n        server\n      }\n      libraries {\n        folder\n        name\n        sourceId\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query BackupSnapshotContents($destinationId: ID!, $folder: String!, $snapshot: String!) {\n    backupSnapshotContents(destinationId: $destinationId, folder: $folder, snapshot: $snapshot) {\n      libraries {\n        folder\n        name\n        files\n        bytes\n      }\n      albums {\n        id\n        title\n        artist\n        year\n        paths\n      }\n      playlists {\n        owner\n        name\n        tracks\n        paths\n      }\n      users {\n        userName\n        displayName\n        ratings\n        plays\n        playlists\n        userId\n      }\n    }\n  }\n"): (typeof documents)["\n  query BackupSnapshotContents($destinationId: ID!, $folder: String!, $snapshot: String!) {\n    backupSnapshotContents(destinationId: $destinationId, folder: $folder, snapshot: $snapshot) {\n      libraries {\n        folder\n        name\n        files\n        bytes\n      }\n      albums {\n        id\n        title\n        artist\n        year\n        paths\n      }\n      playlists {\n        owner\n        name\n        tracks\n        paths\n      }\n      users {\n        userName\n        displayName\n        ratings\n        plays\n        playlists\n        userId\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation StartRestore($input: StartRestoreInput!) {\n    startRestore(input: $input) {\n      ...RestoreJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation StartRestore($input: StartRestoreInput!) {\n    startRestore(input: $input) {\n      ...RestoreJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

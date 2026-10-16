@@ -20,6 +20,19 @@
             <ng-icon name="lucideServer" />
             {{ 'import.migrate.dlna' | t }}
           </button>
+          @if (hasFinishedImports()) {
+            <button
+              hlmBtn
+              variant="ghost"
+              type="button"
+              class="ml-auto gap-2"
+              [disabled]="busy() === 'history'"
+              (click)="clearingHistory.set(true)"
+            >
+              <ng-icon name="lucideTrash2" />
+              {{ 'import.migrate.clear' | t }}
+            </button>
+          }
         </div>
         @if (dlnaImports().length > 0) {
           <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
@@ -113,6 +126,19 @@
                       {{ 'dlnaImport.history.retry' | t }}
                     </button>
                   }
+                  @if (!dlnaActive(job)) {
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      [title]="'import.migrate.removeHelp' | t"
+                      [disabled]="busy() === job.id"
+                      (click)="removeDlna(job)"
+                    >
+                      {{ 'import.migrate.remove' | t }}
+                    </button>
+                  }
                 </div>
               </li>
             }
@@ -163,12 +189,47 @@
                 @if (job.errorCode) {
                   <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
                 }
+                @if (job.status === 'COMPLETED' || job.status === 'FAILED') {
+                  <div>
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      [title]="'import.migrate.removeHelp' | t"
+                      [disabled]="busy() === job.id"
+                      (click)="removeMstream(job)"
+                    >
+                      {{ 'import.migrate.remove' | t }}
+                    </button>
+                  </div>
+                }
               </li>
             }
           </ul>
         }
       </div>
     </section>
+
+    <hlm-alert-dialog
+      [state]="clearingHistory() ? 'open' : 'closed'"
+      (closed)="clearingHistory.set(false)"
+    >
+      <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+        <hlm-alert-dialog-header>
+          <h3 hlmAlertDialogTitle>{{ 'import.migrate.clearTitle' | t }}</h3>
+          <p hlmAlertDialogDescription>{{ 'import.migrate.clearHelp' | t }}</p>
+        </hlm-alert-dialog-header>
+        <hlm-alert-dialog-footer>
+          <button hlmAlertDialogCancel type="button" (click)="clearingHistory.set(false)">
+            {{ 'common.cancel' | t }}
+          </button>
+          <button hlmAlertDialogAction type="button" (click)="clearHistory()">
+            {{ 'import.migrate.clearConfirm' | t }}
+          </button>
+        </hlm-alert-dialog-footer>
+      </hlm-alert-dialog-content>
+    </hlm-alert-dialog>
 
     <section hlmCard>
       <div hlmCardHeader>

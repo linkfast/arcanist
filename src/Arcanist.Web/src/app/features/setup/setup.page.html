@@ -1,901 +1,938 @@
 <main class="flex min-h-screen items-start justify-center bg-muted/40 p-4 md:items-center">
-  <section hlmCard class="w-full max-w-2xl">
-    <div hlmCardHeader>
-      @if (step() !== 'progress') {
-        <p class="text-xs text-muted-foreground">
-          {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}
-        </p>
-      }
-      <h1 hlmCardTitle class="text-xl">
-        {{
-          (reconfigure && step() === 'welcome'
-            ? 'setup.reconfigure.title'
-            : 'setup.steps.' + step() + '.title'
-          ) | t
-        }}
-      </h1>
-      <p hlmCardDescription>
-        {{
-          (reconfigure && step() === 'welcome'
-            ? 'setup.reconfigure.description'
-            : 'setup.steps.' + step() + '.description'
-          ) | t
-        }}
-      </p>
-    </div>
-
-    <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-5">
-      @if (!status()) {
-        <div class="flex justify-center py-8"><hlm-spinner /></div>
-      }
-
-      @switch (step()) {
-        @case ('code') {
-          <hlm-field>
-            <label hlmFieldLabel for="code">{{ 'setup.code.label' | t }}</label>
-            <input
-              hlmInput
-              id="code"
-              name="code"
-              class="font-mono uppercase tracking-widest"
-              autocomplete="off"
-              [(ngModel)]="code"
-              placeholder="XXXX-XXXX"
-            />
-            <p hlmFieldDescription>{{ 'setup.code.help' | t }}</p>
-          </hlm-field>
-        }
-
-        @case ('welcome') {
-          <p class="text-sm">
-            {{ (reconfigure ? 'setup.reconfigure.intro' : 'setup.welcome.intro') | t }}
+  @if (restoring()) {
+    <app-setup-restoring />
+  } @else {
+    <section hlmCard class="w-full max-w-2xl">
+      <div hlmCardHeader>
+        @if (step() !== 'progress') {
+          <p class="text-xs text-muted-foreground">
+            {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}
           </p>
-          <hlm-field>
-            <span hlmFieldLabel>{{ 'setup.welcome.language' | t }}</span>
-            <hlm-radio-group
-              class="grid gap-2"
-              name="language"
-              [ngModel]="i18n.language()"
-              (ngModelChange)="setLanguage($event)"
-            >
-              <label class="flex items-center gap-2 text-sm"
-                ><hlm-radio value="es"><hlm-radio-indicator indicator /></hlm-radio>Español</label
-              >
-              <label class="flex items-center gap-2 text-sm"
-                ><hlm-radio value="en"><hlm-radio-indicator indicator /></hlm-radio>English</label
-              >
-            </hlm-radio-group>
-          </hlm-field>
+        }
+        <h1 hlmCardTitle class="text-xl">
+          {{
+            (reconfigure && step() === 'welcome'
+              ? 'setup.reconfigure.title'
+              : 'setup.steps.' + step() + '.title'
+            ) | t
+          }}
+        </h1>
+        <p hlmCardDescription>
+          {{
+            (reconfigure && step() === 'welcome'
+              ? 'setup.reconfigure.description'
+              : 'setup.steps.' + step() + '.description'
+            ) | t
+          }}
+        </p>
+      </div>
+
+      <div hlmCardContent class="grid grid-cols-[minmax(0,1fr)] gap-5">
+        @if (!status()) {
+          <div class="flex justify-center py-8"><hlm-spinner /></div>
         }
 
-        @case ('database') {
-          @if (status()?.database?.lockedByEnvironment) {
-            <div hlmAlert>
-              <p hlmAlertTitle>{{ 'setup.database.locked' | t }}</p>
-              <p hlmAlertDescription>{{ 'setup.database.lockedHelp' | t }}</p>
+        @switch (step()) {
+          @case ('code') {
+            <hlm-field>
+              <label hlmFieldLabel for="code">{{ 'setup.code.label' | t }}</label>
+              <input
+                hlmInput
+                id="code"
+                name="code"
+                class="font-mono uppercase tracking-widest"
+                autocomplete="off"
+                [(ngModel)]="code"
+                placeholder="XXXX-XXXX"
+              />
+              <p hlmFieldDescription>{{ 'setup.code.help' | t }}</p>
+            </hlm-field>
+          }
+
+          @case ('welcome') {
+            <p class="text-sm">
+              {{ (reconfigure ? 'setup.reconfigure.intro' : 'setup.welcome.intro') | t }}
+            </p>
+            <hlm-field>
+              <span hlmFieldLabel>{{ 'setup.welcome.language' | t }}</span>
+              <hlm-radio-group
+                class="grid gap-2"
+                name="language"
+                [ngModel]="i18n.language()"
+                (ngModelChange)="setLanguage($event)"
+              >
+                <label class="flex items-center gap-2 text-sm"
+                  ><hlm-radio value="es"><hlm-radio-indicator indicator /></hlm-radio>Español</label
+                >
+                <label class="flex items-center gap-2 text-sm"
+                  ><hlm-radio value="en"><hlm-radio-indicator indicator /></hlm-radio>English</label
+                >
+              </hlm-radio-group>
+            </hlm-field>
+            @if (!reconfigure) {
+              <div class="grid gap-2 rounded-lg border p-3 text-sm">
+                <p class="font-medium">{{ 'setup.restore.offerTitle' | t }}</p>
+                <p class="text-muted-foreground">{{ 'setup.restore.offer' | t }}</p>
+                <button
+                  hlmBtn
+                  variant="outline"
+                  type="button"
+                  class="justify-self-start"
+                  (click)="restoreOpen.set(true)"
+                >
+                  {{ 'setup.restore.open' | t }}
+                </button>
+              </div>
+            }
+          }
+
+          @case ('database') {
+            @if (status()?.database?.lockedByEnvironment) {
+              <div hlmAlert>
+                <p hlmAlertTitle>{{ 'setup.database.locked' | t }}</p>
+                <p hlmAlertDescription>{{ 'setup.database.lockedHelp' | t }}</p>
+              </div>
+            } @else {
+              <hlm-radio-group class="grid gap-3" name="provider" [(ngModel)]="provider">
+                <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                  <hlm-radio value="SQLITE" class="mt-0.5"
+                    ><hlm-radio-indicator indicator
+                  /></hlm-radio>
+                  <span class="grid gap-1">
+                    <span class="font-medium"
+                      >SQLite
+                      <span hlmBadge variant="secondary">{{
+                        'setup.database.recommended' | t
+                      }}</span></span
+                    >
+                    <span class="text-muted-foreground">{{ 'setup.database.sqliteHelp' | t }}</span>
+                    <span class="font-mono text-xs text-muted-foreground">{{
+                      status()?.database?.defaultSqlitePath
+                    }}</span>
+                  </span>
+                </label>
+                <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                  <hlm-radio value="POSTGRES" class="mt-0.5"
+                    ><hlm-radio-indicator indicator
+                  /></hlm-radio>
+                  <span class="grid gap-1">
+                    <span class="font-medium">PostgreSQL</span>
+                    <span class="text-muted-foreground">{{
+                      'setup.database.postgresHelp' | t
+                    }}</span>
+                  </span>
+                </label>
+              </hlm-radio-group>
+
+              <div hlmAlert>
+                <p hlmAlertTitle>{{ 'setup.database.whenTitle' | t }}</p>
+                <p hlmAlertDescription>{{ 'setup.database.whenHelp' | t }}</p>
+              </div>
+
+              @if (provider === 'POSTGRES') {
+                <hlm-field>
+                  <label hlmFieldLabel for="connection">{{
+                    'setup.database.connectionString' | t
+                  }}</label>
+                  <input
+                    hlmInput
+                    id="connection"
+                    name="connection"
+                    class="font-mono text-xs"
+                    autocomplete="off"
+                    [(ngModel)]="connectionString"
+                    placeholder="Host=localhost;Database=arcanist;Username=arcanist;Password=…"
+                  />
+                  @if (fieldError('database')) {
+                    <hlm-field-error>{{ fieldError('database') }}</hlm-field-error>
+                  }
+                </hlm-field>
+                <div class="flex items-center gap-3">
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    type="button"
+                    [disabled]="busy() || !connectionString"
+                    (click)="testDatabase()"
+                  >
+                    {{ 'setup.database.test' | t }}
+                  </button>
+                  @if (databaseTest(); as test) {
+                    @if (test.success) {
+                      <span
+                        class="flex items-center gap-1 text-sm text-green-600 dark:text-green-400"
+                        ><ng-icon name="lucideCheck" />{{ 'setup.database.ok' | t }}</span
+                      >
+                    } @else {
+                      <span class="text-sm text-destructive">{{ test.error }}</span>
+                    }
+                  }
+                </div>
+              }
+            }
+          }
+
+          @case ('admin') {
+            <div class="grid gap-4 sm:grid-cols-2">
+              <hlm-field>
+                <label hlmFieldLabel for="userName">{{ 'common.userName' | t }}</label>
+                <input
+                  hlmInput
+                  id="userName"
+                  name="userName"
+                  autocomplete="username"
+                  [(ngModel)]="userName"
+                />
+                @if (fieldError('admin.userName')) {
+                  <hlm-field-error>{{ fieldError('admin.userName') }}</hlm-field-error>
+                }
+              </hlm-field>
+              <hlm-field>
+                <label hlmFieldLabel for="displayName">{{ 'common.displayName' | t }}</label>
+                <input
+                  hlmInput
+                  id="displayName"
+                  name="displayName"
+                  autocomplete="name"
+                  [(ngModel)]="displayName"
+                />
+              </hlm-field>
+              <hlm-field>
+                <label hlmFieldLabel for="password">{{ 'common.password' | t }}</label>
+                <input
+                  hlmInput
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="new-password"
+                  [(ngModel)]="password"
+                />
+                <p hlmFieldDescription>{{ 'setup.admin.passwordHelp' | t }}</p>
+                @if (fieldError('admin.password')) {
+                  <hlm-field-error>{{ fieldError('admin.password') }}</hlm-field-error>
+                }
+              </hlm-field>
+              <hlm-field>
+                <label hlmFieldLabel for="passwordConfirmation">{{
+                  'common.confirmPassword' | t
+                }}</label>
+                <input
+                  hlmInput
+                  id="passwordConfirmation"
+                  name="passwordConfirmation"
+                  type="password"
+                  autocomplete="new-password"
+                  [(ngModel)]="passwordConfirmation"
+                />
+              </hlm-field>
             </div>
-          } @else {
-            <hlm-radio-group class="grid gap-3" name="provider" [(ngModel)]="provider">
+          }
+
+          @case ('import') {
+            <hlm-radio-group class="grid gap-3" name="migrateFrom" [(ngModel)]="migrateFrom">
               <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                <hlm-radio value="SQLITE" class="mt-0.5"
+                <hlm-radio value="none" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+                <span class="grid gap-1">
+                  <span class="font-medium">{{ 'setup.import.none' | t }}</span>
+                  <span class="text-muted-foreground">{{ 'setup.import.noneHelp' | t }}</span>
+                </span>
+              </label>
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio value="mstream" class="mt-0.5"
                   ><hlm-radio-indicator indicator
                 /></hlm-radio>
                 <span class="grid gap-1">
-                  <span class="font-medium"
-                    >SQLite
-                    <span hlmBadge variant="secondary">{{
-                      'setup.database.recommended' | t
-                    }}</span></span
-                  >
-                  <span class="text-muted-foreground">{{ 'setup.database.sqliteHelp' | t }}</span>
-                  <span class="font-mono text-xs text-muted-foreground">{{
-                    status()?.database?.defaultSqlitePath
+                  <span class="font-medium">mStream</span>
+                  <span class="text-muted-foreground">{{
+                    (reconfigure ? 'setup.import.mstreamAgainHelp' : 'setup.import.mstreamHelp') | t
                   }}</span>
                 </span>
               </label>
               <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                <hlm-radio value="POSTGRES" class="mt-0.5"
-                  ><hlm-radio-indicator indicator
-                /></hlm-radio>
+                <hlm-radio value="dlna" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
                 <span class="grid gap-1">
-                  <span class="font-medium">PostgreSQL</span>
-                  <span class="text-muted-foreground">{{ 'setup.database.postgresHelp' | t }}</span>
+                  <span class="font-medium">{{ 'setup.import.dlna' | t }}</span>
+                  <span class="text-muted-foreground">{{ 'setup.import.dlnaHelp' | t }}</span>
                 </span>
               </label>
             </hlm-radio-group>
-
-            <div hlmAlert>
-              <p hlmAlertTitle>{{ 'setup.database.whenTitle' | t }}</p>
-              <p hlmAlertDescription>{{ 'setup.database.whenHelp' | t }}</p>
-            </div>
-
-            @if (provider === 'POSTGRES') {
-              <hlm-field>
-                <label hlmFieldLabel for="connection">{{
-                  'setup.database.connectionString' | t
-                }}</label>
-                <input
-                  hlmInput
-                  id="connection"
-                  name="connection"
-                  class="font-mono text-xs"
-                  autocomplete="off"
-                  [(ngModel)]="connectionString"
-                  placeholder="Host=localhost;Database=arcanist;Username=arcanist;Password=…"
-                />
-                @if (fieldError('database')) {
-                  <hlm-field-error>{{ fieldError('database') }}</hlm-field-error>
-                }
-              </hlm-field>
-              <div class="flex items-center gap-3">
+            @if (migrateFrom === 'mstream') {
+              <app-mstream-import
+                [draft]="mstream"
+                [analyzeWith]="analyzeMstream"
+                [loadDirectories]="loadDirectories"
+                [createDirectory]="createDirectory"
+                [setup]="!reconfigure"
+                [sources]="existingSources()"
+                [adminName]="reconfigure ? '' : userName"
+              />
+              @if (!reconfigure) {
+                <p class="text-xs text-muted-foreground">{{ 'setup.import.mstreamWaits' | t }}</p>
+              }
+            }
+            @if (migrateFrom === 'dlna') {
+              @if (dlnaChoice(); as choice) {
+                <div class="grid gap-1 rounded-lg border p-3 text-sm">
+                  <span class="font-medium">{{ choice.serverName }}</span>
+                  <span class="text-muted-foreground">{{ dlnaFolders(choice) }}</span>
+                  <span class="text-xs text-muted-foreground break-all">{{
+                    'setup.import.dlnaInto' | t: { place: dlnaPlace(choice) }
+                  }}</span>
+                  <button
+                    hlmBtn
+                    variant="link"
+                    size="sm"
+                    type="button"
+                    class="justify-self-start px-0"
+                    (click)="dlnaPicking.set(true)"
+                  >
+                    {{ 'common.edit' | t }}
+                  </button>
+                </div>
+              } @else {
                 <button
                   hlmBtn
                   variant="outline"
                   type="button"
-                  [disabled]="busy() || !connectionString"
-                  (click)="testDatabase()"
-                >
-                  {{ 'setup.database.test' | t }}
-                </button>
-                @if (databaseTest(); as test) {
-                  @if (test.success) {
-                    <span class="flex items-center gap-1 text-sm text-green-600 dark:text-green-400"
-                      ><ng-icon name="lucideCheck" />{{ 'setup.database.ok' | t }}</span
-                    >
-                  } @else {
-                    <span class="text-sm text-destructive">{{ test.error }}</span>
-                  }
-                }
-              </div>
-            }
-          }
-        }
-
-        @case ('admin') {
-          <div class="grid gap-4 sm:grid-cols-2">
-            <hlm-field>
-              <label hlmFieldLabel for="userName">{{ 'common.userName' | t }}</label>
-              <input
-                hlmInput
-                id="userName"
-                name="userName"
-                autocomplete="username"
-                [(ngModel)]="userName"
-              />
-              @if (fieldError('admin.userName')) {
-                <hlm-field-error>{{ fieldError('admin.userName') }}</hlm-field-error>
-              }
-            </hlm-field>
-            <hlm-field>
-              <label hlmFieldLabel for="displayName">{{ 'common.displayName' | t }}</label>
-              <input
-                hlmInput
-                id="displayName"
-                name="displayName"
-                autocomplete="name"
-                [(ngModel)]="displayName"
-              />
-            </hlm-field>
-            <hlm-field>
-              <label hlmFieldLabel for="password">{{ 'common.password' | t }}</label>
-              <input
-                hlmInput
-                id="password"
-                name="password"
-                type="password"
-                autocomplete="new-password"
-                [(ngModel)]="password"
-              />
-              <p hlmFieldDescription>{{ 'setup.admin.passwordHelp' | t }}</p>
-              @if (fieldError('admin.password')) {
-                <hlm-field-error>{{ fieldError('admin.password') }}</hlm-field-error>
-              }
-            </hlm-field>
-            <hlm-field>
-              <label hlmFieldLabel for="passwordConfirmation">{{
-                'common.confirmPassword' | t
-              }}</label>
-              <input
-                hlmInput
-                id="passwordConfirmation"
-                name="passwordConfirmation"
-                type="password"
-                autocomplete="new-password"
-                [(ngModel)]="passwordConfirmation"
-              />
-            </hlm-field>
-          </div>
-        }
-
-        @case ('import') {
-          <hlm-radio-group class="grid gap-3" name="migrateFrom" [(ngModel)]="migrateFrom">
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="none" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
-              <span class="grid gap-1">
-                <span class="font-medium">{{ 'setup.import.none' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.import.noneHelp' | t }}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="mstream" class="mt-0.5"
-                ><hlm-radio-indicator indicator
-              /></hlm-radio>
-              <span class="grid gap-1">
-                <span class="font-medium">mStream</span>
-                <span class="text-muted-foreground">{{
-                  (reconfigure ? 'setup.import.mstreamAgainHelp' : 'setup.import.mstreamHelp') | t
-                }}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="dlna" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
-              <span class="grid gap-1">
-                <span class="font-medium">{{ 'setup.import.dlna' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.import.dlnaHelp' | t }}</span>
-              </span>
-            </label>
-          </hlm-radio-group>
-          @if (migrateFrom === 'mstream') {
-            <app-mstream-import
-              [draft]="mstream"
-              [analyzeWith]="analyzeMstream"
-              [loadDirectories]="loadDirectories"
-              [createDirectory]="createDirectory"
-              [setup]="!reconfigure"
-              [sources]="existingSources()"
-              [adminName]="reconfigure ? '' : userName"
-            />
-            @if (!reconfigure) {
-              <p class="text-xs text-muted-foreground">{{ 'setup.import.mstreamWaits' | t }}</p>
-            }
-          }
-          @if (migrateFrom === 'dlna') {
-            @if (dlnaChoice(); as choice) {
-              <div class="grid gap-1 rounded-lg border p-3 text-sm">
-                <span class="font-medium">{{ choice.serverName }}</span>
-                <span class="text-muted-foreground">{{ dlnaFolders(choice) }}</span>
-                <span class="text-xs text-muted-foreground break-all">{{
-                  'setup.import.dlnaInto' | t: { place: dlnaPlace(choice) }
-                }}</span>
-                <button
-                  hlmBtn
-                  variant="link"
-                  size="sm"
-                  type="button"
-                  class="justify-self-start px-0"
+                  class="justify-self-start"
                   (click)="dlnaPicking.set(true)"
                 >
-                  {{ 'common.edit' | t }}
+                  {{ 'setup.import.dlnaPick' | t }}
                 </button>
-              </div>
-            } @else {
-              <button
-                hlmBtn
-                variant="outline"
-                type="button"
-                class="justify-self-start"
-                (click)="dlnaPicking.set(true)"
-              >
-                {{ 'setup.import.dlnaPick' | t }}
-              </button>
-            }
-            <p class="text-xs text-muted-foreground">{{ 'setup.import.dlnaLater' | t }}</p>
-          }
-        }
-
-        @case ('libraries') {
-          @if (existingLibraries().length > 0) {
-            <div class="grid gap-2">
-              <span class="text-sm font-medium">{{ 'setup.libraries.current' | t }}</span>
-              <ul class="grid gap-2">
-                @for (existing of existingLibraries(); track $index) {
-                  <li class="grid gap-1 rounded-lg border bg-muted/40 p-3 text-sm">
-                    <span class="flex flex-wrap items-center gap-2 font-medium">
-                      {{ existing.name }}
-                      <span hlmBadge [variant]="existing.visibleToAll ? 'secondary' : 'outline'">
-                        {{
-                          (existing.visibleToAll ? 'libraries.everyone' : 'libraries.restricted')
-                            | t
-                        }}
-                      </span>
-                    </span>
-                    @for (location of existing.locations; track location) {
-                      <span
-                        class="min-w-0 truncate font-mono text-xs text-muted-foreground"
-                        [title]="location"
-                        >{{ location }}</span
-                      >
-                    }
-                  </li>
-                }
-              </ul>
-              <p class="text-xs text-muted-foreground">{{ 'setup.libraries.currentHelp' | t }}</p>
-            </div>
-          }
-          @for (library of libraries(); track $index; let index = $index) {
-            <div class="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-lg border p-4">
-              @if (library.mstream; as from) {
-                <span hlmBadge variant="secondary" class="justify-self-start">{{
-                  'setup.libraries.fromMstream' | t: { vpath: from.vpath }
-                }}</span>
               }
-              <div class="flex items-end gap-2">
-                <hlm-field class="flex-1">
-                  <label hlmFieldLabel [for]="'library-' + index">{{ 'libraries.name' | t }}</label>
-                  <input
-                    hlmInput
-                    [id]="'library-' + index"
-                    [name]="'library-' + index"
-                    [ngModel]="library.name"
-                    (ngModelChange)="updateLibrary(index, { name: $event })"
-                    [placeholder]="'setup.libraries.namePlaceholder' | t"
-                  />
-                </hlm-field>
-                @if (libraries().length > 1 || existingLibraries().length > 0) {
-                  <button
-                    hlmBtn
-                    variant="ghost"
-                    size="icon"
-                    type="button"
-                    [attr.aria-label]="'common.remove' | t"
-                    (click)="removeLibrary(index)"
-                  >
-                    <ng-icon name="lucideTrash2" />
-                  </button>
-                }
-              </div>
+              <p class="text-xs text-muted-foreground">{{ 'setup.import.dlnaLater' | t }}</p>
+            }
+          }
 
-              <div class="grid grid-cols-[minmax(0,1fr)] gap-1">
-                @for (folder of library.folders; track folder) {
-                  <div
-                    class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5"
-                  >
-                    <span class="min-w-0 truncate font-mono text-xs" [title]="folder">{{
-                      folder
-                    }}</span>
+          @case ('libraries') {
+            @if (existingLibraries().length > 0) {
+              <div class="grid gap-2">
+                <span class="text-sm font-medium">{{ 'setup.libraries.current' | t }}</span>
+                <ul class="grid gap-2">
+                  @for (existing of existingLibraries(); track $index) {
+                    <li class="grid gap-1 rounded-lg border bg-muted/40 p-3 text-sm">
+                      <span class="flex flex-wrap items-center gap-2 font-medium">
+                        {{ existing.name }}
+                        <span hlmBadge [variant]="existing.visibleToAll ? 'secondary' : 'outline'">
+                          {{
+                            (existing.visibleToAll ? 'libraries.everyone' : 'libraries.restricted')
+                              | t
+                          }}
+                        </span>
+                      </span>
+                      @for (location of existing.locations; track location) {
+                        <span
+                          class="min-w-0 truncate font-mono text-xs text-muted-foreground"
+                          [title]="location"
+                          >{{ location }}</span
+                        >
+                      }
+                    </li>
+                  }
+                </ul>
+                <p class="text-xs text-muted-foreground">{{ 'setup.libraries.currentHelp' | t }}</p>
+              </div>
+            }
+            @for (library of libraries(); track $index; let index = $index) {
+              <div class="grid grid-cols-[minmax(0,1fr)] gap-3 rounded-lg border p-4">
+                @if (library.mstream; as from) {
+                  <span hlmBadge variant="secondary" class="justify-self-start">{{
+                    'setup.libraries.fromMstream' | t: { vpath: from.vpath }
+                  }}</span>
+                }
+                <div class="flex items-end gap-2">
+                  <hlm-field class="flex-1">
+                    <label hlmFieldLabel [for]="'library-' + index">{{
+                      'libraries.name' | t
+                    }}</label>
+                    <input
+                      hlmInput
+                      [id]="'library-' + index"
+                      [name]="'library-' + index"
+                      [ngModel]="library.name"
+                      (ngModelChange)="updateLibrary(index, { name: $event })"
+                      [placeholder]="'setup.libraries.namePlaceholder' | t"
+                    />
+                  </hlm-field>
+                  @if (libraries().length > 1 || existingLibraries().length > 0) {
                     <button
                       hlmBtn
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon"
                       type="button"
                       [attr.aria-label]="'common.remove' | t"
-                      (click)="removeFolder(index, folder)"
+                      (click)="removeLibrary(index)"
                     >
-                      <ng-icon name="lucideX" />
+                      <ng-icon name="lucideTrash2" />
                     </button>
-                  </div>
-                }
-                @if (fieldError('libraries[' + index + ']')) {
-                  <p class="text-sm text-destructive">
-                    {{ fieldError('libraries[' + index + ']') }}
-                  </p>
-                }
-              </div>
+                  }
+                </div>
 
-              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="grid grid-cols-[minmax(0,1fr)] gap-1">
+                  @for (folder of library.folders; track folder) {
+                    <div
+                      class="flex items-center justify-between gap-2 rounded-md bg-muted px-3 py-1.5"
+                    >
+                      <span class="min-w-0 truncate font-mono text-xs" [title]="folder">{{
+                        folder
+                      }}</span>
+                      <button
+                        hlmBtn
+                        variant="ghost"
+                        size="icon-sm"
+                        type="button"
+                        [attr.aria-label]="'common.remove' | t"
+                        (click)="removeFolder(index, folder)"
+                      >
+                        <ng-icon name="lucideX" />
+                      </button>
+                    </div>
+                  }
+                  @if (fieldError('libraries[' + index + ']')) {
+                    <p class="text-sm text-destructive">
+                      {{ fieldError('libraries[' + index + ']') }}
+                    </p>
+                  }
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    class="gap-1"
+                    (click)="pickingFor.set(index)"
+                  >
+                    <ng-icon name="lucideFolderPlus" />
+                    {{
+                      (library.folders.length ? 'libraries.changeFolder' : 'libraries.addFolder')
+                        | t
+                    }}
+                  </button>
+                  <label class="flex items-center gap-2 text-sm">
+                    <hlm-switch
+                      [checked]="library.visibleToAll"
+                      (checkedChange)="updateLibrary(index, { visibleToAll: $event })"
+                    />
+                    {{ 'libraries.visibleToAll' | t }}
+                  </label>
+                </div>
+              </div>
+            }
+            <button
+              hlmBtn
+              variant="ghost"
+              type="button"
+              class="justify-self-start gap-1"
+              (click)="addLibrary()"
+            >
+              <ng-icon name="lucidePlus" />
+              {{
+                (existingLibraries().length > 0 && libraries().length === 0
+                  ? 'setup.libraries.add'
+                  : 'setup.libraries.another'
+                ) | t
+              }}
+            </button>
+            <p class="text-xs text-muted-foreground">{{ 'setup.libraries.networkHelp' | t }}</p>
+          }
+
+          @case ('media') {
+            <p class="text-sm">{{ 'setup.media.explanation' | t }}</p>
+            @if (ffmpegDetected(); as detected) {
+              <div hlmAlert>
+                <p hlmAlertDescription class="break-all">
+                  @if (detected.available) {
+                    {{
+                      'setup.media.found'
+                        | t: { version: detected.version ?? '', path: detected.path ?? '' }
+                    }}
+                  } @else {
+                    {{ 'setup.media.notFound' | t }}
+                  }
+                </p>
+              </div>
+            } @else {
+              <hlm-spinner class="size-5" />
+            }
+            <div hlmField>
+              <label hlmFieldLabel for="ffmpeg-path">{{ 'setup.media.path' | t }}</label>
+              <div class="flex gap-2">
+                <input
+                  hlmInput
+                  id="ffmpeg-path"
+                  class="min-w-0 flex-1"
+                  [(ngModel)]="ffmpegPath"
+                  (ngModelChange)="ffmpegCheck.set(null)"
+                  [placeholder]="'setup.media.pathPlaceholder' | t"
+                />
                 <button
                   hlmBtn
                   variant="outline"
-                  size="sm"
                   type="button"
-                  class="gap-1"
-                  (click)="pickingFor.set(index)"
+                  [disabled]="busy() || !ffmpegPath.trim()"
+                  (click)="checkFfmpeg()"
                 >
-                  <ng-icon name="lucideFolderPlus" />
-                  {{
-                    (library.folders.length ? 'libraries.changeFolder' : 'libraries.addFolder') | t
-                  }}
+                  {{ 'setup.media.check' | t }}
                 </button>
-                <label class="flex items-center gap-2 text-sm">
-                  <hlm-switch
-                    [checked]="library.visibleToAll"
-                    (checkedChange)="updateLibrary(index, { visibleToAll: $event })"
-                  />
-                  {{ 'libraries.visibleToAll' | t }}
-                </label>
               </div>
+              <p hlmFieldDescription>{{ 'setup.media.pathHelp' | t }}</p>
+              @if (ffmpegCheck(); as check) {
+                <p class="text-sm" [class.text-destructive]="!check.available">
+                  {{
+                    check.available
+                      ? ('setup.media.works' | t: { version: check.version ?? '' })
+                      : ('errors.not_ffmpeg' | t)
+                  }}
+                </p>
+              }
+              @if (fieldError('ffmpegPath'); as message) {
+                <p class="text-sm text-destructive">{{ message }}</p>
+              }
             </div>
           }
+
+          @case ('ratings') {
+            <p class="text-sm">{{ 'setup.ratings.explanation' | t }}</p>
+            <hlm-radio-group class="grid gap-3" name="ratingMode" [(ngModel)]="ratingMode">
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio value="STAR" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+                <span class="grid gap-1">
+                  <span class="font-medium">★ {{ 'setup.ratings.star' | t }}</span>
+                  <span class="text-muted-foreground">{{ 'setup.ratings.starHelp' | t }}</span>
+                </span>
+              </label>
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio value="STARS" class="mt-0.5"
+                  ><hlm-radio-indicator indicator
+                /></hlm-radio>
+                <span class="grid gap-1">
+                  <span class="font-medium">★★★★★ {{ 'setup.ratings.stars' | t }}</span>
+                  <span class="text-muted-foreground">{{ 'setup.ratings.starsHelp' | t }}</span>
+                </span>
+              </label>
+            </hlm-radio-group>
+            <p class="text-xs text-muted-foreground">{{ 'setup.ratings.later' | t }}</p>
+          }
+
+          @case ('privacy') {
+            <div class="grid gap-2">
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-checkbox
+                  class="mt-0.5"
+                  [checked]="noTelemetry"
+                  (checkedChange)="setNoTelemetry($event)"
+                />
+                <span class="grid gap-0.5">
+                  <span class="font-medium">{{ 'setup.privacy.noTelemetry' | t }}</span>
+                  <span class="text-muted-foreground">{{
+                    'setup.privacy.noTelemetryHelp' | t
+                  }}</span>
+                </span>
+              </label>
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-checkbox
+                  class="mt-0.5"
+                  [checked]="externalServices === 'NONE'"
+                  (checkedChange)="setExternal('NONE', $event)"
+                />
+                <span class="grid gap-0.5">
+                  <span class="font-medium">{{ 'setup.privacy.noExternal' | t }}</span>
+                  <span class="text-muted-foreground">{{
+                    'setup.privacy.noExternalHelp' | t
+                  }}</span>
+                </span>
+              </label>
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-checkbox
+                  class="mt-0.5"
+                  [checked]="externalServices === 'ULTIMATE_CLOUD_ONLY'"
+                  (checkedChange)="setExternal('ULTIMATE_CLOUD_ONLY', $event)"
+                />
+                <span class="grid gap-0.5">
+                  <span class="font-medium">{{ 'setup.privacy.cloudOnly' | t }}</span>
+                  <span class="text-muted-foreground">{{ 'setup.privacy.cloudOnlyHelp' | t }}</span>
+                </span>
+              </label>
+              <p class="text-xs text-muted-foreground">
+                {{ 'setup.privacy.streamingUnaffected' | t }}
+              </p>
+            </div>
+            <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
+            <hlm-radio-group
+              class="grid gap-3"
+              name="statistics"
+              [(ngModel)]="shareStatistics"
+              [disabled]="statisticsForced()"
+            >
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio value="yes" class="mt-0.5" [disabled]="statisticsForced()"
+                  ><hlm-radio-indicator indicator
+                /></hlm-radio>
+                <span>{{ 'setup.privacy.yes' | t }}</span>
+              </label>
+              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <hlm-radio value="no" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+                <span>{{ 'setup.privacy.no' | t }}</span>
+              </label>
+            </hlm-radio-group>
+            <div class="grid gap-2">
+              <p class="text-sm font-medium">{{ 'setup.privacy.online' | t }}</p>
+              <p class="text-sm text-muted-foreground">
+                {{ 'setup.privacy.onlineExplanation' | t }}
+              </p>
+              @for (key of onlineServiceKeys; track key) {
+                <label class="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
+                  <span class="grid gap-0.5">
+                    <span class="font-medium">{{
+                      'setup.privacy.services.' + key + '.name' | t
+                    }}</span>
+                    <span class="text-muted-foreground">{{
+                      'setup.privacy.services.' + key + '.help' | t
+                    }}</span>
+                  </span>
+                  <hlm-switch
+                    [checked]="onlineServices[key]"
+                    [disabled]="externalServices !== 'ALL'"
+                    (checkedChange)="onlineServices[key] = $event"
+                    [aria-label]="'setup.privacy.services.' + key + '.name' | t"
+                  />
+                </label>
+              }
+            </div>
+            <p class="text-xs text-muted-foreground">{{ 'setup.privacy.later' | t }}</p>
+          }
+
+          @case ('users') {
+            <app-setup-users
+              [draft]="extras"
+              [adminName]="reconfigure ? null : userName.trim()"
+              [existing]="existingUsers().concat(importedUsers())"
+              [restricted]="restrictedLibraries()"
+            />
+          }
+
+          @case ('p2p') {
+            <app-setup-p2p [draft]="extras" />
+          }
+
+          @case ('addons') {
+            <app-setup-addons [draft]="extras" />
+          }
+
+          @case ('review') {
+            <dl class="grid gap-3 text-sm sm:grid-cols-[10rem_1fr]">
+              @if (!reconfigure) {
+                <dt class="text-muted-foreground">{{ 'setup.review.database' | t }}</dt>
+                <dd class="flex items-center justify-between gap-2">
+                  <span>{{
+                    status()?.database?.lockedByEnvironment
+                      ? ('setup.database.locked' | t)
+                      : provider === 'SQLITE'
+                        ? 'SQLite'
+                        : 'PostgreSQL'
+                  }}</span>
+                  <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('database')">
+                    {{ 'common.edit' | t }}
+                  </button>
+                </dd>
+                <dt class="text-muted-foreground">{{ 'setup.review.admin' | t }}</dt>
+                <dd class="flex items-center justify-between gap-2">
+                  <span>{{ userName }}</span>
+                  <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('admin')">
+                    {{ 'common.edit' | t }}
+                  </button>
+                </dd>
+                <dt class="text-muted-foreground">{{ 'setup.review.import' | t }}</dt>
+                <dd class="flex items-center justify-between gap-2">
+                  <span>{{
+                    migrateFrom === 'mstream'
+                      ? ((mstream.importUsers
+                          ? 'setup.review.mstreamWithUsers'
+                          : 'setup.review.mstreamWithoutUsers'
+                        ) | t: { count: mstreamLibraries().length })
+                      : ('setup.review.importNone' | t)
+                  }}</span>
+                  <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('import')">
+                    {{ 'common.edit' | t }}
+                  </button>
+                </dd>
+              }
+              <dt class="text-muted-foreground">{{ 'setup.review.libraries' | t }}</dt>
+              <dd class="flex items-start justify-between gap-2">
+                <ul class="grid gap-1">
+                  @for (existing of existingLibraries(); track $index) {
+                    <li class="text-muted-foreground">
+                      {{ existing.name }} · {{ 'setup.review.existing' | t }}
+                    </li>
+                  }
+                  @for (library of libraries(); track $index) {
+                    @if (library.folders.length) {
+                      <li>
+                        {{ library.name }} ·
+                        {{ 'setup.review.folders' | t: { count: library.folders.length } }}
+                      </li>
+                    }
+                  }
+                  @if (existingLibraries().length === 0 && newLibraryCount() === 0) {
+                    <li class="text-muted-foreground">{{ 'setup.review.noLibraries' | t }}</li>
+                  }
+                </ul>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('libraries')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">ffmpeg</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span class="min-w-0 break-all">{{
+                  ffmpegPath.trim() ||
+                    (ffmpegDetected()?.available
+                      ? ffmpegDetected()?.path
+                      : ('setup.review.ffmpegLater' | t))
+                }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('media')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.ratings' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{
+                  'setup.ratings.' + (ratingMode === 'STARS' ? 'stars' : 'star') | t
+                }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('ratings')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.privacy.online' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{ enabledOnlineServices() || ('setup.review.noOnlineServices' | t) }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.statistics' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{ (shareStatistics === 'yes' ? 'common.yes' : 'common.no') | t }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.privacy' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{ privacySummary() || ('setup.review.privacyDefault' | t) }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.users' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{ usersSummary() || ('setup.review.noUsers' | t) }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('users')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.p2p' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{ (extras.p2pEnabled ? 'setup.review.on' : 'setup.review.off') | t }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('p2p')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+              <dt class="text-muted-foreground">{{ 'setup.review.addons' | t }}</dt>
+              <dd class="flex items-center justify-between gap-2">
+                <span>{{ addonsSummary() || ('setup.review.noAddons' | t) }}</span>
+                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('addons')">
+                  {{ 'common.edit' | t }}
+                </button>
+              </dd>
+            </dl>
+            <p class="text-sm text-muted-foreground">
+              {{ (reconfigure ? 'setup.reconfigure.afterwards' : 'setup.review.afterwards') | t }}
+            </p>
+          }
+
+          @case ('progress') {
+            @if (extrasFailures().length > 0) {
+              <div hlmAlert variant="destructive">
+                <p hlmAlertDescription class="grid gap-1">
+                  <span>{{ 'setup.progress.extrasFailed' | t }}</span>
+                  @for (failure of extrasFailures(); track $index) {
+                    <span>{{ failure.what }}: {{ i18n.error(failure.code) }}</span>
+                  }
+                </p>
+              </div>
+            }
+            <section class="grid gap-3">
+              <h2 class="text-sm font-medium">{{ 'setup.progress.libraries' | t }}</h2>
+              @for (job of scanJobs(); track job.id) {
+                <div class="grid gap-2 rounded-lg border p-3 text-sm">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="font-medium">{{ libraryNames()[job.libraryId] }}</span>
+                    @if (job.status === 'QUEUED' || job.status === 'RUNNING') {
+                      <span class="flex items-center gap-2 text-muted-foreground">
+                        <hlm-spinner class="size-4" />
+                        {{
+                          (job.status === 'QUEUED'
+                            ? 'scan.queued'
+                            : 'scan.phase.' + (job.progress?.phase ?? 'DISCOVERING')
+                          ) | t
+                        }}
+                      </span>
+                    } @else {
+                      <span
+                        hlmBadge
+                        [variant]="job.status === 'COMPLETED' ? 'secondary' : 'destructive'"
+                        >{{ 'scan.status.' + job.status | t }}</span
+                      >
+                    }
+                  </div>
+                  @if (job.status === 'RUNNING') {
+                    @if (job.progress; as progress) {
+                      <span class="text-xs text-muted-foreground">
+                        {{
+                          'scan.progress'
+                            | t
+                              : {
+                                  read: (progress.filesRead | count),
+                                  total: (progress.filesToRead | count),
+                                  found: (progress.filesFound | count),
+                                }
+                        }}
+                      </span>
+                    }
+                    <hlm-progress [value]="scanPercent(job)"
+                      ><hlm-progress-indicator
+                    /></hlm-progress>
+                  } @else if (job.status !== 'QUEUED') {
+                    <span class="text-xs text-muted-foreground">{{
+                      'scan.summary'
+                        | t
+                          : {
+                              seen: (job.filesSeen | count),
+                              added: (job.filesAdded | count),
+                              updated: (job.filesUpdated | count),
+                              missing: (job.filesMissing | count),
+                            }
+                    }}</span>
+                  }
+                  @if (job.errorCode) {
+                    <span class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</span>
+                  }
+                </div>
+              } @empty {
+                <hlm-spinner class="size-5" />
+              }
+            </section>
+
+            @if (importJob(); as job) {
+              <section class="grid gap-2">
+                <h2 class="text-sm font-medium">{{ 'setup.progress.mstream' | t }}</h2>
+                <div class="grid gap-1 rounded-lg border p-3 text-sm">
+                  <p class="flex flex-wrap items-center gap-2">
+                    @if (job.status === 'WAITING' || job.status === 'RUNNING') {
+                      <hlm-spinner class="size-4" />
+                    }
+                    <span
+                      hlmBadge
+                      [variant]="job.status === 'FAILED' ? 'destructive' : 'secondary'"
+                      >{{ 'mstream.status.' + job.status | t }}</span
+                    >
+                    <span class="min-w-0 text-xs break-all text-muted-foreground">{{
+                      job.source
+                    }}</span>
+                  </p>
+                  <p class="text-xs text-muted-foreground">
+                    {{
+                      'setup.progress.created'
+                        | t: { libraries: job.librariesCreated, users: job.usersCreated }
+                    }}
+                  </p>
+                  @if (job.status === 'WAITING') {
+                    <p class="text-xs text-muted-foreground">{{ 'mstream.history.waiting' | t }}</p>
+                  } @else if (job.status === 'RUNNING') {
+                    <p class="text-xs text-muted-foreground">{{ 'mstream.history.running' | t }}</p>
+                  } @else if (job.status === 'COMPLETED') {
+                    @if (job.kind === 'SERVER') {
+                      <p class="text-xs text-muted-foreground">
+                        {{ 'mstream.history.server' | t }}
+                      </p>
+                    } @else {
+                      <p class="text-xs text-muted-foreground">
+                        {{
+                          'setup.progress.brought'
+                            | t
+                              : {
+                                  playlists: job.playlists,
+                                  ratings: job.ratings,
+                                  plays: job.plays,
+                                  unmatched: job.unmatched,
+                                }
+                        }}
+                      </p>
+                    }
+                  }
+                  @if (job.errorCode) {
+                    <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
+                  }
+                </div>
+              </section>
+            }
+
+            <div hlmAlert>
+              <p hlmAlertDescription>
+                {{ (finished() ? 'setup.progress.done' : 'setup.progress.background') | t }}
+              </p>
+            </div>
+          }
+        }
+
+        @if (error()) {
+          <div hlmAlert variant="destructive">
+            <p hlmAlertDescription>{{ error() }}</p>
+          </div>
+        }
+      </div>
+
+      <div hlmCardFooter class="justify-between gap-2">
+        @if (step() === 'progress') {
+          <span></span>
+          <button
+            hlmBtn
+            type="button"
+            [variant]="finished() ? 'default' : 'outline'"
+            [disabled]="importing && !finished()"
+            [title]="importing && !finished() ? ('setup.progress.migrationWait' | t) : ''"
+            (click)="openPanel()"
+          >
+            {{ 'setup.progress.open' | t }}
+          </button>
+        } @else {
           <button
             hlmBtn
             variant="ghost"
             type="button"
-            class="justify-self-start gap-1"
-            (click)="addLibrary()"
+            [disabled]="stepIndex() === 0 || busy()"
+            (click)="back()"
           >
-            <ng-icon name="lucidePlus" />
-            {{
-              (existingLibraries().length > 0 && libraries().length === 0
-                ? 'setup.libraries.add'
-                : 'setup.libraries.another'
-              ) | t
-            }}
+            {{ 'common.back' | t }}
           </button>
-          <p class="text-xs text-muted-foreground">{{ 'setup.libraries.networkHelp' | t }}</p>
-        }
-
-        @case ('media') {
-          <p class="text-sm">{{ 'setup.media.explanation' | t }}</p>
-          @if (ffmpegDetected(); as detected) {
-            <div hlmAlert>
-              <p hlmAlertDescription class="break-all">
-                @if (detected.available) {
-                  {{
-                    'setup.media.found'
-                      | t: { version: detected.version ?? '', path: detected.path ?? '' }
-                  }}
-                } @else {
-                  {{ 'setup.media.notFound' | t }}
-                }
-              </p>
-            </div>
+          @if (step() === 'review') {
+            <button hlmBtn type="button" [disabled]="busy()" (click)="finish()">
+              @if (busy()) {
+                <hlm-spinner class="size-4" />
+              }
+              {{ 'setup.finish' | t }}
+            </button>
           } @else {
-            <hlm-spinner class="size-5" />
+            <button hlmBtn type="button" [disabled]="busy() || !status()" (click)="next()">
+              {{ 'common.next' | t }}
+            </button>
           }
-          <div hlmField>
-            <label hlmFieldLabel for="ffmpeg-path">{{ 'setup.media.path' | t }}</label>
-            <div class="flex gap-2">
-              <input
-                hlmInput
-                id="ffmpeg-path"
-                class="min-w-0 flex-1"
-                [(ngModel)]="ffmpegPath"
-                (ngModelChange)="ffmpegCheck.set(null)"
-                [placeholder]="'setup.media.pathPlaceholder' | t"
-              />
-              <button
-                hlmBtn
-                variant="outline"
-                type="button"
-                [disabled]="busy() || !ffmpegPath.trim()"
-                (click)="checkFfmpeg()"
-              >
-                {{ 'setup.media.check' | t }}
-              </button>
-            </div>
-            <p hlmFieldDescription>{{ 'setup.media.pathHelp' | t }}</p>
-            @if (ffmpegCheck(); as check) {
-              <p class="text-sm" [class.text-destructive]="!check.available">
-                {{
-                  check.available
-                    ? ('setup.media.works' | t: { version: check.version ?? '' })
-                    : ('errors.not_ffmpeg' | t)
-                }}
-              </p>
-            }
-            @if (fieldError('ffmpegPath'); as message) {
-              <p class="text-sm text-destructive">{{ message }}</p>
-            }
-          </div>
         }
-
-        @case ('ratings') {
-          <p class="text-sm">{{ 'setup.ratings.explanation' | t }}</p>
-          <hlm-radio-group class="grid gap-3" name="ratingMode" [(ngModel)]="ratingMode">
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="STAR" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
-              <span class="grid gap-1">
-                <span class="font-medium">★ {{ 'setup.ratings.star' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.ratings.starHelp' | t }}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="STARS" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
-              <span class="grid gap-1">
-                <span class="font-medium">★★★★★ {{ 'setup.ratings.stars' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.ratings.starsHelp' | t }}</span>
-              </span>
-            </label>
-          </hlm-radio-group>
-          <p class="text-xs text-muted-foreground">{{ 'setup.ratings.later' | t }}</p>
-        }
-
-        @case ('privacy') {
-          <div class="grid gap-2">
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-checkbox
-                class="mt-0.5"
-                [checked]="noTelemetry"
-                (checkedChange)="setNoTelemetry($event)"
-              />
-              <span class="grid gap-0.5">
-                <span class="font-medium">{{ 'setup.privacy.noTelemetry' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.privacy.noTelemetryHelp' | t }}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-checkbox
-                class="mt-0.5"
-                [checked]="externalServices === 'NONE'"
-                (checkedChange)="setExternal('NONE', $event)"
-              />
-              <span class="grid gap-0.5">
-                <span class="font-medium">{{ 'setup.privacy.noExternal' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.privacy.noExternalHelp' | t }}</span>
-              </span>
-            </label>
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-checkbox
-                class="mt-0.5"
-                [checked]="externalServices === 'ULTIMATE_CLOUD_ONLY'"
-                (checkedChange)="setExternal('ULTIMATE_CLOUD_ONLY', $event)"
-              />
-              <span class="grid gap-0.5">
-                <span class="font-medium">{{ 'setup.privacy.cloudOnly' | t }}</span>
-                <span class="text-muted-foreground">{{ 'setup.privacy.cloudOnlyHelp' | t }}</span>
-              </span>
-            </label>
-            <p class="text-xs text-muted-foreground">
-              {{ 'setup.privacy.streamingUnaffected' | t }}
-            </p>
-          </div>
-          <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
-          <hlm-radio-group
-            class="grid gap-3"
-            name="statistics"
-            [(ngModel)]="shareStatistics"
-            [disabled]="statisticsForced()"
-          >
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="yes" class="mt-0.5" [disabled]="statisticsForced()"
-                ><hlm-radio-indicator indicator
-              /></hlm-radio>
-              <span>{{ 'setup.privacy.yes' | t }}</span>
-            </label>
-            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-              <hlm-radio value="no" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
-              <span>{{ 'setup.privacy.no' | t }}</span>
-            </label>
-          </hlm-radio-group>
-          <div class="grid gap-2">
-            <p class="text-sm font-medium">{{ 'setup.privacy.online' | t }}</p>
-            <p class="text-sm text-muted-foreground">{{ 'setup.privacy.onlineExplanation' | t }}</p>
-            @for (key of onlineServiceKeys; track key) {
-              <label class="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
-                <span class="grid gap-0.5">
-                  <span class="font-medium">{{
-                    'setup.privacy.services.' + key + '.name' | t
-                  }}</span>
-                  <span class="text-muted-foreground">{{
-                    'setup.privacy.services.' + key + '.help' | t
-                  }}</span>
-                </span>
-                <hlm-switch
-                  [checked]="onlineServices[key]"
-                  [disabled]="externalServices !== 'ALL'"
-                  (checkedChange)="onlineServices[key] = $event"
-                  [aria-label]="'setup.privacy.services.' + key + '.name' | t"
-                />
-              </label>
-            }
-          </div>
-          <p class="text-xs text-muted-foreground">{{ 'setup.privacy.later' | t }}</p>
-        }
-
-        @case ('users') {
-          <app-setup-users
-            [draft]="extras"
-            [adminName]="reconfigure ? null : userName.trim()"
-            [existing]="existingUsers().concat(importedUsers())"
-            [restricted]="restrictedLibraries()"
-          />
-        }
-
-        @case ('p2p') {
-          <app-setup-p2p [draft]="extras" />
-        }
-
-        @case ('addons') {
-          <app-setup-addons [draft]="extras" />
-        }
-
-        @case ('review') {
-          <dl class="grid gap-3 text-sm sm:grid-cols-[10rem_1fr]">
-            @if (!reconfigure) {
-              <dt class="text-muted-foreground">{{ 'setup.review.database' | t }}</dt>
-              <dd class="flex items-center justify-between gap-2">
-                <span>{{
-                  status()?.database?.lockedByEnvironment
-                    ? ('setup.database.locked' | t)
-                    : provider === 'SQLITE'
-                      ? 'SQLite'
-                      : 'PostgreSQL'
-                }}</span>
-                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('database')">
-                  {{ 'common.edit' | t }}
-                </button>
-              </dd>
-              <dt class="text-muted-foreground">{{ 'setup.review.admin' | t }}</dt>
-              <dd class="flex items-center justify-between gap-2">
-                <span>{{ userName }}</span>
-                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('admin')">
-                  {{ 'common.edit' | t }}
-                </button>
-              </dd>
-              <dt class="text-muted-foreground">{{ 'setup.review.import' | t }}</dt>
-              <dd class="flex items-center justify-between gap-2">
-                <span>{{
-                  migrateFrom === 'mstream'
-                    ? ((mstream.importUsers
-                        ? 'setup.review.mstreamWithUsers'
-                        : 'setup.review.mstreamWithoutUsers'
-                      ) | t: { count: mstreamLibraries().length })
-                    : ('setup.review.importNone' | t)
-                }}</span>
-                <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('import')">
-                  {{ 'common.edit' | t }}
-                </button>
-              </dd>
-            }
-            <dt class="text-muted-foreground">{{ 'setup.review.libraries' | t }}</dt>
-            <dd class="flex items-start justify-between gap-2">
-              <ul class="grid gap-1">
-                @for (existing of existingLibraries(); track $index) {
-                  <li class="text-muted-foreground">
-                    {{ existing.name }} · {{ 'setup.review.existing' | t }}
-                  </li>
-                }
-                @for (library of libraries(); track $index) {
-                  @if (library.folders.length) {
-                    <li>
-                      {{ library.name }} ·
-                      {{ 'setup.review.folders' | t: { count: library.folders.length } }}
-                    </li>
-                  }
-                }
-                @if (existingLibraries().length === 0 && newLibraryCount() === 0) {
-                  <li class="text-muted-foreground">{{ 'setup.review.noLibraries' | t }}</li>
-                }
-              </ul>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('libraries')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">ffmpeg</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span class="min-w-0 break-all">{{
-                ffmpegPath.trim() ||
-                  (ffmpegDetected()?.available
-                    ? ffmpegDetected()?.path
-                    : ('setup.review.ffmpegLater' | t))
-              }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('media')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.ratings' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ 'setup.ratings.' + (ratingMode === 'STARS' ? 'stars' : 'star') | t }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('ratings')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.privacy.online' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ enabledOnlineServices() || ('setup.review.noOnlineServices' | t) }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.statistics' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ (shareStatistics === 'yes' ? 'common.yes' : 'common.no') | t }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.privacy' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ privacySummary() || ('setup.review.privacyDefault' | t) }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('privacy')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.users' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ usersSummary() || ('setup.review.noUsers' | t) }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('users')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.p2p' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ (extras.p2pEnabled ? 'setup.review.on' : 'setup.review.off') | t }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('p2p')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-            <dt class="text-muted-foreground">{{ 'setup.review.addons' | t }}</dt>
-            <dd class="flex items-center justify-between gap-2">
-              <span>{{ addonsSummary() || ('setup.review.noAddons' | t) }}</span>
-              <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('addons')">
-                {{ 'common.edit' | t }}
-              </button>
-            </dd>
-          </dl>
-          <p class="text-sm text-muted-foreground">
-            {{ (reconfigure ? 'setup.reconfigure.afterwards' : 'setup.review.afterwards') | t }}
-          </p>
-        }
-
-        @case ('progress') {
-          @if (extrasFailures().length > 0) {
-            <div hlmAlert variant="destructive">
-              <p hlmAlertDescription class="grid gap-1">
-                <span>{{ 'setup.progress.extrasFailed' | t }}</span>
-                @for (failure of extrasFailures(); track $index) {
-                  <span>{{ failure.what }}: {{ i18n.error(failure.code) }}</span>
-                }
-              </p>
-            </div>
-          }
-          <section class="grid gap-3">
-            <h2 class="text-sm font-medium">{{ 'setup.progress.libraries' | t }}</h2>
-            @for (job of scanJobs(); track job.id) {
-              <div class="grid gap-2 rounded-lg border p-3 text-sm">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <span class="font-medium">{{ libraryNames()[job.libraryId] }}</span>
-                  @if (job.status === 'QUEUED' || job.status === 'RUNNING') {
-                    <span class="flex items-center gap-2 text-muted-foreground">
-                      <hlm-spinner class="size-4" />
-                      {{
-                        (job.status === 'QUEUED'
-                          ? 'scan.queued'
-                          : 'scan.phase.' + (job.progress?.phase ?? 'DISCOVERING')
-                        ) | t
-                      }}
-                    </span>
-                  } @else {
-                    <span
-                      hlmBadge
-                      [variant]="job.status === 'COMPLETED' ? 'secondary' : 'destructive'"
-                      >{{ 'scan.status.' + job.status | t }}</span
-                    >
-                  }
-                </div>
-                @if (job.status === 'RUNNING') {
-                  @if (job.progress; as progress) {
-                    <span class="text-xs text-muted-foreground">
-                      {{
-                        'scan.progress'
-                          | t
-                            : {
-                                read: (progress.filesRead | count),
-                                total: (progress.filesToRead | count),
-                                found: (progress.filesFound | count),
-                              }
-                      }}
-                    </span>
-                  }
-                  <hlm-progress [value]="scanPercent(job)"><hlm-progress-indicator /></hlm-progress>
-                } @else if (job.status !== 'QUEUED') {
-                  <span class="text-xs text-muted-foreground">{{
-                    'scan.summary'
-                      | t
-                        : {
-                            seen: (job.filesSeen | count),
-                            added: (job.filesAdded | count),
-                            updated: (job.filesUpdated | count),
-                            missing: (job.filesMissing | count),
-                          }
-                  }}</span>
-                }
-                @if (job.errorCode) {
-                  <span class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</span>
-                }
-              </div>
-            } @empty {
-              <hlm-spinner class="size-5" />
-            }
-          </section>
-
-          @if (importJob(); as job) {
-            <section class="grid gap-2">
-              <h2 class="text-sm font-medium">{{ 'setup.progress.mstream' | t }}</h2>
-              <div class="grid gap-1 rounded-lg border p-3 text-sm">
-                <p class="flex flex-wrap items-center gap-2">
-                  @if (job.status === 'WAITING' || job.status === 'RUNNING') {
-                    <hlm-spinner class="size-4" />
-                  }
-                  <span
-                    hlmBadge
-                    [variant]="job.status === 'FAILED' ? 'destructive' : 'secondary'"
-                    >{{ 'mstream.status.' + job.status | t }}</span
-                  >
-                  <span class="min-w-0 text-xs break-all text-muted-foreground">{{
-                    job.source
-                  }}</span>
-                </p>
-                <p class="text-xs text-muted-foreground">
-                  {{
-                    'setup.progress.created'
-                      | t: { libraries: job.librariesCreated, users: job.usersCreated }
-                  }}
-                </p>
-                @if (job.status === 'WAITING') {
-                  <p class="text-xs text-muted-foreground">{{ 'mstream.history.waiting' | t }}</p>
-                } @else if (job.status === 'RUNNING') {
-                  <p class="text-xs text-muted-foreground">{{ 'mstream.history.running' | t }}</p>
-                } @else if (job.status === 'COMPLETED') {
-                  @if (job.kind === 'SERVER') {
-                    <p class="text-xs text-muted-foreground">
-                      {{ 'mstream.history.server' | t }}
-                    </p>
-                  } @else {
-                    <p class="text-xs text-muted-foreground">
-                      {{
-                        'setup.progress.brought'
-                          | t
-                            : {
-                                playlists: job.playlists,
-                                ratings: job.ratings,
-                                plays: job.plays,
-                                unmatched: job.unmatched,
-                              }
-                      }}
-                    </p>
-                  }
-                }
-                @if (job.errorCode) {
-                  <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
-                }
-              </div>
-            </section>
-          }
-
-          <div hlmAlert>
-            <p hlmAlertDescription>
-              {{ (finished() ? 'setup.progress.done' : 'setup.progress.background') | t }}
-            </p>
-          </div>
-        }
-      }
-
-      @if (error()) {
-        <div hlmAlert variant="destructive">
-          <p hlmAlertDescription>{{ error() }}</p>
-        </div>
-      }
-    </div>
-
-    <div hlmCardFooter class="justify-between gap-2">
-      @if (step() === 'progress') {
-        <span></span>
-        <button
-          hlmBtn
-          type="button"
-          [variant]="finished() ? 'default' : 'outline'"
-          [disabled]="importing && !finished()"
-          [title]="importing && !finished() ? ('setup.progress.migrationWait' | t) : ''"
-          (click)="openPanel()"
-        >
-          {{ 'setup.progress.open' | t }}
-        </button>
-      } @else {
-        <button
-          hlmBtn
-          variant="ghost"
-          type="button"
-          [disabled]="stepIndex() === 0 || busy()"
-          (click)="back()"
-        >
-          {{ 'common.back' | t }}
-        </button>
-        @if (step() === 'review') {
-          <button hlmBtn type="button" [disabled]="busy()" (click)="finish()">
-            @if (busy()) {
-              <hlm-spinner class="size-4" />
-            }
-            {{ 'setup.finish' | t }}
-          </button>
-        } @else {
-          <button hlmBtn type="button" [disabled]="busy() || !status()" (click)="next()">
-            {{ 'common.next' | t }}
-          </button>
-        }
-      }
-    </div>
-  </section>
+      </div>
+    </section>
+  }
 </main>
 
 <hlm-dialog [state]="pickingFor() !== null ? 'open' : 'closed'" (closed)="pickingFor.set(null)">
@@ -926,5 +963,21 @@
       (chosen)="chooseDlna($event)"
       (cancelled)="dlnaPicking.set(false)"
     />
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<hlm-dialog [state]="restoreOpen() ? 'open' : 'closed'" (closed)="restoreOpen.set(false)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    @if (restoreOpen()) {
+      <app-setup-restore
+        [loadDirectories]="loadDirectories"
+        [createDirectory]="createDirectory"
+        (started)="restoreStarted()"
+        (cancelled)="restoreOpen.set(false)"
+      />
+    }
   </hlm-dialog-content>
 </hlm-dialog>

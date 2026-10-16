@@ -63,6 +63,7 @@ import {
   applySetupExtras,
 } from './setup-extras';
 import { SetupAddonsStep, SetupP2PStep, SetupUsersStep } from './setup-steps';
+import { SetupRestoreDialog, SetupRestoring } from './setup-restore';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { CountPipe } from '../../shared/format';
 import {
@@ -122,6 +123,8 @@ const PROGRESS_MS = 1500;
     SetupUsersStep,
     SetupP2PStep,
     SetupAddonsStep,
+    SetupRestoreDialog,
+    SetupRestoring,
     DlnaImportForm,
     HlmAlertImports,
     HlmBadgeImports,
@@ -155,6 +158,14 @@ export class SetupPage implements OnInit {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly fieldErrors = signal<Record<string, string[]>>({});
+  /** Restoring a server from a backup instead of setting it up: the dialog, then the wait while it restarts. */
+  protected readonly restoreOpen = signal(false);
+  protected readonly restoring = signal(false);
+
+  protected restoreStarted(): void {
+    this.restoreOpen.set(false);
+    this.restoring.set(true);
+  }
 
   protected readonly steps = computed<Step[]>(() => {
     if (this.reconfigure)

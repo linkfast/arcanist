@@ -2,6 +2,7 @@ import { Component, computed, effect, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideArchive,
   lucideCast,
   lucideChartColumn,
   lucideCloud,
@@ -41,6 +42,7 @@ import { ThemeSelect } from '../shared/theme-select';
   ],
   providers: [
     provideIcons({
+      lucideArchive,
       lucideCast,
       lucideChartColumn,
       lucideCloud,
@@ -177,6 +179,12 @@ export class Shell {
         path: '/database',
         label: 'nav.database',
         icon: 'lucideDatabase',
+        visible: this.auth.isAdmin(),
+      },
+      {
+        path: '/backups',
+        label: 'nav.backups',
+        icon: 'lucideArchive',
         visible: this.auth.isAdmin(),
       },
       {

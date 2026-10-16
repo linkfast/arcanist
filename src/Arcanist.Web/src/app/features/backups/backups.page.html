@@ -1,0 +1,598 @@
+<header class="mb-6">
+  <h1 class="text-2xl font-semibold">{{ 'backups.title' | t }}</h1>
+  <p class="text-sm text-muted-foreground">{{ 'backups.subtitle' | t }}</p>
+</header>
+
+@if (!loaded()) {
+  <div class="flex justify-center py-12"><hlm-spinner /></div>
+} @else {
+  <div class="grid gap-6">
+    <!-- Backups -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'backups.list.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'backups.list.description' | t }}</p>
+        <div hlmCardAction>
+          <button
+            hlmBtn
+            type="button"
+            class="gap-1"
+            [disabled]="destinations().length === 0"
+            [title]="destinations().length === 0 ? ('backups.list.needsDestination' | t) : ''"
+            (click)="openCreate()"
+          >
+            <ng-icon name="lucidePlus" />
+            {{ 'backups.list.create' | t }}
+          </button>
+        </div>
+      </div>
+      <div hlmCardContent>
+        @if (backups().length === 0) {
+          <div hlmEmpty class="rounded-lg border">
+            <div hlmEmptyHeader>
+              <p hlmEmptyTitle>{{ 'backups.list.empty' | t }}</p>
+              <p hlmEmptyDescription>
+                {{
+                  (destinations().length === 0
+                    ? 'backups.list.needsDestination'
+                    : 'backups.list.emptyHelp'
+                  ) | t
+                }}
+              </p>
+            </div>
+            @if (destinations().length > 0) {
+              <div hlmEmptyContent>
+                <button hlmBtn type="button" class="gap-1" (click)="openCreate()">
+                  <ng-icon name="lucidePlus" />
+                  {{ 'backups.list.create' | t }}
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <ul class="grid gap-3">
+            @for (backup of backups(); track backup.id) {
+              @let job = runOf(backup);
+              <li class="grid gap-2 rounded-lg border p-3">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div class="grid min-w-0 gap-1">
+                    <p class="flex flex-wrap items-center gap-2 font-medium">
+                      {{ backup.name }}
+                      @if (!backup.enabled) {
+                        <span hlmBadge variant="outline">{{ 'backups.list.paused' | t }}</span>
+                      }
+                      @if (backup.includeServer) {
+                        <span hlmBadge variant="secondary">{{
+                          'backups.restore.serverBadge' | t
+                        }}</span>
+                      }
+                      @if (backup.includeUserData) {
+                        <span hlmBadge variant="secondary">{{
+                          'backups.restore.userDataBadge' | t
+                        }}</span>
+                      }
+                    </p>
+                    <p class="truncate text-sm text-muted-foreground" [title]="items(backup)">
+                      {{ 'backups.scopes.' + backup.scope + '.name' | t }}
+                      @if (backup.items.length > 0) {
+                        · {{ items(backup) }}
+                      }
+                    </p>
+                    <p class="text-xs text-muted-foreground">
+                      {{ 'backups.list.to' | t: { destination: backup.destination.name } }} ·
+                      {{ schedule(backup) }}
+                      @if (backup.enabled && backup.nextRunAt) {
+                        ·
+                        <span [title]="backup.nextRunAt | dateTime">{{
+                          'backups.list.next' | t: { when: (backup.nextRunAt | relativeTime) }
+                        }}</span>
+                      }
+                    </p>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1">
+                    @if (job && runActive(job.status)) {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="busy() === job.id"
+                        (click)="cancelRun(job)"
+                      >
+                        {{ 'common.cancel' | t }}
+                      </button>
+                    } @else {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        class="gap-1"
+                        [disabled]="busy() === backup.id"
+                        (click)="run(backup)"
+                      >
+                        <ng-icon name="lucidePlay" />
+                        {{ 'backups.list.runNow' | t }}
+                      </button>
+                    }
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      [title]="'backups.list.history' | t"
+                      [attr.aria-label]="'backups.list.history' | t"
+                      (click)="history.set(backup)"
+                    >
+                      <ng-icon name="lucideHistory" />
+                    </button>
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      [title]="'common.edit' | t"
+                      [attr.aria-label]="'common.edit' | t"
+                      (click)="openEdit(backup)"
+                    >
+                      <ng-icon name="lucidePencil" />
+                    </button>
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      [title]="'common.delete' | t"
+                      [attr.aria-label]="'common.delete' | t"
+                      (click)="deleting.set(backup)"
+                    >
+                      <ng-icon name="lucideTrash2" />
+                    </button>
+                  </div>
+                </div>
+
+                @if (job) {
+                  <div class="grid gap-1 text-sm">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span hlmBadge [variant]="runVariant(job.status)">{{
+                        'backups.runStatus.' + job.status | t
+                      }}</span>
+                      @if (job.finishedAt) {
+                        <span
+                          class="text-xs text-muted-foreground"
+                          [title]="job.finishedAt | dateTime"
+                        >
+                          {{ job.finishedAt | relativeTime }}
+                        </span>
+                      }
+                      @if (runActive(job.status) || job.status !== 'CANCELLED') {
+                        <span class="text-xs text-muted-foreground">
+                          {{
+                            'backups.list.progress'
+                              | t
+                                : {
+                                    copied: (job.copied | count),
+                                    unchanged: (job.unchanged | count),
+                                    bytes: (job.bytes | bytes),
+                                  }
+                          }}
+                          @if (job.failed > 0) {
+                            ·
+                            <span class="text-destructive">{{
+                              'backups.list.failedCount' | t: { count: job.failed }
+                            }}</span>
+                          }
+                        </span>
+                      }
+                    </div>
+                    @if (job.status === 'RUNNING' && runPercent(job) !== null) {
+                      <hlm-progress [value]="runPercent(job)"
+                        ><hlm-progress-indicator
+                      /></hlm-progress>
+                    }
+                    @if (job.errorCode) {
+                      <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
+                    }
+                  </div>
+                } @else {
+                  <p class="text-xs text-muted-foreground">{{ 'backups.list.neverRun' | t }}</p>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+
+    <!-- Destinations -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'backups.destinations.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'backups.destinations.description' | t }}</p>
+        <div hlmCardAction>
+          <button
+            hlmBtn
+            variant="outline"
+            type="button"
+            class="gap-1"
+            (click)="addingDestination.set(true)"
+          >
+            <ng-icon name="lucidePlus" />
+            {{ 'backups.destinations.add' | t }}
+          </button>
+        </div>
+      </div>
+      <div hlmCardContent>
+        <ul class="grid gap-2">
+          @for (destination of destinations(); track destination.id) {
+            <li class="flex items-center justify-between gap-2 rounded-lg border p-3">
+              <div class="grid min-w-0 flex-1 gap-0.5">
+                <p class="flex flex-wrap items-center gap-2 text-sm font-medium">
+                  {{ destination.name }}
+                  <span hlmBadge variant="outline">{{
+                    'backups.destinations.kinds.' + destination.kind | t
+                  }}</span>
+                </p>
+                <p
+                  class="truncate font-mono text-xs text-muted-foreground"
+                  [title]="destination.location"
+                >
+                  {{ destination.location }}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{ 'backups.destinations.count' | t: { count: destination.backups } }}
+                </p>
+              </div>
+              <div class="flex items-center gap-1">
+                <button
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  [disabled]="busy() === destination.id"
+                  (click)="test(destination)"
+                >
+                  {{ 'backups.destinations.test' | t }}
+                </button>
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  [title]="'common.delete' | t"
+                  [attr.aria-label]="'common.delete' | t"
+                  (click)="deletingDestination.set(destination)"
+                >
+                  <ng-icon name="lucideTrash2" />
+                </button>
+              </div>
+            </li>
+          } @empty {
+            <li class="text-sm text-muted-foreground">{{ 'backups.destinations.empty' | t }}</li>
+          }
+        </ul>
+      </div>
+    </section>
+
+    <!-- Restore -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'backups.restore.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'backups.restore.description' | t }}</p>
+        <div hlmCardAction>
+          <button
+            hlmBtn
+            variant="outline"
+            type="button"
+            [disabled]="destinations().length === 0"
+            [title]="destinations().length === 0 ? ('backups.restore.needsDestination' | t) : ''"
+            (click)="openRestore()"
+          >
+            {{ 'backups.restore.open' | t }}
+          </button>
+        </div>
+      </div>
+      <div hlmCardContent>
+        <ul class="grid gap-3">
+          @for (job of restores(); track job.id) {
+            <li class="grid gap-2 rounded-lg border p-3 text-sm">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-medium">{{ job.backupName }}</span>
+                <span hlmBadge [variant]="restoreVariant(job.status)">{{
+                  'backups.restore.status.' + job.status | t
+                }}</span>
+                <span class="text-xs text-muted-foreground" [title]="job.requestedAt | dateTime">
+                  {{ job.requestedAt | relativeTime }}
+                </span>
+                @if (restoreActive(job.status)) {
+                  <button
+                    hlmBtn
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    class="ml-auto"
+                    [disabled]="busy() === job.id"
+                    (click)="cancelRestore(job)"
+                  >
+                    {{ 'common.cancel' | t }}
+                  </button>
+                }
+              </div>
+              @if (restoreActive(job.status) && restorePercent(job) !== null) {
+                <hlm-progress [value]="restorePercent(job)"
+                  ><hlm-progress-indicator
+                /></hlm-progress>
+              }
+              <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                @if (job.files) {
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.restored' | t }}
+                    </dt>
+                    <dd>{{ job.restored | count }} / {{ job.filesTotal | count }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.identical' | t }}
+                    </dt>
+                    <dd>{{ job.identical | count }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.renamed' | t }}
+                    </dt>
+                    <dd>{{ job.renamed | count }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.failed' | t }}
+                    </dt>
+                    <dd [class.text-destructive]="job.filesFailed > 0">
+                      {{ job.filesFailed | count }}
+                    </dd>
+                  </div>
+                }
+                @if (job.userData) {
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.ratings' | t }}
+                    </dt>
+                    <dd>{{ job.ratings | count }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.plays' | t }}
+                    </dt>
+                    <dd>{{ job.playCounts | count }} · {{ job.plays | count }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.playlists' | t }}
+                    </dt>
+                    <dd>{{ job.playlists | count }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">
+                      {{ 'backups.restore.counters.unmatched' | t }}
+                    </dt>
+                    <dd>{{ job.unmatched | count }}</dd>
+                  </div>
+                }
+              </dl>
+              @if (job.errorCode) {
+                <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
+              }
+              @if (job.failures.length > 0) {
+                <details class="text-xs">
+                  <summary class="cursor-pointer text-muted-foreground">
+                    {{ 'backups.failures' | t: { count: job.failures.length } }}
+                  </summary>
+                  <ul class="mt-2 grid gap-1">
+                    @for (failure of job.failures; track $index) {
+                      <li class="grid gap-0.5 rounded bg-muted px-2 py-1">
+                        <span class="truncate font-mono" [title]="failure.path">{{
+                          failure.path
+                        }}</span>
+                        <span class="text-destructive">{{ i18n.error(failure.code) }}</span>
+                      </li>
+                    }
+                  </ul>
+                </details>
+              }
+            </li>
+          } @empty {
+            <li class="text-sm text-muted-foreground">{{ 'backups.restore.empty' | t }}</li>
+          }
+        </ul>
+      </div>
+    </section>
+
+    <!-- Other servers' backups kept here -->
+    <section hlmCard>
+      <div hlmCardHeader>
+        <h2 hlmCardTitle>{{ 'backups.guests.title' | t }}</h2>
+        <p hlmCardDescription>
+          {{ 'backups.guests.description' | t }}
+          <a class="underline" routerLink="/network">{{ 'backups.guests.revokeLink' | t }}</a>
+        </p>
+        <div hlmCardAction>
+          <button hlmBtn variant="outline" type="button" (click)="inviting.set(true)">
+            {{ 'backups.guests.invite' | t }}
+          </button>
+        </div>
+      </div>
+      <div hlmCardContent>
+        <ul class="grid gap-2">
+          @for (guest of guests(); track guest.peerId) {
+            <li class="grid gap-0.5 rounded-lg border p-3 text-sm">
+              <p class="flex flex-wrap items-center gap-2 font-medium">
+                {{ guest.name }}
+                @if (guest.revoked) {
+                  <span hlmBadge variant="destructive">{{ 'backups.guests.revoked' | t }}</span>
+                }
+              </p>
+              <p class="truncate font-mono text-xs text-muted-foreground" [title]="guest.folder">
+                {{ guest.folder }}
+              </p>
+              <p class="text-xs text-muted-foreground">
+                @if (guest.usedBytes !== null && guest.usedBytes !== undefined) {
+                  {{ guest.usedBytes | bytes }}
+                } @else {
+                  {{ 'backups.guests.unknownUsage' | t }}
+                }
+                @if (guest.quotaBytes) {
+                  {{ 'backups.guests.of' | t: { quota: (guest.quotaBytes | bytes) } }}
+                } @else {
+                  · {{ 'backups.guests.noQuota' | t }}
+                }
+                ·
+                @if (guest.lastSeenAt) {
+                  <span [title]="guest.lastSeenAt | dateTime">{{
+                    'backups.guests.lastSeen' | t: { when: (guest.lastSeenAt | relativeTime) }
+                  }}</span>
+                } @else {
+                  {{ 'backups.guests.neverSeen' | t }}
+                }
+              </p>
+            </li>
+          } @empty {
+            <li class="text-sm text-muted-foreground">{{ 'backups.guests.empty' | t }}</li>
+          }
+        </ul>
+      </div>
+    </section>
+  </div>
+}
+
+<!-- Create / edit a backup -->
+<hlm-dialog [state]="editing() ? 'open' : 'closed'" (closed)="editing.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    @if (editing(); as current) {
+      @if (options(); as opts) {
+        <app-backup-form
+          [backup]="current.backup"
+          [destinations]="destinations()"
+          [options]="opts"
+          (saved)="saved()"
+          (cancelled)="editing.set(null)"
+        />
+      }
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Runs of a backup -->
+<hlm-dialog [state]="history() ? 'open' : 'closed'" (closed)="history.set(null)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    @if (history(); as backup) {
+      <app-backup-runs
+        [backupId]="backup.id"
+        [name]="backup.name"
+        [latest]="runs()[backup.id] ?? null"
+        (closed)="history.set(null)"
+      />
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Add a destination -->
+<hlm-dialog
+  [state]="addingDestination() ? 'open' : 'closed'"
+  (closed)="addingDestination.set(false)"
+>
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    @if (addingDestination()) {
+      <app-destination-form
+        [s3Offered]="s3Offered()"
+        [s3Available]="s3Available()"
+        (created)="destinationCreated()"
+        (cancelled)="addingDestination.set(false)"
+      />
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Restore -->
+<hlm-dialog [state]="restoring() ? 'open' : 'closed'" (closed)="restoring.set(false)">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(42rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-2xl"
+  >
+    @if (restoring()) {
+      @if (options(); as opts) {
+        <app-restore-dialog
+          [destinations]="destinations()"
+          [options]="opts"
+          (started)="restoreStarted($event)"
+          (cancelled)="restoring.set(false)"
+        />
+      }
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Invite another server -->
+<hlm-dialog [state]="inviting() ? 'open' : 'closed'" (closed)="invitationClosed()">
+  <hlm-dialog-content
+    *brnDialogContent="let ctx"
+    class="max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100vw-2rem))] overflow-y-auto sm:max-w-xl"
+  >
+    @if (inviting()) {
+      <app-guest-invitation (closed)="invitationClosed()" />
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
+<!-- Delete a backup -->
+<hlm-alert-dialog [state]="deleting() ? 'open' : 'closed'" (closed)="deleting.set(null)">
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    <hlm-alert-dialog-header>
+      <h3 hlmAlertDialogTitle>
+        {{ 'backups.deleteTitle' | t: { name: deleting()?.name ?? '' } }}
+      </h3>
+      <p hlmAlertDialogDescription>{{ 'backups.deleteHelp' | t }}</p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel type="button" (click)="deleting.set(null)">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button hlmAlertDialogAction type="button" (click)="confirmDelete()">
+        {{ 'common.delete' | t }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>
+
+<!-- Delete a destination -->
+<hlm-alert-dialog
+  [state]="deletingDestination() ? 'open' : 'closed'"
+  (closed)="deletingDestination.set(null)"
+>
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    <hlm-alert-dialog-header>
+      <h3 hlmAlertDialogTitle>
+        {{ 'backups.destinations.deleteTitle' | t: { name: deletingDestination()?.name ?? '' } }}
+      </h3>
+      <p hlmAlertDialogDescription>
+        {{ 'backups.destinations.deleteHelp' | t: { count: deletingDestination()?.backups ?? 0 } }}
+      </p>
+    </hlm-alert-dialog-header>
+    <hlm-alert-dialog-footer>
+      <button hlmAlertDialogCancel type="button" (click)="deletingDestination.set(null)">
+        {{ 'common.cancel' | t }}
+      </button>
+      <button hlmAlertDialogAction type="button" (click)="confirmDeleteDestination()">
+        {{ 'common.delete' | t }}
+      </button>
+    </hlm-alert-dialog-footer>
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>

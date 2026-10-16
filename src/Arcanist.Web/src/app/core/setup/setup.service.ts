@@ -8,7 +8,9 @@ import {
   ServerDirectoryListing,
   SetupFfmpegCheck,
   SetupRequest,
+  SetupRestoreSource,
   SetupStatus,
+  SetupStoredBackup,
 } from '../api/rest';
 import type {
   BrowseDlnaMediaServerQuery,
@@ -121,6 +123,54 @@ export class SetupService {
         headers: this.headers(),
       }),
     );
+  }
+
+  /** The backups in a folder or bucket that carry a server, to restore it instead of setting it up. */
+  browseRestore(source: SetupRestoreSource): Promise<SetupStoredBackup[]> {
+    return this.call(
+      this.http.post<SetupStoredBackup[]>('/rest/v1/setup/restore/browse', source, {
+        headers: this.headers(),
+      }),
+    );
+  }
+
+  /** Whether the password opens a snapshot's server data. */
+  checkRestore(
+    source: SetupRestoreSource,
+    folder: string,
+    snapshot: string,
+    password: string,
+  ): Promise<{ success: boolean }> {
+    return this.call(
+      this.http.post<{ success: boolean }>(
+        '/rest/v1/setup/restore/check',
+        { source, folder, snapshot, password },
+        { headers: this.headers() },
+      ),
+    );
+  }
+
+  /** Restores the server from a snapshot; it then restarts by itself as the restored server. */
+  startRestore(request: {
+    source: SetupRestoreSource;
+    folder: string;
+    snapshot: string;
+    password: string;
+    restoreFiles: boolean;
+  }): Promise<unknown> {
+    return this.call(
+      this.http.post('/rest/v1/setup/restore', request, { headers: this.headers() }),
+    );
+  }
+
+  /** Whether the server answers at all (it may be restarting). */
+  async healthy(): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.get('/health', { responseType: 'text' }));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   complete(request: SetupRequest): Promise<unknown> {

@@ -45,6 +45,9 @@ import type {
 import {
   AcceptImportItemMutation,
   CancelDlnaImportMutation,
+  ClearImportHistoryMutation,
+  DeleteDlnaImportMutation,
+  DeleteMstreamImportMutation,
   DlnaImportsQuery,
   RetryDlnaImportMutation,
   CreateDropFolderMutation,
@@ -314,6 +317,52 @@ export class ImportPage implements OnInit {
     try {
       const updated = await action();
       this.dlnaImports.update((list) => list.map((j) => (j.id === updated.id ? updated : j)));
+    } catch (error) {
+      toast.error(this.i18n.error(ApiError.from(error).code));
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  // History of migrations
+
+  protected readonly clearingHistory = signal(false);
+
+  /** Some import has ended: the history can be cleared. */
+  protected hasFinishedImports(): boolean {
+    return (
+      this.dlnaImports().some((job) => !this.dlnaActive(job)) ||
+      this.migrations().some((job) => job.status === 'COMPLETED' || job.status === 'FAILED')
+    );
+  }
+
+  protected async removeDlna(job: DlnaImportJob): Promise<void> {
+    await this.historyAction(job.id, async () => {
+      await this.gql.mutate(DeleteDlnaImportMutation, { id: job.id });
+      this.dlnaImports.update((list) => list.filter((j) => j.id !== job.id));
+    });
+  }
+
+  protected async removeMstream(job: MstreamImportJob): Promise<void> {
+    await this.historyAction(job.id, async () => {
+      await this.gql.mutate(DeleteMstreamImportMutation, { id: job.id });
+      this.migrations.update((list) => list.filter((j) => j.id !== job.id));
+    });
+  }
+
+  protected async clearHistory(): Promise<void> {
+    this.clearingHistory.set(false);
+    await this.historyAction('history', async () => {
+      const count = (await this.gql.mutate(ClearImportHistoryMutation)).clearImportHistory;
+      await Promise.all([this.loadMigrations(), this.loadDlnaImports()]);
+      toast.success(this.i18n.t('import.migrate.cleared', { count }));
+    });
+  }
+
+  private async historyAction(id: string, action: () => Promise<void>): Promise<void> {
+    this.busy.set(id);
+    try {
+      await action();
     } catch (error) {
       toast.error(this.i18n.error(ApiError.from(error).code));
     } finally {

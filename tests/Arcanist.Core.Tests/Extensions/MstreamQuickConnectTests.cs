@@ -53,6 +53,36 @@ public sealed class MstreamQuickConnectTests : IAsyncDisposable
         return JsonDocument.Parse(text).RootElement;
     }
 
+    /// <summary>
+    /// The code once the node runs with the current secret: changes restart the node in the background, and until then
+    /// there is no code (or, after a rotation, still the old one).
+    /// </summary>
+    private async Task<string> PairingCodeAsync(string? previous = null)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (true)
+        {
+            var status = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/mstream", ArcanistFactory.Json, Cancel);
+            if (status.GetProperty("pairingCode").GetString() is { } code && code != previous)
+                return code;
+            Assert.True(DateTime.UtcNow < deadline, $"No new pairing code: {status}");
+            await Task.Delay(100, Cancel);
+        }
+    }
+
+    private async Task WaitForNodeAsync()
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (true)
+        {
+            var status = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/p2p", ArcanistFactory.Json, Cancel);
+            if (status.GetProperty("running").GetBoolean())
+                return;
+            Assert.True(DateTime.UtcNow < deadline, $"The node did not start: {status}");
+            await Task.Delay(100, Cancel);
+        }
+    }
+
     /// <summary>An HTTP request as it arrives through mStream's tunnel: the node's preamble, then the request.</summary>
     private async Task<int> ThroughTunnelAsync(string path)
     {
@@ -79,14 +109,15 @@ public sealed class MstreamQuickConnectTests : IAsyncDisposable
         var enabled = await _admin.PutAsJsonAsync("/rest/v1/p2p/settings",
             new P2PSettingsInput(true, P2PRelayMode.N0, null, "Home", null, null), ArcanistFactory.Json, Cancel);
         Assert.True(enabled.IsSuccessStatusCode, await enabled.Content.ReadAsStringAsync(Cancel));
+        await WaitForNodeAsync();
 
         // Off, nothing answers through it.
         var off = await SettingsAsync(quickConnect: false);
         Assert.Equal(JsonValueKind.Null, off.GetProperty("pairingCode").ValueKind);
         Assert.Equal(404, await ThroughTunnelAsync("/api/v1/ping"));
 
-        var on = await SettingsAsync(quickConnect: true);
-        var code = on.GetProperty("pairingCode").GetString()!;
+        await SettingsAsync(quickConnect: true);
+        var code = await PairingCodeAsync();
         Assert.StartsWith("mstr1:", code);
         var (ticket, secret) = MstreamQuickConnect.Read(code);
         Assert.StartsWith("endpoint", ticket);
@@ -99,7 +130,8 @@ public sealed class MstreamQuickConnectTests : IAsyncDisposable
 
         // A new code: the old secret no longer opens the tunnel.
         var rotated = await _admin.PostAsync("/rest/v1/mstream/quick-connect/rotate", null, Cancel);
-        var next = (await rotated.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("pairingCode").GetString()!;
+        Assert.True(rotated.IsSuccessStatusCode, await rotated.Content.ReadAsStringAsync(Cancel));
+        var next = await PairingCodeAsync(previous: code);
         Assert.NotEqual(Convert.ToBase64String(secret), Convert.ToBase64String(MstreamQuickConnect.Read(next).Secret));
     }
 

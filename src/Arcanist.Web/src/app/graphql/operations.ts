@@ -2429,3 +2429,50 @@ export const TestServerAudioMutation = graphql(`
     testServerAudio
   }
 `);
+
+export const StorageUsageQuery = graphql(`
+  query StorageUsage($refresh: Boolean!) {
+    storageUsage(refresh: $refresh) {
+      dataDirectory
+      arcanistBytes
+      musicBytes
+      measuredAt
+      parts {
+        kind
+        bytes
+      }
+      disk {
+        totalBytes
+        freeBytes
+      }
+      database {
+        provider
+        version
+        sizeBytes
+        tables {
+          name
+          rows
+        }
+      }
+      catalog {
+        libraries
+        tracks
+        albums
+        artists
+        files
+        missingFiles
+        playlists
+        users
+        plays
+        ratings
+      }
+      libraries {
+        id
+        name
+        kind
+        files
+        bytes
+      }
+    }
+  }
+`);

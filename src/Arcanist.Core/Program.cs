@@ -111,6 +111,8 @@ builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<TrackMatchService>();
 builder.Services.AddScoped<Arcanist.Core.Application.Server.ServerAdminService>();
+builder.Services.AddScoped<Arcanist.Core.Application.Server.StorageUsageService>();
+builder.Services.AddSingleton<Arcanist.Core.Application.Server.StorageUsageCache>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Server.PrivacySettings>();
 builder.Services.AddScoped<Arcanist.Core.Application.Server.PrivacyService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Listening.ListeningSignals>();

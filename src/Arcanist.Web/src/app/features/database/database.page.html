@@ -78,6 +78,9 @@
       </dl>
     </section>
 
+    <!-- Version, size and tables of the database; what the catalog holds; how the space is spread. -->
+    <app-storage-usage [detail]="true" />
+
     @if (current.previousSqlite; as previous) {
       <section hlmCard>
         <div hlmCardHeader>

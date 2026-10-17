@@ -12,6 +12,7 @@ import type {
 } from '../../graphql/generated/graphql';
 import { OverviewQuery, ServerInfoQuery } from '../../graphql/operations';
 import { CountPipe } from '../../shared/format';
+import { StorageUsageCard } from '../../shared/storage-usage';
 import { AnalysisCard } from './analysis-card';
 import { BackupsCard } from './backups-card';
 
@@ -26,6 +27,7 @@ import { BackupsCard } from './backups-card';
     CountPipe,
     AnalysisCard,
     BackupsCard,
+    StorageUsageCard,
   ],
   template: `
     <header class="mb-6">
@@ -67,6 +69,7 @@ import { BackupsCard } from './backups-card';
     <app-analysis-card class="mt-6 block" />
 
     @if (auth.isAdmin()) {
+      <app-storage-usage class="mt-6 block" />
       <app-backups-card class="mt-6 block" />
     }
 

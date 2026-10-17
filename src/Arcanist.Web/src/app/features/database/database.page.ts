@@ -32,6 +32,7 @@ import {
   TestPostgresConnectionMutation,
 } from '../../graphql/operations';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
+import { StorageUsageCard } from '../../shared/storage-usage';
 import { BytesPipe, CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
 /** What anyone can know while the server is in maintenance (REST, also during it). */
@@ -68,6 +69,7 @@ interface MaintenanceState {
     DateTimePipe,
     RelativeTimePipe,
     FolderPicker,
+    StorageUsageCard,
   ],
   templateUrl: './database.page.html',
 })

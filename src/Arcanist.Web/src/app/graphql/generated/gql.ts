@@ -209,6 +209,7 @@ type Documents = {
     "\n  query ServerAudio {\n    serverAudio {\n      ...ServerAudioStatusFields\n    }\n  }\n": typeof types.ServerAudioDocument,
     "\n  mutation SetServerAudioSettings($input: ServerAudioSettingsInput!) {\n    setServerAudioSettings(input: $input) {\n      ...ServerAudioStatusFields\n    }\n  }\n": typeof types.SetServerAudioSettingsDocument,
     "\n  mutation TestServerAudio {\n    testServerAudio\n  }\n": typeof types.TestServerAudioDocument,
+    "\n  query StorageUsage($refresh: Boolean!) {\n    storageUsage(refresh: $refresh) {\n      dataDirectory\n      arcanistBytes\n      musicBytes\n      measuredAt\n      parts {\n        kind\n        bytes\n      }\n      disk {\n        totalBytes\n        freeBytes\n      }\n      database {\n        provider\n        version\n        sizeBytes\n        tables {\n          name\n          rows\n        }\n      }\n      catalog {\n        libraries\n        tracks\n        albums\n        artists\n        files\n        missingFiles\n        playlists\n        users\n        plays\n        ratings\n      }\n      libraries {\n        id\n        name\n        kind\n        files\n        bytes\n      }\n    }\n  }\n": typeof types.StorageUsageDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -406,6 +407,7 @@ const documents: Documents = {
     "\n  query ServerAudio {\n    serverAudio {\n      ...ServerAudioStatusFields\n    }\n  }\n": types.ServerAudioDocument,
     "\n  mutation SetServerAudioSettings($input: ServerAudioSettingsInput!) {\n    setServerAudioSettings(input: $input) {\n      ...ServerAudioStatusFields\n    }\n  }\n": types.SetServerAudioSettingsDocument,
     "\n  mutation TestServerAudio {\n    testServerAudio\n  }\n": types.TestServerAudioDocument,
+    "\n  query StorageUsage($refresh: Boolean!) {\n    storageUsage(refresh: $refresh) {\n      dataDirectory\n      arcanistBytes\n      musicBytes\n      measuredAt\n      parts {\n        kind\n        bytes\n      }\n      disk {\n        totalBytes\n        freeBytes\n      }\n      database {\n        provider\n        version\n        sizeBytes\n        tables {\n          name\n          rows\n        }\n      }\n      catalog {\n        libraries\n        tracks\n        albums\n        artists\n        files\n        missingFiles\n        playlists\n        users\n        plays\n        ratings\n      }\n      libraries {\n        id\n        name\n        kind\n        files\n        bytes\n      }\n    }\n  }\n": types.StorageUsageDocument,
 };
 
 /**
@@ -1202,6 +1204,10 @@ export function graphql(source: "\n  mutation SetServerAudioSettings($input: Ser
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation TestServerAudio {\n    testServerAudio\n  }\n"): (typeof documents)["\n  mutation TestServerAudio {\n    testServerAudio\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query StorageUsage($refresh: Boolean!) {\n    storageUsage(refresh: $refresh) {\n      dataDirectory\n      arcanistBytes\n      musicBytes\n      measuredAt\n      parts {\n        kind\n        bytes\n      }\n      disk {\n        totalBytes\n        freeBytes\n      }\n      database {\n        provider\n        version\n        sizeBytes\n        tables {\n          name\n          rows\n        }\n      }\n      catalog {\n        libraries\n        tracks\n        albums\n        artists\n        files\n        missingFiles\n        playlists\n        users\n        plays\n        ratings\n      }\n      libraries {\n        id\n        name\n        kind\n        files\n        bytes\n      }\n    }\n  }\n"): (typeof documents)["\n  query StorageUsage($refresh: Boolean!) {\n    storageUsage(refresh: $refresh) {\n      dataDirectory\n      arcanistBytes\n      musicBytes\n      measuredAt\n      parts {\n        kind\n        bytes\n      }\n      disk {\n        totalBytes\n        freeBytes\n      }\n      database {\n        provider\n        version\n        sizeBytes\n        tables {\n          name\n          rows\n        }\n      }\n      catalog {\n        libraries\n        tracks\n        albums\n        artists\n        files\n        missingFiles\n        playlists\n        users\n        plays\n        ratings\n      }\n      libraries {\n        id\n        name\n        kind\n        files\n        bytes\n      }\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

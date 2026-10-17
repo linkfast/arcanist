@@ -1501,6 +1501,37 @@
         }
       }
     },
+    "/rest/v1/storage-usage": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "How much space Arcanist takes, part by part (the database too), its database\u0027s tables, how much is in the catalog and the music of each library. Measured at most every five minutes unless refresh is true. Administrators only.",
+        "operationId": "StorageUsage",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageUsage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/settings/privacy": {
       "get": {
         "tags": [
@@ -8849,6 +8880,103 @@
           "CLOUD_CONNECT"
         ]
       },
+      "CatalogCounts": {
+        "required": [
+          "libraries",
+          "tracks",
+          "albums",
+          "artists",
+          "files",
+          "missingFiles",
+          "playlists",
+          "users",
+          "plays",
+          "ratings"
+        ],
+        "type": "object",
+        "properties": {
+          "libraries": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "albums": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "missingFiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playlists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "users": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "ratings": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ChangeMyPasswordInput": {
         "required": [
           "currentPassword",
@@ -9623,6 +9751,26 @@
           }
         }
       },
+      "DatabaseTable": {
+        "required": [
+          "name",
+          "rows"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "DatabaseTestResult": {
         "required": [
           "success",
@@ -9641,6 +9789,41 @@
           }
         }
       },
+      "DatabaseUsage": {
+        "required": [
+          "provider",
+          "version",
+          "sizeBytes",
+          "tables"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "$ref": "#/components/schemas/DatabaseProvider"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatabaseTable"
+            }
+          }
+        }
+      },
       "DayOfWeek": {
         "enum": [
           "SUNDAY",
@@ -9652,6 +9835,31 @@
           "SATURDAY",
           null
         ]
+      },
+      "DiskUsage": {
+        "required": [
+          "totalBytes",
+          "freeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "totalBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "freeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
       },
       "DlnaFolder": {
         "required": [
@@ -11886,6 +12094,44 @@
             "items": {
               "$ref": "#/components/schemas/FormatTotals"
             }
+          }
+        }
+      },
+      "LibraryUsage": {
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "files",
+          "bytes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LibrarySourceKind"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -16487,6 +16733,106 @@
           "YEAR",
           "ALL"
         ]
+      },
+      "StoragePart": {
+        "required": [
+          "kind",
+          "bytes"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/StoragePartKind"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "StoragePartKind": {
+        "enum": [
+          "DATABASE",
+          "ARTWORK",
+          "THUMBNAILS",
+          "TEMPORARY",
+          "LOGS",
+          "TOOLS",
+          "PLAYERS",
+          "EXTENSIONS",
+          "OTHER"
+        ]
+      },
+      "StorageUsage": {
+        "required": [
+          "dataDirectory",
+          "arcanistBytes",
+          "parts",
+          "database",
+          "catalog",
+          "musicBytes",
+          "libraries",
+          "disk",
+          "measuredAt"
+        ],
+        "type": "object",
+        "properties": {
+          "dataDirectory": {
+            "type": "string"
+          },
+          "arcanistBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoragePart"
+            }
+          },
+          "database": {
+            "$ref": "#/components/schemas/DatabaseUsage"
+          },
+          "catalog": {
+            "$ref": "#/components/schemas/CatalogCounts"
+          },
+          "musicBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryUsage"
+            }
+          },
+          "disk": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DiskUsage"
+              }
+            ]
+          },
+          "measuredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "StoredBackup": {
         "required": [

@@ -10,6 +10,13 @@ public static class ServerAdminEndpoints
     {
         var server = rest.MapGroup("/server").WithTags("Server");
 
+        rest.MapGet("/storage-usage", (StorageUsageService service, CancellationToken ct, bool refresh = false) => service.UsageAsync(refresh, ct))
+            .WithTags("Server")
+            .WithName("StorageUsage")
+            .WithSummary("How much space Arcanist takes, part by part (the database too), its database's tables, how much is in the " +
+                         "catalog and the music of each library. Measured at most every five minutes unless refresh is true. " +
+                         "Administrators only.");
+
         server.MapGet("/configuration", (ServerAdminService service, CancellationToken ct) => service.ConfigurationAsync(ct))
             .WithName("ServerConfiguration")
             .WithSummary("What the setup wizard chose, as it is now, to run it again. Administrators only.");

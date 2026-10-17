@@ -69,6 +69,12 @@ public sealed class MigrationTests(PostgresContainer postgres) : IClassFixture<P
         Assert.Equal(2, playlist.GetProperty("trackCount").GetInt32());
         var search = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/search?query=alo", ArcanistFactory.Json, Cancel);
         Assert.Equal("Alone", Assert.Single(search.GetProperty("tracks").EnumerateArray()).GetProperty("title").GetString());
+        // What the database takes, now read from PostgreSQL.
+        var usage = (await admin.GetFromJsonAsync<JsonElement>("/rest/v1/storage-usage?refresh=true", ArcanistFactory.Json, Cancel)).GetProperty("database");
+        Assert.Equal("POSTGRES", usage.GetProperty("provider").GetString());
+        Assert.False(string.IsNullOrEmpty(usage.GetProperty("version").GetString()));
+        Assert.True(usage.GetProperty("sizeBytes").GetInt64() > 0);
+        Assert.Contains(usage.GetProperty("tables").EnumerateArray(), t => t.GetProperty("name").GetString() == "Tracks" && t.GetProperty("rows").GetInt64() > 0);
         // New writes go to PostgreSQL; signing in again works.
         await ReadAsync(await admin.PostAsJsonAsync("/rest/v1/playlists", new CreatePlaylistInput("After", null, false, null), ArcanistFactory.Json, Cancel));
         await _factory.LoginAsync();

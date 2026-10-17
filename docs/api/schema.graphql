@@ -134,6 +134,8 @@ type Query {
   anonymousStatistics: Boolean!
   "Server audio: whether it plays, on which device, and the server's audio devices. Administrators only. The server plays through \"play to\" as the renderer \"server\"."
   serverAudio: ServerAudioStatus!
+  "How much space Arcanist takes, part by part (the database too), its database's tables, how much is in the catalog and the music of each library. Measured at most every five minutes unless refresh is true. Administrators only."
+  storageUsage(refresh: Boolean! = false): StorageUsage!
   "The linked Ultimate Cloud account, its plan and what it enables. Administrators only."
   ultimateCloud: UltimateCloudStatus!
   "The Ultimate Cloud accounts linked to this server, for choosing where uploads go. Administrators only."
@@ -1583,6 +1585,73 @@ type AudioDevice {
   isDefault: Boolean!
   sampleRate: Int
   channels: Int
+}
+
+type StorageUsage {
+  dataDirectory: String!
+  arcanistBytes: Long!
+  parts: [StoragePart!]!
+  database: DatabaseUsage!
+  catalog: CatalogCounts!
+  musicBytes: Long!
+  libraries: [LibraryUsage!]!
+  disk: DiskUsage
+  measuredAt: DateTime!
+}
+
+type StoragePart {
+  kind: StoragePartKind!
+  bytes: Long!
+}
+
+enum StoragePartKind {
+  DATABASE
+  ARTWORK
+  THUMBNAILS
+  TEMPORARY
+  LOGS
+  TOOLS
+  PLAYERS
+  EXTENSIONS
+  OTHER
+}
+
+type DatabaseUsage {
+  provider: DatabaseProvider!
+  version: String
+  sizeBytes: Long
+  tables: [DatabaseTable!]!
+}
+
+type DatabaseTable {
+  name: String!
+  rows: Long!
+}
+
+type CatalogCounts {
+  libraries: Int!
+  tracks: Int!
+  albums: Int!
+  artists: Int!
+  files: Int!
+  missingFiles: Int!
+  playlists: Int!
+  users: Int!
+  plays: Long!
+  ratings: Int!
+}
+
+type LibraryUsage {
+  id: ID!
+  name: String!
+  kind: LibrarySourceKind!
+  files: Int!
+  bytes: Long!
+}
+
+type DiskUsage {
+  totalBytes: Long!
+  freeBytes: Long!
 }
 
 type UltimateCloudStatus {

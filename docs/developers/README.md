@@ -19,7 +19,7 @@ Every GraphQL query and mutation has a REST operation whose `operationId` is the
 
 `GET /rest/v1/server-info` (or the `serverInfo` query) works without authentication and returns the version, API
 version, whether setup is complete, the Ultimate Cloud features enabled, `features` (parts of the API that older servers lack:
-`LIBRARY_FILTER`, `UPLOADS`, `TRACK_MATCHING`, `LISTENING_IMPORT`) and `sourceUrl` (where to get the server's
+`LIBRARY_FILTER`, `UPLOADS`, `TRACK_MATCHING`, `LISTENING_IMPORT`, `STAR_TRACKS`, `UPLOAD_HISTORY`, `MY_CLOUD_UPLOADS`) and `sourceUrl` (where to get the server's
 source code, as the AGPL requires). Until setup is complete every other call answers `503` with code
 `setup_required`; send the user to `/admin/setup`.
 
@@ -239,6 +239,18 @@ An app that keeps its own library (Ultimate Desktop, for one) can use the server
   template and never overwrites anything: `201` with `status: IMPORTED`, its `contentHash` and `path`, or `200` with
   `status: DUPLICATE` when the library already has that audio (with its `trackId` once catalogued). The library is
   scanned shortly after the last upload of a batch; then `matchTracks` finds the new tracks by `contentHash`.
+- **The user's uploads** (`UPLOAD_HISTORY`): `myUploads` / `GET /rest/v1/me/uploads` lists them newest first, with
+  `active` (how many are still on their way: worth asking again in a few seconds). An upload into a library is
+  `PROCESSING` until the library's scan catalogues it (`ADDED`, with its `track`), or `DUPLICATE`, `NOT_ADDED` (the
+  scan did not find it) or `FAILED` (with `errorCode`). `clearMyUploads` / `DELETE /rest/v1/me/uploads` forgets the
+  finished ones.
+- **Sending songs to the user's own Ultimate Cloud** (`MY_CLOUD_UPLOADS`): `uploadTracksToMyCloud` /
+  `POST /rest/v1/me/uploads/ultimate-cloud` with up to 1000 `trackIds` queues them; each one shows in `myUploads` as
+  `QUEUED`, `UPLOADING`, `UPLOADED`, `ALREADY_IN_CLOUD` or `FAILED`. It needs the `DOWNLOAD` permission (it gives away
+  a copy) and an Ultimate Cloud account of the user's own (`cloud_not_linked`; `myUltimateCloud` says whether there is
+  one). A song only in a library another Arcanist shares goes only if that server allows downloads
+  (`download_not_allowed`); one that only exists as part of a file split by a CUE sheet cannot go
+  (`cloud_upload_cue`).
 - **Ratings and play counts:** `importListening` / `POST /rest/v1/me/listening/import` brings up to 1000 `ratings`
   (1–5; a star is 5) and `playCounts` (`playCount`, `lastPlayedAt`) per call. Ratings only fill gaps and play counts
   keep the highest, so sending them twice changes nothing. Unknown tracks are counted as `ignored`.

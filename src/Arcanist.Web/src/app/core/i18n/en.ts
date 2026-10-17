@@ -117,6 +117,7 @@ export const en: Dictionary = {
     network: 'P2P network',
     mstream: 'mStream',
     dlna: 'DLNA',
+    serverAudio: 'Server audio',
     extensions: 'Extensions',
     overview: 'Home',
     libraries: 'Libraries',
@@ -1063,10 +1064,56 @@ export const en: Dictionary = {
     playsCount: '{count} plays',
     hours: '{hours} h',
   },
+  serverAudio: {
+    title: 'Server audio',
+    subtitle:
+      'The server plays through an audio device attached to it: speakers, a USB DAC or HDMI.',
+    output: {
+      title: 'Output',
+      description:
+        'It shows up in the players’ “play to” and, with a linked Ultimate Cloud account, as an Ultimate Connect device.',
+      on: 'On',
+      off: 'Off',
+      playsOn: 'Plays on',
+      noDevice: 'No device is open',
+      noDeviceHelp:
+        'It may be unplugged or taken by another program. Arcanist tries again by itself.',
+      noDevices:
+        'The server sees no audio device. In Docker or on a NAS it needs access to the sound card (for example, --device /dev/snd).',
+      connect: 'Ultimate Connect device in {count} account(s).',
+    },
+    unavailable: {
+      title: 'The server cannot play audio',
+      description:
+        'Its native player is missing or, on Linux, the ALSA sound library (libasound2).',
+    },
+    settings: {
+      title: 'Device',
+      description: 'Where the music plays and the name it shows.',
+      device: 'Output device',
+      systemDefault: 'The system’s default',
+      default: 'default',
+      deviceHelp:
+        'With the default, the music follows the device the system chooses. If the chosen one goes away, the default is used.',
+      name: 'Name',
+      nameHelp: 'The name it shows in “play to” and Ultimate Connect.',
+      test: 'Test',
+    },
+    playing: {
+      title: 'Now playing',
+      description:
+        'Whoever starts a queue controls it while it plays; so do administrators. The plays count for whoever started it.',
+      nothing: 'Nothing is playing.',
+      someoneElse: 'someone else’s queue',
+    },
+    saved: 'Server audio saved',
+  },
   extensions: {
     descriptions: {
       dlna: 'DLNA/UPnP server for TVs, speakers and apps on the local network, and “play on”.',
       mstream: 'The mStream API, for the mStream apps.',
+      'server-audio':
+        'Plays through an audio device attached to the server, from “play to” and Ultimate Connect.',
       subsonic:
         'The Subsonic and OpenSubsonic API, for apps such as Symfonium, DSub, Feishin or Amperfy.',
       'ultimate-cloud':

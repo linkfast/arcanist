@@ -1335,6 +1335,7 @@ export const DlnaRendererStateFields = graphql(`
     volume
     queue
     queueIndex
+    startedByYou
     track {
       id
       title
@@ -2368,5 +2369,50 @@ export const CancelRestoreMutation = graphql(`
     cancelRestore(id: $id) {
       ...RestoreJobFields
     }
+  }
+`);
+
+export const ServerAudioStatusFields = graphql(`
+  fragment ServerAudioStatusFields on ServerAudioStatus {
+    enabled
+    available
+    unavailableReason
+    devices {
+      id
+      name
+      isDefault
+      sampleRate
+      channels
+    }
+    deviceId
+    device
+    deviceError
+    name
+    customName
+    volume
+    muted
+    connectAccounts
+  }
+`);
+
+export const ServerAudioQuery = graphql(`
+  query ServerAudio {
+    serverAudio {
+      ...ServerAudioStatusFields
+    }
+  }
+`);
+
+export const SetServerAudioSettingsMutation = graphql(`
+  mutation SetServerAudioSettings($input: ServerAudioSettingsInput!) {
+    setServerAudioSettings(input: $input) {
+      ...ServerAudioStatusFields
+    }
+  }
+`);
+
+export const TestServerAudioMutation = graphql(`
+  mutation TestServerAudio {
+    testServerAudio
   }
 `);

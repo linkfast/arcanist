@@ -131,7 +131,7 @@ type Documents = {
     "\n  mutation SetDlnaRecordPlays($record: Boolean!) {\n    setDlnaRecordPlays(record: $record) {\n      ...DlnaStatusFields\n    }\n  }\n": typeof types.SetDlnaRecordPlaysDocument,
     "\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n": typeof types.DlnaRendererFieldsFragmentDoc,
     "\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n": typeof types.DlnaRenderersDocument,
-    "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": typeof types.DlnaRendererStateFieldsFragmentDoc,
+    "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    startedByYou\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": typeof types.DlnaRendererStateFieldsFragmentDoc,
     "\n  query DlnaRenderer($id: String!) {\n    dlnaRenderer(id: $id) {\n      ...DlnaRendererStateFields\n    }\n  }\n": typeof types.DlnaRendererDocument,
     "\n  mutation AddDlnaRenderer($url: String!) {\n    addDlnaRenderer(url: $url) {\n      ...DlnaRendererFields\n    }\n  }\n": typeof types.AddDlnaRendererDocument,
     "\n  mutation PlayOnDlnaRenderer($input: PlayOnDlnaRendererInput!) {\n    playOnDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n": typeof types.PlayOnDlnaRendererDocument,
@@ -205,6 +205,10 @@ type Documents = {
     "\n  query BackupSnapshotContents($destinationId: ID!, $folder: String!, $snapshot: String!) {\n    backupSnapshotContents(destinationId: $destinationId, folder: $folder, snapshot: $snapshot) {\n      libraries {\n        folder\n        name\n        files\n        bytes\n      }\n      albums {\n        id\n        title\n        artist\n        year\n        paths\n      }\n      playlists {\n        owner\n        name\n        tracks\n        paths\n      }\n      users {\n        userName\n        displayName\n        ratings\n        plays\n        playlists\n        userId\n      }\n    }\n  }\n": typeof types.BackupSnapshotContentsDocument,
     "\n  mutation StartRestore($input: StartRestoreInput!) {\n    startRestore(input: $input) {\n      ...RestoreJobFields\n    }\n  }\n": typeof types.StartRestoreDocument,
     "\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n": typeof types.CancelRestoreDocument,
+    "\n  fragment ServerAudioStatusFields on ServerAudioStatus {\n    enabled\n    available\n    unavailableReason\n    devices {\n      id\n      name\n      isDefault\n      sampleRate\n      channels\n    }\n    deviceId\n    device\n    deviceError\n    name\n    customName\n    volume\n    muted\n    connectAccounts\n  }\n": typeof types.ServerAudioStatusFieldsFragmentDoc,
+    "\n  query ServerAudio {\n    serverAudio {\n      ...ServerAudioStatusFields\n    }\n  }\n": typeof types.ServerAudioDocument,
+    "\n  mutation SetServerAudioSettings($input: ServerAudioSettingsInput!) {\n    setServerAudioSettings(input: $input) {\n      ...ServerAudioStatusFields\n    }\n  }\n": typeof types.SetServerAudioSettingsDocument,
+    "\n  mutation TestServerAudio {\n    testServerAudio\n  }\n": typeof types.TestServerAudioDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -324,7 +328,7 @@ const documents: Documents = {
     "\n  mutation SetDlnaRecordPlays($record: Boolean!) {\n    setDlnaRecordPlays(record: $record) {\n      ...DlnaStatusFields\n    }\n  }\n": types.SetDlnaRecordPlaysDocument,
     "\n  fragment DlnaRendererFields on DlnaRenderer {\n    id\n    name\n    manufacturer\n    model\n    address\n    manual\n  }\n": types.DlnaRendererFieldsFragmentDoc,
     "\n  query DlnaRenderers {\n    dlnaRenderers {\n      ...DlnaRendererFields\n    }\n  }\n": types.DlnaRenderersDocument,
-    "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": types.DlnaRendererStateFieldsFragmentDoc,
+    "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    startedByYou\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n": types.DlnaRendererStateFieldsFragmentDoc,
     "\n  query DlnaRenderer($id: String!) {\n    dlnaRenderer(id: $id) {\n      ...DlnaRendererStateFields\n    }\n  }\n": types.DlnaRendererDocument,
     "\n  mutation AddDlnaRenderer($url: String!) {\n    addDlnaRenderer(url: $url) {\n      ...DlnaRendererFields\n    }\n  }\n": types.AddDlnaRendererDocument,
     "\n  mutation PlayOnDlnaRenderer($input: PlayOnDlnaRendererInput!) {\n    playOnDlnaRenderer(input: $input) {\n      ...DlnaRendererStateFields\n    }\n  }\n": types.PlayOnDlnaRendererDocument,
@@ -398,6 +402,10 @@ const documents: Documents = {
     "\n  query BackupSnapshotContents($destinationId: ID!, $folder: String!, $snapshot: String!) {\n    backupSnapshotContents(destinationId: $destinationId, folder: $folder, snapshot: $snapshot) {\n      libraries {\n        folder\n        name\n        files\n        bytes\n      }\n      albums {\n        id\n        title\n        artist\n        year\n        paths\n      }\n      playlists {\n        owner\n        name\n        tracks\n        paths\n      }\n      users {\n        userName\n        displayName\n        ratings\n        plays\n        playlists\n        userId\n      }\n    }\n  }\n": types.BackupSnapshotContentsDocument,
     "\n  mutation StartRestore($input: StartRestoreInput!) {\n    startRestore(input: $input) {\n      ...RestoreJobFields\n    }\n  }\n": types.StartRestoreDocument,
     "\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n": types.CancelRestoreDocument,
+    "\n  fragment ServerAudioStatusFields on ServerAudioStatus {\n    enabled\n    available\n    unavailableReason\n    devices {\n      id\n      name\n      isDefault\n      sampleRate\n      channels\n    }\n    deviceId\n    device\n    deviceError\n    name\n    customName\n    volume\n    muted\n    connectAccounts\n  }\n": types.ServerAudioStatusFieldsFragmentDoc,
+    "\n  query ServerAudio {\n    serverAudio {\n      ...ServerAudioStatusFields\n    }\n  }\n": types.ServerAudioDocument,
+    "\n  mutation SetServerAudioSettings($input: ServerAudioSettingsInput!) {\n    setServerAudioSettings(input: $input) {\n      ...ServerAudioStatusFields\n    }\n  }\n": types.SetServerAudioSettingsDocument,
+    "\n  mutation TestServerAudio {\n    testServerAudio\n  }\n": types.TestServerAudioDocument,
 };
 
 /**
@@ -885,7 +893,7 @@ export function graphql(source: "\n  query DlnaRenderers {\n    dlnaRenderers {\
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n"): (typeof documents)["\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n"];
+export function graphql(source: "\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    startedByYou\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n"): (typeof documents)["\n  fragment DlnaRendererStateFields on DlnaRendererState {\n    renderer {\n      ...DlnaRendererFields\n    }\n    state\n    positionMs\n    durationMs\n    volume\n    queue\n    queueIndex\n    startedByYou\n    track {\n      id\n      title\n      artworkId\n      album {\n        title\n      }\n      artists {\n        name\n        role\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -1178,6 +1186,22 @@ export function graphql(source: "\n  mutation StartRestore($input: StartRestoreI
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation CancelRestore($id: ID!) {\n    cancelRestore(id: $id) {\n      ...RestoreJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment ServerAudioStatusFields on ServerAudioStatus {\n    enabled\n    available\n    unavailableReason\n    devices {\n      id\n      name\n      isDefault\n      sampleRate\n      channels\n    }\n    deviceId\n    device\n    deviceError\n    name\n    customName\n    volume\n    muted\n    connectAccounts\n  }\n"): (typeof documents)["\n  fragment ServerAudioStatusFields on ServerAudioStatus {\n    enabled\n    available\n    unavailableReason\n    devices {\n      id\n      name\n      isDefault\n      sampleRate\n      channels\n    }\n    deviceId\n    device\n    deviceError\n    name\n    customName\n    volume\n    muted\n    connectAccounts\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query ServerAudio {\n    serverAudio {\n      ...ServerAudioStatusFields\n    }\n  }\n"): (typeof documents)["\n  query ServerAudio {\n    serverAudio {\n      ...ServerAudioStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetServerAudioSettings($input: ServerAudioSettingsInput!) {\n    setServerAudioSettings(input: $input) {\n      ...ServerAudioStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetServerAudioSettings($input: ServerAudioSettingsInput!) {\n    setServerAudioSettings(input: $input) {\n      ...ServerAudioStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation TestServerAudio {\n    testServerAudio\n  }\n"): (typeof documents)["\n  mutation TestServerAudio {\n    testServerAudio\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

@@ -47,6 +47,7 @@ docker run -d --name arcanist --restart unless-stopped -p 8484:8484 -v arcanist-
 
 The image supports linux/amd64 and linux/arm64. The setup code is in `docker logs arcanist`. Add `/music` as a
 library. Keep `/data` on a local disk: with SQLite, the database must not live on a network share (the music can).
+For server audio (playing through the host's sound card), add `--device /dev/snd --group-add audio`.
 
 ### Synology
 

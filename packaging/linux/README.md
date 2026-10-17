@@ -23,6 +23,14 @@ Open `http://<host>:8484/` and follow the setup wizard. From another machine it 
   [Service]
   SupplementaryGroups=music
   ```
+- **Server audio** (the extension that plays through a sound card of the server) needs the sound devices, which the
+  unit hides. To use it, in `sudo systemctl edit arcanist`:
+  ```ini
+  [Service]
+  PrivateDevices=no
+  SupplementaryGroups=audio
+  ```
+  It plays through ALSA directly: on a desktop machine, a sound server (PipeWire, PulseAudio) may hold the card.
 - **Port and settings:** `/var/lib/arcanist/arcanist.json` (written by the setup wizard), or environment variables
   in `systemctl edit arcanist`, e.g. `Environment=ASPNETCORE_URLS=http://*:9000`.
 

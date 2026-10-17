@@ -120,6 +120,7 @@ export const es: Dictionary = {
     network: 'Red P2P',
     mstream: 'mStream',
     dlna: 'DLNA',
+    serverAudio: 'Audio del servidor',
     extensions: 'Extensiones',
     overview: 'Inicio',
     libraries: 'Bibliotecas',
@@ -1078,10 +1079,56 @@ export const es: Dictionary = {
     playsCount: '{count} rep.',
     hours: '{hours} h',
   },
+  serverAudio: {
+    title: 'Audio del servidor',
+    subtitle:
+      'El servidor reproduce por un dispositivo de audio conectado a él: altavoces, un DAC USB o HDMI.',
+    output: {
+      title: 'Salida',
+      description:
+        'Aparece en «reproducir en» de los reproductores y, con una cuenta de Ultimate Cloud vinculada, como dispositivo de Ultimate Connect.',
+      on: 'Activado',
+      off: 'Desactivado',
+      playsOn: 'Suena por',
+      noDevice: 'No hay ningún dispositivo abierto',
+      noDeviceHelp:
+        'Puede estar desconectado u ocupado por otro programa. Arcanist lo vuelve a intentar solo.',
+      noDevices:
+        'El servidor no ve ningún dispositivo de audio. En Docker o en un NAS hay que darle acceso a la tarjeta de sonido (por ejemplo, --device /dev/snd).',
+      connect: 'Dispositivo de Ultimate Connect en {count} cuenta(s).',
+    },
+    unavailable: {
+      title: 'El servidor no puede reproducir audio',
+      description:
+        'Falta su reproductor nativo o, en Linux, la biblioteca de sonido ALSA (libasound2).',
+    },
+    settings: {
+      title: 'Dispositivo',
+      description: 'Por dónde suena la música y con qué nombre se muestra.',
+      device: 'Dispositivo de salida',
+      systemDefault: 'El predeterminado del sistema',
+      default: 'predeterminado',
+      deviceHelp:
+        'Con el predeterminado, la música sigue al dispositivo que elija el sistema. Si el elegido desaparece, se usa el predeterminado.',
+      name: 'Nombre',
+      nameHelp: 'Con este nombre aparece en «reproducir en» y en Ultimate Connect.',
+      test: 'Probar',
+    },
+    playing: {
+      title: 'Lo que suena',
+      description:
+        'Quien empieza una cola la controla mientras suena; los administradores también. Las reproducciones cuentan para quien la empezó.',
+      nothing: 'No suena nada.',
+      someoneElse: 'cola de otra persona',
+    },
+    saved: 'Audio del servidor guardado',
+  },
   extensions: {
     descriptions: {
       dlna: 'Servidor DLNA/UPnP para televisores, altavoces y apps de la red local, y «reproducir en».',
       mstream: 'La API de mStream, para las apps de mStream.',
+      'server-audio':
+        'Reproduce por un dispositivo de audio conectado al servidor, desde «reproducir en» y Ultimate Connect.',
       subsonic:
         'La API de Subsonic y OpenSubsonic, para apps como Symfonium, DSub, Feishin o Amperfy.',
       'ultimate-cloud':

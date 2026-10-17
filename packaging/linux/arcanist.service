@@ -26,6 +26,7 @@ NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=yes
+# Server audio (off by default) plays through the sound card: it needs PrivateDevices=no and SupplementaryGroups=audio.
 PrivateDevices=yes
 ProtectKernelTunables=yes
 ProtectKernelModules=yes

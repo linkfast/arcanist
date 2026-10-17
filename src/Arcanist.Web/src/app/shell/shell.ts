@@ -15,6 +15,7 @@ import {
   lucideLogOut,
   lucideMusic,
   lucideNetwork,
+  lucideSpeaker,
   lucidePuzzle,
   lucideSettings,
   lucideUserCog,
@@ -57,6 +58,7 @@ import { ThemeSelect } from '../shared/theme-select';
       lucideLogOut,
       lucideMusic,
       lucideNetwork,
+      lucideSpeaker,
       lucideSettings,
       lucideExternalLink,
     }),
@@ -200,6 +202,12 @@ export class Shell {
         visible: this.auth.isAdmin() && this.extensions.has('ultimate-cloud'),
       },
       { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
+      {
+        path: '/server-audio',
+        label: 'nav.serverAudio',
+        icon: 'lucideSpeaker',
+        visible: this.auth.isAdmin() && this.extensions.has('server-audio'),
+      },
       {
         path: '/mstream',
         label: 'nav.mstream',

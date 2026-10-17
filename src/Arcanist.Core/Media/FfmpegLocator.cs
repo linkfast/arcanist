@@ -48,6 +48,7 @@ public sealed partial class FfmpegLocator(
     /// <summary>Synology packages from SynoCommunity, newest first.</summary>
     private static readonly string[] KnownLocations =
     [
+        "/var/packages/ffmpeg8/target/bin/ffmpeg",
         "/var/packages/ffmpeg7/target/bin/ffmpeg",
         "/var/packages/ffmpeg6/target/bin/ffmpeg",
         "/var/packages/ffmpeg/target/bin/ffmpeg",

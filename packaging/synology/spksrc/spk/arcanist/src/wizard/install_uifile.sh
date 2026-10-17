@@ -24,13 +24,28 @@ cat <<EOF_WIZARD > "${SYNOPKG_TEMP_LOGFILE}"
           }
         }]
     }, {
-      "desc": "Arcanist runs as the internal service user <b>sc-arcanist</b>, which gets access to this shared folder. To add other folders as libraries, give <b>sc-arcanist</b> read permission on them. See <a target=\"_blank\" href=\"https://docs.synocommunity.com/user-guide/permissions/\">Permission Management</a>."
+      "type": "textfield",
+      "desc": "The port Arcanist answers on (from 1024 to 65535). You can change it later in Arcanist's window in DSM.",
+      "subitems": [{
+          "key": "wizard_port",
+          "desc": "Port",
+          "defaultValue": "8484",
+          "validator": {
+            "allowBlank": false,
+            "regex": {
+              "expr": "/^(102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/",
+              "errorText": "Enter a port from 1024 to 65535."
+            }
+          }
+        }]
+    }, {
+      "desc": "Arcanist runs as the internal service user <b>sc-arcanist</b>, which gets access to this shared folder. To add other folders as libraries, give <b>sc-arcanist</b> read permission on them: Arcanist's window in DSM shows which ones it can read and how."
     }]
 }, {
   "step_title": "Setup code",
   "items": [{
       "type": "textfield",
-      "desc": "After installing, open Arcanist (port 8484) to create the administrator account and your libraries. Arcanist asks for this code to make sure the person setting it up is you. Write it down.",
+      "desc": "After installing, open Arcanist from the DSM main menu to create the administrator account and your libraries. Arcanist asks for this code to make sure the person setting it up is you. Write it down.",
       "subitems": [{
           "key": "wizard_setup_code",
           "desc": "Setup code",

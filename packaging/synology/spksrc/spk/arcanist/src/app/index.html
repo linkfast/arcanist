@@ -1,0 +1,326 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arcanist</title>
+    <!-- Arcanist's window in DSM: the package's state and settings, for DSM administrators (api.cgi checks). -->
+    <style>
+      :root {
+        color-scheme: light;
+        --text: #1f2933;
+        --muted: #616e7c;
+        --line: #d9e2ec;
+        --panel: #ffffff;
+        --back: #f5f7fa;
+        --accent: #0b6bcb;
+        --good: #1b7f3b;
+        --bad: #b42318;
+        --warn-back: #fff7e6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 16px;
+        font: 13px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--text);
+        background: var(--back);
+      }
+      h1 { margin: 0 0 2px; font-size: 18px; }
+      h2 { margin: 0 0 8px; font-size: 14px; }
+      p { margin: 0 0 8px; }
+      .muted { color: var(--muted); }
+      .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; margin-top: 12px; }
+      .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+      .grow { flex: 1; }
+      .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); }
+      .badge.good { color: var(--good); border-color: var(--good); }
+      .badge.bad { color: var(--bad); border-color: var(--bad); }
+      button, .button {
+        font: inherit; padding: 5px 12px; border-radius: 4px; border: 1px solid var(--line); background: #fff;
+        color: var(--text); cursor: pointer; text-decoration: none; display: inline-block;
+      }
+      button.primary, .button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button:disabled { opacity: .6; cursor: default; }
+      input { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px; width: 7em; }
+      code { font: 12px ui-monospace, Consolas, monospace; }
+      .code { font: 600 20px ui-monospace, Consolas, monospace; letter-spacing: .08em; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 5px 4px; border-top: 1px solid var(--line); vertical-align: top; }
+      .note { background: var(--warn-back); border-radius: 4px; padding: 8px 10px; margin-top: 8px; }
+      .error { color: var(--bad); }
+      ol { margin: 4px 0 0; padding-left: 20px; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <div class="grow">
+        <h1>Arcanist</h1>
+        <p class="muted" data-t="subtitle"></p>
+      </div>
+      <a class="button primary" id="open" target="_blank" rel="noopener" data-t="open"></a>
+    </div>
+
+    <p class="error" id="failure" hidden></p>
+
+    <div class="card">
+      <h2 data-t="state"></h2>
+      <div class="row">
+        <span class="badge" id="running"></span>
+        <span class="muted" id="version"></span>
+        <span class="grow"></span>
+        <button id="restart" data-t="restart"></button>
+      </div>
+      <div class="row" style="margin-top: 8px">
+        <span class="muted" data-t="components"></span>
+        <span class="badge" id="dotnet"></span>
+        <span class="badge" id="ffmpeg"></span>
+      </div>
+      <div id="setup" hidden>
+        <p style="margin-top: 10px" data-t="setupHelp"></p>
+        <div class="code" id="code"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-t="port"></h2>
+      <p class="muted" data-t="portHelp"></p>
+      <div class="row">
+        <input id="port" type="number" min="1024" max="65535" />
+        <button class="primary" id="savePort" data-t="change"></button>
+        <span class="muted" id="portState"></span>
+      </div>
+      <p class="note" data-t="firewall"></p>
+    </div>
+
+    <div class="card">
+      <h2 data-t="folders"></h2>
+      <p class="muted" data-t="foldersHelp"></p>
+      <table><tbody id="shares"></tbody></table>
+      <div id="howto" class="note" hidden>
+        <strong data-t="howtoTitle"></strong>
+        <ol>
+          <li data-t="howto1"></li>
+          <li data-t="howto2"></li>
+          <li data-t="howto3"></li>
+          <li data-t="howto4"></li>
+        </ol>
+        <p style="margin: 8px 0 0"><button id="openShares" data-t="openShares"></button></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-t="data"></h2>
+      <p class="muted"><span data-t="dataHelp"></span> <code id="dataDir"></code> (<span id="dataSize"></span>)</p>
+    </div>
+
+    <script>
+      "use strict";
+      const texts = {
+        es: {
+          subtitle: "Tu servidor de música en este NAS.",
+          open: "Abrir Arcanist",
+          state: "Estado",
+          on: "En marcha",
+          off: "Detenido",
+          version: "Versión {v}",
+          restart: "Reiniciar",
+          components: "Paquetes de los que depende:",
+          dotnetName: ".NET 10",
+          ffmpegName: "FFmpeg 8",
+          setupHelp: "Arcanist aún no está configurado. Ábrelo y sigue su asistente; te pedirá este código:",
+          port: "Puerto",
+          portHelp: "El puerto en el que responde Arcanist. Al cambiarlo, Arcanist se reinicia en el nuevo.",
+          change: "Cambiar",
+          portSaved: "Arcanist se está reiniciando en el puerto {p}.",
+          firewall: "Si usas el firewall de DSM, permite el puerto nuevo (Panel de control > Seguridad > Firewall). Para usar HTTPS y un nombre propio, crea una regla de proxy inverso hacia este puerto (Panel de control > Portal de inicio de sesión > Avanzado > Proxy inverso).",
+          folders: "Carpetas compartidas",
+          foldersHelp: "Arcanist funciona con el usuario interno {u}. Solo puede usar como biblioteca las carpetas que ese usuario puede leer.",
+          readable: "Arcanist puede leerla",
+          notReadable: "Arcanist no puede leerla",
+          unknown: "No se pudo comprobar",
+          howtoTitle: "Para que Arcanist pueda leer una carpeta:",
+          howto1: "Abre Panel de control > Carpeta compartida, elige la carpeta y pulsa Editar.",
+          howto2: "En Permisos, cambia la lista a «Usuario interno del sistema».",
+          howto3: "Marca «Solo lectura» para {u} (o «Lectura/escritura» si quieres que Arcanist organice archivos, importe o reciba subidas) y pulsa Guardar.",
+          howto4: "Después, añádela en Arcanist como biblioteca: su ruta aparece en la tabla.",
+          openShares: "Abrir Carpeta compartida",
+          data: "Datos de Arcanist",
+          dataHelp: "Base de datos, claves, cachés y registros, en el volumen del sistema del paquete:",
+          not_signed_in: "Inicia sesión en DSM para ver esta ventana.",
+          not_admin: "Solo los administradores de DSM pueden ver esta ventana.",
+          port_in_use: "Ese puerto ya lo usa otro programa.",
+          invalid_port: "Escribe un puerto de 1024 a 65535.",
+          not_running: "Arcanist no está en marcha: inícialo desde el Centro de paquetes.",
+          cannot_restart: "No se pudo reiniciar Arcanist desde aquí: detén e inicia el paquete en el Centro de paquetes.",
+          cannot_write: "No se pudo guardar el puerto.",
+          failed: "No se pudo leer el estado de Arcanist.",
+        },
+        en: {
+          subtitle: "Your music server on this NAS.",
+          open: "Open Arcanist",
+          state: "State",
+          on: "Running",
+          off: "Stopped",
+          version: "Version {v}",
+          restart: "Restart",
+          components: "Packages it depends on:",
+          dotnetName: ".NET 10",
+          ffmpegName: "FFmpeg 8",
+          setupHelp: "Arcanist is not set up yet. Open it and follow its wizard; it asks for this code:",
+          port: "Port",
+          portHelp: "The port Arcanist answers on. Changing it restarts Arcanist on the new one.",
+          change: "Change",
+          portSaved: "Arcanist is restarting on port {p}.",
+          firewall: "If you use DSM's firewall, allow the new port (Control Panel > Security > Firewall). For HTTPS and a name of your own, create a reverse proxy rule to this port (Control Panel > Login Portal > Advanced > Reverse Proxy).",
+          folders: "Shared folders",
+          foldersHelp: "Arcanist runs as the internal user {u}. It can only use as libraries the folders that user can read.",
+          readable: "Arcanist can read it",
+          notReadable: "Arcanist cannot read it",
+          unknown: "Could not be checked",
+          howtoTitle: "To let Arcanist read a folder:",
+          howto1: "Open Control Panel > Shared Folder, choose the folder and click Edit.",
+          howto2: "In Permissions, switch the list to “System internal user”.",
+          howto3: "Tick “Read only” for {u} (or “Read/Write” to let Arcanist organize files, import or receive uploads) and click Save.",
+          howto4: "Then add it in Arcanist as a library: its path is in the table.",
+          openShares: "Open Shared Folder",
+          data: "Arcanist's data",
+          dataHelp: "Database, keys, caches and logs, on the package's system volume:",
+          not_signed_in: "Sign in to DSM to see this window.",
+          not_admin: "Only DSM administrators can see this window.",
+          port_in_use: "Another program already uses that port.",
+          invalid_port: "Enter a port from 1024 to 65535.",
+          not_running: "Arcanist is not running: start it from Package Center.",
+          cannot_restart: "Arcanist could not be restarted from here: stop and start the package in Package Center.",
+          cannot_write: "The port could not be saved.",
+          failed: "Arcanist's state could not be read.",
+        },
+      };
+      const lang = (navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en";
+      const t = (key, values = {}) =>
+        (texts[lang][key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
+      const $ = (id) => document.getElementById(id);
+      let state = null;
+
+      function translate(user) {
+        for (const element of document.querySelectorAll("[data-t]"))
+          element.textContent = t(element.dataset.t, { u: user || "sc-arcanist" });
+      }
+
+      function fail(code) {
+        $("failure").textContent = t(code || "failed");
+        $("failure").hidden = false;
+      }
+
+      function size(bytes) {
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        let value = bytes, unit = 0;
+        while (value >= 1000 && unit < units.length - 1) { value /= 1000; unit++; }
+        return new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(value) + " " + units[unit];
+      }
+
+      async function load() {
+        let response;
+        try {
+          response = await fetch("api.cgi?action=status", { cache: "no-store", credentials: "same-origin" });
+        } catch {
+          return fail("failed");
+        }
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) return fail(body.error);
+        $("failure").hidden = true;
+        state = body;
+        render();
+      }
+
+      function render() {
+        translate(state.serviceUser);
+        const url = `http://${location.hostname}:${state.port}/`;
+        $("open").href = state.setupCompleted ? url + "admin/" : url;
+        $("running").textContent = t(state.running ? "on" : "off");
+        $("running").className = "badge " + (state.running ? "good" : "bad");
+        $("version").textContent = state.version ? t("version", { v: state.version }) : "";
+        $("restart").disabled = !state.running;
+        for (const [id, present] of [["dotnet", state.dotnet], ["ffmpeg", state.ffmpeg]]) {
+          $(id).textContent = t(id + "Name");
+          $(id).className = "badge " + (present ? "good" : "bad");
+        }
+        $("setup").hidden = state.setupCompleted || !state.setupCode;
+        $("code").textContent = state.setupCode || "";
+        if (document.activeElement !== $("port")) $("port").value = state.port;
+        $("dataDir").textContent = state.dataDirectory;
+        $("dataSize").textContent = size(state.dataBytes);
+
+        const rows = state.shares.map((share) => {
+          const row = document.createElement("tr");
+          const name = document.createElement("td");
+          name.innerHTML = "<strong></strong><br><code></code>";
+          name.querySelector("strong").textContent = share.name;
+          name.querySelector("code").textContent = share.path;
+          const access = document.createElement("td");
+          const badge = document.createElement("span");
+          badge.className = "badge " + (share.readable === true ? "good" : share.readable === false ? "bad" : "");
+          badge.textContent = t(share.readable === true ? "readable" : share.readable === false ? "notReadable" : "unknown");
+          access.append(badge);
+          access.style.textAlign = "right";
+          row.append(name, access);
+          return row;
+        });
+        $("shares").replaceChildren(...rows);
+        $("howto").hidden = !state.shares.some((share) => share.readable !== true);
+      }
+
+      async function post(fields) {
+        const response = await fetch("api.cgi", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Arcanist-Window": "1" },
+          body: new URLSearchParams(fields),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || "failed");
+        return body;
+      }
+
+      $("savePort").addEventListener("click", async () => {
+        $("savePort").disabled = true;
+        $("portState").textContent = "";
+        try {
+          const result = await post({ action: "port", port: $("port").value.trim() });
+          $("portState").textContent = t("portSaved", { p: result.port });
+          setTimeout(load, 4000);
+        } catch (error) {
+          $("portState").textContent = t(error.message);
+        } finally {
+          $("savePort").disabled = false;
+        }
+      });
+
+      $("restart").addEventListener("click", async () => {
+        $("restart").disabled = true;
+        try {
+          await post({ action: "restart" });
+          setTimeout(load, 4000);
+        } catch (error) {
+          fail(error.message);
+          $("restart").disabled = false;
+        }
+      });
+
+      // Opens Control Panel > Shared Folder in DSM (this page is in a DSM window, on DSM's own address).
+      $("openShares").addEventListener("click", () => {
+        try {
+          window.top.SYNO.SDS.AppLaunch("SYNO.SDS.AdminCenter.Application", { fn: "SYNO.SDS.AdminCenter.Share.Main" });
+        } catch {
+          window.open("/?launchApp=SYNO.SDS.AdminCenter.Application&launchParam=" +
+            encodeURIComponent("fn=SYNO.SDS.AdminCenter.Share.Main"), "_blank");
+        }
+      });
+
+      translate();
+      load();
+      setInterval(load, 15000);
+    </script>
+  </body>
+</html>

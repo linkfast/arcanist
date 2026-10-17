@@ -3,6 +3,10 @@
 Release tarballs (`arcanist-<version>-linux-x64.tar.gz`, `…-linux-arm64.tar.gz`) are self-contained: no .NET install
 is needed, only the ICU library most distributions already have (`libicu`).
 
+The `…-dotnet.tar.gz` ones are smaller, for systems with the ASP.NET Core 10 runtime installed (the
+`aspnetcore-runtime-10.0` package of your distribution, or Microsoft's): run them with `dotnet arcanist.dll`, and in
+the systemd unit set `ExecStart=/usr/bin/dotnet /opt/arcanist/arcanist.dll`. The Synology package uses them.
+
 ## Install as a systemd service
 
 ```sh

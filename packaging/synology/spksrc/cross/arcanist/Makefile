@@ -1,9 +1,9 @@
 PKG_NAME = arcanist
 PKG_VERS = 0.1.0
 PKG_EXT = tar.gz
-PKG_DIST_NAME = $(PKG_NAME)-$(PKG_VERS)-linux-$(PKG_DIST_ARCH).$(PKG_EXT)
+PKG_DIST_NAME = $(PKG_NAME)-$(PKG_VERS)-linux-$(PKG_DIST_ARCH)-dotnet.$(PKG_EXT)
 PKG_DIST_SITE = https://github.com/linkfast/arcanist/releases/download/v$(PKG_VERS)
-PKG_DIR = $(PKG_NAME)-$(PKG_VERS)-linux-$(PKG_DIST_ARCH)
+PKG_DIR = $(PKG_NAME)-$(PKG_VERS)-linux-$(PKG_DIST_ARCH)-dotnet
 
 DEPENDS =
 
@@ -13,7 +13,8 @@ LICENSE  = AGPL-3.0-or-later
 
 INSTALL_TARGET = arcanist_install
 
-# The release tarballs are self-contained .NET builds with the admin panel; use digests with multiple files.
+# The release tarballs for systems with .NET (the runtime comes from the dotnet10-runtime package), with the admin
+# panel; use digests with multiple files.
 PKG_DIST_ARCH_LIST = x64 arm64
 
 include ../../mk/spksrc.common.mk

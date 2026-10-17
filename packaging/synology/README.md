@@ -1,17 +1,48 @@
 # Synology package
 
 `spksrc/` holds the [spksrc](https://github.com/SynoCommunity/spksrc) definitions to submit to SynoCommunity:
-`cross/arcanist` downloads the release tarballs (self-contained, x64 and arm64) and `spk/arcanist` packages them for
-DSM 7.2 and later.
+`cross/arcanist` downloads the release tarballs for systems with .NET (`arcanist-<version>-linux-<arch>-dotnet`,
+x64 and arm64) and `spk/arcanist` packages them for DSM 7.2 and later.
 
+- Depends on two SynoCommunity packages, which Package Center installs with it: **`dotnet10-runtime`** (the
+  ASP.NET Core 10 runtime that runs the server; the package is some 70 MB smaller than with a self-contained build)
+  and **`ffmpeg8`** (audio conversion, found by Arcanist at `/var/packages/ffmpeg8/target/bin/ffmpeg`).
 - Runs as the internal user `sc-arcanist`. Its data (settings, SQLite database, keys, caches, logs) is in
   `/var/packages/arcanist/var`, on the NAS's own volume, never on a share.
 - The install wizard asks for the music shared folder (created if missing and made accessible to `sc-arcanist`) and
-  shows the setup code that Arcanist's own setup wizard asks for.
-- Port 8484, registered with the DSM firewall and as a desktop shortcut.
+  the port, and shows the setup code that Arcanist's own setup wizard asks for.
+- `bin/arcanist-run` supervises the server: it reads the port from `var/package.conf` on every start, and starts the
+  server again when it asks to (exit code 75, after a factory reset or a server restore) or when the package's
+  window asks for it; more than five times in a minute and it stops. DSM stops it with TERM, passed on to the server.
 - Updates come from Package Center; Arcanist has no updater of its own on DSM.
 
-## Building
+## Arcanist's window in DSM
+
+Arcanist appears in DSM's main menu (administrators only). Its window (`app/index.html`, a DSM `legacy` app on
+`/webman/3rdparty/arcanist/`) talks to `app/api.cgi`, which checks the DSM session (`authenticate.cgi`) and the
+`administrators` group. It shows:
+
+- whether the server runs, its version and, until it is set up, the setup code;
+- the port, which can be changed (the server starts again on it; DSM's firewall has the default port 8484 open);
+- the shared folders and whether `sc-arcanist` can read them, with the steps to give it access and a button that
+  opens Control Panel > Shared Folder (a package cannot change share permissions itself on DSM 7);
+- where its data is and how much it takes, and a link to Arcanist's own panel.
+
+`api.cgi` is plain `sh` (DSM has no Python or jq by default). POST requests need the header `X-Arcanist-Window: 1`,
+which a form on another site cannot send.
+
+## Building a package to try
+
+Before a release exists, from the local tarballs (needs Docker):
+
+```sh
+packaging/linux/pack.sh
+packaging/synology/build-local.sh       # artifacts/synology/arcanist_*.spk
+```
+
+Install the `.spk` in Package Center with "Manual Install".
+
+## Building for SynoCommunity
 
 In a checkout of spksrc (normally its Docker build environment):
 
@@ -19,7 +50,7 @@ In a checkout of spksrc (normally its Docker build environment):
 cp -R <arcanist>/packaging/synology/spksrc/cross/arcanist cross/
 cp -R <arcanist>/packaging/synology/spksrc/spk/arcanist spk/
 make -C cross/arcanist digests       # once per version, after the GitHub release exists
-make -C spk/arcanist arch-x64-7.2 arch-armv8-7.2
+make -C spk/arcanist arch-x64-7.2 arch-aarch64-7.2
 ```
 
 For a new version, set `PKG_VERS` in `cross/arcanist/Makefile` and `SPK_VERS` in `spk/arcanist/Makefile` (reset

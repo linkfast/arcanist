@@ -1,0 +1,17 @@
+{
+    ".url": {
+        "com.synocommunity.packages.arcanist": {
+            "title": "Arcanist",
+            "desc": "Self-hosted music server",
+            "icon": "images/arcanist-{0}.png",
+            "type": "legacy",
+            "url": "/webman/3rdparty/arcanist/index.html",
+            "width": 760,
+            "height": 640,
+            "allowMultiInstance": false,
+            "allUsers": false,
+            "grantPrivilege": "local",
+            "advanceGrantPrivilege": true
+        }
+    }
+}

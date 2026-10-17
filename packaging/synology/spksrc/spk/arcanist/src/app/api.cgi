@@ -4,6 +4,9 @@
 #                              with whether Arcanist (sc-arcanist) can read them.
 #   POST action=port&port=N    changes the port and starts the server again on it.
 #   POST action=restart        starts the server again.
+#   POST ?action=environment&enabled=0|1   the test mode: whether it is on, and its variables as the body
+#                              (text, one KEY=value per line; "Arcanist:UltimateCloud:ApiUrl" is saved as
+#                              Arcanist__UltimateCloud__ApiUrl). Saves them and starts the server again if it runs.
 # POST requests must carry the header X-Arcanist-Window: 1 (a form on another site cannot send it).
 # Plain sh: DSM has no Python or jq by default.
 
@@ -45,6 +48,33 @@ configured_port ()
     echo "${port:-8484}"
 }
 
+test_mode ()
+{
+    [ "$(sed -n 's/^TEST_MODE=\(.*\)$/\1/p' "${VAR}/package.conf" 2>/dev/null | tail -n 1)" = "1" ] && echo true || echo false
+}
+
+# package.conf, which bin/arcanist-run reads on every start: $1 the port, $2 the test mode (true or false).
+write_conf ()
+{
+    mode=0
+    [ "$2" = true ] && mode=1
+    printf 'PORT=%s\nTEST_MODE=%s\n' "$1" "${mode}" > "${VAR}/package.conf.new" 2>/dev/null \
+        && mv "${VAR}/package.conf.new" "${VAR}/package.conf"
+}
+
+# The test mode's variables as a JSON array of {"key", "value"}.
+variables_json ()
+{
+    out=""
+    if [ -f "${VAR}/environment" ]; then
+        while IFS= read -r line || [ -n "${line}" ]; do
+            case "${line}" in *=*) ;; *) continue ;; esac
+            out="${out:+${out},}{\"key\":$(json "${line%%=*}"),\"value\":$(json "${line#*=}")}"
+        done < "${VAR}/environment"
+    fi
+    echo "[${out}]"
+}
+
 # A value of runtime.json, which Arcanist writes while it runs ({"processId": …, "version": "…", …}).
 runtime_value ()
 {
@@ -72,16 +102,22 @@ can_read ()
     fi
 }
 
-status ()
+is_running ()
 {
-    running=false
     pid="$(runtime_value processId)"
     if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
-        running=true
+        echo true
     elif [ -n "${pid}" ] && [ -d "/proc/${pid}" ]; then
         # Another user's process: kill -0 is refused, but it exists.
-        running=true
+        echo true
+    else
+        echo false
     fi
+}
+
+status ()
+{
+    running="$(is_running)"
 
     setup_completed=false
     if grep -q '"Completed"[[:space:]]*:[[:space:]]*true' "${VAR}/arcanist.json" 2>/dev/null; then
@@ -113,7 +149,7 @@ status ()
     ffmpeg=false
     [ -x /var/packages/ffmpeg8/target/bin/ffmpeg ] && ffmpeg=true
 
-    respond "200 OK" "{\"user\":$(json "${user}"),\"cgiUser\":$(json "$(id -un 2>/dev/null)"),\"running\":${running},\"version\":$(json "$(runtime_value version)"),\"startedAt\":$(json "$(runtime_value startedAt)"),\"port\":$(configured_port),\"setupCompleted\":${setup_completed},\"setupCode\":${code},\"dataDirectory\":$(json "${VAR}"),\"dataBytes\":$(( ${data_kb:-0} * 1024 )),\"serviceUser\":$(json "${SERVICE_USER}"),\"dotnet\":${dotnet},\"ffmpeg\":${ffmpeg},\"shares\":[${shares}]}"
+    respond "200 OK" "{\"user\":$(json "${user}"),\"cgiUser\":$(json "$(id -un 2>/dev/null)"),\"running\":${running},\"version\":$(json "$(runtime_value version)"),\"startedAt\":$(json "$(runtime_value startedAt)"),\"port\":$(configured_port),\"setupCompleted\":${setup_completed},\"setupCode\":${code},\"dataDirectory\":$(json "${VAR}"),\"dataBytes\":$(( ${data_kb:-0} * 1024 )),\"serviceUser\":$(json "${SERVICE_USER}"),\"dotnet\":${dotnet},\"ffmpeg\":${ffmpeg},\"testMode\":$(test_mode),\"variables\":$(variables_json),\"shares\":[${shares}]}"
 }
 
 # ── Changes ──────────────────────────────────────────────────────────────────
@@ -137,6 +173,48 @@ form_value ()
     printf '%s' "${body}" | tr '&' '\n' | sed -n "s/^$1=//p" | head -n 1
 }
 
+query_value ()
+{
+    printf '%s' "${QUERY_STRING:-}" | tr '&' '\n' | sed -n "s/^$1=//p" | head -n 1
+}
+
+# Checks the test mode's variables (the request's body) and saves them to "environment", which bin/arcanist-run
+# reads. Names may be written as settings (with ":"); those the package relies on are refused.
+save_environment ()
+{
+    new="${VAR}/environment.new"
+    if ! ( umask 077 && : > "${new}" ) 2>/dev/null; then
+        respond "500 Internal Server Error" '{"error":"cannot_write"}'
+    fi
+    n=0
+    while IFS= read -r line || [ -n "${line}" ]; do
+        n=$((n + 1))
+        line="$(printf '%s' "${line}" | tr -d '\r')"
+        case "${line}" in ''|\#*) continue ;; esac
+        key=""
+        case "${line}" in
+            *=*) key="$(printf '%s' "${line%%=*}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/:/__/g')" ;;
+        esac
+        case "${key}" in
+            ''|[0-9]*|*[!A-Za-z0-9_]*)
+                rm -f "${new}"
+                respond "400 Bad Request" "{\"error\":\"invalid_variable\",\"line\":${n}}"
+                ;;
+        esac
+        case "$(printf '%s' "${key}" | tr 'a-z' 'A-Z')" in
+            PATH|HOME|USER|SHELL|LD_*|DOTNET_ROOT|ARCANIST_DATA_DIR|ARCANIST_HOME|ARCANIST__DATADIR|URLS|ASPNETCORE_URLS|ARCANIST__HOSTING__*)
+                rm -f "${new}"
+                respond "400 Bad Request" "{\"error\":\"reserved_variable\",\"line\":${n},\"key\":$(json "${key}")}"
+                ;;
+        esac
+        value="$(printf '%s' "${line#*=}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        printf '%s=%s\n' "${key}" "${value}" >> "${new}"
+    done <<EOF
+${body}
+EOF
+    mv "${new}" "${VAR}/environment" || respond "500 Internal Server Error" '{"error":"cannot_write"}'
+}
+
 case "${REQUEST_METHOD}" in
     GET)
         status
@@ -145,8 +223,27 @@ case "${REQUEST_METHOD}" in
         if [ "${HTTP_X_ARCANIST_WINDOW}" != "1" ]; then
             respond "403 Forbidden" '{"error":"missing_header"}'
         fi
-        body="$(head -c "${CONTENT_LENGTH:-0}")"
-        case "$(form_value action)" in
+        length="$(printf '%s' "${CONTENT_LENGTH:-0}" | tr -cd '0-9')"
+        if [ "${length:-0}" -gt 65536 ]; then
+            respond "413 Payload Too Large" '{"error":"too_large"}'
+        fi
+        body="$(head -c "${length:-0}")"
+        action="$(query_value action)"
+        [ -n "${action}" ] || action="$(form_value action)"
+        case "${action}" in
+            environment)
+                save_environment
+                enabled=false
+                [ "$(query_value enabled)" = "1" ] && enabled=true
+                if ! write_conf "$(configured_port)" "${enabled}"; then
+                    respond "500 Internal Server Error" '{"error":"cannot_write"}'
+                fi
+                if [ "$(is_running)" = true ]; then
+                    restart_server
+                    respond "200 OK" "{\"testMode\":${enabled},\"restarted\":true}"
+                fi
+                respond "200 OK" "{\"testMode\":${enabled},\"restarted\":false}"
+                ;;
             port)
                 port="$(form_value port)"
                 case "${port}" in
@@ -158,7 +255,7 @@ case "${REQUEST_METHOD}" in
                 if [ "${port}" != "$(configured_port)" ] && port_in_use "${port}"; then
                     respond "409 Conflict" '{"error":"port_in_use"}'
                 fi
-                if ! echo "PORT=${port}" > "${VAR}/package.conf.new" 2>/dev/null || ! mv "${VAR}/package.conf.new" "${VAR}/package.conf"; then
+                if ! write_conf "${port}" "$(test_mode)"; then
                     respond "500 Internal Server Error" '{"error":"cannot_write"}'
                 fi
                 restart_server

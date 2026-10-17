@@ -20,7 +20,7 @@ done
 
 # Without line ending conversion: on Windows, spksrc's checksum files would not be read.
 [ -d "$spksrc/.git" ] || git -c core.autocrlf=false clone --depth 1 https://github.com/SynoCommunity/spksrc.git "$spksrc"
-rm -rf "$spksrc/cross/arcanist" "$spksrc/spk/arcanist" "$spksrc/work-"*/arcanist* 2>/dev/null || true
+rm -rf "$spksrc/cross/arcanist" "$spksrc/spk/arcanist" "$spksrc/work-"*/arcanist* "$spksrc/packages/arcanist_"* 2>/dev/null || true
 cp -R packaging/synology/spksrc/cross/arcanist "$spksrc/cross/"
 cp -R packaging/synology/spksrc/spk/arcanist "$spksrc/spk/"
 

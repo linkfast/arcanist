@@ -16,6 +16,7 @@
         --accent: #0b6bcb;
         --good: #1b7f3b;
         --bad: #b42318;
+        --warn: #b54708;
         --warn-back: #fff7e6;
       }
       * { box-sizing: border-box; }
@@ -36,6 +37,7 @@
       .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); }
       .badge.good { color: var(--good); border-color: var(--good); }
       .badge.bad { color: var(--bad); border-color: var(--bad); }
+      .badge.warn { color: var(--warn); border-color: var(--warn); background: var(--warn-back); }
       button, .button {
         font: inherit; padding: 5px 12px; border-radius: 4px; border: 1px solid var(--line); background: #fff;
         color: var(--text); cursor: pointer; text-decoration: none; display: inline-block;
@@ -50,6 +52,10 @@
       .note { background: var(--warn-back); border-radius: 4px; padding: 8px 10px; margin-top: 8px; }
       .error { color: var(--bad); }
       ol { margin: 4px 0 0; padding-left: 20px; }
+      .variables td { border: 0; padding: 3px 4px 3px 0; }
+      .variables input { width: 100%; }
+      .variables input.invalid { border-color: var(--bad); }
+      .variables td:last-child { width: 1%; }
       [hidden] { display: none !important; }
     </style>
   </head>
@@ -71,6 +77,7 @@
       <div class="row">
         <span class="badge" id="running"></span>
         <span class="muted" id="version"></span>
+        <span class="badge warn" id="testBadge" data-t="testBadge" hidden></span>
         <span class="grow"></span>
         <button id="restart" data-t="restart"></button>
       </div>
@@ -116,6 +123,33 @@
       <h2 data-t="data"></h2>
       <p class="muted"><span data-t="dataHelp"></span> <code id="dataDir"></code> (<span id="dataSize"></span>)</p>
     </div>
+
+    <div class="card">
+      <h2 data-t="testMode"></h2>
+      <p class="muted" data-t="testHelp"></p>
+      <label class="row">
+        <input type="checkbox" id="testEnabled" style="width: auto" />
+        <span data-t="testEnable"></span>
+      </label>
+      <div id="testEditor" hidden>
+        <table class="variables"><tbody id="variables"></tbody></table>
+        <p style="margin: 6px 0 0"><button id="addVariable" data-t="addVariable"></button></p>
+        <p class="note" data-t="testNote"></p>
+      </div>
+      <div class="row" style="margin-top: 10px">
+        <button class="primary" id="saveTest" data-t="saveTest"></button>
+        <span class="muted" id="testState"></span>
+      </div>
+      <!-- Settings worth trying against services not published yet. -->
+      <datalist id="knownKeys">
+        <option value="Arcanist:UltimateCloud:ApiUrl"></option>
+        <option value="Arcanist:UltimateCloud:EventsUrl"></option>
+        <option value="Arcanist:UltimateCloud:ToolsUrl"></option>
+        <option value="Arcanist:UltimateCloud:Authority"></option>
+        <option value="Arcanist:UltimateCloud:ClientId"></option>
+        <option value="Serilog:MinimumLevel:Default"></option>
+      </datalist>
+    </div>
     </main>
 
     <script>
@@ -157,7 +191,22 @@
           invalid_port: "Escribe un puerto de 1024 a 65535.",
           not_running: "Arcanist no está en marcha: inícialo desde el Centro de paquetes.",
           cannot_restart: "No se pudo reiniciar Arcanist desde aquí: detén e inicia el paquete en el Centro de paquetes.",
-          cannot_write: "No se pudo guardar el puerto.",
+          cannot_write: "No se pudo guardar el cambio.",
+          testMode: "Modo de prueba",
+          testBadge: "Modo de prueba",
+          testHelp: "Para probar Arcanist con servicios que aún no están publicados, como un Ultimate Cloud de pruebas. Cada variable se le pasa a Arcanist al arrancar: un ajuste de Arcanist (Arcanist:UltimateCloud:ApiUrl) o una variable de entorno.",
+          testEnable: "Activar modo de prueba",
+          keyPlaceholder: "Arcanist:UltimateCloud:ApiUrl",
+          valuePlaceholder: "Valor",
+          addVariable: "Añadir variable",
+          remove: "Quitar",
+          testNote: "Tienen prioridad sobre el archivo de configuración de Arcanist (arcanist.json). Al desactivar el modo de prueba se conservan, pero dejan de aplicarse.",
+          saveTest: "Guardar y reiniciar",
+          testSavedRestart: "Guardado. Arcanist se está reiniciando.",
+          testSaved: "Guardado. Se aplicará cuando Arcanist arranque.",
+          invalid_variable: "Nombre no válido: usa letras, números, «_» y «:», sin empezar por un número.",
+          reserved_variable: "{k} no se puede cambiar: lo usa el paquete.",
+          too_large: "Hay demasiadas variables.",
           failed: "No se pudo leer el estado de Arcanist.",
         },
         en: {
@@ -196,7 +245,22 @@
           invalid_port: "Enter a port from 1024 to 65535.",
           not_running: "Arcanist is not running: start it from Package Center.",
           cannot_restart: "Arcanist could not be restarted from here: stop and start the package in Package Center.",
-          cannot_write: "The port could not be saved.",
+          cannot_write: "The change could not be saved.",
+          testMode: "Test mode",
+          testBadge: "Test mode",
+          testHelp: "To try Arcanist with services not published yet, such as a test Ultimate Cloud. Each variable is given to Arcanist when it starts: an Arcanist setting (Arcanist:UltimateCloud:ApiUrl) or an environment variable.",
+          testEnable: "Turn on test mode",
+          keyPlaceholder: "Arcanist:UltimateCloud:ApiUrl",
+          valuePlaceholder: "Value",
+          addVariable: "Add variable",
+          remove: "Remove",
+          testNote: "They take precedence over Arcanist's settings file (arcanist.json). Turning test mode off keeps them, but they stop applying.",
+          saveTest: "Save and restart",
+          testSavedRestart: "Saved. Arcanist is restarting.",
+          testSaved: "Saved. It applies when Arcanist starts.",
+          invalid_variable: "Invalid name: use letters, digits, “_” and “:”, not starting with a digit.",
+          reserved_variable: "{k} cannot be changed: the package relies on it.",
+          too_large: "There are too many variables.",
           failed: "Arcanist's state could not be read.",
         },
       };
@@ -205,6 +269,8 @@
         (texts[lang][key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
       const $ = (id) => document.getElementById(id);
       let state = null;
+      // While the test mode's form has unsaved changes, refreshing the state leaves it alone.
+      let editingTest = false;
 
       // The DSM session's SynoToken: from the window that shows this page, or from DSM itself.
       const token = new URLSearchParams(location.search).get("SynoToken") || (() => {
@@ -291,6 +357,35 @@
         });
         $("shares").replaceChildren(...rows);
         $("howto").hidden = !state.shares.some((share) => share.readable !== true);
+
+        $("testBadge").hidden = !state.testMode;
+        if (!editingTest) {
+          $("testEnabled").checked = state.testMode;
+          // Settings are shown with ":", as in Arcanist's settings; they are saved with "__", as variables.
+          $("variables").replaceChildren(...state.variables.map((v) => variableRow(v.key.replaceAll("__", ":"), v.value)));
+          if (!state.variables.length) $("variables").append(variableRow("", ""));
+          $("testEditor").hidden = !state.testMode;
+        }
+      }
+
+      function variableRow(key, value) {
+        const row = document.createElement("tr");
+        const keyInput = Object.assign(document.createElement("input"), { value: key, placeholder: t("keyPlaceholder"), spellcheck: false });
+        keyInput.setAttribute("list", "knownKeys");
+        const valueInput = Object.assign(document.createElement("input"), { value, placeholder: t("valuePlaceholder"), spellcheck: false });
+        const remove = Object.assign(document.createElement("button"), { type: "button", textContent: t("remove") });
+        remove.addEventListener("click", () => {
+          editingTest = true;
+          row.remove();
+          if (!$("variables").children.length) $("variables").append(variableRow("", ""));
+        });
+        const cells = [keyInput, valueInput, remove].map((element) => {
+          const cell = document.createElement("td");
+          cell.append(element);
+          return cell;
+        });
+        row.append(...cells);
+        return row;
       }
 
       async function post(fields) {
@@ -320,6 +415,49 @@
           $("portState").textContent = t(error.message);
         } finally {
           $("savePort").disabled = false;
+        }
+      });
+
+      $("testEnabled").addEventListener("change", () => {
+        editingTest = true;
+        $("testEditor").hidden = !$("testEnabled").checked;
+      });
+      $("variables").addEventListener("input", () => (editingTest = true));
+      $("addVariable").addEventListener("click", () => {
+        editingTest = true;
+        const row = variableRow("", "");
+        $("variables").append(row);
+        row.querySelector("input").focus();
+      });
+
+      // The variables go as text, one KEY=value per line (api.cgi checks and saves them).
+      $("saveTest").addEventListener("click", async () => {
+        const rows = [...$("variables").children]
+          .map((row) => [...row.querySelectorAll("input")])
+          .filter(([key, value]) => key.value.trim() || value.value.trim());
+        for (const [key] of rows) key.classList.remove("invalid");
+        $("saveTest").disabled = true;
+        $("testState").textContent = "";
+        try {
+          const response = await fetch(`api.cgi?action=environment&enabled=${$("testEnabled").checked ? 1 : 0}`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "text/plain; charset=utf-8", "X-Arcanist-Window": "1", "X-SYNO-TOKEN": token },
+            body: rows.map(([key, value]) => `${key.value.trim()}=${value.value.trim()}`).join("\n"),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            if (body.line) rows[body.line - 1]?.[0].classList.add("invalid");
+            $("testState").textContent = t(body.error || "failed", { k: body.key });
+            return;
+          }
+          editingTest = false;
+          $("testState").textContent = t(body.restarted ? "testSavedRestart" : "testSaved");
+          setTimeout(load, body.restarted ? 4000 : 0);
+        } catch {
+          $("testState").textContent = t("failed");
+        } finally {
+          $("saveTest").disabled = false;
         }
       });
 

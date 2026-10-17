@@ -12,8 +12,8 @@ x64 and arm64) and `spk/arcanist` packages them for DSM 7.2 and later.
 - The install wizard asks for the music shared folder (created if missing and made accessible to `sc-arcanist`) and
   the port, and shows the setup code that Arcanist's own setup wizard asks for.
 - `bin/arcanist-run` supervises the server: it reads the port from `var/package.conf` on every start, and starts the
-  server again when it asks to (exit code 75, after a factory reset or a server restore) or when the package's
-  window asks for it; more than five times in a minute and it stops. DSM stops it with TERM, passed on to the server.
+  server again when it asks to (exit code 75, after a factory reset or a server restore; more than five times in a
+  minute and it stops) or when the package's window asks for it. DSM stops it with TERM, passed on to the server.
 - Updates come from Package Center; Arcanist has no updater of its own on DSM.
 
 ## Arcanist's window in DSM
@@ -29,7 +29,13 @@ group. It shows:
 - the port, which can be changed (the server starts again on it; DSM's firewall has the default port 8484 open);
 - the shared folders and whether `sc-arcanist` can read them, with the steps to give it access and a button that
   opens Control Panel > Shared Folder (a package cannot change share permissions itself on DSM 7);
-- where its data is and how much it takes, and a link to Arcanist's own panel.
+- where its data is and how much it takes, and a link to Arcanist's own panel;
+- **test mode**: variables given to Arcanist when it starts, to try it against services not published yet (for
+  example `Arcanist:UltimateCloud:ApiUrl` with a test Ultimate Cloud). Settings may be written with `:` and are saved
+  as variables (`Arcanist__UltimateCloud__ApiUrl`) in `var/environment`; `TEST_MODE=1` in `var/package.conf` turns
+  them on. They take precedence over `arcanist.json`. Names the package relies on (`PATH`, `HOME`, `LD_*`,
+  `DOTNET_ROOT`, the data and server folders, `URLS`, `Arcanist__Hosting__*`) are refused, and `arcanist-run` checks
+  them again and logs only their names. Turning it off keeps them without applying them.
 
 `api.cgi` is plain `sh` (DSM has no Python or jq by default). POST requests need the header `X-Arcanist-Window: 1`,
 which a form on another site cannot send.

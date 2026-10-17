@@ -272,9 +272,17 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 var fileId = variables!["f"]!.GetValue<string>();
                 var hash = Blobs.Single(b => b.Value == fileId).Key;
                 var input = variables["i"]!;
-                var id = $"up-{Tracks.Count + 1}";
-                AddTrack(id, input["title"]!.GetValue<string>(), input["artist"]?.GetValue<string>() ?? "", input["album"]?.GetValue<string>() ?? "",
-                    input["trackNumber"]?.GetValue<int>() ?? 0, Uploaded[$"CloudFiles/{hash}"], hash: hash, format: "WAV");
+                var id = account == "user-1" ? $"up-{Tracks.Count + 1}" : $"up-{account}-{TracksOf(account).Count + 1}";
+                if (account == "user-1")
+                    AddTrack(id, input["title"]!.GetValue<string>(), input["artist"]?.GetValue<string>() ?? "", input["album"]?.GetValue<string>() ?? "",
+                        input["trackNumber"]?.GetValue<int>() ?? 0, Uploaded[$"CloudFiles/{hash}"], hash: hash, format: "WAV");
+                else
+                {
+                    // Into the library of the account uploading it.
+                    TrackHashes[id] = hash;
+                    AddDescribed(TracksOf(account), id, input["title"]!.GetValue<string>(), input["artist"]?.GetValue<string>() ?? "",
+                        input["album"]?.GetValue<string>() ?? "", input["trackNumber"]?.GetValue<int>() ?? 0, Uploaded[$"CloudFiles/{hash}"], null, "WAV");
+                }
                 return Json(new { data = new { addCloudTrack = new { cloudTrackId = id } } });
             }
 

@@ -199,6 +199,8 @@ public static class ErrorCodes
     public const string CloudSyncFailed = "cloud_sync_failed";
     /// <summary>Uploading a file to Ultimate Cloud failed.</summary>
     public const string UploadFailed = "upload_failed";
+    /// <summary>The song only exists as part of a file split by a CUE sheet, which cannot go to Ultimate Cloud on its own.</summary>
+    public const string CloudUploadCue = "cloud_upload_cue";
     /// <summary>Ultimate Cloud's sign-in does not offer linking with a code for this server.</summary>
     public const string CloudLinkUnsupported = "cloud_link_unsupported";
     /// <summary>Changes in this library cannot be noticed as they happen (it is shared by another server, or in S3): scan it on an interval.</summary>

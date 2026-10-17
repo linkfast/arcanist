@@ -57,6 +57,12 @@ public enum ApiFeature
     /// <c>starTracksChanged</c> subscription.
     /// </summary>
     StarTracks,
+
+    /// <summary>The user's history of uploads: <c>myUploads</c> and <c>clearMyUploads</c>.</summary>
+    UploadHistory,
+
+    /// <summary><c>uploadTracksToMyCloud</c>: sending songs to the user's own Ultimate Cloud library.</summary>
+    MyCloudUploads,
 }
 
 public sealed class ServerInfoService(

@@ -148,6 +148,8 @@ type Query {
   myUltimateCloudMetrics: UltimateCloudMetrics!
   "How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only."
   cloudSyncs: [LibraryCloudSyncState!]!
+  "The user's uploads, newest first: files sent into libraries (and whether each is in the catalog yet) and songs sent to their own Ultimate Cloud library."
+  myUploads(after: String, first: Int): MyUploadPage!
   "Public description of the server. Does not require authentication."
   serverInfo: ServerInfo!
   "The signed-in user."
@@ -1835,6 +1837,44 @@ type CloudSyncFailure {
   reason: String!
 }
 
+type MyUploadPage {
+  items: [MyUpload!]!
+  nextCursor: String
+  totalCount: Int!
+  active: Int!
+}
+
+type MyUpload {
+  id: ID!
+  kind: MyUploadKind!
+  status: MyUploadStatus!
+  name: String!
+  size: Long
+  libraryId: ID
+  libraryName: String
+  track: Track
+  errorCode: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum MyUploadKind {
+  LIBRARY
+  ULTIMATE_CLOUD
+}
+
+enum MyUploadStatus {
+  PROCESSING
+  ADDED
+  DUPLICATE
+  NOT_ADDED
+  QUEUED
+  UPLOADING
+  UPLOADED
+  ALREADY_IN_CLOUD
+  FAILED
+}
+
 type ServerInfo {
   name: String!
   version: String!
@@ -1854,6 +1894,8 @@ enum ApiFeature {
   TRACK_MATCHING
   LISTENING_IMPORT
   STAR_TRACKS
+  UPLOAD_HISTORY
+  MY_CLOUD_UPLOADS
 }
 
 type UserAccount {
@@ -2121,6 +2163,10 @@ type Mutation {
   setMyUltimateCloudServices(input: UltimateCloudServicesInput!): MyUltimateCloudStatus!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
+  "Forgets the user's finished uploads (what is still on its way stays). Returns how many were forgotten."
+  clearMyUploads: Int!
+  "Sends songs of this server (at most 1000) to the user's own Ultimate Cloud library, in the background; their progress is in myUploads. Needs the DOWNLOAD permission, and for a library another server shares, its permission to download."
+  uploadTracksToMyCloud(input: UploadTracksToMyCloudInput!): [MyUpload!]!
   "Requires MANAGE_USERS and a recent authentication."
   createUser(input: CreateUserInput!): UserAccount!
   "Requires MANAGE_USERS and a recent authentication."
@@ -2595,6 +2641,10 @@ input UltimateCloudServicesInput {
 
 input StartMyUltimateCloudLinkInput {
   libraryName: String
+}
+
+input UploadTracksToMyCloudInput {
+  trackIds: [ID!]!
 }
 
 input CreateUserInput {

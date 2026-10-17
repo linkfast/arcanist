@@ -119,6 +119,7 @@ builder.Services.AddSingleton<Arcanist.Core.Application.Listening.ListeningSigna
 builder.Services.Configure<Arcanist.Core.Application.Libraries.UploadOptions>(builder.Configuration.GetSection("Arcanist:Uploads"));
 builder.Services.AddScoped<Arcanist.Core.Application.Libraries.UploadService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.UploadScans>();
+builder.Services.AddScoped<Arcanist.Core.Application.Uploads.MyUploadService>();
 builder.Services.AddScoped<DuplicateService>();
 builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<ImportService>();

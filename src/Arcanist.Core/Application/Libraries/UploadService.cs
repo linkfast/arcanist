@@ -40,7 +40,8 @@ public sealed class UploadOptions
 /// <summary>
 /// Files sent by apps into a library (migrating Ultimate Desktop's library, for one): placed with the library's
 /// template like a drop folder's, never overwriting, and skipped when the library already has the audio. Needs the
-/// UPLOAD permission and a library the user can access with a folder Arcanist can write to.
+/// UPLOAD permission and a library the user can access with a folder Arcanist can write to. Each upload goes into
+/// the user's history (<see cref="UserUpload"/>), failed ones too, where it shows once it is in the catalog.
 /// </summary>
 public sealed class UploadService(
     ArcanistDbContext db,
@@ -49,6 +50,7 @@ public sealed class UploadService(
     LibraryLocks locks,
     UploadScans scans,
     ArcanistPaths paths,
+    TimeProvider time,
     ILogger<UploadService> logger)
 {
     public async Task<UploadResult> UploadAsync(Guid libraryId, string fileName, Stream body, CancellationToken cancellationToken)
@@ -57,6 +59,46 @@ public sealed class UploadService(
         if (!access.CanAccessLibrary(libraryId))
             throw new ArcanistException.NotFound();
 
+        long? size = null;
+        try
+        {
+            var result = await ImportAsync(access, libraryId, fileName, body, length => size = length, cancellationToken);
+            await RecordAsync(access.UserId, libraryId, fileName, size, result, null, cancellationToken);
+            return result;
+        }
+        catch (ArcanistException e) when (e is not ArcanistException.NotFound && !cancellationToken.IsCancellationRequested)
+        {
+            var code = e is ArcanistException.Invalid invalid ? invalid.Errors.ToDictionary().Values.SelectMany(c => c).FirstOrDefault() ?? e.Code : e.Code;
+            await RecordAsync(access.UserId, libraryId, fileName, size, null, code, cancellationToken);
+            throw;
+        }
+    }
+
+    private async Task RecordAsync(Guid user, Guid libraryId, string fileName, long? size, UploadResult? result, string? error, CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow().UtcDateTime;
+        db.ChangeTracker.Clear();
+        db.UserUploads.Add(new UserUpload
+        {
+            UserId = user,
+            Kind = UserUploadKind.Library,
+            Status = result is null ? UserUploadStatus.Failed : result.Status == UploadStatus.Duplicate ? UserUploadStatus.Duplicate : UserUploadStatus.Processing,
+            Name = Application.Uploads.MyUploadService.Cut(Path.GetFileName(fileName ?? "")),
+            Size = size,
+            LibraryId = libraryId,
+            TrackId = result?.TrackId,
+            ContentHash = result?.ContentHash,
+            Path = result?.Path,
+            ErrorCode = error,
+            CreatedAt = now,
+            UpdatedAt = now,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<UploadResult> ImportAsync(
+        UserAccess access, Guid libraryId, string fileName, Stream body, Action<long> measured, CancellationToken cancellationToken)
+    {
         var extension = Path.GetExtension(fileName ?? "").ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(fileName) || !AudioFormats.IsAudio(fileName))
             throw ArcanistException.Field("fileName", ErrorCodes.InvalidFormat);
@@ -76,7 +118,10 @@ public sealed class UploadService(
         try
         {
             await using (var file = File.Create(temporary))
+            {
                 await body.CopyToAsync(file, cancellationToken);
+                measured(file.Length);
+            }
 
             AudioMetadata metadata;
             string hash;

@@ -2211,6 +2211,7 @@ export const en: Dictionary = {
     cloud_read_only:
       'The Ultimate Cloud account is read only (a lapsed subscription): nothing is uploaded.',
     upload_failed: 'Uploading to Ultimate Cloud failed.',
+    cloud_upload_cue: 'The song only exists as part of a file split by a CUE sheet, which cannot be uploaded on its own.',
     cloud_sync_failed: 'The sync stopped because of an unexpected error. Check the server log.',
     s3_unavailable: 'Libraries in S3 need the Cloud plan.',
     s3_unreachable: 'The S3 service does not answer at that address.',

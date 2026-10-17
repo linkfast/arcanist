@@ -1255,6 +1255,106 @@
         }
       }
     },
+    "/rest/v1/me/uploads": {
+      "get": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "The user\u0027s uploads, newest first: files sent into libraries (and whether each is in the catalog yet) and songs sent to their own Ultimate Cloud library.",
+        "operationId": "MyUploads",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUploadPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Forgets the user\u0027s finished uploads (what is still on its way stays). Returns how many were forgotten.",
+        "operationId": "ClearMyUploads",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "pattern": "^-?(?:0|[1-9]\\d*)$",
+                  "type": [
+                    "integer",
+                    "string"
+                  ],
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/uploads/ultimate-cloud": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Sends songs of this server (at most 1000) to the user\u0027s own Ultimate Cloud library, in the background; their progress is in myUploads. Needs the DOWNLOAD permission, and for a library another server shares, its permission to download.",
+        "operationId": "UploadTracksToMyCloud",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadTracksToMyCloudInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyUpload"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/search": {
       "get": {
         "tags": [
@@ -7887,7 +7987,9 @@
           "UPLOADS",
           "TRACK_MATCHING",
           "LISTENING_IMPORT",
-          "STAR_TRACKS"
+          "STAR_TRACKS",
+          "UPLOAD_HISTORY",
+          "MY_CLOUD_UPLOADS"
         ]
       },
       "AppPassword": {
@@ -13208,6 +13310,141 @@
           }
         }
       },
+      "MyUpload": {
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "name",
+          "size",
+          "libraryId",
+          "libraryName",
+          "track",
+          "errorCode",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MyUploadKind"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MyUploadStatus"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "libraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "track": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Track"
+              }
+            ]
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MyUploadKind": {
+        "enum": [
+          "LIBRARY",
+          "ULTIMATE_CLOUD"
+        ]
+      },
+      "MyUploadPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount",
+          "active"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyUpload"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "active": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "MyUploadStatus": {
+        "enum": [
+          "PROCESSING",
+          "ADDED",
+          "DUPLICATE",
+          "NOT_ADDED",
+          "QUEUED",
+          "UPLOADING",
+          "UPLOADED",
+          "ALREADY_IN_CLOUD",
+          "FAILED"
+        ]
+      },
       "NetworkPeer": {
         "required": [
           "id",
@@ -18214,6 +18451,21 @@
           "DUPLICATE"
         ]
       },
+      "UploadTracksToMyCloudInput": {
+        "required": [
+          "trackIds"
+        ],
+        "type": "object",
+        "properties": {
+          "trackIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "UserAccount": {
         "required": [
           "id",
@@ -18426,6 +18678,9 @@
     },
     {
       "name": "Playlists"
+    },
+    {
+      "name": "Uploads"
     },
     {
       "name": "Catalog"

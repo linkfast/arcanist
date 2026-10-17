@@ -2241,6 +2241,7 @@ export const es: Dictionary = {
     cloud_read_only:
       'La cuenta de Ultimate Cloud está en solo lectura (suscripción vencida): no se sube nada.',
     upload_failed: 'La subida a Ultimate Cloud falló.',
+    cloud_upload_cue: 'La canción solo existe como parte de un archivo dividido por una hoja CUE, que no se puede subir por separado.',
     cloud_sync_failed:
       'La sincronización se detuvo por un error inesperado. Revisa el registro del servidor.',
     s3_unavailable: 'Las bibliotecas en S3 necesitan el plan Cloud.',

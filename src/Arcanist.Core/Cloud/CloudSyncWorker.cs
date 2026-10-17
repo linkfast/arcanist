@@ -212,6 +212,9 @@ public sealed class CloudSyncWorker(
     }
 
     /// <summary>A song of the library, as the catalog knows it (one copy per audio: the best).</summary>
+    /// <param name="AlreadyInCloud">The account's library already had it: nothing was uploaded.</param>
+    public sealed record CloudUploadOutcome(string? CloudTrackId, bool AlreadyInCloud, string? ErrorCode);
+
     private sealed record LocalSong(
         string ContentHash, Guid SourceId, string RelativePath, string Title, string? Artist, string? Album, string? Genre, int? Year,
         int? TrackNumber, int? DiscNumber, string? Format, int? BitRate, int? SampleRate, int? BitDepth, int? Channels, int DurationMs,
@@ -260,6 +263,27 @@ public sealed class CloudSyncWorker(
             .FirstOrDefaultAsync(cancellationToken), cancellationToken);
         if (song is null)
             return (null, ErrorCodes.NotFound);
+        var outcome = await UploadAsync(song, cancellationToken);
+        return (outcome.CloudTrackId, outcome.ErrorCode);
+    }
+
+    /// <summary>
+    /// Uploads one copy of a song (a <see cref="MediaFile"/>) to the account's library, as a user asking for it does:
+    /// a copy from S3, another server or Ultimate Cloud is downloaded first.
+    /// </summary>
+    public async Task<CloudUploadOutcome> UploadFileAsync(Guid fileId, CancellationToken cancellationToken)
+    {
+        if (!audio.IsInstalled)
+            return new CloudUploadOutcome(null, false, ErrorCodes.CloudToolMissing);
+        var song = await DbAsync(db => db.MediaFiles.AsNoTracking()
+            .Where(f => f.Id == fileId && f.MissingSince == null && f.CueTrack == 0)
+            .Select(ToSong)
+            .FirstOrDefaultAsync(cancellationToken), cancellationToken);
+        return song is null ? new CloudUploadOutcome(null, false, ErrorCodes.NotFound) : await UploadAsync(song, cancellationToken);
+    }
+
+    private async Task<CloudUploadOutcome> UploadAsync(LocalSong song, CancellationToken cancellationToken)
+    {
 
         var libraryId = await DbAsync(db => db.LibrarySources.Where(s => s.Id == song.SourceId).Select(s => s.LibraryId).SingleAsync(cancellationToken), cancellationToken);
         // The library's pairings are with the account it syncs with (the server's when it does not): uploads to
@@ -272,32 +296,56 @@ public sealed class CloudSyncWorker(
                 cancellationToken)
             : null;
         if (item is { CloudTrackId: { } known, Status: CloudSyncItemStatus.Uploaded or CloudSyncItemStatus.Matched })
-            return (known, null);
+            return new CloudUploadOutcome(known, true, null);
 
         item ??= await AddItemAsync(new CloudSyncItem { LibraryId = libraryId, ContentHash = song.ContentHash, Title = Cut(song.Title)! }, cancellationToken);
         var stop = await LocalAsync(song, item, upload: true, cancellationToken);
         if (!kept)
             await DbAsync(db => db.CloudSyncItems.Where(i => i.Id == item.Id).ExecuteDeleteAsync(cancellationToken), cancellationToken);
         return item.Status is CloudSyncItemStatus.Uploaded or CloudSyncItemStatus.Matched
-            ? (item.CloudTrackId, null)
-            : (null, stop ?? item.Reason ?? ErrorCodes.UploadFailed);
+            ? new CloudUploadOutcome(item.CloudTrackId, item.Status == CloudSyncItemStatus.Matched, null)
+            : new CloudUploadOutcome(null, false, stop ?? item.Reason ?? ErrorCodes.UploadFailed);
     }
 
     /// <summary>Pairs a song of the library with Ultimate Cloud, uploading it when asked to. Returns the stop reason of an upload refused for the whole account.</summary>
     private async Task<string?> LocalAsync(LocalSong song, CloudSyncItem item, bool upload, CancellationToken cancellationToken)
     {
-        var storage = storages.For(LibrarySourceKind.Local);
-        var location = await DbAsync(async db => StorageLocation.From(await db.LibrarySources.AsNoTracking().SingleAsync(s => s.Id == song.SourceId, cancellationToken)),
-            cancellationToken);
-        var path = storage.TryGetLocalPath(location, song.RelativePath);
+        var source = await DbAsync(db => db.LibrarySources.AsNoTracking().SingleAsync(s => s.Id == song.SourceId, cancellationToken), cancellationToken);
+        var storage = storages.For(source.Kind);
+        var location = StorageLocation.From(source);
         item.Title = Cut(song.Title)!;
         item.Path = song.RelativePath;
         item.MatchKey = song.MatchKey;
-        if (path is null || !File.Exists(path))
+
+        var stripped = Path.Combine(paths.Cache, "sync", $"{Guid.NewGuid():N}{Path.GetExtension(song.RelativePath)}");
+        Directory.CreateDirectory(Path.GetDirectoryName(stripped)!);
+        // A copy that is not on this server's disks (S3, another server, Ultimate Cloud) is downloaded first.
+        string? downloaded = null;
+        var path = storage.TryGetLocalPath(location, song.RelativePath);
+        if (path is null)
+        {
+            downloaded = Path.Combine(paths.Cache, "sync", $"{Guid.NewGuid():N}-source{Path.GetExtension(song.RelativePath)}");
+            try
+            {
+                await using (var input = await storage.OpenReadAsync(location, song.RelativePath, cancellationToken))
+                await using (var output = File.Create(downloaded))
+                    await input.CopyToAsync(output, cancellationToken);
+                path = downloaded;
+            }
+            catch (Exception e) when (e is IOException or HttpRequestException or UnauthorizedAccessException)
+            {
+                File.Delete(downloaded);
+                logger.LogWarning("Reading {Path} to upload it to Ultimate Cloud failed: {Error}", song.RelativePath, e.Message);
+                // Another server refusing the download says so in the error (PeerStorage).
+                var code = e.Message == ErrorCodes.DownloadNotAllowed ? ErrorCodes.DownloadNotAllowed
+                    : e is FileNotFoundException ? ErrorCodes.NotFound : ErrorCodes.UploadFailed;
+                return await SaveAsync(item, CloudSyncItemStatus.Failed, code, cancellationToken);
+            }
+        }
+
+        if (!File.Exists(path))
             return await SaveAsync(item, CloudSyncItemStatus.Failed, ErrorCodes.NotFound, cancellationToken);
 
-        var stripped = Path.Combine(paths.Cache, "sync", $"{Guid.NewGuid():N}{Path.GetExtension(path)}");
-        Directory.CreateDirectory(Path.GetDirectoryName(stripped)!);
         try
         {
             string sha1 = "";
@@ -363,6 +411,8 @@ public sealed class CloudSyncWorker(
         finally
         {
             File.Delete(stripped);
+            if (downloaded is not null)
+                File.Delete(downloaded);
         }
     }
 

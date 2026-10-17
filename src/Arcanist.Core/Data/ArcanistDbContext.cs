@@ -66,6 +66,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<PlayEvent> PlayEvents => Set<PlayEvent>();
 
     public DbSet<CloudDropFetch> CloudDropFetches => Set<CloudDropFetch>();
+
+    public DbSet<UserUpload> UserUploads => Set<UserUpload>();
     public DbSet<TrackPlayStats> TrackPlayStats => Set<TrackPlayStats>();
     public DbSet<Playlist> Playlists => Set<Playlist>();
     public DbSet<PlaylistEntry> PlaylistEntries => Set<PlaylistEntry>();
@@ -374,6 +376,22 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             fetch.Property(f => f.LibraryPath).HasMaxLength(2048);
             fetch.Property(f => f.UploadedTrackId).HasMaxLength(64);
             fetch.HasIndex(f => new { f.DropFolderId, f.CloudTrackId }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserUpload>(upload =>
+        {
+            upload.HasOne(u => u.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            upload.HasOne<Library>().WithMany().HasForeignKey(u => u.LibraryId).OnDelete(DeleteBehavior.SetNull);
+            upload.HasOne<Track>().WithMany().HasForeignKey(u => u.TrackId).OnDelete(DeleteBehavior.SetNull);
+            upload.Property(u => u.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            upload.Property(u => u.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            upload.Property(u => u.Name).HasMaxLength(512);
+            upload.Property(u => u.ContentHash).HasMaxLength(64);
+            upload.Property(u => u.Path).HasMaxLength(2048);
+            upload.Property(u => u.CloudTrackId).HasMaxLength(64);
+            upload.Property(u => u.ErrorCode).HasMaxLength(NameLength);
+            upload.HasIndex(u => new { u.UserId, u.CreatedAt });
+            upload.HasIndex(u => new { u.Kind, u.Status });
         });
 
         modelBuilder.Entity<PlayEvent>(play =>

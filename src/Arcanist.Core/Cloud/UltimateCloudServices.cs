@@ -26,6 +26,8 @@ public static class UltimateCloudServiceCollectionExtensions
         services.AddHostedService(provider => provider.GetRequiredService<CloudDropWorker>());
         services.AddSingleton<CloudSyncWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<CloudSyncWorker>());
+        services.AddSingleton<MyCloudUploadWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<MyCloudUploadWorker>());
         services.AddSingleton<UltimateCloudServicesSettings>();
         services.AddSingleton<UltimateCloudReporter>();
         services.AddHostedService(provider => provider.GetRequiredService<UltimateCloudReporter>());

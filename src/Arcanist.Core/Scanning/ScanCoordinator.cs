@@ -47,8 +47,9 @@ public sealed class ScanCoordinator(IArcanistDbContextFactory databases, ScanEve
             db.ScanJobs.Add(job);
             await db.SaveChangesAsync(cancellationToken);
 
-            _queue.Writer.TryWrite(job.Id);
+            // Published before the worker can take it: otherwise its RUNNING could reach clients before this QUEUED.
             events.Publish(job);
+            _queue.Writer.TryWrite(job.Id);
             return job;
         }
         finally

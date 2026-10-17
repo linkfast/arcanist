@@ -61,7 +61,11 @@ public sealed class PeerClient(P2PNode node, IHttpClientFactory clients)
         return await ReadAsync<T>(response, cancellationToken);
     }
 
-    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    /// <summary>The other server's JSON: like the API's, enums as UPPER_SNAKE_CASE text (Program.cs).</summary>
+    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper) },
+    };
 
     /// <summary>The body, or the other server's error code as an <see cref="ArcanistException"/>.</summary>
     private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)

@@ -152,6 +152,8 @@ public sealed class P2PTests : IAsyncDisposable
         var music = Music(
             ("Zed/01.wav", new FixtureTags("Alone", "Zed", "Solo", "Zed", TrackNumber: 1)),
             ("Zed/02.wav", new FixtureTags("Again", "Zed", "Solo", "Zed", TrackNumber: 2)));
+        // Lyrics travel too: their source is an enum, which once broke reading the owner's description.
+        await File.WriteAllTextAsync(Path.Combine(music, "Zed", "01.lrc"), "[00:00.50]On my own", Cancel);
         var owner = await StartServerAsync(new SetupLibrary("Música", [music]));
         await owner.Factory.WaitForScansAsync(owner.Admin);
         var receiver = await StartServerAsync();
@@ -171,6 +173,10 @@ public sealed class P2PTests : IAsyncDisposable
             .EnumerateArray().ToDictionary(t => t.GetProperty("title").GetString()!);
         Assert.Equal(["Again", "Alone"], tracks.Keys.Order());
         Assert.Equal("Solo", tracks["Alone"].GetProperty("album").GetProperty("title").GetString());
+        var lyrics = await receiver.Admin.GetFromJsonAsync<JsonElement>(
+            $"/rest/v1/tracks/{tracks["Alone"].GetProperty("id").GetString()}/lyrics", ArcanistFactory.Json, Cancel);
+        Assert.Equal("On my own", lyrics.GetProperty("plain").GetString());
+        Assert.Equal("SIDECAR", lyrics.GetProperty("source").GetString());
 
         // Played from the owner, byte for byte, ranges included.
         var alone = tracks["Alone"].GetProperty("id").GetString();

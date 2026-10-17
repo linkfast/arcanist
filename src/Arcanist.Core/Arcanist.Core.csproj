@@ -123,6 +123,8 @@
   <ItemGroup>
     <NativeCrate Include="$(MSBuildThisFileDirectory)../../native/arcanist-audio/" Library="$(NativeLibraryPrefix)arcanist_audio$(NativeLibraryExtension)" Feature="audio analysis" />
     <NativeCrate Include="$(MSBuildThisFileDirectory)../../native/arcanist-p2p/" Library="$(NativeLibraryPrefix)arcanist_p2p$(NativeLibraryExtension)" Feature="the P2P network" />
+    <!-- Optional: on Linux it needs ALSA's development files (libasound2-dev); without them only server audio is missing. -->
+    <NativeCrate Include="$(MSBuildThisFileDirectory)../../native/arcanist-player/" Library="$(NativeLibraryPrefix)arcanist_player$(NativeLibraryExtension)" Feature="server audio" Optional="true" />
   </ItemGroup>
 
   <Target Name="BuildNative" Condition="'$(NativeRid)' == '$(NETCoreSdkRuntimeIdentifier)' And '$(SkipNativeBuild)' != 'true'" Inputs="%(NativeCrate.Identity)src/lib.rs;%(NativeCrate.Identity)Cargo.toml;%(NativeCrate.Identity)Cargo.lock;@(NativeSource)" Outputs="$(NativeDir)%(NativeCrate.Library)">
@@ -133,8 +135,11 @@
       <Output TaskParameter="ExitCode" PropertyName="CargoExitCode" />
     </Exec>
     <Warning Condition="'$(CargoExitCode)' != '0' And !Exists('$(NativeDir)%(NativeCrate.Library)')" Text="Rust (cargo) is not installed, so %(NativeCrate.Library) was not built: %(NativeCrate.Feature) will be unavailable." />
-    <Exec Condition="'$(CargoExitCode)' == '0'" Command="cargo build --release --manifest-path &quot;%(NativeCrate.Identity)Cargo.toml&quot;" />
-    <Copy Condition="'$(CargoExitCode)' == '0'" SourceFiles="%(NativeCrate.Identity)target/release/%(NativeCrate.Library)" DestinationFolder="$(NativeDir)" />
+    <Exec Condition="'$(CargoExitCode)' == '0'" Command="cargo build --release --manifest-path &quot;%(NativeCrate.Identity)Cargo.toml&quot;" ContinueOnError="$([MSBuild]::ValueOrDefault('%(NativeCrate.Optional)', 'false'))">
+      <Output TaskParameter="ExitCode" PropertyName="NativeBuildExitCode" />
+    </Exec>
+    <Warning Condition="'$(CargoExitCode)' == '0' And '$(NativeBuildExitCode)' != '0'" Text="%(NativeCrate.Library) could not be built: %(NativeCrate.Feature) will be unavailable." />
+    <Copy Condition="'$(CargoExitCode)' == '0' And Exists('%(NativeCrate.Identity)target/release/%(NativeCrate.Library)')" SourceFiles="%(NativeCrate.Identity)target/release/%(NativeCrate.Library)" DestinationFolder="$(NativeDir)" />
   </Target>
 
   <Target Name="IncludeNative" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildNative">

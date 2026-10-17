@@ -17,16 +17,21 @@ RUN npm ci
 COPY src/Arcanist.Web/ ./
 RUN npm run build
 
-# Native libraries (audio analysis and P2P), cross-compiled for the target architecture.
+# Native libraries (audio analysis, P2P and the server's audio output), cross-compiled for the target architecture.
 FROM --platform=$BUILDPLATFORM rust:1.98-bookworm AS native
 ARG TARGETARCH
-RUN apt-get update && apt-get install -y --no-install-recommends python3-pip && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip pkg-config && rm -rf /var/lib/apt/lists/* \
     && pip3 install --break-system-packages cargo-zigbuild ziglang
 WORKDIR /src
 COPY packaging/native/build.sh packaging/native/
 COPY native/arcanist-audio/ native/arcanist-audio/
 COPY native/arcanist-p2p/ native/arcanist-p2p/
+COPY native/arcanist-player/ native/arcanist-player/
 RUN sh packaging/native/build.sh "linux-$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "$TARGETARCH")"
+# The image has no ALSA: the player's libasound goes next to it, with ALSA's configuration.
+RUN mkdir -p /alsa/lib /alsa/share \
+    && cp -L artifacts/native/alsa-*/usr/lib/*/libasound.so.2 /alsa/lib/ \
+    && cp -a artifacts/native/alsa-*/usr/share/alsa/. /alsa/share/
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS server
 ARG TARGETARCH
@@ -53,6 +58,9 @@ LABEL org.opencontainers.image.title="Arcanist" \
 WORKDIR /app
 COPY --from=server /app ./
 COPY --from=panel /src/Arcanist.Web/dist/arcanist-web/browser ./wwwroot/admin
+# Server audio (an extension, off by default) plays through ALSA: run with --device /dev/snd to give it the sound card.
+COPY --from=native /alsa/lib/ ./
+COPY --from=native /alsa/share/ /usr/share/alsa/
 
 # Data directory (database, keys, caches, logs). Never put it on a network share when using SQLite.
 ENV ARCANIST_DATA_DIR=/data

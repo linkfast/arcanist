@@ -18,9 +18,12 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      # The runners have Rust: the native libraries' own tests, then the server build compiles them.
+      # The runners have Rust: the native libraries' own tests, then the server build compiles them. The player
+      # links ALSA.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev
       - run: cargo test --release --locked --manifest-path native/arcanist-audio/Cargo.toml
       - run: cargo test --release --locked --manifest-path native/arcanist-p2p/Cargo.toml
+      - run: cargo test --release --locked --manifest-path native/arcanist-player/Cargo.toml
       # The players every package bundles: their pinned download and SHA-256 (see BundledPlayer in the csproj).
       - run: dotnet msbuild src/Arcanist.Core/Arcanist.Core.csproj -t:FetchBundledPlayers
       # Docker is available on these runners, so the PostgreSQL tests run instead of being skipped.

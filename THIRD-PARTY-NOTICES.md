@@ -60,6 +60,18 @@ GraphiQL (MIT), React and ReactDOM (MIT) are loaded by the browser from jsDelivr
 
 Symphonia's source code is available at https://github.com/pdeljanov/Symphonia, as the MPL-2.0 requires.
 
+## Native player (`native/arcanist-player`, shipped with the server for the server audio extension)
+
+| Component | License |
+|---|---|
+| Symphonia (`symphonia` and its `symphonia-*` format and codec crates) | MPL-2.0 |
+| cpal, and on each system its backend crates (`windows`, `alsa`/`alsa-sys`, `coreaudio-rs`) | Apache-2.0 / MIT OR Apache-2.0 / MIT |
+| rubato, realfft | MIT |
+| RustFFT, num-complex, num-traits, num-integer, primal-check, strength_reduce, transpose, dasp_sample, serde, serde_json | MIT OR Apache-2.0 |
+| alsa-lib (`libasound.so.2` and ALSA's configuration, only in the Docker image; elsewhere the system's) | LGPL-2.1-or-later |
+
+alsa-lib is linked dynamically and can be replaced; its source code is available at https://github.com/alsa-project/alsa-lib, as the LGPL requires.
+
 ## Native P2P library (`native/arcanist-p2p`, shipped with the server and in the mobile bindings)
 
 About 300 crates in all; `cargo metadata --manifest-path native/arcanist-p2p/Cargo.toml` lists each one with its

@@ -4,6 +4,9 @@ SPK_REV = 1
 SPK_ICON = src/arcanist.png
 
 DEPENDS = cross/arcanist
+# ALSA, for server audio (DSM has none): lib/libasound.so.2, with its configuration in share/alsa (built with the
+# package's prefix, so it finds it by itself).
+DEPENDS += cross/alsa-lib
 # SynoCommunity's .NET runtime runs the server; its FFmpeg converts audio (Arcanist finds it by itself).
 SPK_DEPENDS = "dotnet10-runtime:ffmpeg8"
 
@@ -54,3 +57,5 @@ arcanist_extra_install:
 	install -m 644 src/app/arcanist.js $(STAGING_DIR)/app/arcanist.js
 	install -m 644 src/app/index.html $(STAGING_DIR)/app/index.html
 	install -m 755 src/app/api.cgi $(STAGING_DIR)/app/api.cgi
+	# The server audio player looks for libasound next to itself first.
+	ln -sf ../../lib/libasound.so.2 $(STAGING_DIR)/share/arcanist/libasound.so.2

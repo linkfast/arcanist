@@ -107,6 +107,11 @@
         <span class="badge" id="dotnet"></span>
         <span class="badge" id="ffmpeg"></span>
       </div>
+      <div class="row" style="margin-top: 8px">
+        <span class="muted" data-t="sound"></span>
+        <span class="badge" id="sound"></span>
+      </div>
+      <p class="note" id="soundHelp" hidden></p>
       <div id="setup" hidden>
         <p style="margin-top: 10px" data-t="setupHelp"></p>
         <div class="code" id="code"></div>
@@ -207,6 +212,13 @@
           components: "Paquetes de los que depende:",
           dotnetName: ".NET 10",
           ffmpegName: "FFmpeg 8",
+          sound: "Audio del servidor:",
+          soundNone: "Sin tarjetas de sonido",
+          soundOne: "1 salida de audio",
+          soundMany: "{n} salidas de audio",
+          soundNoAccess: "Sin permiso para usarlas",
+          soundHelpNone: "Este NAS no tiene tarjetas de sonido que reconozca su sistema (por ejemplo, un DAC USB). Solo hacen falta para que Arcanist reproduzca por los altavoces del NAS; lo demás funciona igual.",
+          soundHelpAccess: "Arcanist ({u}) no puede abrir las tarjetas de sonido, y en DSM un paquete no puede darse ese permiso. Para el audio del servidor, crea en Panel de control > Programador de tareas una tarea activada al arrancar, con el usuario root y el comando: chmod a+rw /dev/snd/*",
           setupHelp: "Arcanist aún no está configurado. Ábrelo y sigue su asistente; te pedirá este código:",
           port: "Puerto",
           portHelp: "El puerto en el que responde Arcanist. Al cambiarlo, Arcanist se reinicia en el nuevo.",
@@ -276,6 +288,13 @@
           components: "Packages it depends on:",
           dotnetName: ".NET 10",
           ffmpegName: "FFmpeg 8",
+          sound: "Server audio:",
+          soundNone: "No sound cards",
+          soundOne: "1 audio output",
+          soundMany: "{n} audio outputs",
+          soundNoAccess: "Not allowed to use them",
+          soundHelpNone: "This NAS has no sound cards its system recognizes (for example, a USB DAC). They are only needed for Arcanist to play through the NAS's speakers; everything else works the same.",
+          soundHelpAccess: "Arcanist ({u}) cannot open the sound cards, and on DSM a package cannot give itself that permission. For server audio, create a triggered task run at boot-up in Control Panel > Task Scheduler, with the user root and the command: chmod a+rw /dev/snd/*",
           setupHelp: "Arcanist is not set up yet. Open it and follow its wizard; it asks for this code:",
           port: "Port",
           portHelp: "The port Arcanist answers on. Changing it restarts Arcanist on the new one.",
@@ -406,6 +425,13 @@
           $(id).textContent = t(id + "Name");
           $(id).className = "badge " + (present ? "good" : "bad");
         }
+        const outputs = state.soundOutputs || 0;
+        $("sound").textContent = t(!outputs ? "soundNone" : state.soundUsable === false ? "soundNoAccess" : outputs === 1 ? "soundOne" : "soundMany", { n: outputs });
+        $("sound").className = "badge " + (!outputs ? "" : state.soundUsable === false ? "bad" : "good");
+        // Without sound cards, the reason is a tooltip: most NAS have none and need none.
+        $("sound").title = outputs ? "" : t("soundHelpNone");
+        $("soundHelp").textContent = t("soundHelpAccess", { u: state.serviceUser });
+        $("soundHelp").hidden = !(outputs > 0 && state.soundUsable === false);
         $("setup").hidden = state.setupCompleted || !state.setupCode;
         $("code").textContent = state.setupCode || "";
         if (document.activeElement !== $("port")) $("port").value = state.port;

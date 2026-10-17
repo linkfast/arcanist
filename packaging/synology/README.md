@@ -17,6 +17,10 @@ x64 and arm64) and `spk/arcanist` packages them for DSM 7.2 and later.
 - DSM writes the package's output (the supervisor's and the server's console) to `var/arcanist.log` and clears it only
   when the package starts; the supervisor cuts it to its last 2 MB when it passes 10 MB. Arcanist's own log is in
   `var/logs/arcanist-<date>.log` (14 days).
+- Server audio: DSM has no ALSA, so the package builds SynoCommunity's `cross/alsa-lib` (`lib/libasound.so.2`, its
+  configuration in `share/alsa`) and links it next to the player, which looks there first. The sound cards
+  (`/dev/snd`) must also be usable by `sc-arcanist`, which a DSM 7 package cannot arrange: the window says so, and
+  how (a task run as root at boot-up with `chmod a+rw /dev/snd/*`).
 - Updates come from Package Center; Arcanist has no updater of its own on DSM.
 
 ## Arcanist's window in DSM

@@ -68,7 +68,7 @@ Symphonia's source code is available at https://github.com/pdeljanov/Symphonia, 
 | cpal, and on each system its backend crates (`windows`, `alsa`/`alsa-sys`, `coreaudio-rs`) | Apache-2.0 / MIT OR Apache-2.0 / MIT |
 | rubato, realfft | MIT |
 | RustFFT, num-complex, num-traits, num-integer, primal-check, strength_reduce, transpose, dasp_sample, serde, serde_json | MIT OR Apache-2.0 |
-| alsa-lib (`libasound.so.2` and ALSA's configuration, only in the Docker image; elsewhere the system's) | LGPL-2.1-or-later |
+| alsa-lib (`libasound.so.2` and ALSA's configuration, only in the Docker image and the Synology package, which builds it with SynoCommunity's `cross/alsa-lib`; elsewhere the system's) | LGPL-2.1-or-later |
 
 alsa-lib is linked dynamically and can be replaced; its source code is available at https://github.com/alsa-project/alsa-lib, as the LGPL requires.
 

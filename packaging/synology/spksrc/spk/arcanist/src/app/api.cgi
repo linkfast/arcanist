@@ -154,7 +154,22 @@ status ()
     ffmpeg=false
     [ -x /var/packages/ffmpeg8/target/bin/ffmpeg ] && ffmpeg=true
 
-    respond "200 OK" "{\"user\":$(json "${user}"),\"cgiUser\":$(json "$(id -un 2>/dev/null)"),\"running\":${running},\"version\":$(json "$(runtime_value version)"),\"startedAt\":$(json "$(runtime_value startedAt)"),\"port\":$(configured_port),\"setupCompleted\":${setup_completed},\"setupCode\":${code},\"dataDirectory\":$(json "${VAR}"),\"dataBytes\":$(( ${data_kb:-0} * 1024 )),\"serviceUser\":$(json "${SERVICE_USER}"),\"dotnet\":${dotnet},\"ffmpeg\":${ffmpeg},\"testMode\":$(test_mode),\"variables\":$(variables_json),\"shares\":[${shares}]}"
+    # Sound cards' outputs (for server audio), and whether the service user may use them: a package cannot add its
+    # user to the audio group on DSM 7.
+    outputs=0
+    usable=true
+    for pcm in /dev/snd/pcmC*D*p; do
+        [ -e "${pcm}" ] || continue
+        outputs=$((outputs + 1))
+        case "$(id -un 2>/dev/null)" in
+            "${SERVICE_USER}") [ -r "${pcm}" ] && [ -w "${pcm}" ] || usable=false ;;
+            root) su "${SERVICE_USER}" -s /bin/sh -c 'test -r "$1" && test -w "$1"' -- "${pcm}" 2>/dev/null || usable=false ;;
+            *) usable=null ;;
+        esac
+    done
+    [ "${outputs}" -gt 0 ] || usable=null
+
+    respond "200 OK" "{\"soundOutputs\":${outputs},\"soundUsable\":${usable},\"user\":$(json "${user}"),\"cgiUser\":$(json "$(id -un 2>/dev/null)"),\"running\":${running},\"version\":$(json "$(runtime_value version)"),\"startedAt\":$(json "$(runtime_value startedAt)"),\"port\":$(configured_port),\"setupCompleted\":${setup_completed},\"setupCode\":${code},\"dataDirectory\":$(json "${VAR}"),\"dataBytes\":$(( ${data_kb:-0} * 1024 )),\"serviceUser\":$(json "${SERVICE_USER}"),\"dotnet\":${dotnet},\"ffmpeg\":${ffmpeg},\"testMode\":$(test_mode),\"variables\":$(variables_json),\"shares\":[${shares}]}"
 }
 
 # ── Changes ──────────────────────────────────────────────────────────────────

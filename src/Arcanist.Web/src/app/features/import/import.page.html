@@ -174,7 +174,25 @@
                           }
                   }}
                 </p>
-                @if (job.status === 'WAITING') {
+                @if (job.filesTotal > 0) {
+                  <p class="text-xs text-muted-foreground">
+                    {{
+                      'mstream.history.files'
+                        | t
+                          : {
+                              total: job.filesTotal,
+                              copied: job.filesCopied,
+                              present: job.filesPresent,
+                              failed: job.filesFailed,
+                            }
+                    }}
+                  </p>
+                }
+                @if (job.status === 'COPYING') {
+                  <p class="flex items-center gap-2 text-xs text-muted-foreground">
+                    <hlm-spinner class="size-3" />{{ 'mstream.history.copying' | t }}
+                  </p>
+                } @else if (job.status === 'WAITING') {
                   <p class="flex items-center gap-2 text-xs text-muted-foreground">
                     <hlm-spinner class="size-3" />{{ 'mstream.history.waiting' | t }}
                   </p>
@@ -190,7 +208,19 @@
                   <p class="text-xs text-destructive">{{ i18n.error(job.errorCode) }}</p>
                 }
                 @if (job.status === 'COMPLETED' || job.status === 'FAILED') {
-                  <div>
+                  <div class="flex flex-wrap gap-2">
+                    @if (job.canRetry) {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="busy() === job.id"
+                        (click)="retryMstream(job)"
+                      >
+                        {{ 'mstream.history.retry' | t }}
+                      </button>
+                    }
                     <button
                       hlmBtn
                       variant="ghost"

@@ -4345,6 +4345,38 @@
         }
       }
     },
+    "/rest/v1/mstream/imports/{id}/retry": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Tries again the files of an import from an mStream server that could not be copied. Administrators only, with a recent authentication.",
+        "operationId": "RetryMstreamImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MstreamImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/mstream/import-history/clear": {
       "post": {
         "tags": [
@@ -12231,7 +12263,12 @@
           "ratings",
           "plays",
           "unmatched",
-          "errorCode"
+          "errorCode",
+          "filesTotal",
+          "filesCopied",
+          "filesPresent",
+          "filesFailed",
+          "canRetry"
         ],
         "type": "object",
         "properties": {
@@ -12312,6 +12349,41 @@
               "null",
               "string"
             ]
+          },
+          "filesTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesCopied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesPresent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesFailed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "canRetry": {
+            "type": "boolean"
           }
         }
       },
@@ -12324,6 +12396,7 @@
       "MstreamImportStatus": {
         "enum": [
           "WAITING",
+          "COPYING",
           "RUNNING",
           "COMPLETED",
           "FAILED"
@@ -12359,6 +12432,10 @@
               "null",
               "string"
             ]
+          },
+          "copyFiles": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -12367,7 +12444,8 @@
           "vpath",
           "root",
           "rootExists",
-          "sourceId"
+          "sourceId",
+          "files"
         ],
         "type": "object",
         "properties": {
@@ -12386,6 +12464,15 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -15329,6 +15416,10 @@
               "null",
               "string"
             ]
+          },
+          "copyFiles": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

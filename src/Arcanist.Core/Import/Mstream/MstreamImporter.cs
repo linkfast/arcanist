@@ -48,10 +48,12 @@ internal sealed class MstreamImporter(TimeProvider time)
             {
                 if (!stats.TryGetValue(trackId, out var stat))
                     db.TrackPlayStats.Add(stats[trackId] = stat = new TrackPlayStats { UserId = userId, TrackId = trackId });
+                // Counted when it brings something: applying the same data again counts nothing.
+                if (track.PlayCount > stat.PlayCount)
+                    played++;
                 stat.PlayCount = Math.Max(stat.PlayCount, track.PlayCount);
                 if (track.LastPlayedAt is { } at && (stat.LastPlayedAt is null || stat.LastPlayedAt < at))
                     stat.LastPlayedAt = at;
-                played++;
             }
         }
 

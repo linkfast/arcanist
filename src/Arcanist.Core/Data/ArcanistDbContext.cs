@@ -43,6 +43,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<OrganizeMove> OrganizeMoves => Set<OrganizeMove>();
     public DbSet<AppPassword> AppPasswords => Set<AppPassword>();
     public DbSet<MstreamImport> MstreamImports => Set<MstreamImport>();
+    public DbSet<MstreamImportFile> MstreamImportFiles => Set<MstreamImportFile>();
 
     public DbSet<DlnaImport> DlnaImports => Set<DlnaImport>();
 
@@ -239,7 +240,17 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             import.Property(i => i.Status).HasConversion<string>().HasMaxLength(EnumLength);
             import.Property(i => i.Source).HasMaxLength(PathLength);
             import.Property(i => i.ErrorCode).HasMaxLength(64);
+            import.HasMany(i => i.Files).WithOne().HasForeignKey(f => f.ImportId).OnDelete(DeleteBehavior.Cascade);
             import.HasIndex(i => i.Status);
+        });
+
+        modelBuilder.Entity<MstreamImportFile>(file =>
+        {
+            file.Property(f => f.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            file.Property(f => f.Vpath).HasMaxLength(NameLength);
+            file.Property(f => f.Path).HasMaxLength(PathLength);
+            file.Property(f => f.Reason).HasMaxLength(64);
+            file.HasIndex(f => new { f.ImportId, f.Status });
         });
 
         modelBuilder.Entity<DlnaImport>(import =>

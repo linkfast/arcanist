@@ -9,6 +9,15 @@ namespace Arcanist.Core.Import.Mstream;
 /// Talks to an mStream server through its public API: to read its libraries and users (as an administrator) and,
 /// when each user first signs in to Arcanist, to check their password and bring their data.
 /// </summary>
+internal enum MstreamDownload
+{
+    Done,
+    Failed,
+
+    /// <summary>The session is no longer good (mStream answered 401 or 403).</summary>
+    Refused,
+}
+
 internal sealed class MstreamServerClient(IHttpClientFactory clients)
 {
     public const string HttpClientName = "mstream";
@@ -89,6 +98,41 @@ internal sealed class MstreamServerClient(IHttpClientFactory clients)
 
         return new MstreamUserContent(playlists, tracks.Values.ToList());
     }
+
+    /// <summary>The audio files of a vpath, as vpath paths (<c>vpath/relative/path</c>).</summary>
+    public async Task<IReadOnlyList<string>> ListFilesAsync(Uri server, string token, string vpath, CancellationToken cancellationToken)
+    {
+        var files = await PostAsync(server, "/api/v1/file-explorer/recursive", new { directory = vpath }, token, cancellationToken);
+        return files.ValueKind == JsonValueKind.Array
+            ? files.EnumerateArray().Where(f => f.ValueKind == JsonValueKind.String).Select(f => f.GetString()!).ToList()
+            : [];
+    }
+
+    /// <summary>Downloads a file (its vpath path) to <paramref name="destination"/>.</summary>
+    public async Task<MstreamDownload> DownloadAsync(Uri server, string token, string path, string destination, CancellationToken cancellationToken)
+    {
+        var url = Url(server, "/media/" + string.Join('/', path.Split('/').Select(Uri.EscapeDataString)));
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("x-access-token", token);
+            using var response = await clients.CreateClient(DownloadClientName).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                return MstreamDownload.Refused;
+            if (!response.IsSuccessStatusCode)
+                return MstreamDownload.Failed;
+            await using var file = File.Create(destination);
+            await response.Content.CopyToAsync(file, cancellationToken);
+            return MstreamDownload.Done;
+        }
+        catch (Exception e) when (e is HttpRequestException or IOException || e is TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            return MstreamDownload.Failed;
+        }
+    }
+
+    /// <summary>For downloads, with a long timeout: files can be big.</summary>
+    public const string DownloadClientName = "mstream-download";
 
     private HttpClient Client => clients.CreateClient(HttpClientName);
 

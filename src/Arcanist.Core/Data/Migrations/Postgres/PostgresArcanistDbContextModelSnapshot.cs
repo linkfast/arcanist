@@ -1140,12 +1140,30 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("CopiedBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CopyMap")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ErrorCode")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<int>("FilesCopied")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesFailed")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesPresent")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesTotal")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1158,6 +1176,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<int>("LibrariesCreated")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PendingData")
+                        .HasColumnType("text");
+
                     b.Property<int>("Playlists")
                         .HasColumnType("integer");
 
@@ -1169,6 +1190,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<Guid?>("RequestedByUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Session")
+                        .HasColumnType("text");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -1199,6 +1223,40 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.HasIndex("Status");
 
                     b.ToTable("MstreamImports");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImportFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ImportId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Vpath")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportId", "Status");
+
+                    b.ToTable("MstreamImportFiles");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OnlineLookup", b =>
@@ -2398,6 +2456,15 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImportFile", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.MstreamImport", null)
+                        .WithMany("Files")
+                        .HasForeignKey("ImportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeMove", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.OrganizeRun", "Run")
@@ -2685,6 +2752,11 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("Access");
 
                     b.Navigation("Sources");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImport", b =>
+                {
+                    b.Navigation("Files");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeRun", b =>

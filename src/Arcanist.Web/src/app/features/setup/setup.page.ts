@@ -604,13 +604,13 @@ export class SetupPage implements OnInit {
   }
 
   /** The mStream libraries that come along, each with the folder of a new library it goes to. */
-  protected mstreamLibraries(): { vpath: string; folder: string }[] {
+  protected mstreamLibraries(): { vpath: string; folder: string; copyFiles: boolean }[] {
     if (this.migrateFrom !== 'mstream') return [];
     const folders = this.libraries().flatMap((library) => library.folders);
     return this.mstream
       .choices()
       .filter((c) => c.target === NewLibrary && folders.includes(c.path.trim()))
-      .map((c) => ({ vpath: c.vpath, folder: c.path.trim() }));
+      .map((c) => ({ vpath: c.vpath, folder: c.path.trim(), copyFiles: this.mstream.copies(c) }));
   }
 
   /**

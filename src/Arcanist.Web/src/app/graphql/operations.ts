@@ -1031,6 +1031,11 @@ export const MstreamImportJobFields = graphql(`
     plays
     unmatched
     errorCode
+    filesTotal
+    filesCopied
+    filesPresent
+    filesFailed
+    canRetry
   }
 `);
 
@@ -1042,6 +1047,7 @@ export const MstreamAnalysisFields = graphql(`
       root
       rootExists
       sourceId
+      files
     }
     users {
       userName
@@ -1190,6 +1196,14 @@ export const AnalyzeMstreamServerMutation = graphql(`
   mutation AnalyzeMstreamServer($input: MstreamServerInput!) {
     analyzeMstreamServer(input: $input) {
       ...MstreamAnalysisFields
+    }
+  }
+`);
+
+export const RetryMstreamImportMutation = graphql(`
+  mutation RetryMstreamImport($id: ID!) {
+    retryMstreamImport(id: $id) {
+      ...MstreamImportJobFields
     }
   }
 `);

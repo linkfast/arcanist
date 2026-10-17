@@ -1673,11 +1673,12 @@ export const en: Dictionary = {
         'mStream’s installation folder or its configuration file. Everything is read, passwords included.',
       server: 'An mStream server',
       serverHelp:
-        'Through its API, with an administrator account. Each user brings their data the first time they sign in here with their mStream password.',
+        'Through its API, with an administrator account: its data comes now, each user’s the first time they sign in here. On another machine, its files can be copied.',
       folderLabel: 'Folder or configuration file',
       url: 'Server address',
       adminUser: 'mStream administrator',
-      passwordHelp: 'The password is only used now; it is not kept.',
+      passwordHelp:
+        'The password is not kept. To copy files, the mStream session is kept, encrypted, until the copy is over.',
     },
     libraries: {
       title: 'Libraries',
@@ -1686,6 +1687,13 @@ export const en: Dictionary = {
         'The ones you import join your libraries in the next step. Their files are found by their path inside the chosen folder.',
       none: 'mStream has no libraries.',
       notHere: 'Not on this server',
+      files: '{count} songs in mStream',
+      copy: 'Copy the files from mStream',
+      copyHelp:
+        'They are downloaded through its API into the chosen folder, at the same paths and overwriting nothing; then it is scanned. It goes on in the background and resumes after a restart.',
+      noCopyHere: 'The files already in this folder are used.',
+      noCopyEmpty:
+        'Without copying them, the library only has what the chosen folder already holds.',
       skip: 'Do not import',
       new: 'New library',
       name: 'Name',
@@ -1704,6 +1712,8 @@ export const en: Dictionary = {
       noPassword: 'No password: an administrator must set one',
       none: 'mStream has no users.',
       data: '{playlists} playlists, {rated} rated and {played} played songs.',
+      dataServer:
+        'Your mStream account: {playlists} playlists, {rated} rated and {played} played songs. The other users’ arrive when they sign in.',
       import: 'Import the users and their data',
     },
     history: {
@@ -1712,11 +1722,15 @@ export const en: Dictionary = {
         '{libraries} libraries and {users} users created · {playlists} playlists, {ratings} ratings and {plays} played songs · {unmatched} not found',
       waiting: 'Waiting for the libraries’ scans to finish.',
       server: 'Each user’s data arrives when they first sign in.',
+      files: '{copied} of {total} files copied · {present} were there · {failed} failed',
+      copying: 'Copying the files from mStream…',
+      retry: 'Try the failed ones again',
       running: 'Bringing playlists, ratings and plays…',
     },
     status: {
       WAITING: 'Waiting',
       RUNNING: 'Running',
+      COPYING: 'Copying',
       COMPLETED: 'Completed',
       FAILED: 'Failed',
     },
@@ -2168,6 +2182,8 @@ export const en: Dictionary = {
     playlist_full: 'A playlist holds at most 10,000 tracks.',
     not_undoable: 'That can no longer be undone.',
     mstream_unreachable: 'The mStream server does not answer, or not as mStream does.',
+    mstream_session_expired:
+      'The mStream server no longer takes this import’s session: import again to copy what is missing.',
     mstream_admin_required:
       'An mStream administrator account is needed, with its admin API unlocked.',
     dlna_disabled: 'DLNA is off.',
@@ -2180,7 +2196,8 @@ export const en: Dictionary = {
     renderer_unreachable: 'The device does not answer: it may be off or gone from the network.',
     renderer_failed: 'The device refused the request.',
     nothing_queued: 'Arcanist has nothing queued on that device.',
-    renderer_in_use: 'Someone else is playing on that device; you can control it once they stop or their queue ends.',
+    renderer_in_use:
+      'Someone else is playing on that device; you can control it once they stop or their queue ends.',
     p2p_disabled: 'The P2P network is off.',
     p2p_unavailable: 'The P2P network is not available on this platform.',
     p2p_bind_failed: 'The P2P network could not open its UDP port (is another program using it?).',

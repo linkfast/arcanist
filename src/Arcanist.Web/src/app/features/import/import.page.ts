@@ -59,6 +59,7 @@ import {
   IgnoreImportItemMutation,
   ImportMstreamMutation,
   MstreamImportsQuery,
+  RetryMstreamImportMutation,
   ImportQueueQuery as ImportQueue,
   LibrariesQuery,
   UltimateCloudAccountsQuery,
@@ -251,7 +252,11 @@ export class ImportPage implements OnInit {
   constructor() {
     const timer = setInterval(() => {
       void this.loadQueue();
-      if (this.migrations().some((m) => m.status === 'WAITING' || m.status === 'RUNNING'))
+      if (
+        this.migrations().some(
+          (m) => m.status === 'COPYING' || m.status === 'WAITING' || m.status === 'RUNNING',
+        )
+      )
         void this.loadMigrations();
     }, REFRESH_MS);
     // Copies move fast: their progress is refreshed more often.
@@ -340,6 +345,14 @@ export class ImportPage implements OnInit {
     await this.historyAction(job.id, async () => {
       await this.gql.mutate(DeleteDlnaImportMutation, { id: job.id });
       this.dlnaImports.update((list) => list.filter((j) => j.id !== job.id));
+    });
+  }
+
+  protected async retryMstream(job: MstreamImportJob): Promise<void> {
+    await this.historyAction(job.id, async () => {
+      const retried = (await this.gql.mutate(RetryMstreamImportMutation, { id: job.id }))
+        .retryMstreamImport;
+      this.migrations.update((list) => list.map((j) => (j.id === job.id ? retried : j)));
     });
   }
 

@@ -1135,12 +1135,30 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("CopiedBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CopyMap")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ErrorCode")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("FilesCopied")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FilesFailed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FilesPresent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FilesTotal")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("TEXT");
@@ -1153,6 +1171,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<int>("LibrariesCreated")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("PendingData")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Playlists")
                         .HasColumnType("INTEGER");
 
@@ -1163,6 +1184,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Session")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Source")
@@ -1194,6 +1218,40 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.HasIndex("Status");
 
                     b.ToTable("MstreamImports");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImportFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ImportId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Vpath")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportId", "Status");
+
+                    b.ToTable("MstreamImportFiles");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OnlineLookup", b =>
@@ -2393,6 +2451,15 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImportFile", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.MstreamImport", null)
+                        .WithMany("Files")
+                        .HasForeignKey("ImportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeMove", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.OrganizeRun", "Run")
@@ -2680,6 +2747,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Navigation("Access");
 
                     b.Navigation("Sources");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImport", b =>
+                {
+                    b.Navigation("Files");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeRun", b =>

@@ -103,8 +103,8 @@ type Documents = {
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.SetExtensionEnabledDocument,
     "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": typeof types.UninstallExtensionDocument,
-    "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": typeof types.MstreamImportJobFieldsFragmentDoc,
-    "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": typeof types.MstreamAnalysisFieldsFragmentDoc,
+    "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    canRetry\n  }\n": typeof types.MstreamImportJobFieldsFragmentDoc,
+    "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n      files\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": typeof types.MstreamAnalysisFieldsFragmentDoc,
     "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.MstreamImportsDocument,
     "\n  fragment DlnaImportJobFields on DlnaImportJob {\n    id\n    serverName\n    folders\n    libraryId\n    libraryName\n    status\n    found\n    copied\n    duplicates\n    failed\n    copiedBytes\n    createdAt\n    finishedAt\n    errorCode\n    failures {\n      title\n      artist\n      album\n      reason\n    }\n  }\n": typeof types.DlnaImportJobFieldsFragmentDoc,
     "\n  query DlnaImports {\n    dlnaImports {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.DlnaImportsDocument,
@@ -119,6 +119,7 @@ type Documents = {
     "\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": typeof types.RetryDlnaImportDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamServerDocument,
+    "\n  mutation RetryMstreamImport($id: ID!) {\n    retryMstreamImport(id: $id) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.RetryMstreamImportDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.ImportMstreamDocument,
     "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n": typeof types.DlnaStatusFieldsFragmentDoc,
     "\n  fragment MstreamStatusFields on MstreamStatus {\n    enabled\n    starThreshold\n    passwordSignIn\n    features\n    quickConnect\n    p2pEnabled\n    pairingCode\n  }\n": typeof types.MstreamStatusFieldsFragmentDoc,
@@ -295,8 +296,8 @@ const documents: Documents = {
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": types.SetExtensionEnabledDocument,
     "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": types.UninstallExtensionDocument,
-    "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n": types.MstreamImportJobFieldsFragmentDoc,
-    "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": types.MstreamAnalysisFieldsFragmentDoc,
+    "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    canRetry\n  }\n": types.MstreamImportJobFieldsFragmentDoc,
+    "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n      files\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": types.MstreamAnalysisFieldsFragmentDoc,
     "\n  query MstreamImports {\n    mstreamImports {\n      ...MstreamImportJobFields\n    }\n  }\n": types.MstreamImportsDocument,
     "\n  fragment DlnaImportJobFields on DlnaImportJob {\n    id\n    serverName\n    folders\n    libraryId\n    libraryName\n    status\n    found\n    copied\n    duplicates\n    failed\n    copiedBytes\n    createdAt\n    finishedAt\n    errorCode\n    failures {\n      title\n      artist\n      album\n      reason\n    }\n  }\n": types.DlnaImportJobFieldsFragmentDoc,
     "\n  query DlnaImports {\n    dlnaImports {\n      ...DlnaImportJobFields\n    }\n  }\n": types.DlnaImportsDocument,
@@ -311,6 +312,7 @@ const documents: Documents = {
     "\n  mutation RetryDlnaImport($id: ID!) {\n    retryDlnaImport(id: $id) {\n      ...DlnaImportJobFields\n    }\n  }\n": types.RetryDlnaImportDocument,
     "\n  mutation AnalyzeMstreamFolder($folder: String!) {\n    analyzeMstreamFolder(folder: $folder) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamFolderDocument,
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamServerDocument,
+    "\n  mutation RetryMstreamImport($id: ID!) {\n    retryMstreamImport(id: $id) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.RetryMstreamImportDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.ImportMstreamDocument,
     "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n": types.DlnaStatusFieldsFragmentDoc,
     "\n  fragment MstreamStatusFields on MstreamStatus {\n    enabled\n    starThreshold\n    passwordSignIn\n    features\n    quickConnect\n    p2pEnabled\n    pairingCode\n  }\n": types.MstreamStatusFieldsFragmentDoc,
@@ -771,11 +773,11 @@ export function graphql(source: "\n  mutation UninstallExtension($id: String!) {
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n"): (typeof documents)["\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n  }\n"];
+export function graphql(source: "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    canRetry\n  }\n"): (typeof documents)["\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    canRetry\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n"): (typeof documents)["\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n"];
+export function graphql(source: "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n      files\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n"): (typeof documents)["\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n      files\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -832,6 +834,10 @@ export function graphql(source: "\n  mutation AnalyzeMstreamFolder($folder: Stri
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n"): (typeof documents)["\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RetryMstreamImport($id: ID!) {\n    retryMstreamImport(id: $id) {\n      ...MstreamImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation RetryMstreamImport($id: ID!) {\n    retryMstreamImport(id: $id) {\n      ...MstreamImportJobFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

@@ -43,7 +43,8 @@ public sealed record SetupMstreamSource(string? Folder, MstreamServerInput? Serv
 
 /// <param name="Vpath">mStream's name for the library.</param>
 /// <param name="Folder">Where its music is on this server: one of the folders of <see cref="SetupRequest.Libraries"/>.</param>
-public sealed record SetupMstreamLibrary(string? Vpath, string? Folder);
+/// <param name="CopyFiles">From an mStream server on another machine: copy its files into that folder.</param>
+public sealed record SetupMstreamLibrary(string? Vpath, string? Folder, bool CopyFiles = false);
 
 /// <summary>Imports an mStream installation into the new server.</summary>
 /// <param name="Libraries">The mStream libraries whose data comes along, and where they are now. Others are left out.</param>
@@ -400,8 +401,11 @@ public sealed class SetupService(
             return (library.Sources[v.Value.Folder].Id, library.Id);
         }, StringComparer.Ordinal);
 
+        var copy = request.Server is null
+            ? []
+            : (request.Libraries ?? []).Where(l => l.CopyFiles && l.Vpath is not null && map.ContainsKey(l.Vpath)).Select(l => l.Vpath!).ToHashSet(StringComparer.Ordinal);
         var import = await MstreamImportService.RecordAsync(db, source, map, map.Values.Select(v => v.Item2).Distinct().Count(),
-            request.ImportUsers, adminId, time.GetUtcNow().UtcDateTime, cancellationToken);
+            request.ImportUsers, adminId, time.GetUtcNow().UtcDateTime, cancellationToken, copy, MstreamImportService.Protector(services));
         await db.SaveChangesAsync(cancellationToken);
         return import;
     }

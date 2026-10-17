@@ -5,6 +5,7 @@ using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Import.Mstream;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using MstreamImportEntity = Arcanist.Core.Data.Entities.MstreamImport;
 
@@ -19,7 +20,9 @@ public sealed record MstreamServerInput(string Url, string UserName, string Pass
 /// <param name="Root">Its folder, on the mStream server.</param>
 /// <param name="RootExists">The folder exists on this server.</param>
 /// <param name="SourceId">The library folder of Arcanist at the same place, if there is one.</param>
-public sealed record MstreamLibraryInfo(string Vpath, string Root, bool RootExists, Guid? SourceId);
+/// <param name="Files">Its audio files on the mStream server (through its API; null for a folder), which can be
+/// copied here when the folder is not on this server.</param>
+public sealed record MstreamLibraryInfo(string Vpath, string Root, bool RootExists, Guid? SourceId, int? Files);
 
 /// <param name="Exists">An Arcanist user has that name: the data goes to them, and their account is not changed.</param>
 /// <param name="CanSignIn">Their mStream password will work here (otherwise an administrator sets a new one).</param>
@@ -27,7 +30,8 @@ public sealed record MstreamUserInfo(string UserName, bool IsAdmin, IReadOnlyLis
 
 /// <summary>What an mStream installation holds, before importing it.</summary>
 /// <param name="Version">5 or 6 for an installation read from its folder; null for a server read through its API, which
-/// does not tell. Through the API, each user's playlists, ratings and plays arrive when they first sign in here.</param>
+/// does not tell. Through the API, the counts are the importing account's: the other users' playlists, ratings and
+/// plays arrive when they first sign in here.</param>
 public sealed record MstreamAnalysis(
     int? Version,
     IReadOnlyList<MstreamLibraryInfo> Libraries,
@@ -37,7 +41,9 @@ public sealed record MstreamAnalysis(
     int PlayedTracks);
 
 /// <summary>What becomes of an mStream library: an existing library folder, a new library, or nothing (both null).</summary>
-public sealed record MstreamLibraryChoice(string Vpath, Guid? SourceId, string? NewLibraryName, string? NewLibraryPath);
+/// <param name="CopyFiles">From an mStream server: copy its files into that folder (at the same paths, never
+/// overwriting), for a server on another machine.</param>
+public sealed record MstreamLibraryChoice(string Vpath, Guid? SourceId, string? NewLibraryName, string? NewLibraryPath, bool CopyFiles = false);
 
 /// <param name="Folder">The mStream installation on this server: its folder or configuration file.</param>
 /// <param name="Server">Or an mStream server, through its API.</param>
@@ -46,6 +52,8 @@ public sealed record ImportMstreamInput(string? Folder, MstreamServerInput? Serv
 
 /// <summary>An import from mStream and what it brought.</summary>
 /// <param name="Unmatched">Playlist songs, ratings and plays whose file is not in the catalog.</param>
+/// <param name="FilesTotal">Files to copy from the server; then how many were copied, were there already or failed.</param>
+/// <param name="CanRetry">The files that failed can be tried again (the mStream session is kept for that).</param>
 public sealed record MstreamImportJob(
     Guid Id,
     MstreamImportKind Kind,
@@ -59,7 +67,12 @@ public sealed record MstreamImportJob(
     int Ratings,
     int Plays,
     int Unmatched,
-    string? ErrorCode);
+    string? ErrorCode,
+    int FilesTotal,
+    int FilesCopied,
+    int FilesPresent,
+    int FilesFailed,
+    bool CanRetry);
 
 /// <summary>
 /// Imports an mStream installation: libraries, users (who keep their passwords) and their playlists, ratings and
@@ -74,6 +87,9 @@ public sealed class MstreamImportService(
     MstreamImportSignal signal,
     IServiceProvider services)
 {
+    /// <summary>Protects the mStream session kept to copy an import's files.</summary>
+    internal const string SessionPurpose = "Arcanist.Mstream.Session";
+
     private MstreamReader Reader => services.GetRequiredService<MstreamReader>();
 
     public async Task<MstreamAnalysis> AnalyzeFolderAsync(string folder, CancellationToken cancellationToken)
@@ -92,11 +108,35 @@ public sealed class MstreamImportService(
     {
         var actor = guard.Admin();
         guard.RecentAuthentication();
+        var choices = input.Libraries ?? [];
+        if (input.Server is null && choices.Any(c => c.CopyFiles))
+            throw ArcanistException.Field("libraries", ErrorCodes.InvalidFormat);
         var source = await Reader.ReadAsync(input.Folder, input.Server, cancellationToken);
-        var vpaths = await MapLibrariesAsync(input.Libraries ?? [], source.Libraries, cancellationToken);
-        var import = await RecordAsync(db, source, vpaths.Map, vpaths.Created, input.ImportUsers, actor.UserId, Now(), cancellationToken);
+        var vpaths = await MapLibrariesAsync(choices, source.Libraries, cancellationToken);
+        var copy = choices.Where(c => c.CopyFiles && vpaths.Map.ContainsKey(c.Vpath)).Select(c => c.Vpath).ToHashSet(StringComparer.Ordinal);
+        var import = await RecordAsync(db, source, vpaths.Map, vpaths.Created, input.ImportUsers, actor.UserId, Now(), cancellationToken,
+            copy, Protector(services));
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateAll();
+        signal.Notify();
+        return ToModel(import);
+    }
+
+    /// <summary>Tries again the files of an import from a server that could not be copied.</summary>
+    public async Task<MstreamImportJob> RetryAsync(Guid id, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        var import = await db.MstreamImports.SingleOrDefaultAsync(i => i.Id == id, cancellationToken) ?? throw new ArcanistException.NotFound();
+        if (!CanRetry(import))
+            throw new ArcanistException.Conflict(ErrorCodes.ImportRunning);
+        await db.MstreamImportFiles.Where(f => f.ImportId == id && f.Status == MstreamImportFileStatus.Failed)
+            .ExecuteUpdateAsync(s => s.SetProperty(f => f.Status, MstreamImportFileStatus.Pending).SetProperty(f => f.Reason, (string?)null), cancellationToken);
+        import.FilesFailed = 0;
+        import.ErrorCode = null;
+        import.FinishedAt = null;
+        import.Status = MstreamImportStatus.Copying;
+        await db.SaveChangesAsync(cancellationToken);
         signal.Notify();
         return ToModel(import);
     }
@@ -157,13 +197,15 @@ public sealed class MstreamImportService(
     }
 
     /// <summary>
-    /// Adds the import to <paramref name="db"/> (not saved), with the users it creates. A folder import with users
-    /// waits for the import worker, which brings their data once the scans of their libraries are over; one through
-    /// the API is done: each user brings their data when they first sign in.
+    /// Adds the import to <paramref name="db"/> (not saved), with the users it creates. The import worker finishes it:
+    /// it copies the files of the vpaths in <paramref name="copy"/> from the server, then, once the scans of the
+    /// libraries are over, brings the users' data: all of them from a folder; from a server, the importing account's
+    /// (the others bring theirs when they first sign in).
     /// </summary>
     internal static async Task<MstreamImportEntity> RecordAsync(
         ArcanistDbContext db, MstreamSource source, IReadOnlyDictionary<string, (Guid SourceId, Guid LibraryId)> vpaths, int librariesCreated,
-        bool importUsers, Guid? requestedBy, DateTime now, CancellationToken cancellationToken)
+        bool importUsers, Guid? requestedBy, DateTime now, CancellationToken cancellationToken,
+        IReadOnlyCollection<string>? copy = null, IDataProtector? sessions = null)
     {
         var import = new MstreamImportEntity
         {
@@ -178,7 +220,20 @@ public sealed class MstreamImportService(
 
         var users = importUsers ? await ImportUsersAsync(db, import, source.Users, vpaths, now, cancellationToken) : [];
         import.UserMap = JsonSerializer.Serialize(users);
-        import.Status = import.Kind == MstreamImportKind.Folder && users.Count > 0 ? MstreamImportStatus.Waiting : MstreamImportStatus.Completed;
+
+        // From a server: the importing account's data goes to the user of its name, or to whoever imports.
+        if (source.Session is { } session && (session.Content.Playlists.Count > 0 || session.Content.Tracks.Count > 0)
+            && (users.TryGetValue(session.UserName, out var owner) ? owner : requestedBy) is { } ownerId)
+            import.PendingData = JsonSerializer.Serialize(new MstreamPendingData(ownerId, session.Content));
+        if (source.Session is not null && copy is { Count: > 0 })
+        {
+            import.CopyMap = JsonSerializer.Serialize(copy.ToDictionary(v => v, v => vpaths[v].SourceId));
+            import.Session = (sessions ?? throw new InvalidOperationException("A protector is needed to keep the session.")).Protect(source.Session.Token);
+        }
+
+        import.Status = import.CopyMap is not null ? MstreamImportStatus.Copying
+            : import.PendingData is not null || import.Kind == MstreamImportKind.Folder && users.Count > 0 ? MstreamImportStatus.Waiting
+            : MstreamImportStatus.Completed;
         import.FinishedAt = import.Status == MstreamImportStatus.Completed ? now : null;
         db.MstreamImports.Add(import);
         return import;
@@ -293,7 +348,15 @@ public sealed class MstreamImportService(
 
     internal static MstreamImportJob ToModel(MstreamImportEntity import) => new(
         import.Id, import.Kind, import.Source, import.Status, import.CreatedAt, import.FinishedAt, import.LibrariesCreated, import.UsersCreated,
-        import.Playlists, import.Ratings, import.Plays, import.Unmatched, import.ErrorCode);
+        import.Playlists, import.Ratings, import.Plays, import.Unmatched, import.ErrorCode,
+        import.FilesTotal, import.FilesCopied, import.FilesPresent, import.FilesFailed, CanRetry(import));
+
+    private static bool CanRetry(MstreamImportEntity import) =>
+        import is { Kind: MstreamImportKind.Server, Session: not null, CopyMap: not null, Status: MstreamImportStatus.Completed or MstreamImportStatus.Failed }
+        && (import.FilesFailed > 0 || import.ErrorCode is not null);
+
+    internal static IDataProtector Protector(IServiceProvider services) =>
+        services.GetRequiredService<IDataProtectionProvider>().CreateProtector(SessionPurpose);
 
     private DateTime Now() => time.GetUtcNow().UtcDateTime;
 }

@@ -25,9 +25,13 @@ export interface MstreamLibraryChoice {
   vpath: string;
   root: string;
   rootExists: boolean;
+  /** Its audio files on the mStream server (read through its API), or null. */
+  files: number | null;
   target: string;
   name: string;
   path: string;
+  /** Copy the server's files into the folder (an mStream server on another machine). */
+  copy: boolean;
 }
 
 export const SkipLibrary = 'skip';
@@ -61,19 +65,30 @@ export class MstreamImportDraft {
     );
   }
 
+  /** Whether the files of a library are copied from the server. */
+  copies(choice: MstreamLibraryChoice): boolean {
+    return this.analyzed?.server != null && choice.copy;
+  }
+
   /** The chosen libraries, as the import mutation takes them. */
   libraryInputs(): {
     vpath: string;
     sourceId?: string;
     newLibraryName?: string;
     newLibraryPath?: string;
+    copyFiles: boolean;
   }[] {
     return this.choices()
       .filter((c) => c.target !== SkipLibrary)
       .map((c) =>
         c.target === NewLibrary
-          ? { vpath: c.vpath, newLibraryName: c.name.trim(), newLibraryPath: c.path.trim() }
-          : { vpath: c.vpath, sourceId: c.target },
+          ? {
+              vpath: c.vpath,
+              newLibraryName: c.name.trim(),
+              newLibraryPath: c.path.trim(),
+              copyFiles: this.copies(c),
+            }
+          : { vpath: c.vpath, sourceId: c.target, copyFiles: this.copies(c) },
       );
   }
 }
@@ -234,6 +249,11 @@ export class MstreamImportDraft {
                         'mstream.libraries.notHere' | t
                       }}</span>
                     }
+                    @if (choice.files !== null) {
+                      <span class="ml-2 text-xs text-muted-foreground">{{
+                        'mstream.libraries.files' | t: { count: choice.files }
+                      }}</span>
+                    }
                   </span>
                   <hlm-native-select
                     [value]="choice.target"
@@ -250,6 +270,26 @@ export class MstreamImportDraft {
                     }
                   </hlm-native-select>
                 </div>
+                @if (draft().analyzed?.server && choice.target !== 'skip') {
+                  <label class="flex items-start gap-2 text-sm">
+                    <hlm-switch
+                      class="mt-0.5"
+                      [checked]="choice.copy"
+                      (checkedChange)="draft().update(index, { copy: $event })"
+                    />
+                    <span>
+                      {{ 'mstream.libraries.copy' | t }}
+                      <span class="block text-xs text-muted-foreground">{{
+                        (choice.copy
+                          ? 'mstream.libraries.copyHelp'
+                          : choice.rootExists
+                            ? 'mstream.libraries.noCopyHere'
+                            : 'mstream.libraries.noCopyEmpty'
+                        ) | t
+                      }}</span>
+                    </span>
+                  </label>
+                }
                 @if (choice.target === 'new') {
                   <div class="grid gap-2 sm:grid-cols-[12rem_minmax(0,1fr)]">
                     <input
@@ -306,19 +346,17 @@ export class MstreamImportDraft {
                 <li class="text-sm text-muted-foreground">{{ 'mstream.users.none' | t }}</li>
               }
             </ul>
-            @if (found.version) {
-              <p class="text-sm text-muted-foreground">
-                {{
-                  'mstream.users.data'
-                    | t
-                      : {
-                          playlists: found.playlists,
-                          rated: found.ratedTracks,
-                          played: found.playedTracks,
-                        }
-                }}
-              </p>
-            }
+            <p class="text-sm text-muted-foreground">
+              {{
+                (found.version ? 'mstream.users.data' : 'mstream.users.dataServer')
+                  | t
+                    : {
+                        playlists: found.playlists,
+                        rated: found.ratedTracks,
+                        played: found.playedTracks,
+                      }
+              }}
+            </p>
             @if (setup()) {
               <p class="text-xs text-muted-foreground">{{ 'mstream.users.sameName' | t }}</p>
             }
@@ -390,9 +428,13 @@ export class MstreamImportForm {
           vpath: library.vpath,
           root: library.root,
           rootExists: library.rootExists,
-          target: library.sourceId ?? (library.rootExists ? NewLibrary : SkipLibrary),
+          files: library.files ?? null,
+          // A server's folder that is not here: a new library whose files are copied from the server.
+          target:
+            library.sourceId ?? (library.rootExists || source.server ? NewLibrary : SkipLibrary),
           name: library.vpath,
           path: library.rootExists ? library.root : '',
+          copy: !!source.server && !library.rootExists,
         })),
       );
       draft.analysis.set(analysis);

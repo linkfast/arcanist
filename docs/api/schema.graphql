@@ -1119,6 +1119,11 @@ type MstreamImportJob {
   plays: Int!
   unmatched: Int!
   errorCode: String
+  filesTotal: Int!
+  filesCopied: Int!
+  filesPresent: Int!
+  filesFailed: Int!
+  canRetry: Boolean!
 }
 
 enum MstreamImportKind {
@@ -1128,6 +1133,7 @@ enum MstreamImportKind {
 
 enum MstreamImportStatus {
   WAITING
+  COPYING
   RUNNING
   COMPLETED
   FAILED
@@ -1885,6 +1891,8 @@ type Mutation {
   analyzeMstreamServer(input: MstreamServerInput!): MstreamAnalysis!
   "Imports from mStream: the chosen libraries, its users (who keep their passwords) and their playlists, ratings and play counts, which arrive once the new libraries are scanned (or, from a server, when each user first signs in). Needs a recent authentication."
   importMstream(input: ImportMstreamInput!): MstreamImportJob!
+  "Tries again the files of an import from an mStream server that could not be copied. Administrators only, with a recent authentication."
+  retryMstreamImport(id: ID!): MstreamImportJob!
   "Removes a finished import from mStream from the history; what it brought stays. An import from an mStream server stays while some of its users have not signed in. Administrators only."
   deleteMstreamImport(id: ID!): Boolean!
   "Clears the history of migrations from mStream and DLNA servers (only finished ones, and not the mStream imports still needed to sign in); returns how many went. Administrators only."
@@ -2261,6 +2269,7 @@ type MstreamLibraryInfo {
   root: String!
   rootExists: Boolean!
   sourceId: ID
+  files: Int
 }
 
 type MstreamUserInfo {
@@ -2289,6 +2298,7 @@ input MstreamLibraryChoice {
   sourceId: ID
   newLibraryName: String
   newLibraryPath: String
+  copyFiles: Boolean!
 }
 
 input MstreamSettingsInput {

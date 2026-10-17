@@ -5,7 +5,10 @@ public enum MstreamImportKind
     /// <summary>Read from an mStream installation on this server: its configuration and database.</summary>
     Folder,
 
-    /// <summary>Through the API of an mStream server: users bring their data when they first sign in.</summary>
+    /// <summary>
+    /// Through the API of an mStream server: the account that imports brings its data at once, the other users when
+    /// they first sign in; the files can be copied from the server.
+    /// </summary>
     Server,
 }
 
@@ -13,6 +16,9 @@ public enum MstreamImportStatus
 {
     /// <summary>Waiting for the scans of the libraries it uses, to match mStream's files with the catalog.</summary>
     Waiting,
+
+    /// <summary>Copying the files of an mStream server into library folders, before waiting for their scans.</summary>
+    Copying,
 
     Running,
 
@@ -58,6 +64,62 @@ public sealed class MstreamImport : Entity
 
     /// <summary>Why it failed, as an <c>ErrorCodes</c> value.</summary>
     public string? ErrorCode { get; set; }
+
+    /// <summary>
+    /// The mStream session of the account that imported from a server (protected with Data Protection), to copy its
+    /// files; kept while some of them can be tried again, and forgotten with the import.
+    /// </summary>
+    public string? Session { get; set; }
+
+    /// <summary>
+    /// The playlists, ratings and plays of the account that imported from a server, as JSON, until they are brought
+    /// (after the scans): <c>{"userId": …, "content": …}</c>.
+    /// </summary>
+    public string? PendingData { get; set; }
+
+    /// <summary>The vpaths whose files are copied from the server, and the library folder of each, as JSON.</summary>
+    public string? CopyMap { get; set; }
+
+    public int FilesTotal { get; set; }
+
+    public int FilesCopied { get; set; }
+
+    /// <summary>Files the library folder had already (the same size at the same place).</summary>
+    public int FilesPresent { get; set; }
+
+    public int FilesFailed { get; set; }
+
+    public long CopiedBytes { get; set; }
+
+    public List<MstreamImportFile> Files { get; init; } = [];
+}
+
+public enum MstreamImportFileStatus
+{
+    Pending,
+
+    Copied,
+
+    /// <summary>The library folder had it already.</summary>
+    Present,
+
+    Failed,
+}
+
+/// <summary>A file of an mStream server to copy, at the same path in the library folder of its vpath.</summary>
+public sealed class MstreamImportFile : Entity
+{
+    public Guid ImportId { get; init; }
+
+    public required string Vpath { get; init; }
+
+    /// <summary>Its path inside the vpath, as mStream gives it (and as it is written here).</summary>
+    public required string Path { get; init; }
+
+    public MstreamImportFileStatus Status { get; set; }
+
+    /// <summary>Why it failed, as an <c>ErrorCodes</c> value.</summary>
+    public string? Reason { get; set; }
 }
 
 public enum DlnaImportStatus

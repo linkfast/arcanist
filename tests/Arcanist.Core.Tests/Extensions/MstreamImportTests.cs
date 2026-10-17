@@ -28,7 +28,10 @@ public sealed class MstreamImportTests : IAsyncDisposable
     public MstreamImportTests()
     {
         _factory = new ArcanistFactory(services: services =>
-            services.AddHttpClient(MstreamServerClient.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => _server));
+        {
+            services.AddHttpClient(MstreamServerClient.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => _server);
+            services.AddHttpClient(MstreamServerClient.DownloadClientName).ConfigurePrimaryHttpMessageHandler(() => _server);
+        });
         AudioFixtures.WriteWav(Path.Combine(_music, "Zed", "01.wav"), 1, new FixtureTags("Alone", "Zed", "Solo", "Zed", TrackNumber: 1));
         AudioFixtures.WriteWav(Path.Combine(_music, "Zed", "02.wav"), 2, new FixtureTags("Again", "Zed", "Solo", "Zed", TrackNumber: 2));
     }
@@ -212,6 +215,8 @@ public sealed class MstreamImportTests : IAsyncDisposable
                 "/api/v1/auth/login" => new HttpResponseMessage(HttpStatusCode.Unauthorized),
                 "/api/v1/admin/directories" => FakeOnlineServices.Json("""{"music":{"id":1,"root":"/srv/music","type":"music"}}"""),
                 "/api/v1/admin/users" => FakeOnlineServices.Json("""{"anna":{"admin":false,"vpaths":["music"]}}"""),
+                _ when Token(request) == "t-admin" && path.StartsWith("/api/v1/playlist/", StringComparison.Ordinal) => FakeOnlineServices.Json("[]"),
+                _ when Token(request) == "t-admin" && path.StartsWith("/api/v1/db/", StringComparison.Ordinal) => FakeOnlineServices.Json("[]"),
                 "/api/v1/playlist/getall" => FakeOnlineServices.Json("""[{"name":"Fav"}]"""),
                 "/api/v1/playlist/load" => FakeOnlineServices.Json("""[{"id":1,"lokiId":1,"filepath":"music/Zed/01.wav","metadata":{}}]"""),
                 "/api/v1/db/rated" => FakeOnlineServices.Json("""[{"filepath":"music/Zed/02.wav","metadata":{"rating":10}}]"""),
@@ -264,6 +269,86 @@ public sealed class MstreamImportTests : IAsyncDisposable
         Assert.True((await admin.DeleteAsync($"/rest/v1/mstream/imports/{importId}", Cancel)).IsSuccessStatusCode);
         Assert.Empty((await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/mstream/imports", ArcanistFactory.Json, Cancel))!);
         Assert.Equal(5, (await TracksAsync(anna))["Again"].GetProperty("rating").GetInt32());
+    }
+
+    private static string? Token(HttpRequestMessage request) =>
+        request.Headers.TryGetValues("x-access-token", out var values) ? values.FirstOrDefault() : null;
+
+    [Fact]
+    public async Task A_server_on_another_machine_has_its_files_copied_and_the_importing_account_brings_its_data()
+    {
+        // mStream's music, on "its" machine: Arcanist only reaches it through the API.
+        var remote = Directory.CreateTempSubdirectory("arcanist-mstream-remote-").FullName;
+        AudioFixtures.WriteWav(Path.Combine(remote, "Zed", "01.wav"), 1, new FixtureTags("Alone", "Zed", "Solo", "Zed", TrackNumber: 1));
+        AudioFixtures.WriteWav(Path.Combine(remote, "Zed", "02.wav"), 2, new FixtureTags("Again", "Zed", "Solo", "Zed", TrackNumber: 2));
+        var target = Directory.CreateTempSubdirectory("arcanist-mstream-target-").FullName;
+        var broken = true;
+        _server.Respond = request =>
+        {
+            var path = Uri.UnescapeDataString(request.RequestUri!.AbsolutePath);
+            if (path != "/api/v1/auth/login" && Token(request) != "t-admin")
+                return new HttpResponseMessage(HttpStatusCode.Unauthorized);
+            return path switch
+            {
+                "/api/v1/auth/login" => FakeOnlineServices.Json("""{"token":"t-admin","vpaths":["music"]}"""),
+                "/api/v1/admin/directories" => FakeOnlineServices.Json("""{"music":{"id":1,"root":"/srv/music","type":"music"}}"""),
+                "/api/v1/admin/users" => FakeOnlineServices.Json("""{"admin":{"admin":true,"vpaths":["music"]}}"""),
+                "/api/v1/playlist/getall" => FakeOnlineServices.Json("""[{"name":"Fav"}]"""),
+                "/api/v1/playlist/load" => FakeOnlineServices.Json("""[{"id":1,"lokiId":1,"filepath":"music/Zed/01.wav","metadata":{}}]"""),
+                "/api/v1/db/rated" => FakeOnlineServices.Json("""[{"filepath":"music/Zed/02.wav","metadata":{"rating":10}}]"""),
+                "/api/v1/db/stats/most-played" => FakeOnlineServices.Json("""[{"filepath":"music/Zed/01.wav","metadata":{"play-count":5}}]"""),
+                "/api/v1/file-explorer/recursive" => FakeOnlineServices.Json("""["music/Zed/01.wav","music/Zed/02.wav"]"""),
+                // The second file fails the first time.
+                "/media/music/Zed/02.wav" when broken => new HttpResponseMessage(HttpStatusCode.InternalServerError),
+                _ when path.StartsWith("/media/music/", StringComparison.Ordinal) =>
+                    new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(File.ReadAllBytes(Path.Combine(remote, path["/media/music/".Length..]))) },
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+            };
+        };
+
+        await _factory.CompleteSetupAsync(new SetupLibrary("Music", [target], VisibleToAll: false));
+        var admin = await _factory.CreateAuthenticatedClientAsync();
+        await _factory.WaitForScansAsync(admin);
+
+        // The analysis counts the server's files and the importing account's data.
+        var server = new { url = "http://mstream.test:3000", userName = "admin", password = "root pass" };
+        var analysis = await PostAsync(admin, "/rest/v1/mstream/analyze-server", server);
+        var library = analysis.GetProperty("libraries")[0];
+        Assert.Equal((false, 2), (library.GetProperty("rootExists").GetBoolean(), library.GetProperty("files").GetInt32()));
+        Assert.Equal((1, 1, 1), (analysis.GetProperty("playlists").GetInt32(), analysis.GetProperty("ratedTracks").GetInt32(), analysis.GetProperty("playedTracks").GetInt32()));
+
+        // The folder is not on this server: the files are copied into the library's.
+        var sourceId = (await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))![0].GetProperty("sources")[0].GetProperty("id").GetString();
+        var import = await PostAsync(admin, "/rest/v1/mstream/imports",
+            new { server, libraries = new[] { new { vpath = "music", sourceId, copyFiles = true } }, importUsers = false });
+        Assert.Equal("COPYING", import.GetProperty("status").GetString());
+        var done = await WaitForImportAsync(admin);
+        Assert.Equal(("COMPLETED", 2, 1, 1, true), (done.GetProperty("status").GetString(), done.GetProperty("filesTotal").GetInt32(),
+            done.GetProperty("filesCopied").GetInt32(), done.GetProperty("filesFailed").GetInt32(), done.GetProperty("canRetry").GetBoolean()));
+        Assert.True(File.Exists(Path.Combine(target, "Zed", "01.wav")));
+
+        // The importing account's data went to whoever imported (its users were not imported).
+        var tracks = await TracksAsync(admin);
+        Assert.Equal(5, tracks["Alone"].GetProperty("playCount").GetInt32());
+        Assert.Equal(1, Assert.Single((await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/playlists", ArcanistFactory.Json, Cancel))!).GetProperty("trackCount").GetInt32());
+
+        // Trying again copies what failed; the file copied before is not copied twice.
+        broken = false;
+        var retried = await PostAsync(admin, $"/rest/v1/mstream/imports/{done.GetProperty("id").GetString()}/retry", new { });
+        Assert.Equal("COPYING", retried.GetProperty("status").GetString());
+        done = await WaitForImportAsync(admin);
+        Assert.Equal(("COMPLETED", 2, 0, false), (done.GetProperty("status").GetString(), done.GetProperty("filesCopied").GetInt32(),
+            done.GetProperty("filesFailed").GetInt32(), done.GetProperty("canRetry").GetBoolean()));
+        await _factory.WaitForScansAsync(admin);
+        Assert.Equal(5, (await TracksAsync(admin))["Again"].GetProperty("rating").GetInt32());
+
+        // A second import finds the files there already.
+        await PostAsync(admin, "/rest/v1/mstream/imports",
+            new { server, libraries = new[] { new { vpath = "music", sourceId, copyFiles = true } }, importUsers = false });
+        var again = await WaitForImportAsync(admin);
+        Assert.Equal((0, 2), (again.GetProperty("filesCopied").GetInt32(), again.GetProperty("filesPresent").GetInt32()));
+        Directory.Delete(remote, true);
+        Directory.Delete(target, true);
     }
 
     [Fact]

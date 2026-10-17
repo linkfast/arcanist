@@ -29,6 +29,10 @@ public static class MstreamImportEndpoints
             .WithSummary("Removes a finished import from mStream from the history; what it brought stays. An import from an mStream server stays " +
                          "while some of its users have not signed in. Administrators only.");
 
+        mstream.MapPost("/imports/{id:guid}/retry", (Guid id, MstreamImportService service, CancellationToken ct) => service.RetryAsync(id, ct))
+            .WithName("RetryMstreamImport")
+            .WithSummary("Tries again the files of an import from an mStream server that could not be copied. Administrators only, with a recent authentication.");
+
         mstream.MapPost("/import-history/clear", (MstreamImportService service, CancellationToken ct) => service.ClearHistoryAsync(ct))
             .WithName("ClearImportHistory")
             .WithSummary("Clears the history of migrations from mStream and DLNA servers (only finished ones, and not the mStream imports still " +

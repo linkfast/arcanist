@@ -1699,11 +1699,12 @@ export const es: Dictionary = {
         'La carpeta de instalación de mStream o su archivo de configuración. Se lee todo, contraseñas incluidas.',
       server: 'Un servidor mStream',
       serverHelp:
-        'Por su API, con una cuenta de administrador. Cada usuario trae sus datos la primera vez que inicia sesión aquí con su contraseña de mStream.',
+        'Por su API, con una cuenta de administrador: sus datos llegan ya y los de cada usuario la primera vez que inicia sesión aquí. Si está en otra máquina, sus archivos se pueden copiar.',
       folderLabel: 'Carpeta o archivo de configuración',
       url: 'Dirección del servidor',
       adminUser: 'Administrador de mStream',
-      passwordHelp: 'La contraseña solo se usa ahora; no se guarda.',
+      passwordHelp:
+        'La contraseña no se guarda. Para copiar archivos se guarda la sesión de mStream, cifrada, hasta que termina la copia.',
     },
     libraries: {
       title: 'Bibliotecas',
@@ -1712,6 +1713,12 @@ export const es: Dictionary = {
         'Las que importes se añaden a tus bibliotecas en el siguiente paso. Sus archivos se buscan por su ruta dentro de la carpeta elegida.',
       none: 'mStream no tiene bibliotecas.',
       notHere: 'No está en este servidor',
+      files: '{count} canciones en mStream',
+      copy: 'Copiar los archivos desde mStream',
+      copyHelp:
+        'Se descargan por su API a la carpeta elegida, con las mismas rutas y sin sobrescribir nada; después se escanea. Sigue en segundo plano y se reanuda tras un reinicio.',
+      noCopyHere: 'Se usan los archivos que ya hay en esta carpeta.',
+      noCopyEmpty: 'Sin copiarlos, la biblioteca solo tendrá lo que ya haya en la carpeta elegida.',
       skip: 'No importar',
       new: 'Nueva biblioteca',
       name: 'Nombre',
@@ -1730,6 +1737,8 @@ export const es: Dictionary = {
       noPassword: 'Sin contraseña: un administrador deberá asignarle una',
       none: 'mStream no tiene usuarios.',
       data: '{playlists} playlists, {rated} canciones valoradas y {played} reproducidas.',
+      dataServer:
+        'Tu cuenta de mStream: {playlists} playlists, {rated} canciones valoradas y {played} reproducidas. Las de los demás usuarios llegan cuando inician sesión.',
       import: 'Importar los usuarios y sus datos',
     },
     history: {
@@ -1739,8 +1748,12 @@ export const es: Dictionary = {
       waiting: 'Esperando a que terminen los escaneos de las bibliotecas.',
       running: 'Trayendo playlists, valoraciones y reproducciones…',
       server: 'Los datos de cada usuario llegan cuando inicia sesión por primera vez.',
+      files: '{copied} de {total} archivos copiados · {present} ya estaban · {failed} con error',
+      copying: 'Copiando los archivos desde mStream…',
+      retry: 'Reintentar los que fallaron',
     },
     status: {
+      COPYING: 'Copiando',
       WAITING: 'En espera',
       RUNNING: 'En curso',
       COMPLETED: 'Completada',
@@ -2204,6 +2217,8 @@ export const es: Dictionary = {
     playlist_full: 'Una playlist admite como mucho 10.000 canciones.',
     not_undoable: 'Eso ya no se puede deshacer.',
     mstream_unreachable: 'El servidor de mStream no responde, o no responde como mStream.',
+    mstream_session_expired:
+      'El servidor de mStream ya no acepta la sesión de esta importación: vuelve a importar para copiar lo que falta.',
     mstream_admin_required:
       'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
     dlna_disabled: 'DLNA está desactivado.',
@@ -2217,7 +2232,8 @@ export const es: Dictionary = {
     renderer_unreachable: 'El dispositivo no responde: puede estar apagado o fuera de la red.',
     renderer_failed: 'El dispositivo rechazó la orden.',
     nothing_queued: 'Arcanist no tiene nada en cola en ese dispositivo.',
-    renderer_in_use: 'Otra persona está reproduciendo en ese dispositivo; podrás controlarlo cuando termine o lo detenga.',
+    renderer_in_use:
+      'Otra persona está reproduciendo en ese dispositivo; podrás controlarlo cuando termine o lo detenga.',
     p2p_disabled: 'La red P2P está desactivada.',
     p2p_unavailable: 'La red P2P no está disponible en esta plataforma.',
     p2p_bind_failed: 'La red P2P no pudo abrir su puerto UDP (¿lo usa otro programa?).',

@@ -8,14 +8,20 @@ namespace Arcanist.Core.Import.Mstream;
 /// <summary>An mStream installation read for importing, from its folder or from its server.</summary>
 /// <param name="Location">The folder, or the server's address.</param>
 /// <param name="Version">5 or 6 when read from its folder; null through the API, which does not tell.</param>
-/// <param name="Content">Each user's data; through the API it arrives when they first sign in.</param>
+/// <param name="Content">Each user's data; through the API, the importing account's (the others' arrives when they
+/// first sign in).</param>
+/// <param name="Session">Through the API: the importing account, its session and how many files each vpath has.</param>
 internal sealed record MstreamSource(
     MstreamImportKind Kind,
     string Location,
     int? Version,
     IReadOnlyList<MstreamLibraryData> Libraries,
     IReadOnlyList<MstreamUserData> Users,
-    IReadOnlyList<MstreamUserContent> Content);
+    IReadOnlyList<MstreamUserContent> Content,
+    MstreamSession? Session = null);
+
+/// <summary>The account an import from an mStream server signed in with.</summary>
+internal sealed record MstreamSession(string UserName, string Token, MstreamUserContent Content, IReadOnlyDictionary<string, int> Files);
 
 /// <summary>Reads mStream installations for the importer and for the setup wizard, which has no database yet.</summary>
 internal sealed class MstreamReader(MstreamServerClient client)
@@ -36,7 +42,22 @@ internal sealed class MstreamReader(MstreamServerClient client)
         var token = await client.LoginAsync(url, server.UserName ?? "", server.Password ?? "", cancellationToken)
                     ?? throw ArcanistException.Field("password", ErrorCodes.InvalidCredentials);
         var read = await client.ReadAsync(url, token, cancellationToken);
-        return new MstreamSource(MstreamImportKind.Server, url.AbsoluteUri.TrimEnd('/'), null, read.Libraries, read.Users, []);
+        // The importing account's own data comes now; how many files each library has, to copy those not here.
+        var content = await client.ReadUserAsync(url, token, cancellationToken);
+        var files = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var library in read.Libraries)
+        {
+            try
+            {
+                files[library.Name] = (await client.ListFilesAsync(url, token, library.Name, cancellationToken)).Count;
+            }
+            catch (ArcanistException)
+            {
+                // An mStream without that route: its files are not counted (copying them would fail and say so).
+            }
+        }
+        var session = new MstreamSession(server.UserName ?? "", token, content, files);
+        return new MstreamSource(MstreamImportKind.Server, url.AbsoluteUri.TrimEnd('/'), null, read.Libraries, read.Users, [content], session);
     }
 
     /// <summary>What the installation holds, matched against this server's library folders and user names.</summary>
@@ -47,7 +68,8 @@ internal sealed class MstreamReader(MstreamServerClient client)
         return new MstreamAnalysis(
             source.Version,
             source.Libraries.Select(l => new MstreamLibraryInfo(l.Name, l.Root, l.Root.Length > 0 && Directory.Exists(l.Root),
-                librarySources.Where(s => SamePath(s.Location, l.Root)).Select(s => (Guid?)s.Id).FirstOrDefault())).ToList(),
+                librarySources.Where(s => SamePath(s.Location, l.Root)).Select(s => (Guid?)s.Id).FirstOrDefault(),
+                source.Session?.Files.GetValueOrDefault(l.Name))).ToList(),
             source.Users.Select(u => new MstreamUserInfo(u.Name, u.IsAdmin, u.Vpaths, normalizedUserNames.Contains(TextNormalizer.Normalize(u.Name)),
                 server || u is { PasswordHash.Length: > 0, Salt.Length: > 0 })).ToList(),
             source.Content.Sum(c => c.Playlists.Count),

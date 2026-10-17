@@ -29,6 +29,11 @@ public sealed partial class Mutation
     public static Task<MstreamImportJob> ImportMstream(ImportMstreamInput input, [FromServices] MstreamImportService imports, CancellationToken cancellationToken) =>
         imports.ImportAsync(input, cancellationToken);
 
+    [Name("retryMstreamImport")]
+    [Description("Tries again the files of an import from an mStream server that could not be copied. Administrators only, with a recent authentication.")]
+    public static Task<MstreamImportJob> RetryMstreamImport([Id] Guid id, [FromServices] MstreamImportService imports, CancellationToken cancellationToken) =>
+        imports.RetryAsync(id, cancellationToken);
+
     [Name("deleteMstreamImport")]
     [Description("Removes a finished import from mStream from the history; what it brought stays. An import from an mStream server stays while some of its users have not signed in. Administrators only.")]
     public static Task<bool> DeleteMstreamImport([Id] Guid id, [FromServices] MstreamImportService imports, CancellationToken cancellationToken) =>

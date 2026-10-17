@@ -176,7 +176,7 @@ public sealed class DiscoveryService(
         if (await FavoriteTracks(visible, user).CountAsync(cancellationToken) >= 10)
             mixes.Add(await MixOfAsync(access, MixKind.Favorites, "favorites", null, null, FavoriteTracks(visible, user), cancellationToken));
 
-        if (await UnplayedTracks(visible, user).Take(20).CountAsync(cancellationToken) >= 20)
+        if (await UnplayedTracks(visible, user).OrderBy(t => t.Id).Take(20).CountAsync(cancellationToken) >= 20)
             mixes.Add(await MixOfAsync(access, MixKind.Discovery, "discovery", null, null, UnplayedTracks(visible, user), cancellationToken));
 
         var decades = await visible.Where(t => t.Album.Year != null)

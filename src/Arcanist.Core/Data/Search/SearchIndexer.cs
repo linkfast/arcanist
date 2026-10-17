@@ -19,7 +19,7 @@ public static class SearchIndexer
         var albums = new HashSet<Guid>();
         while (true)
         {
-            var tracks = await db.Tracks.Where(t => t.SearchText == null)
+            var tracks = await db.Tracks.Where(t => t.SearchText == null).OrderBy(t => t.Id)
                 .Select(t => new
                 {
                     t.Id,
@@ -47,7 +47,7 @@ public static class SearchIndexer
 
         while (true)
         {
-            var artists = await db.Artists.Where(a => a.SearchText == null).Select(a => new { a.Id, a.Name }).Take(BatchSize).ToListAsync(cancellationToken);
+            var artists = await db.Artists.Where(a => a.SearchText == null).OrderBy(a => a.Id).Select(a => new { a.Id, a.Name }).Take(BatchSize).ToListAsync(cancellationToken);
             if (artists.Count == 0)
                 break;
             await InTransactionAsync(db, artists, artist => db.Artists.Where(a => a.Id == artist.Id)
@@ -56,7 +56,7 @@ public static class SearchIndexer
 
         while (true)
         {
-            var playlists = await db.Playlists.Where(p => p.SearchText == null).Select(p => new { p.Id, p.Name, p.Description }).Take(BatchSize).ToListAsync(cancellationToken);
+            var playlists = await db.Playlists.Where(p => p.SearchText == null).OrderBy(p => p.Id).Select(p => new { p.Id, p.Name, p.Description }).Take(BatchSize).ToListAsync(cancellationToken);
             if (playlists.Count == 0)
                 break;
             await InTransactionAsync(db, playlists, playlist => db.Playlists.Where(p => p.Id == playlist.Id)
@@ -66,7 +66,7 @@ public static class SearchIndexer
 
     private static async Task<int> IndexAlbumsAsync(ArcanistDbContext db, IQueryable<Album> query, CancellationToken cancellationToken)
     {
-        var albums = await query.Select(a => new { a.Id, a.Title, Artist = a.AlbumArtist.Name }).Take(BatchSize).ToListAsync(cancellationToken);
+        var albums = await query.OrderBy(a => a.Id).Select(a => new { a.Id, a.Title, Artist = a.AlbumArtist.Name }).Take(BatchSize).ToListAsync(cancellationToken);
         await InTransactionAsync(db, albums, album => db.Albums.Where(a => a.Id == album.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.SearchText, FullTextSearch.Text(album.Title, album.Artist)), cancellationToken), cancellationToken);
         return albums.Count;

@@ -14,6 +14,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddSingleton<DropFolderImporter>();
         services.AddSingleton<ImportMonitor>();
         services.AddHostedService<DropFolderWorker>();
+        services.AddSingleton<ImportSuggester>();
+        services.AddHostedService(sp => sp.GetRequiredService<ImportSuggester>());
         return services;
     }
 }

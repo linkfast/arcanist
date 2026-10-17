@@ -1011,6 +1011,16 @@ export const es: Dictionary = {
       genre: 'Género',
       help: 'Las etiquetas se escriben en el archivo antes de importarlo.',
       import: 'Guardar e importar',
+      suggestions: {
+        title: 'Sugerencias de AcoustID',
+        score: '{percent} %',
+        track: 'pista {track}',
+        discTrack: 'disco {disc}, pista {track}',
+        notFound: 'AcoustID no reconoce esta canción.',
+        unidentifiable:
+          'No se pudo tomar la huella de este archivo para buscarlo en AcoustID (un formato que necesita ffmpeg, un álbum en un archivo con su hoja CUE…).',
+        none: 'Sin sugerencias por ahora. Con AcoustID activado en Ajustes (servicios en línea), Arcanist las busca a partir del sonido del archivo.',
+      },
     },
   },
   organize: {

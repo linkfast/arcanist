@@ -212,6 +212,8 @@ internal sealed class DropFolderWorker(
 
         logger.LogInformation("Importing {Count} files from {DropFolder}", ready.Count, folder.Path);
         var imported = await importer.ImportAsync(folder.Id, entries, ready, cancellationToken);
+        // Files missing tags get their suggestions looked up.
+        services.GetService<ImportSuggester>()?.Wake();
         // Cloud Drop learns at once what became of its songs (off Cloud Drop, or kept there).
         if (folder.Kind == DropFolderKind.UltimateCloudDrop)
             services.GetService<Cloud.CloudDropWorker>()?.Wake();

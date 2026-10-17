@@ -11012,7 +11012,9 @@
           "destinationPath",
           "trackId",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "suggestionState",
+          "suggestions"
         ],
         "type": "object",
         "properties": {
@@ -11078,6 +11080,22 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "suggestionState": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImportSuggestionState"
+              }
+            ]
+          },
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportSuggestion"
+            }
           }
         }
       },
@@ -11167,6 +11185,103 @@
           "FAILED",
           "IGNORED",
           "DISCARDED"
+        ]
+      },
+      "ImportSuggestion": {
+        "required": [
+          "title",
+          "artist",
+          "album",
+          "albumArtist",
+          "year",
+          "trackNumber",
+          "discNumber",
+          "score",
+          "acoustId",
+          "recordingMbid",
+          "releaseMbid"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "albumArtist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trackNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "discNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "acoustId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recordingMbid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "releaseMbid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ImportSuggestionState": {
+        "enum": [
+          "FOUND",
+          "NOT_FOUND",
+          "UNIDENTIFIABLE",
+          null
         ]
       },
       "ImportSummary": {
@@ -11299,6 +11414,20 @@
               "null",
               "string"
             ]
+          },
+          "recordingMbid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "releaseMbid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

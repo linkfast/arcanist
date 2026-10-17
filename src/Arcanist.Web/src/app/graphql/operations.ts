@@ -725,6 +725,19 @@ export const ImportItemFields = graphql(`
     trackId
     createdAt
     updatedAt
+    suggestionState
+    suggestions {
+      title
+      artist
+      album
+      albumArtist
+      year
+      trackNumber
+      discNumber
+      score
+      recordingMbid
+      releaseMbid
+    }
     details {
       title
       artist

@@ -446,6 +446,9 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             item.Property(i => i.Tags).HasMaxLength(8000);
             item.Property(i => i.Request).HasMaxLength(8000);
             item.Property(i => i.DestinationPath).HasMaxLength(PathLength);
+            item.Property(i => i.SuggestionState).HasConversion<string>().HasMaxLength(EnumLength);
+            item.Property(i => i.SuggestionsFor).HasMaxLength(64);
+            item.Property(i => i.Suggestions).HasMaxLength(16000);
             item.HasIndex(i => new { i.DropFolderId, i.RelativePath });
             item.HasIndex(i => new { i.Status, i.UpdatedAt });
             item.HasIndex(i => i.ContentHash);

@@ -1288,6 +1288,8 @@ type ImportItem {
   trackId: ID
   createdAt: DateTime!
   updatedAt: DateTime!
+  suggestionState: ImportSuggestionState
+  suggestions: [ImportSuggestion!]!
 }
 
 enum ImportStatus {
@@ -1326,6 +1328,26 @@ type ImportFileDetails {
   sampleRate: Int
   bitDepth: Int
   durationMs: Int!
+}
+
+enum ImportSuggestionState {
+  FOUND
+  NOT_FOUND
+  UNIDENTIFIABLE
+}
+
+type ImportSuggestion {
+  title: String!
+  artist: String
+  album: String
+  albumArtist: String
+  year: Int
+  trackNumber: Int
+  discNumber: Int
+  score: Float!
+  acoustId: ID!
+  recordingMbid: ID!
+  releaseMbid: ID
 }
 
 type ImportSummary {
@@ -2377,6 +2399,8 @@ input ImportTagsInput {
   trackNumber: Int
   discNumber: Int
   genre: String
+  recordingMbid: ID
+  releaseMbid: ID
 }
 
 input P2PSettingsInput {

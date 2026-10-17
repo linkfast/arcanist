@@ -33,6 +33,11 @@ internal static class TagWriter
             track.DiscNumber = disc;
         if (tags.Genre is { } genre)
             track.Genre = genre.Trim();
+        // The keys the tag reader (and Picard, in Vorbis comments and APE) use for MusicBrainz identifiers.
+        if (tags.RecordingMbid is { } recording)
+            track.AdditionalFields["MUSICBRAINZ_TRACKID"] = recording.ToString();
+        if (tags.ReleaseMbid is { } release)
+            track.AdditionalFields["MUSICBRAINZ_ALBUMID"] = release.ToString();
 
         if (!track.Save())
             throw new IOException($"Could not write tags to '{path}'.");

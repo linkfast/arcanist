@@ -204,6 +204,20 @@ public enum ImportReason
     WriteFailed,
 }
 
+/// <summary>What looking up a file missing tags in AcoustID gave.</summary>
+public enum ImportSuggestionState
+{
+    /// <summary>AcoustID knows the recording: there are suggestions.</summary>
+    Found,
+
+    /// <summary>AcoustID does not know it.</summary>
+    NotFound,
+
+    /// <summary>No fingerprint could be taken (a format the analyzer cannot read without ffmpeg, an album in one file
+    /// with a cue sheet, a damaged file…).</summary>
+    Unidentifiable,
+}
+
 /// <summary>A file found in a drop folder and what became of it. Imported items are kept as history for a while.</summary>
 public sealed class ImportItem : Entity
 {
@@ -240,6 +254,17 @@ public sealed class ImportItem : Entity
 
     /// <summary>The library's track this file duplicates (or replaced files of).</summary>
     public Guid? TrackId { get; set; }
+
+    /// <summary>
+    /// What AcoustID said the audio of a file missing tags is, looked up by its fingerprint: whether it found
+    /// anything, and the tags it suggests (<c>ImportSuggestion</c>s as JSON). They hold for the audio they were looked
+    /// up for (<see cref="SuggestionsFor"/>, its <see cref="ContentHash"/>): a changed file is looked up again.
+    /// </summary>
+    public ImportSuggestionState? SuggestionState { get; set; }
+
+    public string? SuggestionsFor { get; set; }
+
+    public string? Suggestions { get; set; }
 
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 

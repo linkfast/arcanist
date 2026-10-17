@@ -82,10 +82,106 @@ public sealed class AcoustIdClient(IHttpClientFactory clients)
                 .ToList();
         });
 
+    /// <summary>A recording a fingerprint matched, with what MusicBrainz knows of it.</summary>
+    public sealed record RecordingDetails(Guid AcoustId, double Score, Guid RecordingMbid, string? Title, string? Artist, IReadOnlyList<ReleaseDetails> Releases);
+
+    /// <param name="DiscCount">How many discs the release has.</param>
+    public sealed record ReleaseDetails(Guid ReleaseMbid, string? Title, string? Artist, int? Year, int? TrackNumber, int? DiscNumber, int DiscCount, string? TrackTitle);
+
+    /// <summary>
+    /// Looks up a fingerprint with the recordings it matched, their artists and the releases they are on, with the
+    /// disc and number of the track: what is needed to suggest tags for a file.
+    /// </summary>
+    public Task<IReadOnlyList<RecordingDetails>> LookupDetailsAsync(string key, string fingerprint, int durationSeconds, CancellationToken cancellationToken) =>
+        OnlineHttp.SendAsync<IReadOnlyList<RecordingDetails>>(async () =>
+        {
+            var http = clients.CreateClient(OnlineHttp.AcoustId);
+            using var form = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["client"] = key,
+                ["meta"] = "recordings releases tracks compress",
+                ["duration"] = durationSeconds.ToString(CultureInfo.InvariantCulture),
+                ["fingerprint"] = fingerprint,
+                ["format"] = "json",
+            });
+            using var response = await http.PostAsync("https://api.acoustid.org/v2/lookup", form, cancellationToken);
+            var body = await response.Content.ReadFromJsonAsync<DetailsResponse>(cancellationToken) ?? throw new OnlineServiceException("unexpected_response");
+            if (body.Status != "ok")
+                throw new OnlineServiceException(body.Error?.Code is 4 or 5 ? "invalid_key" : "service_error");
+
+            static string? Names(List<ArtistJson>? artists) =>
+                artists is { Count: > 0 } ? string.Concat(artists.Select((a, i) => a.Name + (i < artists.Count - 1 ? a.JoinPhrase ?? "; " : ""))).Trim() : null;
+
+            var found = new List<RecordingDetails>();
+            foreach (var result in body.Results ?? [])
+            {
+                if (!Guid.TryParse(result.Id, out var acoustId))
+                    continue;
+                foreach (var recording in result.Recordings ?? [])
+                {
+                    if (!Guid.TryParse(recording.Id, out var recordingMbid))
+                        continue;
+                    var releases = new List<ReleaseDetails>();
+                    foreach (var release in recording.Releases ?? [])
+                    {
+                        if (!Guid.TryParse(release.Id, out var releaseMbid))
+                            continue;
+                        // The medium and track of this recording on the release (the only ones AcoustID includes).
+                        var medium = release.Mediums?.FirstOrDefault(m => m.Tracks is { Count: > 0 });
+                        var track = medium?.Tracks?.FirstOrDefault();
+                        releases.Add(new ReleaseDetails(releaseMbid, release.Title, Names(release.Artists), release.Date?.Year,
+                            track?.Position, medium?.Position, release.MediumCount ?? 1, track?.Title));
+                    }
+
+                    found.Add(new RecordingDetails(acoustId, result.Score, recordingMbid, recording.Title, Names(recording.Artists), releases));
+                }
+            }
+
+            return found;
+        });
+
     private sealed record Response(
         [property: JsonPropertyName("status")] string Status,
         [property: JsonPropertyName("results")] List<Result>? Results,
         [property: JsonPropertyName("error")] Error? Error);
+
+    private sealed record DetailsResponse(
+        [property: JsonPropertyName("status")] string Status,
+        [property: JsonPropertyName("results")] List<DetailsResult>? Results,
+        [property: JsonPropertyName("error")] Error? Error);
+
+    private sealed record DetailsResult(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("score")] double Score,
+        [property: JsonPropertyName("recordings")] List<RecordingJson>? Recordings);
+
+    private sealed record RecordingJson(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("artists")] List<ArtistJson>? Artists,
+        [property: JsonPropertyName("releases")] List<ReleaseJson>? Releases);
+
+    private sealed record ArtistJson(
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("joinphrase")] string? JoinPhrase);
+
+    private sealed record ReleaseJson(
+        [property: JsonPropertyName("id")] string Id,
+        [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("artists")] List<ArtistJson>? Artists,
+        [property: JsonPropertyName("date")] DateJson? Date,
+        [property: JsonPropertyName("medium_count")] int? MediumCount,
+        [property: JsonPropertyName("mediums")] List<MediumJson>? Mediums);
+
+    private sealed record DateJson([property: JsonPropertyName("year")] int? Year);
+
+    private sealed record MediumJson(
+        [property: JsonPropertyName("position")] int? Position,
+        [property: JsonPropertyName("tracks")] List<TrackJson>? Tracks);
+
+    private sealed record TrackJson(
+        [property: JsonPropertyName("position")] int? Position,
+        [property: JsonPropertyName("title")] string? Title);
 
     private sealed record Result(
         [property: JsonPropertyName("id")] string Id,

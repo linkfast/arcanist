@@ -307,7 +307,11 @@ public sealed class ImportService(
         item.DestinationPath,
         item.TrackId,
         item.CreatedAt,
-        item.UpdatedAt);
+        item.UpdatedAt,
+        item.SuggestionsFor is not null && item.SuggestionsFor == item.ContentHash ? item.SuggestionState : null,
+        item.SuggestionsFor is not null && item.SuggestionsFor == item.ContentHash && item.Suggestions is { } suggestions
+            ? JsonSerializer.Deserialize<List<ImportSuggestion>>(suggestions, Json) ?? []
+            : []);
 
     private DateTime Now() => time.GetUtcNow().UtcDateTime;
 }

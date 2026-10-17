@@ -108,10 +108,33 @@ public sealed record ImportFileDetails(
     int? BitDepth,
     int DurationMs);
 
+/// <summary>
+/// Tags AcoustID suggests for a file missing them, from the recording its fingerprint matched and one of the releases
+/// it is on. Accepting one writes its tags and MusicBrainz identifiers into the file.
+/// </summary>
+/// <param name="Score">How sure AcoustID is that the audio is this recording, from 0 to 1.</param>
+/// <param name="DiscNumber">Only for releases of several discs.</param>
+/// <param name="ReleaseMbid">The release (album) the album, year and numbers come from; null for a recording on no release.</param>
+public sealed record ImportSuggestion(
+    string Title,
+    string? Artist,
+    string? Album,
+    string? AlbumArtist,
+    int? Year,
+    int? TrackNumber,
+    int? DiscNumber,
+    double Score,
+    Guid AcoustId,
+    Guid RecordingMbid,
+    Guid? ReleaseMbid);
+
 /// <summary>A file found in a drop folder.</summary>
 /// <param name="Path">Path inside the drop folder.</param>
 /// <param name="DestinationPath">Where it went in the library, once imported.</param>
 /// <param name="TrackId">The library's track it duplicates, or whose copies it replaced.</param>
+/// <param name="SuggestionState">For a file missing tags, what AcoustID gave; null while it has not been looked up
+/// (or AcoustID is not switched on).</param>
+/// <param name="Suggestions">The tags AcoustID suggests, the likeliest first.</param>
 public sealed record ImportItem(
     Guid Id,
     Guid DropFolderId,
@@ -123,9 +146,13 @@ public sealed record ImportItem(
     string? DestinationPath,
     Guid? TrackId,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    ImportSuggestionState? SuggestionState,
+    IReadOnlyList<ImportSuggestion> Suggestions);
 
 /// <summary>Tags written to a dropped file before importing it. Null fields are left as they are.</summary>
+/// <param name="RecordingMbid">The MusicBrainz recording (from a suggestion), so the file is identified.</param>
+/// <param name="ReleaseMbid">The MusicBrainz release (from a suggestion).</param>
 public sealed record ImportTagsInput(
     string? Title,
     string? Artist,
@@ -134,7 +161,9 @@ public sealed record ImportTagsInput(
     int? Year,
     int? TrackNumber,
     int? DiscNumber,
-    string? Genre);
+    string? Genre,
+    Guid? RecordingMbid = null,
+    Guid? ReleaseMbid = null);
 
 /// <summary>Files of the drop folders by state. <c>Imported</c> counts the history kept (30 days).</summary>
 public sealed record ImportSummary(int Pending, int NeedsReview, int Duplicate, int Failed, int Ignored, int Imported);

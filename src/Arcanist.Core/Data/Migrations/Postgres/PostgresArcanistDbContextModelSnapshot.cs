@@ -871,6 +871,18 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("SuggestionState")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Suggestions")
+                        .HasMaxLength(16000)
+                        .HasColumnType("character varying(16000)");
+
+                    b.Property<string>("SuggestionsFor")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Tags")
                         .HasMaxLength(8000)
                         .HasColumnType("character varying(8000)");

@@ -866,6 +866,18 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SuggestionState")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Suggestions")
+                        .HasMaxLength(16000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SuggestionsFor")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Tags")
                         .HasMaxLength(8000)
                         .HasColumnType("TEXT");

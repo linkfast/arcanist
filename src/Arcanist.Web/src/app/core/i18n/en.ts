@@ -996,6 +996,16 @@ export const en: Dictionary = {
       genre: 'Genre',
       help: 'The tags are written into the file before importing it.',
       import: 'Save and import',
+      suggestions: {
+        title: 'AcoustID suggestions',
+        score: '{percent}%',
+        track: 'track {track}',
+        discTrack: 'disc {disc}, track {track}',
+        notFound: 'AcoustID does not recognize this song.',
+        unidentifiable:
+          'No fingerprint of this file could be taken to look it up in AcoustID (a format that needs ffmpeg, an album in one file with its cue sheet…).',
+        none: 'No suggestions yet. With AcoustID on in Settings (online services), Arcanist looks them up from how the file sounds.',
+      },
     },
   },
   organize: {

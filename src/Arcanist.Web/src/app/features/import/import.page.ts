@@ -105,7 +105,12 @@ interface TagsForm {
   trackNumber: number | null;
   discNumber: number | null;
   genre: string;
+  /** From an AcoustID suggestion: written with the tags so the file is identified. */
+  recordingMbid: string | null;
+  releaseMbid: string | null;
 }
+
+type ImportSuggestion = ImportItem['suggestions'][number];
 
 /** How often the queue is refreshed while the page is open: files arrive on their own. */
 const REFRESH_MS = 5000;
@@ -485,8 +490,37 @@ export class ImportPage implements OnInit {
       trackNumber: details?.trackNumber ?? null,
       discNumber: details?.discNumber ?? null,
       genre: details?.genre ?? '',
+      recordingMbid: null,
+      releaseMbid: null,
     };
     this.reviewing.set(item);
+  }
+
+  /** Fills the form with an AcoustID suggestion (the genre the file had stays). */
+  protected applySuggestion(suggestion: ImportSuggestion): void {
+    this.tags = {
+      ...this.tags,
+      title: suggestion.title,
+      artist: suggestion.artist ?? '',
+      album: suggestion.album ?? '',
+      albumArtist: suggestion.albumArtist ?? '',
+      year: suggestion.year ?? null,
+      trackNumber: suggestion.trackNumber ?? null,
+      discNumber: suggestion.discNumber ?? null,
+      recordingMbid: suggestion.recordingMbid,
+      releaseMbid: suggestion.releaseMbid ?? null,
+    };
+  }
+
+  protected isApplied(suggestion: ImportSuggestion): boolean {
+    return (
+      this.tags.recordingMbid === suggestion.recordingMbid &&
+      this.tags.releaseMbid === (suggestion.releaseMbid ?? null)
+    );
+  }
+
+  protected percent(score: number): number {
+    return Math.round(score * 100);
   }
 
   protected async saveReview(): Promise<void> {
@@ -506,6 +540,8 @@ export class ImportPage implements OnInit {
           trackNumber: number(this.tags.trackNumber),
           discNumber: number(this.tags.discNumber),
           genre: text(this.tags.genre),
+          recordingMbid: this.tags.recordingMbid,
+          releaseMbid: this.tags.releaseMbid,
         },
       }),
     );
@@ -703,6 +739,8 @@ export class ImportPage implements OnInit {
       trackNumber: null,
       discNumber: null,
       genre: '',
+      recordingMbid: null,
+      releaseMbid: null,
     };
   }
 }

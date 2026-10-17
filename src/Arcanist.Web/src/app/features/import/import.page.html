@@ -842,6 +842,76 @@
           <p hlmDialogDescription class="truncate font-mono text-xs">{{ item.path }}</p>
         </hlm-dialog-header>
 
+        <!-- What AcoustID says the audio is: a click fills the form. -->
+        @switch (item.suggestionState) {
+          @case ('FOUND') {
+            <div class="grid gap-2">
+              <h4 class="text-sm font-medium">{{ 'import.review.suggestions.title' | t }}</h4>
+              <ul class="grid max-h-48 gap-1 overflow-y-auto">
+                @for (suggestion of item.suggestions; track $index) {
+                  <li>
+                    <button
+                      type="button"
+                      class="grid w-full gap-0.5 rounded-md border px-3 py-2 text-left text-sm hover:bg-accent"
+                      [class.border-primary]="isApplied(suggestion)"
+                      [attr.aria-pressed]="isApplied(suggestion)"
+                      (click)="applySuggestion(suggestion)"
+                    >
+                      <span class="flex items-center justify-between gap-2">
+                        <span class="truncate font-medium">{{ suggestion.title }}</span>
+                        <span class="shrink-0 text-xs text-muted-foreground">{{
+                          'import.review.suggestions.score'
+                            | t: { percent: percent(suggestion.score) }
+                        }}</span>
+                      </span>
+                      <span class="truncate text-xs text-muted-foreground">
+                        {{ suggestion.artist }}
+                        @if (suggestion.album) {
+                          · {{ suggestion.album }}
+                        }
+                        @if (suggestion.year) {
+                          ({{ suggestion.year }})
+                        }
+                        @if (suggestion.trackNumber) {
+                          ·
+                          {{
+                            (suggestion.discNumber
+                              ? 'import.review.suggestions.discTrack'
+                              : 'import.review.suggestions.track'
+                            )
+                              | t
+                                : {
+                                    disc: suggestion.discNumber ?? 0,
+                                    track: suggestion.trackNumber,
+                                  }
+                          }}
+                        }
+                      </span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+          @case ('NOT_FOUND') {
+            <p class="text-xs text-muted-foreground">
+              {{ 'import.review.suggestions.notFound' | t }}
+            </p>
+          }
+          @case ('UNIDENTIFIABLE') {
+            <p class="text-xs text-muted-foreground">
+              {{ 'import.review.suggestions.unidentifiable' | t }}
+            </p>
+          }
+          @default {
+            @if (item.reason === 'MISSING_TAGS') {
+              <p class="text-xs text-muted-foreground">
+                {{ 'import.review.suggestions.none' | t }}
+              </p>
+            }
+          }
+        }
+
         <div class="grid gap-3 sm:grid-cols-2">
           <hlm-field class="sm:col-span-2">
             <label hlmFieldLabel for="tag-title">{{ 'import.review.titleField' | t }}</label>

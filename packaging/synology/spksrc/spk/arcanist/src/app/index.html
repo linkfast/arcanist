@@ -59,11 +59,13 @@
         <h1>Arcanist</h1>
         <p class="muted" data-t="subtitle"></p>
       </div>
-      <a class="button primary" id="open" target="_blank" rel="noopener" data-t="open"></a>
+      <a class="button primary" id="open" target="_blank" rel="noopener" data-t="open" hidden></a>
     </div>
 
     <p class="error" id="failure" hidden></p>
 
+    <!-- Shown once the state arrives. -->
+    <main id="content" hidden>
     <div class="card">
       <h2 data-t="state"></h2>
       <div class="row">
@@ -114,6 +116,7 @@
       <h2 data-t="data"></h2>
       <p class="muted"><span data-t="dataHelp"></span> <code id="dataDir"></code> (<span id="dataSize"></span>)</p>
     </div>
+    </main>
 
     <script>
       "use strict";
@@ -148,7 +151,7 @@
           openShares: "Abrir Carpeta compartida",
           data: "Datos de Arcanist",
           dataHelp: "Base de datos, claves, cachés y registros, en el volumen del sistema del paquete:",
-          not_signed_in: "Inicia sesión en DSM para ver esta ventana.",
+          not_signed_in: "Abre Arcanist desde el menú principal de DSM, con una sesión de administrador.",
           not_admin: "Solo los administradores de DSM pueden ver esta ventana.",
           port_in_use: "Ese puerto ya lo usa otro programa.",
           invalid_port: "Escribe un puerto de 1024 a 65535.",
@@ -187,7 +190,7 @@
           openShares: "Open Shared Folder",
           data: "Arcanist's data",
           dataHelp: "Database, keys, caches and logs, on the package's system volume:",
-          not_signed_in: "Sign in to DSM to see this window.",
+          not_signed_in: "Open Arcanist from DSM's main menu, signed in as an administrator.",
           not_admin: "Only DSM administrators can see this window.",
           port_in_use: "Another program already uses that port.",
           invalid_port: "Enter a port from 1024 to 65535.",
@@ -202,6 +205,15 @@
         (texts[lang][key] || key).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
       const $ = (id) => document.getElementById(id);
       let state = null;
+
+      // The DSM session's SynoToken: from the window that shows this page, or from DSM itself.
+      const token = new URLSearchParams(location.search).get("SynoToken") || (() => {
+        try {
+          return window.parent.SYNO.SDS.Session.SynoToken || "";
+        } catch {
+          return "";
+        }
+      })();
 
       function translate(user) {
         for (const element of document.querySelectorAll("[data-t]"))
@@ -223,13 +235,23 @@
       async function load() {
         let response;
         try {
-          response = await fetch("api.cgi?action=status", { cache: "no-store", credentials: "same-origin" });
+          response = await fetch("api.cgi?action=status", {
+            cache: "no-store",
+            credentials: "same-origin",
+            headers: { "X-SYNO-TOKEN": token },
+          });
         } catch {
           return fail("failed");
         }
         const body = await response.json().catch(() => ({}));
-        if (!response.ok) return fail(body.error);
+        if (!response.ok) {
+          $("content").hidden = true;
+          $("open").hidden = true;
+          return fail(body.error);
+        }
         $("failure").hidden = true;
+        $("content").hidden = false;
+        $("open").hidden = false;
         state = body;
         render();
       }
@@ -275,7 +297,11 @@
         const response = await fetch("api.cgi", {
           method: "POST",
           credentials: "same-origin",
-          headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Arcanist-Window": "1" },
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-Arcanist-Window": "1",
+            "X-SYNO-TOKEN": token,
+          },
           body: new URLSearchParams(fields),
         });
         const body = await response.json().catch(() => ({}));

@@ -26,7 +26,10 @@ json ()
 
 # ── Who asks ─────────────────────────────────────────────────────────────────
 
-user="$(/usr/syno/synoman/webman/modules/authenticate.cgi 2>/dev/null)"
+# DSM tells who is signed in from the session cookie and, with its protection against cross-site requests (on by
+# default), the session's SynoToken, which the page sends in X-SYNO-TOKEN; authenticate.cgi reads it from the query.
+token="$(printf '%s' "${HTTP_X_SYNO_TOKEN:-}" | tr -cd 'A-Za-z0-9._-')"
+user="$(QUERY_STRING="SynoToken=${token}" HTTP_X_SYNO_TOKEN="${token}" /usr/syno/synoman/webman/modules/authenticate.cgi 2>/dev/null)"
 if [ -z "${user}" ]; then
     respond "401 Unauthorized" '{"error":"not_signed_in"}'
 fi

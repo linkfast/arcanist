@@ -1,17 +1,22 @@
 {
-    ".url": {
-        "com.synocommunity.packages.arcanist": {
+    "arcanist.js": {
+        "SYNOCOMMUNITY.Arcanist.AppInstance": {
+            "type": "app",
             "title": "Arcanist",
             "desc": "Self-hosted music server",
+            "version": "1",
             "icon": "images/arcanist-{0}.png",
-            "type": "legacy",
-            "url": "/webman/3rdparty/arcanist/index.html",
-            "width": 760,
-            "height": 640,
             "allowMultiInstance": false,
             "allUsers": false,
             "grantPrivilege": "local",
-            "advanceGrantPrivilege": true
+            "advanceGrantPrivilege": true,
+            "appWindow": "SYNOCOMMUNITY.Arcanist.AppWindow",
+            "depend": ["SYNOCOMMUNITY.Arcanist.AppWindow"]
+        },
+        "SYNOCOMMUNITY.Arcanist.AppWindow": {
+            "type": "lib",
+            "title": "Arcanist",
+            "icon": "images/arcanist-{0}.png"
         }
     }
 }

@@ -4,6 +4,7 @@
 #
 #   packaging/linux/pack.sh               # artifacts/linux/arcanist-<version>-linux-{x64,arm64}-dotnet.tar.gz
 #   packaging/synology/build-local.sh     # artifacts/synology/arcanist_<arch>-7.2_<version>-<rev>.spk
+#   SPK_REV=2 packaging/synology/build-local.sh   # the same version again, to install over the first
 #
 # Needs Docker (spksrc's build image); clones spksrc into artifacts/spksrc the first time.
 set -eu
@@ -26,6 +27,8 @@ cp -R packaging/synology/spksrc/spk/arcanist "$spksrc/spk/"
 # This version, from the local tarballs instead of the release's. Package versions have no pre-release suffix.
 sed -i "s/^PKG_VERS = .*/PKG_VERS = $version/" "$spksrc/cross/arcanist/Makefile"
 sed -i "s/^SPK_VERS = .*/SPK_VERS = ${version%%-*}/" "$spksrc/spk/arcanist/Makefile"
+# SPK_REV=2 (and so on) builds a package DSM installs over an earlier one of the same version.
+[ -z "${SPK_REV:-}" ] || sed -i "s/^SPK_REV = .*/SPK_REV = $SPK_REV/" "$spksrc/spk/arcanist/Makefile"
 mkdir -p "$spksrc/distrib"
 for arch in x64 arm64; do
     cp "artifacts/linux/arcanist-$version-linux-$arch-dotnet.tar.gz" "$spksrc/distrib/"

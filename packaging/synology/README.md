@@ -18,9 +18,12 @@ x64 and arm64) and `spk/arcanist` packages them for DSM 7.2 and later.
 
 ## Arcanist's window in DSM
 
-Arcanist appears in DSM's main menu (administrators only). Its window (`app/index.html`, a DSM `legacy` app on
-`/webman/3rdparty/arcanist/`) talks to `app/api.cgi`, which checks the DSM session (`authenticate.cgi`) and the
-`administrators` group. It shows:
+Arcanist appears in DSM's main menu (administrators only) and opens in a window of DSM's desktop: `app/arcanist.js`
+is a DSM application (`SYNOCOMMUNITY.Arcanist.AppInstance`, the package's `dsmappname`) whose window shows
+`app/index.html` (on `/webman/3rdparty/arcanist/`) with the session's `SynoToken`. A `url` or `legacy` app would open
+in a browser tab instead, without that token. The page talks to `app/api.cgi`, which checks the DSM session
+(`authenticate.cgi`, with the cookie and the `SynoToken` the page sends in `X-SYNO-TOKEN`) and the `administrators`
+group. It shows:
 
 - whether the server runs, its version and, until it is set up, the setup code;
 - the port, which can be changed (the server starts again on it; DSM's firewall has the default port 8484 open);

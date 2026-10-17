@@ -34,6 +34,7 @@ SERVICE_PORT_TITLE = Arcanist (HTTP)
 # Arcanist's window in DSM (status, port, shared folders it can read), for administrators.
 DSM_UI_DIR = app
 DSM_UI_CONFIG = src/app/config
+DSM_APP_NAME = SYNOCOMMUNITY.Arcanist.AppInstance
 
 WIZARDS_DIR = src/wizard/
 # The music share is created if missing and made accessible to sc-arcanist.
@@ -50,5 +51,6 @@ include ../../mk/spksrc.spk.mk
 arcanist_extra_install:
 	install -m 755 -d $(STAGING_DIR)/bin $(STAGING_DIR)/app
 	install -m 755 src/arcanist-run.sh $(STAGING_DIR)/bin/arcanist-run
+	install -m 644 src/app/arcanist.js $(STAGING_DIR)/app/arcanist.js
 	install -m 644 src/app/index.html $(STAGING_DIR)/app/index.html
 	install -m 755 src/app/api.cgi $(STAGING_DIR)/app/api.cgi

@@ -80,7 +80,15 @@ public sealed class UltimateCloudClient(IHttpClientFactory clients, UltimateClou
     public Task<JsonNode> SendAnonymousAsync(string query, object? variables, CancellationToken cancellationToken) =>
         SendAsync(query, variables, signedIn: false, cancellationToken);
 
-    private async Task<JsonNode> SendAsync(string query, object? variables, bool signedIn, CancellationToken cancellationToken)
+    /// <summary>
+    /// Runs an operation as another of this server's devices (its audio output, an Ultimate Connect target), signed
+    /// in with the account of this flow.
+    /// </summary>
+    public Task<JsonNode> SendAsDeviceAsync(string deviceId, string clientApp, string query, object? variables, CancellationToken cancellationToken) =>
+        SendAsync(query, variables, signedIn: true, cancellationToken, (deviceId, clientApp));
+
+    private async Task<JsonNode> SendAsync(
+        string query, object? variables, bool signedIn, CancellationToken cancellationToken, (string Id, string ClientApp)? device = null)
     {
         var url = options.CurrentValue.ApiUrl ?? throw new UltimateCloudException(ErrorCodes.CloudNotConfigured);
         using var request = new HttpRequestMessage(HttpMethod.Post, url)
@@ -90,8 +98,8 @@ public sealed class UltimateCloudClient(IHttpClientFactory clients, UltimateClou
         };
         if (signedIn)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await auth.AccessTokenAsync(cancellationToken, Account.Value));
-        request.Headers.Add("X-Device-Id", await auth.DeviceIdAsync(cancellationToken));
-        request.Headers.Add("X-Client-App", ClientApp);
+        request.Headers.Add("X-Device-Id", device?.Id ?? await auth.DeviceIdAsync(cancellationToken));
+        request.Headers.Add("X-Client-App", device?.ClientApp ?? ClientApp);
 
         HttpResponseMessage response;
         try

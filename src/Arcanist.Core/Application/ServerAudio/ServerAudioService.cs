@@ -19,6 +19,7 @@ namespace Arcanist.Core.Application.ServerAudio;
 /// <param name="Name">The name it shows in "play to" and Ultimate Connect.</param>
 /// <param name="CustomName">The name chosen by an administrator; null for the default.</param>
 /// <param name="Volume">0–100.</param>
+/// <param name="ConnectAccounts">The linked Ultimate Cloud accounts it is an Ultimate Connect device of now.</param>
 public sealed record ServerAudioStatus(
     bool Enabled,
     bool Available,
@@ -30,7 +31,8 @@ public sealed record ServerAudioStatus(
     string Name,
     string? CustomName,
     int Volume,
-    bool Muted);
+    bool Muted,
+    int ConnectAccounts);
 
 /// <param name="DeviceId">The device to play on (an id from <c>devices</c>); the system's default when null.</param>
 /// <param name="Name">The name it shows; the default when null or empty.</param>
@@ -56,7 +58,8 @@ public sealed class ServerAudioService(AccessGuard guard, CatalogService catalog
         var config = await Player.ConfigAsync(cancellationToken);
         var snapshot = await Player.SnapshotAsync(cancellationToken);
         return new ServerAudioStatus(Player.Enabled, Player.Available, Player.Available ? null : Player.UnavailableReason, Player.Devices(),
-            config.DeviceId, snapshot.Device, snapshot.DeviceError, config.DisplayName, config.Name, config.Volume, config.Muted);
+            config.DeviceId, snapshot.Device, snapshot.DeviceError, config.DisplayName, config.Name, config.Volume, config.Muted,
+            services.GetService<Core.Cloud.ServerAudioConnect>()?.OnlineAccounts ?? 0);
     }
 
     public async Task<ServerAudioStatus> SetSettingsAsync(ServerAudioSettingsInput input, CancellationToken cancellationToken)
@@ -168,6 +171,25 @@ public sealed class ServerAudioService(AccessGuard guard, CatalogService catalog
         Require(access, await Player.SnapshotAsync(cancellationToken), control: true);
         await Player.SetVolumeAsync(volume, null, cancellationToken);
         return await StateAsync(access, cancellationToken);
+    }
+
+    /// <summary>Mutes or unmutes it; for Ultimate Connect, whose controllers have their own button.</summary>
+    internal async Task SetMutedAsync(UserAccess access, bool muted, CancellationToken cancellationToken)
+    {
+        Require(access, await Player.SnapshotAsync(cancellationToken), control: true);
+        await Player.SetVolumeAsync(null, muted, cancellationToken);
+    }
+
+    internal async Task SetShuffleAsync(UserAccess access, bool shuffle, CancellationToken cancellationToken)
+    {
+        Require(access, await Player.SnapshotAsync(cancellationToken), control: true);
+        await Player.SetShuffleAsync(shuffle, cancellationToken);
+    }
+
+    internal async Task SetRepeatAsync(UserAccess access, ServerAudioRepeat repeat, CancellationToken cancellationToken)
+    {
+        Require(access, await Player.SnapshotAsync(cancellationToken), control: true);
+        await Player.SetRepeatAsync(repeat, cancellationToken);
     }
 
     internal async Task<DlnaRendererState> EditQueueAsync(UserAccess access, EditDlnaQueueInput input, CancellationToken cancellationToken)

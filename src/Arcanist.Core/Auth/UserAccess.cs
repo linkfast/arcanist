@@ -105,7 +105,8 @@ internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentU
     public UserAccess Access => accessor.HttpContext?.Items[typeof(UserAccess)] as UserAccess
                                 ?? throw new InvalidOperationException("The request is not authenticated.");
 
-    public Guid SessionId => Guid.Parse(accessor.HttpContext!.User.FindFirst(ArcanistClaims.SessionId)!.Value);
+    /// <summary>The request's session; none (empty, as the extensions that sign in without one) for background work acting as a user.</summary>
+    public Guid SessionId => accessor.HttpContext is { } context ? Guid.Parse(context.User.FindFirst(ArcanistClaims.SessionId)!.Value) : Guid.Empty;
 
     public DateTimeOffset? AuthenticatedAt =>
         long.TryParse(accessor.HttpContext?.User.FindFirst(ArcanistClaims.AuthenticatedAt)?.Value, out var seconds)

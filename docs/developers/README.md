@@ -318,6 +318,21 @@ it, change its queue or replace it; anyone else gets `renderer_in_use` until it 
 Errors: `dlna_disabled`, `renderer_unreachable` (switched off or gone), `renderer_failed` (it refused),
 `nothing_queued` (skipping without an Arcanist queue on it) and `renderer_in_use`.
 
+### The server's own speakers
+
+With the server audio extension on, the server itself plays through an audio device attached to it (speakers, a USB
+DAC, HDMI). It is one more renderer, with the id `server`, listed first by `dlnaRenderers` even while DLNA is off, to
+administrators and users with the `PLAY_ON_SERVER` permission; everything above works on it the same way, with the
+same rule about who controls a queue. Its errors add `server_audio_disabled` (the extension is off) and
+`server_audio_unavailable` (the server cannot play audio).
+
+Apps of the Ultimate family also find it as an Ultimate Connect device of each linked Ultimate Cloud account (named
+as the administrator chose; `X-Client-App: arcanist-server-audio`). It takes every command type; `PLAY_ITEMS` and
+`ENQUEUE_NEXT` find each item by `localTrackId` (a track id of this server), `acoustId`, `cloudTrackId` (a song of
+that account's Ultimate Cloud library catalogued here) or, last, title and artist, and leave out what the server does
+not have. `PLAY_PLAYLIST` takes an Arcanist playlist's id as `localPlaylistId`. Commands run as the account's user:
+for the server's account, the administrator who linked it; for a user's own account, that user.
+
 ## Subsonic and mStream apps
 
 Arcanist also speaks the Subsonic API (1.16.1 with OpenSubsonic extensions, at `/rest/{method}[.view]`) and the

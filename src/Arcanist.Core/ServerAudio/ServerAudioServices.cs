@@ -8,6 +8,8 @@ public static class ServerAudioServiceCollectionExtensions
         services.AddSingleton<ServerAudioPlayer>();
         services.AddHostedService(sp => sp.GetRequiredService<ServerAudioPlayer>());
         services.AddScoped<Application.ServerAudio.ServerAudioService>();
+        services.AddSingleton<Cloud.ServerAudioConnect>();
+        services.AddHostedService(sp => sp.GetRequiredService<Cloud.ServerAudioConnect>());
         return services;
     }
 }

@@ -1552,6 +1552,7 @@ type ServerAudioStatus {
   customName: String
   volume: Int!
   muted: Boolean!
+  connectAccounts: Int!
 }
 
 type AudioDevice {

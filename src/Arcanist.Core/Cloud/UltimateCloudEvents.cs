@@ -100,7 +100,7 @@ public sealed class UltimateCloudEvents(
         var wait = TimeSpan.FromSeconds(5);
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (accounts.TierOf(account) != CloudTier.None && EventsUri() is { } uri)
+            if (accounts.TierOf(account) != CloudTier.None && EventsUri(options.CurrentValue) is { } uri)
             {
                 try
                 {
@@ -152,9 +152,9 @@ public sealed class UltimateCloudEvents(
     }
 
     /// <summary><c>EventsUrl</c>, or the API's URL as a WebSocket one.</summary>
-    private Uri? EventsUri()
+    internal static Uri? EventsUri(UltimateCloudOptions options)
     {
-        var configured = options.CurrentValue.EventsUrl ?? options.CurrentValue.ApiUrl;
+        var configured = options.EventsUrl ?? options.ApiUrl;
         if (string.IsNullOrWhiteSpace(configured) || !Uri.TryCreate(configured, UriKind.Absolute, out var uri))
             return null;
         var builder = new UriBuilder(uri) { Scheme = uri.Scheme switch { "https" => "wss", "http" => "ws", _ => uri.Scheme } };
@@ -288,11 +288,11 @@ public sealed class UltimateCloudEvents(
         }
     }
 
-    private static async Task SendAsync(ClientWebSocket socket, object message, CancellationToken cancellationToken) =>
+    internal static async Task SendAsync(ClientWebSocket socket, object message, CancellationToken cancellationToken) =>
         await socket.SendAsync(JsonSerializer.SerializeToUtf8Bytes(message), WebSocketMessageType.Text, endOfMessage: true, cancellationToken);
 
     /// <summary>The next message; null once the socket closes.</summary>
-    private static async Task<JsonNode?> ReceiveAsync(ClientWebSocket socket, CancellationToken cancellationToken)
+    internal static async Task<JsonNode?> ReceiveAsync(ClientWebSocket socket, CancellationToken cancellationToken)
     {
         var buffer = new byte[16 * 1024];
         using var message = new MemoryStream();

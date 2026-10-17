@@ -46,6 +46,11 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     /// <summary>Every recorded play, with the account it was recorded for.</summary>
     public ConcurrentQueue<(string Account, string AcoustId)> PlaysBy { get; } = new();
 
+    /// <summary>A call of server audio as an Ultimate Connect device (registering, heartbeats, states, going offline).</summary>
+    public sealed record ConnectCall(string Account, string DeviceId, string Operation, JsonNode? Variables);
+
+    public ConcurrentQueue<ConnectCall> ConnectCalls { get; } = new();
+
     /// <summary>The servers' nodes each account registered.</summary>
     public ConcurrentQueue<(string Account, string NodeId)> RegisteredBy { get; } = new();
 
@@ -138,6 +143,16 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 return new HttpResponseMessage(HttpStatusCode.Unauthorized);
             var account = AccountOf(request);
             var plan = Plans.GetValueOrDefault(account) ?? Plan;
+            var connect = new[] { "touchSyncedDevice", "connectHeartbeat", "publishPlaybackState", "goOfflineForConnect" }.FirstOrDefault(query.Contains);
+            if (connect is not null && request.Headers.GetValues("X-Client-App").Single() == "arcanist-server-audio")
+                ConnectCalls.Enqueue(new ConnectCall(account, request.Headers.GetValues("X-Device-Id").Single(), connect,
+                    JsonNode.Parse(body)!["variables"]?.DeepClone()));
+            if (query.Contains("connectHeartbeat"))
+                return Json(new { data = new { connectHeartbeat = true } });
+            if (query.Contains("publishPlaybackState"))
+                return Json(new { data = new { publishPlaybackState = new { status = "PLAYING" } } });
+            if (query.Contains("goOfflineForConnect"))
+                return Json(new { data = new { goOfflineForConnect = true } });
             if (query.Contains("touchSyncedDevice"))
                 return Json(new { data = new { touchSyncedDevice = true } });
             if (query.Contains("myLibrary"))

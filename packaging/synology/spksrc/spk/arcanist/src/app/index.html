@@ -56,6 +56,21 @@
       .variables input { width: 100%; }
       .variables input.invalid { border-color: var(--bad); }
       .variables td:last-child { width: 1%; }
+      .tabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 1px solid var(--line); }
+      .tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 6px 12px; }
+      .tabs button[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--accent); font-weight: 600; }
+      .logs select, .logs input[type="search"] { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+      .logs input[type="search"] { width: 9em; }
+      .logs #logFile { max-width: 220px; }
+      .logview {
+        height: calc(100vh - 250px); min-height: 200px; overflow: auto; margin-top: 10px; padding: 8px 10px;
+        border-radius: 4px; background: #111820; color: #d9e2ec;
+        font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-all;
+      }
+      .logview .l-debug { color: #8796a8; }
+      .logview .l-warn { color: #f5b14c; }
+      .logview .l-error { color: #ff7b72; }
+      .logview .empty { color: #8796a8; }
       [hidden] { display: none !important; }
     </style>
   </head>
@@ -72,6 +87,12 @@
 
     <!-- Shown once the state arrives. -->
     <main id="content" hidden>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabGeneral" aria-selected="true" data-t="tabGeneral"></button>
+      <button role="tab" id="tabLogs" aria-selected="false" data-t="tabLogs"></button>
+    </div>
+
+    <section id="general">
     <div class="card">
       <h2 data-t="state"></h2>
       <div class="row">
@@ -150,6 +171,26 @@
         <option value="Serilog:MinimumLevel:Default"></option>
       </datalist>
     </div>
+    </section>
+
+    <section id="logs" class="logs" hidden>
+      <div class="card">
+        <div class="row">
+          <select id="logFile"></select>
+          <select id="logLevel">
+            <option value="0" data-t="levelAll"></option>
+            <option value="3" data-t="levelWarn"></option>
+            <option value="4" data-t="levelError"></option>
+          </select>
+          <input id="logSearch" type="search" data-tp="search" />
+          <span class="grow"></span>
+          <label class="row" style="gap: 4px"><input type="checkbox" id="logFollow" style="width: auto" checked /> <span data-t="follow"></span></label>
+          <button id="logDownload" data-t="download"></button>
+        </div>
+        <div class="logview" id="logView"></div>
+        <p class="muted" id="logInfo" style="margin: 6px 0 0"></p>
+      </div>
+    </section>
     </main>
 
     <script>
@@ -208,6 +249,21 @@
           reserved_variable: "{k} no se puede cambiar: lo usa el paquete.",
           too_large: "Hay demasiadas variables.",
           failed: "No se pudo leer el estado de Arcanist.",
+          tabGeneral: "General",
+          tabLogs: "Registros",
+          logLatest: "Arcanist (el más reciente)",
+          logOf: "Arcanist del {d}",
+          logPackage: "Salida del paquete (supervisor y consola)",
+          levelAll: "Todos los niveles",
+          levelWarn: "Avisos y errores",
+          levelError: "Solo errores",
+          search: "Buscar",
+          follow: "En vivo",
+          download: "Descargar",
+          logEmpty: "Aún no hay nada en este registro.",
+          logShown: "{f} · {s} · {n} líneas",
+          log_not_found: "Ese registro no existe todavía o ya se borró.",
+          cannot_read: "Esta ventana no puede leer los registros de Arcanist.",
         },
         en: {
           subtitle: "Your music server on this NAS.",
@@ -262,6 +318,21 @@
           reserved_variable: "{k} cannot be changed: the package relies on it.",
           too_large: "There are too many variables.",
           failed: "Arcanist's state could not be read.",
+          tabGeneral: "General",
+          tabLogs: "Logs",
+          logLatest: "Arcanist (the newest)",
+          logOf: "Arcanist on {d}",
+          logPackage: "The package's output (supervisor and console)",
+          levelAll: "All levels",
+          levelWarn: "Warnings and errors",
+          levelError: "Errors only",
+          search: "Search",
+          follow: "Live",
+          download: "Download",
+          logEmpty: "Nothing in this log yet.",
+          logShown: "{f} · {s} · {n} lines",
+          log_not_found: "That log does not exist yet, or was deleted.",
+          cannot_read: "This window cannot read Arcanist's logs.",
         },
       };
       const lang = (navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en";
@@ -284,6 +355,7 @@
       function translate(user) {
         for (const element of document.querySelectorAll("[data-t]"))
           element.textContent = t(element.dataset.t, { u: user || "sc-arcanist" });
+        for (const element of document.querySelectorAll("[data-tp]")) element.placeholder = t(element.dataset.tp);
       }
 
       function fail(code) {
@@ -479,6 +551,230 @@
         } catch {
           window.open("/?launchApp=SYNO.SDS.AdminCenter.Application&launchParam=" +
             encodeURIComponent("fn=SYNO.SDS.AdminCenter.Share.Main"), "_blank");
+        }
+      });
+
+      // ── Logs ──────────────────────────────────────────────────────────────
+      // Reads a log in pieces (api.cgi sends the bytes after an offset) and keeps following it while the tab is open.
+      // Serilog's lines say their level ([INF], [WRN]…); the lines after one without it (an exception's stack trace)
+      // take the same level, so filtering keeps them together. The supervisor's own lines start with a date.
+      const MAX_LINES = 5000;
+      const LEVELS = { VRB: 0, DBG: 1, INF: 2, WRN: 3, ERR: 4, FTL: 5 };
+      const levelPattern = /\[(?:\d\d:\d\d:\d\d(?:\.\d+)? )?(VRB|DBG|INF|WRN|ERR|FTL)\]/;
+      const supervisorPattern = /^\w{3} \w{3} +\d+ \d\d:\d\d:\d\d/;
+      const log = { file: "latest", name: null, end: null, size: 0, decoder: null, rest: "", lines: [], timer: null, busy: false };
+
+      function logRequest(params) {
+        return fetch("api.cgi?" + new URLSearchParams({ action: "log", ...params }), {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { "X-SYNO-TOKEN": token },
+        });
+      }
+
+      function lineClass(level) {
+        return level >= 4 ? "l-error" : level === 3 ? "l-warn" : level <= 1 ? "l-debug" : "";
+      }
+
+      function visible(line) {
+        const search = $("logSearch").value.trim().toLowerCase();
+        return line.level >= Number($("logLevel").value) && (!search || line.text.toLowerCase().includes(search));
+      }
+
+      function lineNode(line) {
+        const node = document.createElement("div");
+        node.textContent = line.text || " ";
+        node.className = lineClass(line.level);
+        return node;
+      }
+
+      function showEmpty() {
+        if ($("logView").children.length) return;
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = t("logEmpty");
+        $("logView").append(empty);
+      }
+
+      function renderLog() {
+        const nodes = [];
+        for (const line of log.lines) {
+          line.node = visible(line) ? lineNode(line) : null;
+          if (line.node) nodes.push(line.node);
+        }
+        $("logView").replaceChildren(...nodes);
+        if (!nodes.length) showEmpty();
+        $("logView").scrollTop = $("logView").scrollHeight;
+        logInfo();
+      }
+
+      function logInfo() {
+        $("logInfo").textContent = log.name ? t("logShown", { f: log.name, s: size(log.size), n: log.lines.length }) : "";
+      }
+
+      function resetLog() {
+        log.end = null;
+        log.name = null;
+        log.rest = "";
+        log.lines = [];
+        log.decoder = new TextDecoder();
+        $("logView").replaceChildren();
+      }
+
+      // Adds text to the log; the last line waits until it is complete. dropFirst: the text starts mid-line.
+      function appendLog(text, dropFirst) {
+        const view = $("logView");
+        const atBottom = view.scrollTop + view.clientHeight >= view.scrollHeight - 30;
+        const parts = (log.rest + text).split("\n");
+        log.rest = parts.pop();
+        if (dropFirst) parts.shift();
+        view.querySelector(".empty")?.remove();
+        let previous = log.lines.at(-1)?.level ?? 2;
+        for (let part of parts) {
+          part = part.replace(/\r$/, "").replace(/\x1b\[[0-9;]*m/g, "");
+          const match = levelPattern.exec(part.slice(0, 64));
+          const level = match ? LEVELS[match[1]] : supervisorPattern.test(part) ? 2 : previous;
+          previous = level;
+          const line = { text: part, level, node: null };
+          if (visible(line)) {
+            line.node = lineNode(line);
+            view.append(line.node);
+          }
+          log.lines.push(line);
+        }
+        for (const old of log.lines.splice(0, Math.max(0, log.lines.length - MAX_LINES))) old.node?.remove();
+        if (!view.children.length) showEmpty();
+        if (atBottom) view.scrollTop = view.scrollHeight;
+        logInfo();
+      }
+
+      // Reads what the log has after what is shown (all of it, in pieces), or its end the first time.
+      async function readLog() {
+        if (log.busy) return;
+        log.busy = true;
+        try {
+          for (let pieces = 0; pieces < 20; pieces++) {
+            const response = await logRequest(log.end === null ? { file: log.file } : { file: log.file, offset: log.end });
+            if (!response.ok) {
+              const body = await response.json().catch(() => ({}));
+              resetLog();
+              const message = document.createElement("div");
+              message.className = "empty";
+              message.textContent = t(body.error || "failed");
+              $("logView").append(message);
+              return;
+            }
+            const name = response.headers.get("X-Log-File");
+            const start = Number(response.headers.get("X-Log-Offset"));
+            const end = Number(response.headers.get("X-Log-End"));
+            const bytes = await response.arrayBuffer();
+            // The newest log is another file (a new day), or this one was cut: read it again from the start.
+            if (log.name !== null && (name !== log.name || start !== log.end)) {
+              resetLog();
+              log.end = 0;
+              log.name = name;
+              continue;
+            }
+            const first = log.end === null;
+            log.name = name;
+            log.size = Number(response.headers.get("X-Log-Size"));
+            appendLog(log.decoder.decode(bytes, { stream: true }), first && start > 0);
+            log.end = end;
+            if (end >= log.size) break;
+          }
+        } catch {
+          // The next round tries again.
+        } finally {
+          log.busy = false;
+        }
+      }
+
+      function followLog() {
+        clearTimeout(log.timer);
+        if ($("logs").hidden || !$("logFollow").checked) return;
+        log.timer = setTimeout(async () => {
+          await readLog();
+          followLog();
+        }, 2000);
+      }
+
+      async function loadLogFiles() {
+        const response = await fetch("api.cgi?action=logs", {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { "X-SYNO-TOKEN": token },
+        }).catch(() => null);
+        const body = response?.ok ? await response.json().catch(() => null) : null;
+        const options = [new Option(t("logLatest"), "latest")];
+        for (const file of body?.logs ?? []) {
+          if (file.kind === "package") {
+            options.push(new Option(t("logPackage"), file.file));
+          } else {
+            const [, y, m, d] = /(\d{4})(\d\d)(\d\d)/.exec(file.file);
+            const date = new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString(lang);
+            options.push(new Option(t("logOf", { d: date }), file.file));
+          }
+        }
+        $("logFile").replaceChildren(...options);
+        $("logFile").value = options.some((option) => option.value === log.file) ? log.file : "latest";
+      }
+
+      async function openLog(file) {
+        log.file = file;
+        resetLog();
+        await readLog();
+        followLog();
+      }
+
+      function showTab(logs) {
+        $("tabGeneral").setAttribute("aria-selected", String(!logs));
+        $("tabLogs").setAttribute("aria-selected", String(logs));
+        $("general").hidden = logs;
+        $("logs").hidden = !logs;
+        if (logs) {
+          loadLogFiles();
+          openLog(log.file);
+        } else {
+          clearTimeout(log.timer);
+        }
+      }
+
+      $("tabGeneral").addEventListener("click", () => showTab(false));
+      $("tabLogs").addEventListener("click", () => showTab(true));
+      $("logFile").addEventListener("change", () => openLog($("logFile").value));
+      $("logLevel").addEventListener("change", renderLog);
+      $("logSearch").addEventListener("input", renderLog);
+      $("logFollow").addEventListener("change", async () => {
+        if ($("logFollow").checked) await readLog();
+        followLog();
+      });
+
+      // The whole file, in pieces, saved with its name.
+      $("logDownload").addEventListener("click", async () => {
+        $("logDownload").disabled = true;
+        try {
+          const pieces = [];
+          let offset = 0, name = null, total = 0;
+          do {
+            const response = await logRequest({ file: log.name ?? log.file, offset });
+            if (!response.ok) throw new Error();
+            name = response.headers.get("X-Log-File");
+            total = Number(response.headers.get("X-Log-Size"));
+            pieces.push(await response.blob());
+            offset = Number(response.headers.get("X-Log-End"));
+          } while (offset < total);
+          const link = Object.assign(document.createElement("a"), {
+            href: URL.createObjectURL(new Blob(pieces, { type: "text/plain" })),
+            download: name,
+          });
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+        } catch {
+          $("logInfo").textContent = t("failed");
+        } finally {
+          $("logDownload").disabled = false;
         }
       });
 

@@ -14,6 +14,9 @@ x64 and arm64) and `spk/arcanist` packages them for DSM 7.2 and later.
 - `bin/arcanist-run` supervises the server: it reads the port from `var/package.conf` on every start, and starts the
   server again when it asks to (exit code 75, after a factory reset or a server restore; more than five times in a
   minute and it stops) or when the package's window asks for it. DSM stops it with TERM, passed on to the server.
+- DSM writes the package's output (the supervisor's and the server's console) to `var/arcanist.log` and clears it only
+  when the package starts; the supervisor cuts it to its last 2 MB when it passes 10 MB. Arcanist's own log is in
+  `var/logs/arcanist-<date>.log` (14 days).
 - Updates come from Package Center; Arcanist has no updater of its own on DSM.
 
 ## Arcanist's window in DSM
@@ -30,6 +33,10 @@ group. It shows:
 - the shared folders and whether `sc-arcanist` can read them, with the steps to give it access and a button that
   opens Control Panel > Shared Folder (a package cannot change share permissions itself on DSM 7);
 - where its data is and how much it takes, and a link to Arcanist's own panel;
+- **logs** (their own tab): Arcanist's, by day, and the package's output, followed live (every 2 s), with a level
+  filter that keeps an exception's lines with it, a search box and a download button. `api.cgi` sends a log in
+  pieces after an offset (`?action=log&file=…&offset=…`, at most 512 KB, as text with `X-Log-*` headers) and reads
+  nothing but those files;
 - **test mode**: variables given to Arcanist when it starts, to try it against services not published yet (for
   example `Arcanist:UltimateCloud:ApiUrl` with a test Ultimate Cloud). Settings may be written with `:` and are saved
   as variables (`Arcanist__UltimateCloud__ApiUrl`) in `var/environment`; `TEST_MODE=1` in `var/package.conf` turns

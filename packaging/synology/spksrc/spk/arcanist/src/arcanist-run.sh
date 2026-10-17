@@ -19,6 +19,25 @@ recent=""
 
 trap 'stopping=1; [ -n "${child}" ] && kill -TERM "${child}" 2>/dev/null' TERM INT
 
+# DSM writes the package's output (this script's and what the server writes to its console) to arcanist.log and
+# clears it only when the package starts: over 10 MB, its oldest part is dropped. Everyone writes to it in append
+# mode, so cutting it while they write is safe (a few lines may be lost).
+package_log="${ARCANIST_DATA_DIR}/arcanist.log"
+trim_package_log ()
+{
+    while :; do
+        size="$(wc -c < "${package_log}" 2>/dev/null | tr -cd '0-9')"
+        if [ "${size:-0}" -gt 10485760 ]; then
+            tail -c 2097152 "${package_log}" > "${package_log}.trim" && cat "${package_log}.trim" > "${package_log}"
+            rm -f "${package_log}.trim"
+        fi
+        sleep "${ARCANIST_LOG_TRIM_SECONDS:-60}"
+    done
+}
+trim_package_log &
+trimmer=$!
+trap 'kill "${trimmer}" 2>/dev/null' EXIT
+
 port_from_conf ()
 {
     port="$(sed -n 's/^PORT=\([0-9][0-9]*\)$/\1/p' "${conf}" 2>/dev/null | tail -n 1)"

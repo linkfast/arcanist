@@ -2,6 +2,11 @@
 # The API of Arcanist's window in DSM (index.html), for DSM administrators only:
 #   GET  ?action=status        the server's state, its port, the setup code until set up, and the shared folders
 #                              with whether Arcanist (sc-arcanist) can read them.
+#   GET  ?action=logs          the log files: Arcanist's (logs/arcanist-<date>.log, newest first) and the package's
+#                              output (arcanist.log: the supervisor and what Arcanist writes to its console).
+#   GET  ?action=log&file=F&offset=N   a log's bytes from N (without it, its last 128 KB), at most 512 KB, as text;
+#                              X-Log-Offset/X-Log-End say which bytes they are and X-Log-File which file (F "latest":
+#                              Arcanist's newest). An offset past the end (the file was trimmed) starts from 0.
 #   POST action=port&port=N    changes the port and starts the server again on it.
 #   POST action=restart        starts the server again.
 #   POST ?action=environment&enabled=0|1   the test mode: whether it is on, and its variables as the body
@@ -215,9 +220,80 @@ EOF
     mv "${new}" "${VAR}/environment" || respond "500 Internal Server Error" '{"error":"cannot_write"}'
 }
 
+# ── Logs ─────────────────────────────────────────────────────────────────────
+
+# A log's path under VAR from its name: Arcanist's (arcanist-<date>.log, or "latest" for the newest) or the package's
+# output (arcanist.log). Nothing else can be read.
+log_path ()
+{
+    case "$1" in
+        latest)
+            name="$(ls -1 "${VAR}/logs" 2>/dev/null | grep -E '^arcanist-[0-9]{8}\.log$' | sort | tail -n 1)"
+            [ -n "${name}" ] && echo "logs/${name}"
+            ;;
+        arcanist.log)
+            echo "arcanist.log"
+            ;;
+        arcanist-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].log)
+            echo "logs/$1"
+            ;;
+    esac
+}
+
+list_logs ()
+{
+    out=""
+    for name in $(ls -1 "${VAR}/logs" 2>/dev/null | grep -E '^arcanist-[0-9]{8}\.log$' | sort -r) arcanist.log; do
+        path="${VAR}/$(log_path "${name}")"
+        [ -f "${path}" ] || continue
+        size="$(wc -c < "${path}" 2>/dev/null | tr -cd '0-9')"
+        modified="$(date -r "${path}" +%s 2>/dev/null | tr -cd '0-9')"
+        kind=server
+        [ "${name}" = arcanist.log ] && kind=package
+        out="${out:+${out},}{\"file\":$(json "${name}"),\"kind\":\"${kind}\",\"size\":${size:-0},\"modified\":${modified:-0}}"
+    done
+    respond "200 OK" "{\"logs\":[${out}]}"
+}
+
+# Sends a log's bytes as text, with which bytes they are in the headers.
+send_log ()
+{
+    name="$(query_value file)"
+    rel="$(log_path "${name:-latest}")"
+    path="${VAR}/${rel}"
+    if [ -z "${rel}" ] || [ ! -f "${path}" ]; then
+        respond "404 Not Found" '{"error":"log_not_found"}'
+    fi
+    if [ ! -r "${path}" ]; then
+        respond "403 Forbidden" '{"error":"cannot_read"}'
+    fi
+    size="$(wc -c < "${path}" | tr -cd '0-9')"
+    size="${size:-0}"
+    offset="$(query_value offset | tr -cd '0-9')"
+    if [ -z "${offset}" ]; then
+        start=$(( size > 131072 ? size - 131072 : 0 ))
+    elif [ "${offset}" -gt "${size}" ]; then
+        start=0
+    else
+        start="${offset}"
+    fi
+    end="${size}"
+    [ $(( end - start )) -gt 524288 ] && end=$(( start + 524288 ))
+    printf 'Status: 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nX-Log-File: %s\r\nX-Log-Offset: %s\r\nX-Log-End: %s\r\nX-Log-Size: %s\r\n\r\n' \
+        "${rel##*/}" "${start}" "${end}" "${size}"
+    if [ "${end}" -gt "${start}" ]; then
+        tail -c +$(( start + 1 )) "${path}" | head -c $(( end - start ))
+    fi
+    exit 0
+}
+
 case "${REQUEST_METHOD}" in
     GET)
-        status
+        case "$(query_value action)" in
+            logs) list_logs ;;
+            log) send_log ;;
+            *) status ;;
+        esac
         ;;
     POST)
         if [ "${HTTP_X_ARCANIST_WINDOW}" != "1" ]; then

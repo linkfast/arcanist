@@ -17,6 +17,9 @@ public enum Permission
 
     /// <summary>Add music to the libraries the user can access (uploads, and migrating an app's library).</summary>
     Upload,
+
+    /// <summary>Play on the server's own audio output (server audio), from "play to" and Ultimate Connect.</summary>
+    PlayOnServer,
 }
 
 /// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed.</param>
@@ -80,6 +83,7 @@ public static class PermissionMapping
         Permission.Download => Permissions.Download,
         Permission.ViewAllStats => Permissions.ViewAllStats,
         Permission.Upload => Permissions.Upload,
+        Permission.PlayOnServer => Permissions.PlayOnServer,
         _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null),
     };
 

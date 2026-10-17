@@ -756,6 +756,7 @@ export const en: Dictionary = {
     DOWNLOAD: 'Download',
     VIEW_ALL_STATS: 'View all statistics',
     UPLOAD: 'Upload music',
+    PLAY_ON_SERVER: 'Play on the server',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Create, edit and delete the libraries they can access.',
@@ -766,6 +767,8 @@ export const en: Dictionary = {
     VIEW_ALL_STATS: "See every user's statistics.",
     UPLOAD:
       'Add music to the libraries they can access, from apps (for example, migrating Ultimate Desktop’s library).',
+    PLAY_ON_SERVER:
+      'Play on the server’s audio device (Server audio) from players and Ultimate Connect.',
   },
   account: {
     cloud: {
@@ -2187,6 +2190,9 @@ export const en: Dictionary = {
     mstream_admin_required:
       'An mStream administrator account is needed, with its admin API unlocked.',
     dlna_disabled: 'DLNA is off.',
+    server_audio_disabled: 'Server audio is off.',
+    server_audio_unavailable:
+      'The server cannot play audio: its native player is missing or, on Linux, ALSA.',
     cloud_disabled: 'Ultimate Cloud is switched off.',
     last_source: 'A local library keeps its folder: move it instead.',
     library_disabled: 'This library needs Ultimate Cloud, which is switched off.',

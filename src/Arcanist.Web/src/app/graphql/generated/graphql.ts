@@ -442,6 +442,7 @@ export type Permission =
   | 'MANAGE_LIBRARIES'
   | 'MANAGE_SETTINGS'
   | 'MANAGE_USERS'
+  | 'PLAY_ON_SERVER'
   | 'RUN_SCANS'
   | 'UPLOAD'
   | 'VIEW_ALL_STATS';

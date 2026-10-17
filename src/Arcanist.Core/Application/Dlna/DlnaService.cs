@@ -1,5 +1,6 @@
 using System.Net;
 using Arcanist.Core.Application.Catalog;
+using Arcanist.Core.Application.ServerAudio;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
@@ -119,6 +120,9 @@ public sealed class DlnaService(
     private RendererRegistry Registry => services.GetRequiredService<RendererRegistry>();
     private RendererSessions Sessions => services.GetRequiredService<RendererSessions>();
     private DlnaEndpoint Endpoint => services.GetRequiredService<DlnaEndpoint>();
+    private ServerAudioService Server => services.GetRequiredService<ServerAudioService>();
+
+    private static bool IsServer(string? id) => id == ServerAudioService.RendererId;
 
     private bool Enabled => extensions.IsEnabled(DlnaExtension.Id);
 
@@ -171,10 +175,14 @@ public sealed class DlnaService(
         return await StatusAsync(cancellationToken);
     }
 
+    /// <summary>The renderers of the local network (while DLNA is on), and the server's own output (with server audio).</summary>
     public IReadOnlyList<DlnaRenderer> Renderers()
     {
-        guard.Authenticated();
-        return Enabled ? Registry.List().Select(ToModel).ToList() : [];
+        var access = guard.Authenticated();
+        var list = Server.Visible(access) ? [Server.Renderer()] : new List<DlnaRenderer>();
+        if (Enabled)
+            list.AddRange(Registry.List().Select(ToModel));
+        return list;
     }
 
     /// <summary>Asks the local network for renderers now and returns the list a few seconds later (those that answered by then).</summary>
@@ -203,6 +211,8 @@ public sealed class DlnaService(
     public async Task<DlnaRendererState> EditQueueAsync(EditDlnaQueueInput input, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
+        if (IsServer(input.RendererId))
+            return await Server.EditQueueAsync(access, input, cancellationToken);
         var device = Find(input.RendererId);
         var session = Sessions.Find(device.Id) ?? throw new ArcanistException.Conflict(ErrorCodes.NothingQueued);
         RequireControl(access, session);
@@ -267,6 +277,8 @@ public sealed class DlnaService(
     public async Task<DlnaRendererState> RendererAsync(string id, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
+        if (IsServer(id))
+            return await Server.StateAsync(access, cancellationToken);
         var device = Find(id);
         var client = Registry.Client;
         var status = await RendererControl.StatusAsync(client, device, cancellationToken);
@@ -314,6 +326,8 @@ public sealed class DlnaService(
     public async Task<DlnaRendererState> PlayAsync(PlayOnDlnaRendererInput input, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
+        if (IsServer(input.RendererId))
+            return await Server.PlayAsync(access, input.TrackIds ?? [], input.StartIndex, cancellationToken);
         var device = Find(input.RendererId);
         RequireControl(access, Sessions.Find(device.Id));
         var queue = await BuildQueueAsync(access, device, input.TrackIds ?? [], cancellationToken);
@@ -372,6 +386,8 @@ public sealed class DlnaService(
     public async Task<DlnaRendererState> ControlAsync(ControlDlnaRendererInput input, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
+        if (IsServer(input.RendererId))
+            return await Server.ControlAsync(access, input.Action, input.PositionMs, cancellationToken);
         var device = Find(input.RendererId);
         var client = Registry.Client;
         var session = Sessions.Find(device.Id);
@@ -412,6 +428,8 @@ public sealed class DlnaService(
         var access = guard.Authenticated();
         if (volume is < 0 or > 100)
             throw ArcanistException.Field("volume", ErrorCodes.InvalidFormat);
+        if (IsServer(rendererId))
+            return await Server.SetVolumeAsync(access, volume, cancellationToken);
         var device = Find(rendererId);
         RequireControl(access, Sessions.Find(device.Id));
         await RendererControl.SetVolumeAsync(Registry.Client, device, volume, cancellationToken);

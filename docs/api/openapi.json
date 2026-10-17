@@ -4728,6 +4728,79 @@
         }
       }
     },
+    "/rest/v1/server-audio": {
+      "get": {
+        "tags": [
+          "Server audio"
+        ],
+        "summary": "Server audio: whether it plays, on which device, and the server\u0027s audio devices. Administrators only. The server plays through \u0022play to\u0022 as the renderer \u0022server\u0022.",
+        "operationId": "ServerAudio",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAudioStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server-audio/settings": {
+      "put": {
+        "tags": [
+          "Server audio"
+        ],
+        "summary": "Chooses the device server audio plays on (the system\u0027s default when null) and the name it shows. Administrators only, with a recent authentication.",
+        "operationId": "SetServerAudioSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAudioSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAudioStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server-audio/test": {
+      "post": {
+        "tags": [
+          "Server audio"
+        ],
+        "summary": "Plays a short tone on the server\u0027s device, to check it; refused while a queue plays. Administrators only.",
+        "operationId": "TestServerAudio",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/mstream": {
       "get": {
         "tags": [
@@ -8002,6 +8075,45 @@
           "LYRICIST",
           "PRODUCER"
         ]
+      },
+      "AudioDevice": {
+        "required": [
+          "id",
+          "name",
+          "isDefault",
+          "sampleRate",
+          "channels"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "sampleRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "channels": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "AudioMetadata": {
         "type": "object",
@@ -13709,7 +13821,8 @@
           "RUN_SCANS",
           "DOWNLOAD",
           "VIEW_ALL_STATS",
-          "UPLOAD"
+          "UPLOAD",
+          "PLAY_ON_SERVER"
         ]
       },
       "PlannedMove": {
@@ -14824,6 +14937,101 @@
             "items": {
               "$ref": "#/components/schemas/Playlist"
             }
+          }
+        }
+      },
+      "ServerAudioSettingsInput": {
+        "required": [
+          "deviceId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ServerAudioStatus": {
+        "required": [
+          "enabled",
+          "available",
+          "unavailableReason",
+          "devices",
+          "deviceId",
+          "device",
+          "deviceError",
+          "name",
+          "customName",
+          "volume",
+          "muted"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "unavailableReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AudioDevice"
+            }
+          },
+          "deviceId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deviceError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "customName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "volume": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "muted": {
+            "type": "boolean"
           }
         }
       },
@@ -17779,6 +17987,9 @@
     },
     {
       "name": "DLNA"
+    },
+    {
+      "name": "Server audio"
     },
     {
       "name": "mStream"

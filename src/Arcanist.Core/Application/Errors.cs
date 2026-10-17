@@ -117,6 +117,10 @@ public static class ErrorCodes
     public const string NothingQueued = "nothing_queued";
     /// <summary>Another user's queue is playing on that renderer: only they (or an administrator) control it until it stops.</summary>
     public const string RendererInUse = "renderer_in_use";
+    /// <summary>The server audio extension is off.</summary>
+    public const string ServerAudioDisabled = "server_audio_disabled";
+    /// <summary>The server cannot play audio: its native player could not load (ALSA missing on Linux) or no device opens.</summary>
+    public const string ServerAudioUnavailable = "server_audio_unavailable";
     /// <summary>The P2P network is off.</summary>
     public const string P2PDisabled = "p2p_disabled";
     /// <summary>The P2P library is missing for this platform, so the network cannot run.</summary>

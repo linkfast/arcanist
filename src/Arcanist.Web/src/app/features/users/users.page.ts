@@ -46,6 +46,7 @@ const allPermissions: Permission[] = [
   'DOWNLOAD',
   'VIEW_ALL_STATS',
   'UPLOAD',
+  'PLAY_ON_SERVER',
 ];
 
 interface UserForm {

@@ -768,6 +768,7 @@ export const es: Dictionary = {
     DOWNLOAD: 'Descargar',
     VIEW_ALL_STATS: 'Ver todas las estadísticas',
     UPLOAD: 'Subir música',
+    PLAY_ON_SERVER: 'Reproducir en el servidor',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Crear, editar y eliminar las bibliotecas a las que tiene acceso.',
@@ -778,6 +779,8 @@ export const es: Dictionary = {
     VIEW_ALL_STATS: 'Ver las estadísticas de todos los usuarios.',
     UPLOAD:
       'Añadir música a las bibliotecas a las que tiene acceso, desde las apps (por ejemplo, al migrar la biblioteca de Ultimate Desktop).',
+    PLAY_ON_SERVER:
+      'Reproducir en el dispositivo de audio del servidor (Audio del servidor) desde los reproductores y Ultimate Connect.',
   },
   account: {
     cloud: {
@@ -2222,6 +2225,9 @@ export const es: Dictionary = {
     mstream_admin_required:
       'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
     dlna_disabled: 'DLNA está desactivado.',
+    server_audio_disabled: 'El audio del servidor está desactivado.',
+    server_audio_unavailable:
+      'El servidor no puede reproducir audio: falta su reproductor nativo o, en Linux, ALSA.',
     cloud_disabled: 'Ultimate Cloud está desactivado.',
     last_source: 'Una biblioteca local conserva su carpeta: muévela en lugar de quitarla.',
     library_disabled: 'Esta biblioteca necesita Ultimate Cloud, que está desactivado.',

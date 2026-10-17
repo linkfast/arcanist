@@ -5,5 +5,6 @@ internal static class BuiltInExtensions
 {
     public static IReadOnlyList<IBuiltInExtension> All { get; } = [
         new Dlna.DlnaExtension(), new Mstream.MstreamExtension(), new Subsonic.SubsonicExtension(), new UltimateCloud.UltimateCloudExtension(),
+        new ServerAudio.ServerAudioExtension(),
     ];
 }

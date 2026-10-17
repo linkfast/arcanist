@@ -19,6 +19,7 @@ public enum Permissions : long
     Download = 1 << 4,
     ViewAllStats = 1 << 5,
     Upload = 1 << 6,
+    PlayOnServer = 1 << 7,
 }
 
 public sealed class User : Entity

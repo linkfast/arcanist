@@ -74,6 +74,7 @@ public static class RestSetup
         rest.MapAppPasswordEndpoints();
         rest.MapMstreamImportEndpoints();
         rest.MapDlnaEndpoints();
+        rest.MapServerAudioEndpoints();
         rest.MapMstreamEndpoints();
         rest.MapP2PEndpoints();
         rest.MapDatabaseEndpoints();

@@ -11,7 +11,8 @@ export type Permission =
   | 'RUN_SCANS'
   | 'DOWNLOAD'
   | 'VIEW_ALL_STATS'
-  | 'UPLOAD';
+  | 'UPLOAD'
+  | 'PLAY_ON_SERVER';
 export type DatabaseProvider = 'SQLITE' | 'POSTGRES';
 
 export interface UserAccount {

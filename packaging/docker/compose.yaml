@@ -1,0 +1,40 @@
+# Arcanist with Docker Compose, with SQLite (enough for most homes). See packaging/docker/README.md.
+#
+#   cp .env.example .env      # then set MUSIC_DIR (and the rest, if you like)
+#   docker compose up -d
+#   docker compose logs arcanist | grep -i "setup code"
+#
+# Then open http://<host>:8484/ and follow the setup wizard; add /music as a library.
+
+name: arcanist
+
+services:
+  arcanist:
+    image: ghcr.io/linkfast/arcanist:${ARCANIST_TAG:-preview}
+    container_name: arcanist
+    restart: unless-stopped
+    ports:
+      - "${ARCANIST_PORT:-8484}:8484"
+    environment:
+      TZ: ${TZ:-UTC}
+    volumes:
+      # The database, keys, caches and logs. Keep it on a local disk: SQLite must not live on a network share.
+      - arcanist-data:/data
+      # Your music. Read-only is enough to play it; drop ":ro" to let Arcanist organize files, import from drop
+      # folders, copy shared libraries or receive uploads into it.
+      - ${MUSIC_DIR:?Set MUSIC_DIR in .env}:/music:ro
+      # A drop folder, if you want one (add it in the panel as /drop):
+      # - ${DROP_DIR}:/drop
+      # Backups to a folder of the host (add it in the panel as /backups):
+      # - ${BACKUP_DIR}:/backups
+    # Server audio (an extension, off by default) plays through the host's sound card:
+    # devices:
+    #   - /dev/snd:/dev/snd
+    # group_add:
+    #   - audio
+    # DLNA finds devices with multicast on the local network, which a bridged container does not see. For DLNA,
+    # use the host's network instead of "ports" (Linux only):
+    # network_mode: host
+
+volumes:
+  arcanist-data:

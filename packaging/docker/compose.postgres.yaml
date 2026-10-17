@@ -1,0 +1,56 @@
+# Arcanist with PostgreSQL, for large libraries (more than about 250,000 songs) or many people listening at once.
+# See packaging/docker/README.md.
+#
+#   cp .env.example .env      # then set MUSIC_DIR and POSTGRES_PASSWORD
+#   docker compose -f compose.postgres.yaml up -d
+#   docker compose -f compose.postgres.yaml logs arcanist | grep -i "setup code"
+#
+# The database comes from this file, so the setup wizard does not ask for it. A server that already uses SQLite
+# moves to PostgreSQL from the panel instead (Database page), without this file.
+
+name: arcanist
+
+services:
+  arcanist:
+    image: ghcr.io/linkfast/arcanist:${ARCANIST_TAG:-preview}
+    container_name: arcanist
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${ARCANIST_PORT:-8484}:8484"
+    environment:
+      TZ: ${TZ:-UTC}
+      Arcanist__Database__Provider: Postgres
+      Arcanist__Database__ConnectionString: Host=postgres;Database=arcanist;Username=arcanist;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      # Keys, caches and logs (the database is in PostgreSQL).
+      - arcanist-data:/data
+      # Your music. Drop ":ro" to let Arcanist organize files, import from drop folders or receive uploads into it.
+      - ${MUSIC_DIR:?Set MUSIC_DIR in .env}:/music:ro
+    # Server audio (an extension, off by default) plays through the host's sound card:
+    # devices:
+    #   - /dev/snd:/dev/snd
+    # group_add:
+    #   - audio
+
+  postgres:
+    image: postgres:17
+    container_name: arcanist-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: arcanist
+      POSTGRES_USER: arcanist
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - arcanist-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arcanist -d arcanist"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  arcanist-data:
+  arcanist-postgres:

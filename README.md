@@ -49,6 +49,8 @@ The image supports linux/amd64 and linux/arm64. The setup code is in `docker log
 library. Keep `/data` on a local disk: with SQLite, the database must not live on a network share (the music can).
 For server audio (playing through the host's sound card), add `--device /dev/snd --group-add audio`.
 
+With Docker Compose (SQLite or PostgreSQL): see [packaging/docker](packaging/docker/README.md).
+
 ### Synology
 
 A package for DSM 7.2+ is prepared for SynoCommunity ([packaging/synology](packaging/synology/README.md)). Its install

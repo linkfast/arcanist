@@ -40,9 +40,11 @@ ARG VERSION=
 WORKDIR /src
 COPY global.json Directory.Build.props ./
 COPY src/Arcanist.Core/Arcanist.Core.csproj src/Arcanist.Core/
+COPY src/Arcanist.Extensibility/Arcanist.Extensibility.csproj src/Arcanist.Extensibility/
 # The runtime identifier only selects native libraries (SkiaSharp); the server itself is portable.
 RUN echo "linux-$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "$TARGETARCH")" > /rid \
     && dotnet restore src/Arcanist.Core/Arcanist.Core.csproj -r "$(cat /rid)"
+COPY src/Arcanist.Extensibility/ src/Arcanist.Extensibility/
 COPY src/Arcanist.Core/ src/Arcanist.Core/
 COPY --from=native /src/artifacts/native/ artifacts/native/
 RUN dotnet publish src/Arcanist.Core/Arcanist.Core.csproj -c Release -o /app --no-restore \

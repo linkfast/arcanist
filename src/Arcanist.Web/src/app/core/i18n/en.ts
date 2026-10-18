@@ -1289,6 +1289,12 @@ export const en: Dictionary = {
       failed: 'Failed',
       restartRequired: 'Restart needed',
       restartRequiredHelp: 'The change applies when the server restarts.',
+      restartNeeded: 'Some installed or switched on extensions will run once the server restarts.',
+      restartNow: 'Restart now',
+      restartWaiting: 'Restarting the server… it is back in a few seconds.',
+      restartDone: 'The server restarted',
+      restartUnreachable:
+        'The server did not answer. Without a supervisor (service, Docker, systemd or the tray), start it again by hand.',
       routes: 'Routes',
       installed: 'Extension installed: switch it on and restart the server to use it.',
     },

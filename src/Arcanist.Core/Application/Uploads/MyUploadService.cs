@@ -55,6 +55,7 @@ public enum MyUploadStatus
 /// <param name="Name">The file's name (into a library) or the song's title (into Ultimate Cloud).</param>
 /// <param name="Track">The song, when the user can see it: once catalogued, or the one sent to Ultimate Cloud.</param>
 /// <param name="ErrorCode">Why it failed: <c>download_not_allowed</c>, <c>cloud_quota_exceeded</c>, <c>unreadable</c>…</param>
+/// <param name="Source">The extension that brought the file (such as <c>youtube</c>); null when the user sent it.</param>
 public sealed record MyUpload(
     Guid Id,
     MyUploadKind Kind,
@@ -66,7 +67,8 @@ public sealed record MyUpload(
     Track? Track,
     string? ErrorCode,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    string? Source = null);
 
 /// <param name="Active">How many are still processing, queued or uploading: worth asking again in a few seconds.</param>
 public sealed record MyUploadPage(IReadOnlyList<MyUpload> Items, string? NextCursor, int TotalCount, int Active);
@@ -123,7 +125,7 @@ public sealed class MyUploadService(
         return new MyUploadPage(page.Select(u => new MyUpload(u.Id, (MyUploadKind)u.Kind, (MyUploadStatus)u.Status, u.Name, u.Size, u.LibraryId,
                 u.LibraryId is { } library ? libraries.GetValueOrDefault(library) : null,
                 u.TrackId is { } track ? tracks.GetValueOrDefault(track) : null,
-                u.ErrorCode, u.CreatedAt, u.UpdatedAt)).ToList(),
+                u.ErrorCode, u.CreatedAt, u.UpdatedAt, u.Source)).ToList(),
             next, total, active);
     }
 
@@ -220,7 +222,7 @@ public sealed class MyUploadService(
         var libraries = await db.Libraries.AsNoTracking().Where(l => libraryIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, l => l.Name, cancellationToken);
         return rows.Select(u => new MyUpload(u.Id, (MyUploadKind)u.Kind, (MyUploadStatus)u.Status, u.Name, u.Size, u.LibraryId,
             u.LibraryId is { } library ? libraries.GetValueOrDefault(library) : null, tracks.GetValueOrDefault(u.TrackId!.Value), u.ErrorCode,
-            u.CreatedAt, u.UpdatedAt)).ToList();
+            u.CreatedAt, u.UpdatedAt, u.Source)).ToList();
     }
 
     /// <summary>

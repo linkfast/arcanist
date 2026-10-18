@@ -270,5 +270,29 @@ public sealed class ServerAdminService(
         lifetime.StopApplication();
     }
 
+    /// <summary>
+    /// Restarts the server, as installing an extension (or switching an installed one on) needs: it stops with exit
+    /// code 75 and its supervisor (the tray, the Windows service, systemd, Docker with a restart policy, Synology's
+    /// package) starts it again. Without one it just stops. Administrators only, with a recent authentication.
+    /// </summary>
+    public ResetResult Restart()
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        logger.LogWarning("{User} asked the server to restart", guard.Authenticated().UserName);
+        if (configuration.GetValue("Arcanist:Hosting:StopToRestart", true))
+        {
+            _ = Task.Run(async () =>
+            {
+                // Let the answer go out first.
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                Environment.ExitCode = FactoryReset.RestartExitCode;
+                lifetime.StopApplication();
+            });
+        }
+
+        return new ResetResult(true);
+    }
+
     private void WakeReporter() => services.GetService<Core.Cloud.UltimateCloudReporter>()?.Wake();
 }

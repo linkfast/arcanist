@@ -338,7 +338,8 @@ An app that keeps its own library (Ultimate Desktop, for one) can use the server
   `active` (how many are still on their way: worth asking again in a few seconds). An upload into a library is
   `PROCESSING` until the library's scan catalogues it (`ADDED`, with its `track`), or `DUPLICATE`, `NOT_ADDED` (the
   scan did not find it) or `FAILED` (with `errorCode`). `clearMyUploads` / `DELETE /rest/v1/me/uploads` forgets the
-  finished ones.
+  finished ones. `source` names the extension that brought a file (such as `youtube`); it is null
+  for the files the user sent.
 - **Sending songs to the user's own Ultimate Cloud** (`MY_CLOUD_UPLOADS`): `uploadTracksToMyCloud` /
   `POST /rest/v1/me/uploads/ultimate-cloud` with up to 1000 `trackIds` queues them; each one shows in `myUploads` as
   `QUEUED`, `UPLOADING`, `UPLOADED`, `ALREADY_IN_CLOUD` or `FAILED`. It needs the `DOWNLOAD` permission (it gives away
@@ -395,6 +396,17 @@ the APIs, so players need no CORS setup and can use the cookie-based refresh des
 routes fall back to their entry page; API paths and the prefixes `/api`, `/media`, `/album-art`, `/transcode`,
 `/shared` and `/ext` are reserved and never reach them. Administrators install players from the admin panel: see
 [Packaging a web player](frontends.md).
+
+### Extension apps
+
+With the `EXTENSION_APPS` feature, `extensionApps(language)` / `GET /rest/v1/extension-apps` lists pages that
+installed extensions offer the user (such as one to bring songs from YouTube): its `name` and `description` in the
+language asked for, the page's `url`, an `iconUrl` and a preferred `width` and `height`. Only those of running
+extensions whose permissions the user has are listed. Show them as you show your own views, and open one in a
+window (an `iframe`) or a tab of its own. The app gets the session, the language and your look from your player
+through the **host protocol** (`postMessage`; see [Writing a server extension](extensions.md#the-host-protocol)):
+answer its `arcanist:hello` with `arcanist:session`, send that again whenever your token is refreshed or your theme
+changes, and handle `arcanist:token-expired` and `arcanist:open`.
 
 ## Reaching the server from anywhere
 

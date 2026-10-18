@@ -410,6 +410,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             upload.Property(u => u.ContentHash).HasMaxLength(64);
             upload.Property(u => u.Path).HasMaxLength(2048);
             upload.Property(u => u.CloudTrackId).HasMaxLength(64);
+            upload.Property(u => u.Source).HasMaxLength(64);
             upload.Property(u => u.ErrorCode).HasMaxLength(NameLength);
             upload.HasIndex(u => new { u.UserId, u.CreatedAt });
             upload.HasIndex(u => new { u.Kind, u.Status });

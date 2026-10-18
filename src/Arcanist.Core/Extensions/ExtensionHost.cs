@@ -138,7 +138,7 @@ public sealed class ExtensionHost
             var dataDirectory = Path.Combine(paths.Root, "extension-data", registration.Manifest.Id);
             Directory.CreateDirectory(dataDirectory);
             registration.Context = new ExtensionContext(registration.Manifest.Id, dataDirectory,
-                configuration.GetSection($"Arcanist:Extensions:{registration.Manifest.Id}"));
+                configuration.GetSection($"Arcanist:Extensions:{registration.Manifest.Id}"), registration.Root);
             try
             {
                 registration.Instance!.ConfigureServices(services, registration.Context);
@@ -216,11 +216,35 @@ public sealed class ExtensionHost
             errors.Add("minApiVersion", ErrorCodes.ApiVersionUnsupported);
         if ((manifest.Routes ?? []).Any(route => !ClaimablePrefixes.Contains(route)))
             errors.Add("routes", ErrorCodes.RouteNotAllowed);
+        if (!AppsAreValid(manifest))
+            errors.Add("apps", ErrorCodes.InvalidFormat);
 
         var assembly = string.IsNullOrWhiteSpace(manifest.Assembly) ? null : Path.GetFullPath(Path.Combine(root, manifest.Assembly));
         if (assembly is null || !assembly.StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !File.Exists(assembly))
             errors.Add("assembly", ErrorCodes.NotFound);
         errors.ThrowIfAny();
+    }
+
+    /// <summary>
+    /// An extension's apps: unique ids, pages and icons of its own (under <c>/ext/&lt;id&gt;/</c>), permissions the API
+    /// knows and sensible window sizes.
+    /// </summary>
+    internal static bool AppsAreValid(ExtensionManifest manifest)
+    {
+        var apps = manifest.Apps ?? [];
+        if (apps.Count > 16 || apps.Select(a => a.Id).Distinct(StringComparer.Ordinal).Count() != apps.Count)
+            return false;
+        var own = $"/ext/{manifest.Id}/";
+        return apps.All(app =>
+            PackageArchive.IsValidId(app.Id)
+            && !string.IsNullOrWhiteSpace(app.Name) && app.Name.Length <= 64
+            && OwnPath(app.Path) && (app.Icon is null || OwnPath(app.Icon))
+            && (app.Permissions ?? []).All(name => Application.Extensions.ExtensionService.ParsePermission(name) is not null)
+            && app.Width is null or >= 240 and <= 4096 && app.Height is null or >= 200 and <= 4096);
+
+        bool OwnPath(string? path) =>
+            path is not null && (path + "/").StartsWith(own, StringComparison.Ordinal) && !path.Contains("..") && !path.Contains('\\')
+            && Uri.IsWellFormedUriString(path, UriKind.Relative);
     }
 
     internal static IEnumerable<(ExtensionManifest Manifest, string Root)> Installed(ArcanistPaths paths)

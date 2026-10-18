@@ -1,3 +1,6 @@
+using System.Text.Json;
+using Arcanist.Core.Data;
+using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Extensions;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Packages;
@@ -27,6 +30,26 @@ public sealed record Extension(
     string BasePath);
 
 /// <summary>
+/// A page of a running extension that the user may open from a player (in a window or a tab of its own). Part of the
+/// API contract.
+/// </summary>
+/// <param name="ExtensionId">The extension it belongs to.</param>
+/// <param name="Id">The app's id within its extension.</param>
+/// <param name="Name">In the language asked for when the extension has it, otherwise in English.</param>
+/// <param name="Url">The page, on this server (a path).</param>
+/// <param name="IconUrl">A square SVG icon (a path); null when it has none.</param>
+/// <param name="Width">The window's preferred width in CSS pixels; null to let the player choose.</param>
+public sealed record ExtensionAppInfo(
+    string ExtensionId,
+    string Id,
+    string Name,
+    string? Description,
+    string Url,
+    string? IconUrl,
+    int? Width,
+    int? Height);
+
+/// <summary>
 /// Installing and switching extensions. Administrators only, with a recent authentication for every change: an
 /// extension runs inside the server with full trust.
 /// </summary>
@@ -36,9 +59,66 @@ public sealed class ExtensionService(
     ArcanistPaths paths,
     ISettingsFileWriter settings,
     IHttpClientFactory clients,
-    Server.PrivacySettings privacy)
+    Server.PrivacySettings privacy,
+    SettingsStore settingsStore,
+    IHttpContextAccessor http)
 {
     private static readonly SemaphoreSlim Changes = new(1, 1);
+
+    /// <summary>
+    /// The apps of the extensions running now (switched on and loaded) that the user may open: those whose
+    /// permissions they have, and those for administrators when they are one. Names in <paramref name="language"/>,
+    /// or the request's, or the server's default.
+    /// </summary>
+    public async Task<IReadOnlyList<ExtensionAppInfo>> AppsAsync(string? language, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var languages = new List<string>();
+        if (!string.IsNullOrWhiteSpace(language))
+            languages.Add(language.Trim());
+        if (http.HttpContext?.Request.Headers.AcceptLanguage.ToString() is { Length: > 0 } accept)
+            languages.AddRange(accept.Split(',').Select(part => part.Split(';')[0].Trim()).Where(tag => tag.Length > 0));
+        if (await settingsStore.GetAsync<string?>(SettingKeys.DefaultLanguage, null, cancellationToken) is { Length: > 0 } fallback)
+            languages.Add(fallback);
+
+        return host.Extensions
+            .Where(e => e.Status == ExtensionStatus.Running && host.IsEnabled(e.Manifest.Id))
+            .SelectMany(e => (e.Manifest.Apps ?? []).Select(app => (Extension: e.Manifest.Id, App: app)))
+            .Where(entry => (!entry.App.AdminOnly || access.IsAdmin)
+                            && (entry.App.Permissions ?? []).All(name => ParsePermission(name) is { } permission && access.Has(permission)))
+            .Select(entry => new ExtensionAppInfo(entry.Extension, entry.App.Id,
+                Localized(entry.App.Names, languages) ?? entry.App.Name,
+                Localized(entry.App.Descriptions, languages) ?? entry.App.Description,
+                entry.App.Path, entry.App.Icon, entry.App.Width, entry.App.Height))
+            .OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>The first of <paramref name="languages"/> the texts have, also by its base language (es-PE → es).</summary>
+    private static string? Localized(IReadOnlyDictionary<string, string>? texts, IEnumerable<string> languages)
+    {
+        if (texts is null || texts.Count == 0)
+            return null;
+        foreach (var tag in languages)
+        {
+            foreach (var candidate in new[] { tag, tag.Split('-')[0] })
+            {
+                var match = texts.FirstOrDefault(t => string.Equals(t.Key, candidate, StringComparison.OrdinalIgnoreCase));
+                if (match.Value is { Length: > 0 })
+                    return match.Value;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>A permission by its API name (<c>UPLOAD</c>, <c>PLAY_ON_SERVER</c>).</summary>
+    public static Permissions? ParsePermission(string? name) =>
+        Enum.GetValues<Permissions>().Where(p => p != Permissions.None)
+            .Select(p => (Permission: p, Name: JsonNamingPolicy.SnakeCaseUpper.ConvertName(p.ToString())))
+            .FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.Ordinal)) is { Name: not null } found
+            ? found.Permission
+            : null;
 
     public IReadOnlyList<Extension> List()
     {

@@ -2373,6 +2373,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<long?>("Size")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Source")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)

@@ -1023,6 +1023,14 @@ export const SetExtensionEnabledMutation = graphql(`
   }
 `);
 
+export const RestartServerMutation = graphql(`
+  mutation RestartServer {
+    restartServer {
+      restartRequired
+    }
+  }
+`);
+
 export const UninstallExtensionMutation = graphql(`
   mutation UninstallExtension($id: String!) {
     uninstallExtension(id: $id)
@@ -2626,7 +2634,10 @@ export const TrackAnalysisFields = graphql(`
 
 export const TrackAnalysisQuery = graphql(`
   query TrackAnalysis($trackId: ID!) {
-    trackAnalysis(trackId: $trackId, include: "beats,energy,vocals,sections,silences,cues,loudness,key") {
+    trackAnalysis(
+      trackId: $trackId
+      include: "beats,energy,vocals,sections,silences,cues,loudness,key"
+    ) {
       ...TrackAnalysisFields
     }
   }

@@ -1846,6 +1846,39 @@
         }
       }
     },
+    "/rest/v1/extension-apps": {
+      "get": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Pages of the running extensions the user may open from a player, in a window (an iframe) or a tab of its own, named in \u0060language\u0060 (or Accept-Language). They get the session and the player\u0027s theme with the host protocol of docs/developers/extensions.md.",
+        "operationId": "ExtensionApps",
+        "parameters": [
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExtensionAppInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/maintenance": {
       "get": {
         "tags": [
@@ -6558,6 +6591,27 @@
         }
       }
     },
+    "/rest/v1/server/restart": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Restarts the server (to load extensions installed or switched on since it started). It stops with exit code 75 and its supervisor starts it again; wait for /health. Administrators only, with a recent authentication.",
+        "operationId": "RestartServer",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/server/reset/settings": {
       "post": {
         "tags": [
@@ -8883,7 +8937,8 @@
           "UPLOAD_HISTORY",
           "MY_CLOUD_UPLOADS",
           "TRACK_ANALYSIS",
-          "TRACK_STATS"
+          "TRACK_STATS",
+          "EXTENSION_APPS"
         ]
       },
       "AppPassword": {
@@ -11704,6 +11759,63 @@
           }
         }
       },
+      "ExtensionAppInfo": {
+        "required": [
+          "extensionId",
+          "id",
+          "name",
+          "description",
+          "url",
+          "iconUrl",
+          "width",
+          "height"
+        ],
+        "type": "object",
+        "properties": {
+          "extensionId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "iconUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ExtensionStatus": {
         "enum": [
           "NOT_LOADED",
@@ -14278,6 +14390,12 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20042,6 +20160,9 @@
       "name": "Discovery"
     },
     {
+      "name": "Extensions"
+    },
+    {
       "name": "Database"
     },
     {
@@ -20070,9 +20191,6 @@
     },
     {
       "name": "Frontends"
-    },
-    {
-      "name": "Extensions"
     },
     {
       "name": "Account"

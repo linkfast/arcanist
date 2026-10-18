@@ -74,6 +74,12 @@ public enum ApiFeature
 
     /// <summary>Listening statistics per song: <c>trackStats</c> (the user's, or the server's).</summary>
     TrackStats,
+
+    /// <summary>
+    /// <c>extensionApps</c>: pages of the extensions that players open in a window or a tab, with the host protocol;
+    /// <c>MyUpload.source</c> names the extension a file came from.
+    /// </summary>
+    ExtensionApps,
 }
 
 public sealed class ServerInfoService(

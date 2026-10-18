@@ -2378,6 +2378,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<long?>("Size")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("Source")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)

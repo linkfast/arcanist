@@ -102,6 +102,7 @@ type Documents = {
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": typeof types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.SetExtensionEnabledDocument,
+    "\n  mutation RestartServer {\n    restartServer {\n      restartRequired\n    }\n  }\n": typeof types.RestartServerDocument,
     "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": typeof types.UninstallExtensionDocument,
     "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    canRetry\n  }\n": typeof types.MstreamImportJobFieldsFragmentDoc,
     "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n      files\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": typeof types.MstreamAnalysisFieldsFragmentDoc,
@@ -216,7 +217,7 @@ type Documents = {
     "\n  mutation ReanalyzeTracks {\n    reanalyzeTracks {\n      ...AiStatusFields\n    }\n  }\n": typeof types.ReanalyzeTracksDocument,
     "\n  query AiTrackSearch($search: String!) {\n    tracks(search: $search, first: 8) {\n      items {\n        id\n        title\n        durationMs\n        artists {\n          name\n          role\n        }\n        album {\n          title\n        }\n      }\n    }\n  }\n": typeof types.AiTrackSearchDocument,
     "\n  fragment TrackAnalysisFields on TrackAnalysisResult {\n    trackId\n    status\n    stale\n    position\n    errorCode\n    analysisVersion\n    analyzedAt\n    durationSeconds\n    musicStart\n    musicEnd\n    tempo {\n      bpm\n      confidence\n      stable\n      beatsPerBar\n      firstBeat\n      firstDownbeat\n      beats\n      downbeats\n    }\n    loudness {\n      integratedLufs\n      range\n      truePeakDb\n    }\n    key {\n      tonic\n      mode\n      camelot\n      confidence\n    }\n    energy {\n      stepSeconds\n      values\n    }\n    vocals {\n      stepSeconds\n      presence\n    }\n    silences {\n      start\n      end\n      kind\n    }\n    fades {\n      fadeInEnd\n      fadeOutStart\n    }\n    sections {\n      start\n      end\n      label\n      name\n      energy\n      trend\n      occurrence\n    }\n    highlight {\n      start\n      end\n      confidence\n    }\n    mixPoints {\n      introEnd\n      outroStart\n      mixIn\n      mixOut\n    }\n    scratchCues {\n      t\n      duration\n      kind\n      isolation\n      strength\n    }\n  }\n": typeof types.TrackAnalysisFieldsFragmentDoc,
-    "\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(trackId: $trackId, include: \"beats,energy,vocals,sections,silences,cues,loudness,key\") {\n      ...TrackAnalysisFields\n    }\n  }\n": typeof types.TrackAnalysisDocument,
+    "\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(\n      trackId: $trackId\n      include: \"beats,energy,vocals,sections,silences,cues,loudness,key\"\n    ) {\n      ...TrackAnalysisFields\n    }\n  }\n": typeof types.TrackAnalysisDocument,
     "\n  mutation PrioritizeTrackAnalysis($trackId: ID!) {\n    prioritizeTrackAnalysis(trackId: $trackId) {\n      ...TrackAnalysisFields\n    }\n  }\n": typeof types.PrioritizeTrackAnalysisDocument,
 };
 const documents: Documents = {
@@ -308,6 +309,7 @@ const documents: Documents = {
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": types.SetExtensionEnabledDocument,
+    "\n  mutation RestartServer {\n    restartServer {\n      restartRequired\n    }\n  }\n": types.RestartServerDocument,
     "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": types.UninstallExtensionDocument,
     "\n  fragment MstreamImportJobFields on MstreamImportJob {\n    id\n    kind\n    source\n    status\n    createdAt\n    finishedAt\n    librariesCreated\n    usersCreated\n    playlists\n    ratings\n    plays\n    unmatched\n    errorCode\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    canRetry\n  }\n": types.MstreamImportJobFieldsFragmentDoc,
     "\n  fragment MstreamAnalysisFields on MstreamAnalysis {\n    version\n    libraries {\n      vpath\n      root\n      rootExists\n      sourceId\n      files\n    }\n    users {\n      userName\n      isAdmin\n      vpaths\n      exists\n      canSignIn\n    }\n    playlists\n    ratedTracks\n    playedTracks\n  }\n": types.MstreamAnalysisFieldsFragmentDoc,
@@ -422,7 +424,7 @@ const documents: Documents = {
     "\n  mutation ReanalyzeTracks {\n    reanalyzeTracks {\n      ...AiStatusFields\n    }\n  }\n": types.ReanalyzeTracksDocument,
     "\n  query AiTrackSearch($search: String!) {\n    tracks(search: $search, first: 8) {\n      items {\n        id\n        title\n        durationMs\n        artists {\n          name\n          role\n        }\n        album {\n          title\n        }\n      }\n    }\n  }\n": types.AiTrackSearchDocument,
     "\n  fragment TrackAnalysisFields on TrackAnalysisResult {\n    trackId\n    status\n    stale\n    position\n    errorCode\n    analysisVersion\n    analyzedAt\n    durationSeconds\n    musicStart\n    musicEnd\n    tempo {\n      bpm\n      confidence\n      stable\n      beatsPerBar\n      firstBeat\n      firstDownbeat\n      beats\n      downbeats\n    }\n    loudness {\n      integratedLufs\n      range\n      truePeakDb\n    }\n    key {\n      tonic\n      mode\n      camelot\n      confidence\n    }\n    energy {\n      stepSeconds\n      values\n    }\n    vocals {\n      stepSeconds\n      presence\n    }\n    silences {\n      start\n      end\n      kind\n    }\n    fades {\n      fadeInEnd\n      fadeOutStart\n    }\n    sections {\n      start\n      end\n      label\n      name\n      energy\n      trend\n      occurrence\n    }\n    highlight {\n      start\n      end\n      confidence\n    }\n    mixPoints {\n      introEnd\n      outroStart\n      mixIn\n      mixOut\n    }\n    scratchCues {\n      t\n      duration\n      kind\n      isolation\n      strength\n    }\n  }\n": types.TrackAnalysisFieldsFragmentDoc,
-    "\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(trackId: $trackId, include: \"beats,energy,vocals,sections,silences,cues,loudness,key\") {\n      ...TrackAnalysisFields\n    }\n  }\n": types.TrackAnalysisDocument,
+    "\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(\n      trackId: $trackId\n      include: \"beats,energy,vocals,sections,silences,cues,loudness,key\"\n    ) {\n      ...TrackAnalysisFields\n    }\n  }\n": types.TrackAnalysisDocument,
     "\n  mutation PrioritizeTrackAnalysis($trackId: ID!) {\n    prioritizeTrackAnalysis(trackId: $trackId) {\n      ...TrackAnalysisFields\n    }\n  }\n": types.PrioritizeTrackAnalysisDocument,
 };
 
@@ -792,6 +794,10 @@ export function graphql(source: "\n  mutation InstallExtensionFromUrl($url: Stri
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RestartServer {\n    restartServer {\n      restartRequired\n    }\n  }\n"): (typeof documents)["\n  mutation RestartServer {\n    restartServer {\n      restartRequired\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -1251,7 +1257,7 @@ export function graphql(source: "\n  fragment TrackAnalysisFields on TrackAnalys
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(trackId: $trackId, include: \"beats,energy,vocals,sections,silences,cues,loudness,key\") {\n      ...TrackAnalysisFields\n    }\n  }\n"): (typeof documents)["\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(trackId: $trackId, include: \"beats,energy,vocals,sections,silences,cues,loudness,key\") {\n      ...TrackAnalysisFields\n    }\n  }\n"];
+export function graphql(source: "\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(\n      trackId: $trackId\n      include: \"beats,energy,vocals,sections,silences,cues,loudness,key\"\n    ) {\n      ...TrackAnalysisFields\n    }\n  }\n"): (typeof documents)["\n  query TrackAnalysis($trackId: ID!) {\n    trackAnalysis(\n      trackId: $trackId\n      include: \"beats,energy,vocals,sections,silences,cues,loudness,key\"\n    ) {\n      ...TrackAnalysisFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

@@ -6,17 +6,24 @@ namespace Arcanist.Core.Organization;
 
 /// <summary>
 /// Writes tags with ATL.NET. Only used on files being imported, before they enter a library: when an administrator
-/// completes the tags of a dropped file, to carry tags over to a converted copy, and to fill the tags a file copied
-/// from a DLNA server lacks with the server's description. Library files are never re-tagged.
+/// completes the tags of a dropped file, to carry tags over to a converted copy, to fill the tags a file copied
+/// from a DLNA server lacks with the server's description, and by extensions on the files they bring (before
+/// <c>UploadService.UploadAsync</c>). Library files are never re-tagged.
 /// </summary>
-internal static class TagWriter
+public static class TagWriter
 {
     // ATL's settings are process-wide and set by the tag reader: make sure they are in place before writing.
     static TagWriter() => RuntimeHelpers.RunClassConstructor(typeof(TagReader).TypeHandle);
 
-    public static void Write(string path, ImportTagsInput tags)
+    /// <param name="frontCover">An image (JPEG or PNG) to embed as the front cover, replacing the file's pictures.</param>
+    public static void Write(string path, ImportTagsInput tags, byte[]? frontCover = null)
     {
         var track = new ATL.Track(path);
+        if (frontCover is { Length: > 0 })
+        {
+            track.EmbeddedPictures.Clear();
+            track.EmbeddedPictures.Add(ATL.PictureInfo.fromBinaryData(frontCover, ATL.PictureInfo.PIC_TYPE.Front));
+        }
         if (tags.Title is { } title)
             track.Title = title.Trim();
         if (tags.Artist is { } artist)

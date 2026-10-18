@@ -12,6 +12,11 @@ public static class ExtensionEndpoints
     {
         var extensions = rest.MapGroup("/extensions").WithTags("Extensions");
 
+        rest.MapGet("/extension-apps", (string? language, ExtensionService service, CancellationToken ct) => service.AppsAsync(language, ct))
+            .WithTags("Extensions")
+            .WithName("ExtensionApps")
+            .WithSummary("Pages of the running extensions the user may open from a player, in a window (an iframe) or a tab of its own, named in `language` (or Accept-Language). They get the session and the player's theme with the host protocol of docs/developers/extensions.md.");
+
         extensions.MapGet("", (ExtensionService service) => service.List())
             .WithName("Extensions")
             .WithSummary("Built-in and installed extensions, with what happened to them at startup. Administrators only.");

@@ -25,6 +25,10 @@ public static class ServerAdminEndpoints
             .WithName("ReconfigureServer")
             .WithSummary("The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication.");
 
+        server.MapPost("/restart", (ServerAdminService service) => service.Restart())
+            .WithName("RestartServer")
+            .WithSummary("Restarts the server (to load extensions installed or switched on since it started). It stops with exit code 75 and its supervisor starts it again; wait for /health. Administrators only, with a recent authentication.");
+
         server.MapPost("/reset/settings", (ServerAdminService service, CancellationToken ct) => service.ResetSettingsAsync(ct))
             .WithName("ResetSettings")
             .WithSummary("Every server setting back to how a new server starts; libraries, users and their data stay. Administrators only, with a recent authentication.");

@@ -1305,6 +1305,13 @@ export const es: Dictionary = {
       failed: 'Con errores',
       restartRequired: 'Requiere reiniciar',
       restartRequiredHelp: 'El cambio se aplicará al reiniciar el servidor.',
+      restartNeeded:
+        'Hay extensiones instaladas o activadas que funcionarán cuando el servidor se reinicie.',
+      restartNow: 'Reiniciar ahora',
+      restartWaiting: 'Reiniciando el servidor… vuelve en unos segundos.',
+      restartDone: 'El servidor se reinició',
+      restartUnreachable:
+        'El servidor no respondió. Si no tiene un supervisor (servicio, Docker, systemd o la bandeja), hay que volver a iniciarlo a mano.',
       routes: 'Rutas',
       installed: 'Extensión instalada: actívala y reinicia el servidor para usarla.',
     },

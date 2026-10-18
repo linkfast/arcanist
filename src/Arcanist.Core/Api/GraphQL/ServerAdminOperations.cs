@@ -39,6 +39,10 @@ public sealed partial class Mutation
     public static Task<bool> SetAnonymousStatistics(bool enabled, [FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>
         admin.SetAnonymousStatisticsAsync(enabled, cancellationToken);
 
+    [Name("restartServer")]
+    [Description("Restarts the server (to load extensions installed or switched on since it started). It stops with exit code 75 and its supervisor starts it again; wait for /health. Administrators only, with a recent authentication.")]
+    public static ResetResult RestartServer([FromServices] ServerAdminService admin) => admin.Restart();
+
     [Name("resetSettings")]
     [Description("Every server setting back to how a new server starts; libraries, users and their data stay. Administrators only, with a recent authentication.")]
     public static Task<ResetResult> ResetSettings([FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>

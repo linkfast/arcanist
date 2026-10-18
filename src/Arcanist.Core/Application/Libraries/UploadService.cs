@@ -53,28 +53,42 @@ public sealed class UploadService(
     TimeProvider time,
     ILogger<UploadService> logger)
 {
-    public async Task<UploadResult> UploadAsync(Guid libraryId, string fileName, Stream body, CancellationToken cancellationToken)
+    public Task<UploadResult> UploadAsync(Guid libraryId, string fileName, Stream body, CancellationToken cancellationToken) =>
+        UploadAsync(guard.Permission(Permissions.Upload), libraryId, fileName, body, null, cancellationToken);
+
+    /// <summary>
+    /// A file into a library on behalf of a user, as if they had uploaded it (for extensions, also from background
+    /// work: get the user with <c>UserAccessCache.GetUserAsync</c>). It needs the UPLOAD permission and access to the library, goes
+    /// where the library's template says without overwriting anything, and shows in the user's history of uploads
+    /// with <paramref name="source"/> (the extension's id).
+    /// </summary>
+    public async Task<UploadResult> UploadAsync(UserAccess access, Guid libraryId, string fileName, Stream body, string? source,
+        CancellationToken cancellationToken)
     {
-        var access = guard.Permission(Permissions.Upload);
+        if (access.IsDisabled || !access.Has(Permissions.Upload))
+            throw new ArcanistException.Forbidden();
         if (!access.CanAccessLibrary(libraryId))
             throw new ArcanistException.NotFound();
+        if (source is { Length: > 64 })
+            throw ArcanistException.Field("source", ErrorCodes.InvalidFormat);
 
         long? size = null;
         try
         {
             var result = await ImportAsync(access, libraryId, fileName, body, length => size = length, cancellationToken);
-            await RecordAsync(access.UserId, libraryId, fileName, size, result, null, cancellationToken);
+            await RecordAsync(access.UserId, libraryId, fileName, size, result, null, source, cancellationToken);
             return result;
         }
         catch (ArcanistException e) when (e is not ArcanistException.NotFound && !cancellationToken.IsCancellationRequested)
         {
             var code = e is ArcanistException.Invalid invalid ? invalid.Errors.ToDictionary().Values.SelectMany(c => c).FirstOrDefault() ?? e.Code : e.Code;
-            await RecordAsync(access.UserId, libraryId, fileName, size, null, code, cancellationToken);
+            await RecordAsync(access.UserId, libraryId, fileName, size, null, code, source, cancellationToken);
             throw;
         }
     }
 
-    private async Task RecordAsync(Guid user, Guid libraryId, string fileName, long? size, UploadResult? result, string? error, CancellationToken cancellationToken)
+    private async Task RecordAsync(Guid user, Guid libraryId, string fileName, long? size, UploadResult? result, string? error, string? source,
+        CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow().UtcDateTime;
         db.ChangeTracker.Clear();
@@ -90,6 +104,7 @@ public sealed class UploadService(
             ContentHash = result?.ContentHash,
             Path = result?.Path,
             ErrorCode = error,
+            Source = source,
             CreatedAt = now,
             UpdatedAt = now,
         });

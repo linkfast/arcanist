@@ -2,6 +2,11 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Arcanist.Core.Data;
+using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Setup;
+using Arcanist.Core.Tests.Scanning;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.Hosting;
 
@@ -12,8 +17,18 @@ public sealed class ExtensionTests
 
     private static readonly string Assembly = Path.Combine(AppContext.BaseDirectory, "test-extension", "Arcanist.TestExtension.dll");
 
-    private static string Manifest(string id = "hello", string[]? routes = null) =>
-        JsonSerializer.Serialize(new { id, name = "Hello", version = "1.0.0", license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes });
+    private static readonly object[] Apps =
+    [
+        new
+        {
+            id = "greeter", name = "Greeter", names = new Dictionary<string, string> { ["es"] = "Saludador" }, description = "Says hello",
+            path = "/ext/hello/app/", icon = "/ext/hello/icon.svg", permissions = new[] { "UPLOAD" }, width = 640, height = 480,
+        },
+        new { id = "tools", name = "Tools", path = "/ext/hello/tools", adminOnly = true },
+    ];
+
+    private static string Manifest(string id = "hello", string[]? routes = null, object[]? apps = null) =>
+        JsonSerializer.Serialize(new { id, name = "Hello", version = "1.0.0", license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes, apps = apps ?? Apps });
 
     private static byte[] Package(string? manifest = null)
     {
@@ -116,5 +131,116 @@ public sealed class ExtensionTests
         await factory.CreateUserAsync("listener");
         var listener = await factory.CreateAuthenticatedClientAsync("listener");
         Assert.Equal(HttpStatusCode.Forbidden, (await listener.GetAsync("/rest/v1/extensions", Cancel)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Users_see_the_apps_of_running_extensions_they_may_use()
+    {
+        await using var factory = await StartedWithAsync(enabled: true);
+        var admin = await factory.CreateAuthenticatedClientAsync();
+        Assert.Equal("ok", await factory.CreateClient().GetStringAsync("/ext/hello/package", Cancel));
+
+        var apps = await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extension-apps?language=es-PE", ArcanistFactory.Json, Cancel);
+        Assert.Equal(["Saludador", "Tools"], apps!.Select(a => a.GetProperty("name").GetString()));
+        var greeter = apps[0];
+        Assert.Equal(("hello", "greeter", "/ext/hello/app/", "/ext/hello/icon.svg", 640),
+            (greeter.GetProperty("extensionId").GetString(), greeter.GetProperty("id").GetString(), greeter.GetProperty("url").GetString(),
+                greeter.GetProperty("iconUrl").GetString(), greeter.GetProperty("width").GetInt32()));
+
+        // In English otherwise; the same through GraphQL.
+        var english = (await admin.GraphQLAsync("query { extensionApps(language: \"en\") { id name description } }")).GetProperty("data").GetProperty("extensionApps");
+        Assert.Equal("Greeter", english[0].GetProperty("name").GetString());
+        Assert.Equal("Says hello", english[0].GetProperty("description").GetString());
+        Assert.Contains("EXTENSION_APPS", (await admin.GraphQLAsync("query { serverInfo { features } }")).GetRawText());
+
+        // Users see those they have the permissions for, and never the ones for administrators.
+        await factory.CreateUserAsync("listener");
+        await factory.CreateUserAsync("uploader", permissions: Permissions.Upload);
+        Assert.Empty((await (await factory.CreateAuthenticatedClientAsync("listener")).GetFromJsonAsync<List<JsonElement>>("/rest/v1/extension-apps", ArcanistFactory.Json, Cancel))!);
+        Assert.Equal(["greeter"], (await (await factory.CreateAuthenticatedClientAsync("uploader")).GetFromJsonAsync<List<JsonElement>>("/rest/v1/extension-apps", ArcanistFactory.Json, Cancel))!
+            .Select(a => a.GetProperty("id").GetString()));
+
+        // Switched off, its apps go away.
+        await admin.PutAsJsonAsync("/rest/v1/extensions/hello/enabled", new { enabled = false }, ArcanistFactory.Json, Cancel);
+        Assert.Empty((await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extension-apps", ArcanistFactory.Json, Cancel))!);
+    }
+
+    [Fact]
+    public async Task Apps_must_be_pages_of_their_own_extension()
+    {
+        await using var factory = new ArcanistFactory();
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+
+        foreach (var app in new object[]
+                 {
+                     new { id = "away", name = "Away", path = "/ext/other/app" },
+                     new { id = "core", name = "Core", path = "/rest/v1/users" },
+                     new { id = "climb", name = "Climb", path = "/ext/hello/../../admin" },
+                     new { id = "power", name = "Power", path = "/ext/hello/app", permissions = new[] { "ROOT" } },
+                     new { id = "Bad Id", name = "Bad", path = "/ext/hello/app" },
+                 })
+        {
+            var form = new MultipartFormDataContent { { new ByteArrayContent(Package(Manifest(apps: [app]))), "file", "hello.zip" } };
+            var response = await admin.PostAsync("/rest/v1/extensions", form, Cancel);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("apps", await response.Content.ReadAsStringAsync(Cancel));
+        }
+    }
+
+    [Fact]
+    public async Task Extensions_put_files_into_libraries_on_behalf_of_users()
+    {
+        var music = Path.Combine(Path.GetTempPath(), "arcanist-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(music);
+        await using var factory = new ArcanistFactory(new Dictionary<string, string?> { ["Arcanist:Uploads:ScanDelay"] = "00:00:00.2" });
+        Directory.CreateDirectory(factory.DataPath);
+        File.WriteAllText(Path.Combine(factory.DataPath, "arcanist.json"),
+            JsonSerializer.Serialize(new { Arcanist = new { Extensions = new { hello = new { Enabled = true } } } }));
+        var folder = Path.Combine(factory.DataPath, "extensions", "hello");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "arcanist-extension.json"), Manifest());
+        File.Copy(Assembly, Path.Combine(folder, "Arcanist.TestExtension.dll"));
+        await factory.CompleteSetupAsync(new SetupLibrary("Music", [music]));
+        var admin = await factory.CreateAuthenticatedClientAsync();
+        await factory.WaitForScansAsync(admin);
+        var library = Guid.Parse((await admin.GraphQLAsync("query { libraries { id } }")).GetProperty("data").GetProperty("libraries")[0].GetProperty("id").GetString()!);
+        var uploader = await factory.CreateUserAsync("uploader", permissions: Permissions.Upload);
+        var listener = await factory.CreateUserAsync("listener");
+        await using (var db = factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
+        {
+            db.LibraryAccess.Add(new LibraryAccess { UserId = uploader.Id, LibraryId = library });
+            db.LibraryAccess.Add(new LibraryAccess { UserId = listener.Id, LibraryId = library });
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        var wav = AudioFixtures.WriteWav(Path.Combine(music + "-staging", "fetched.wav"), 2, new FixtureTags("Fetched", "Band", "Online", "Band", TrackNumber: 1));
+        var client = factory.CreateClient();
+        var sent = await client.PostAsync($"/ext/hello/import?user={uploader.Id}&library={library}&name=fetched.wav", new ByteArrayContent(File.ReadAllBytes(wav)), Cancel);
+        Assert.Equal(HttpStatusCode.OK, sent.StatusCode);
+
+        // In the user's history, as their upload, naming the extension that brought it.
+        var history = (await (await factory.CreateAuthenticatedClientAsync("uploader")).GraphQLAsync("query { myUploads { items { name status source } } }"))
+            .GetProperty("data").GetProperty("myUploads").GetProperty("items");
+        Assert.Equal(("fetched.wav", "hello"), (history[0].GetProperty("name").GetString(), history[0].GetProperty("source").GetString()));
+
+        // Without the UPLOAD permission, nothing goes in.
+        var refused = await client.PostAsync($"/ext/hello/import?user={listener.Id}&library={library}&name=fetched.wav", new ByteArrayContent(File.ReadAllBytes(wav)), Cancel);
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+    }
+
+    [Fact]
+    public async Task Administrators_restart_the_server()
+    {
+        await using var factory = new ArcanistFactory(new Dictionary<string, string?> { ["Arcanist:Hosting:StopToRestart"] = "false" });
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+
+        var restart = await admin.GraphQLAsync("mutation { restartServer { restartRequired } }");
+        Assert.True(restart.GetProperty("data").GetProperty("restartServer").GetProperty("restartRequired").GetBoolean());
+
+        await factory.CreateUserAsync("listener");
+        var listener = await factory.CreateAuthenticatedClientAsync("listener");
+        Assert.Equal(HttpStatusCode.Forbidden, (await listener.PostAsync("/rest/v1/server/restart", null, Cancel)).StatusCode);
     }
 }

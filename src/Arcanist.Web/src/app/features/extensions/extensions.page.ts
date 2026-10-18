@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -26,6 +26,7 @@ import {
   FrontendsQuery,
   InstallExtensionFromUrlMutation,
   InstallFrontendFromUrlMutation,
+  RestartServerMutation,
   SetDefaultFrontendMutation,
   SetExtensionEnabledMutation,
   UninstallExtensionMutation,
@@ -151,6 +152,27 @@ interface PendingInstall {
           <p hlmCardDescription>{{ 'extensions.list.description' | t }}</p>
         </div>
         <div hlmCardContent class="grid gap-4">
+          @if (restartNeeded() || restarting()) {
+            <div hlmAlert class="flex flex-wrap items-center justify-between gap-3">
+              <p hlmAlertDescription>
+                {{
+                  (restarting()
+                    ? 'extensions.list.restartWaiting'
+                    : 'extensions.list.restartNeeded'
+                  ) | t
+                }}
+              </p>
+              <button
+                hlmBtn
+                size="sm"
+                type="button"
+                [disabled]="busy() || restarting()"
+                (click)="restart()"
+              >
+                {{ 'extensions.list.restartNow' | t }}
+              </button>
+            </div>
+          }
           <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
             @for (extension of extensions(); track extension.id) {
               <li
@@ -301,6 +323,10 @@ export class ExtensionsPage implements OnInit {
   protected readonly frontends = signal<Frontend[]>([]);
   protected readonly extensions = signal<Extension[]>([]);
   protected readonly busy = signal(false);
+  protected readonly restarting = signal(false);
+  protected readonly restartNeeded = computed(() =>
+    this.extensions().some((e) => e.restartRequired),
+  );
   protected readonly pending = signal<PendingInstall | null>(null);
   /** URLs typed in each installer, by kind. */
   protected readonly urls: Record<string, string> = { frontend: '', extension: '' };
@@ -395,6 +421,42 @@ export class ExtensionsPage implements OnInit {
         toast.info(this.i18n.t('extensions.list.restartRequiredHelp'));
       await this.enabledExtensions.refresh();
     });
+  }
+
+  /**
+   * Restarts the server so installed extensions load: it stops and its supervisor starts it again. Waits until it
+   * answers again (it is down for a few seconds), then shows the lists as they are now.
+   */
+  protected async restart(): Promise<void> {
+    this.busy.set(true);
+    try {
+      await this.gql.mutate(RestartServerMutation);
+    } catch (error) {
+      toast.error(this.i18n.error(ApiError.from(error).code));
+      this.busy.set(false);
+      return;
+    }
+    this.restarting.set(true);
+    const started = Date.now();
+    let wentDown = false;
+    // Down first (up to 15 s), then up again (up to 2 min).
+    while (Date.now() - started < 120_000) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const up = await fetch('/health', { cache: 'no-store' })
+        .then((r) => r.ok)
+        .catch(() => false);
+      if (!up) wentDown = true;
+      else if (wentDown || Date.now() - started > 15_000) break;
+    }
+    this.restarting.set(false);
+    this.busy.set(false);
+    try {
+      await this.reload();
+      await this.enabledExtensions.refresh();
+      toast.success(this.i18n.t('extensions.list.restartDone'));
+    } catch {
+      toast.error(this.i18n.t('extensions.list.restartUnreachable'));
+    }
   }
 
   protected uninstallExtension(extension: Extension): Promise<void> {

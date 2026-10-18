@@ -9,6 +9,11 @@ public sealed partial class Query
     [Name("extensions")]
     [Description("Built-in and installed extensions, with what happened to them at startup. Administrators only.")]
     public static IReadOnlyList<Extension> Extensions([FromServices] ExtensionService extensions) => extensions.List();
+
+    [Name("extensionApps")]
+    [Description("Pages of the running extensions the user may open from a player, in a window (an iframe) or a tab of its own, named in `language` (or the request's Accept-Language). They get the session and the player's theme with the host protocol of docs/developers/extensions.md.")]
+    public static Task<IReadOnlyList<ExtensionAppInfo>> ExtensionApps(string? language, [FromServices] ExtensionService extensions, CancellationToken cancellationToken) =>
+        extensions.AppsAsync(language, cancellationToken);
 }
 
 public sealed partial class Mutation

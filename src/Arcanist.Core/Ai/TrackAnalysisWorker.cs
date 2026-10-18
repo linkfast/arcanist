@@ -332,8 +332,12 @@ internal sealed class TrackAnalysisWorker(
             }
         }
 
+        // Together: a client never sees the analysis ready while its request is still in line.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        return await db.TrackAnalysisRequests.Where(r => hashes.Contains(r.ContentHash)).ExecuteDeleteAsync(cancellationToken);
+        var done = await db.TrackAnalysisRequests.Where(r => hashes.Contains(r.ContentHash)).ExecuteDeleteAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return done;
     }
 
     private static int? DurationMs(string json)

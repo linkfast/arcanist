@@ -162,6 +162,8 @@ public sealed class MyUploadsTests : IAsyncDisposable
             await db.SaveChangesAsync(Cancel);
             await db.LibrarySources.Where(s => s.Id == source.Id)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.Kind, LibrarySourceKind.Peer).SetProperty(x => x.Location, remote.Id.ToString()), Cancel);
+            // Without the copy their own library may have catalogued by now (that one would make it "already there").
+            await db.MediaFiles.Where(f => f.LibrarySource.Kind == LibrarySourceKind.UltimateCloud).ExecuteDeleteAsync(Cancel);
         }
 
         var refused = (await bruno.GraphQLAsync(upload)).GetProperty("data").GetProperty("uploadTracksToMyCloud")[0];

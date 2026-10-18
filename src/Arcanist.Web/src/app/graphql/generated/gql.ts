@@ -98,7 +98,7 @@ type Documents = {
     "\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n": typeof types.InstallFrontendFromUrlDocument,
     "\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n": typeof types.SetDefaultFrontendDocument,
     "\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n": typeof types.UninstallFrontendDocument,
-    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
+    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": typeof types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.SetExtensionEnabledDocument,
@@ -305,7 +305,7 @@ const documents: Documents = {
     "\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n": types.InstallFrontendFromUrlDocument,
     "\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n": types.SetDefaultFrontendDocument,
     "\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n": types.UninstallFrontendDocument,
-    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n": types.ExtensionFieldsFragmentDoc,
+    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": types.SetExtensionEnabledDocument,
@@ -781,7 +781,7 @@ export function graphql(source: "\n  mutation UninstallFrontend($id: String!) {\
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n"): (typeof documents)["\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n  }\n"];
+export function graphql(source: "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n"): (typeof documents)["\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

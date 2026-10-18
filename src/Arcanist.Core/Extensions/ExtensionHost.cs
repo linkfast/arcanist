@@ -218,6 +218,8 @@ public sealed class ExtensionHost
             errors.Add("routes", ErrorCodes.RouteNotAllowed);
         if (!AppsAreValid(manifest))
             errors.Add("apps", ErrorCodes.InvalidFormat);
+        if (manifest.AdminPage is { } admin && (!OwnPath(manifest, admin.Path) || admin.Icon is not null && !OwnPath(manifest, admin.Icon)))
+            errors.Add("adminPage", ErrorCodes.InvalidFormat);
 
         var assembly = string.IsNullOrWhiteSpace(manifest.Assembly) ? null : Path.GetFullPath(Path.Combine(root, manifest.Assembly));
         if (assembly is null || !assembly.StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.Ordinal) || !File.Exists(assembly))
@@ -234,18 +236,18 @@ public sealed class ExtensionHost
         var apps = manifest.Apps ?? [];
         if (apps.Count > 16 || apps.Select(a => a.Id).Distinct(StringComparer.Ordinal).Count() != apps.Count)
             return false;
-        var own = $"/ext/{manifest.Id}/";
         return apps.All(app =>
             PackageArchive.IsValidId(app.Id)
             && !string.IsNullOrWhiteSpace(app.Name) && app.Name.Length <= 64
-            && OwnPath(app.Path) && (app.Icon is null || OwnPath(app.Icon))
+            && OwnPath(manifest, app.Path) && (app.Icon is null || OwnPath(manifest, app.Icon))
             && (app.Permissions ?? []).All(name => Application.Extensions.ExtensionService.ParsePermission(name) is not null)
             && app.Width is null or >= 240 and <= 4096 && app.Height is null or >= 200 and <= 4096);
-
-        bool OwnPath(string? path) =>
-            path is not null && (path + "/").StartsWith(own, StringComparison.Ordinal) && !path.Contains("..") && !path.Contains('\\')
-            && Uri.IsWellFormedUriString(path, UriKind.Relative);
     }
+
+    /// <summary>A page or file of the extension's own: under <c>/ext/&lt;id&gt;/</c>, without climbing out of it.</summary>
+    private static bool OwnPath(ExtensionManifest manifest, string? path) =>
+        path is not null && (path + "/").StartsWith($"/ext/{manifest.Id}/", StringComparison.Ordinal) && !path.Contains("..") && !path.Contains('\\')
+        && Uri.IsWellFormedUriString(path, UriKind.Relative);
 
     internal static IEnumerable<(ExtensionManifest Manifest, string Root)> Installed(ArcanistPaths paths)
     {

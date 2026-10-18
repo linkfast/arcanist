@@ -996,6 +996,8 @@ export const ExtensionFields = graphql(`
     restartRequired
     routes
     basePath
+    adminUrl
+    iconUrl
   }
 `);
 

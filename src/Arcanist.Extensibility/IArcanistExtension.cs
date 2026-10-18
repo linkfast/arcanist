@@ -54,6 +54,7 @@ public sealed record ExtensionContext(string Id, string DataDirectory, IConfigur
 /// layers (<c>/api</c>, <c>/media</c>, <c>/album-art</c>, <c>/transcode</c>, <c>/shared</c>, <c>/rest</c>). Two enabled
 /// extensions cannot claim the same prefix.</param>
 /// <param name="Apps">Pages it offers to users, which players list and open (see <see cref="ExtensionApp"/>).</param>
+/// <param name="AdminPage">Its settings page, which the admin panel shows under Extensions (see <see cref="ExtensionAdminPage"/>).</param>
 public sealed record ExtensionManifest(
     string Id,
     string Name,
@@ -65,7 +66,17 @@ public sealed record ExtensionManifest(
     int MinApiVersion = 1,
     string Assembly = "",
     IReadOnlyList<string>? Routes = null,
-    IReadOnlyList<ExtensionApp>? Apps = null);
+    IReadOnlyList<ExtensionApp>? Apps = null,
+    ExtensionAdminPage? AdminPage = null);
+
+/// <summary>
+/// An extension's settings page for administrators. The admin panel lists it under Extensions, with the extension's
+/// name and this icon, and shows it inside the panel (an iframe) while the extension runs. Like apps, it gets the
+/// session, the language and the panel's look with the host protocol.
+/// </summary>
+/// <param name="Path">Where it is served, under <c>/ext/&lt;id&gt;/</c>.</param>
+/// <param name="Icon">A square SVG icon, also under <c>/ext/&lt;id&gt;/</c>.</param>
+public sealed record ExtensionAdminPage(string Path, string? Icon = null);
 
 /// <summary>
 /// A page of an extension that users open from their players: in a window (an iframe) or a tab of its own. It talks

@@ -84,7 +84,8 @@ folder:
       "width": 720,
       "height": 640
     }
-  ]
+  ],
+  "adminPage": { "path": "/ext/hello/admin", "icon": "/ext/hello/icon.svg" }
 }
 ```
 
@@ -95,6 +96,7 @@ folder:
 | `assembly` | Yes | The file, relative to the package, with the `IArcanistExtension` implementation (exactly one public, non-abstract class). |
 | `routes` | No | Prefixes claimed besides `/ext/<id>`. |
 | `apps` | No | Pages users open from their players (see [Apps](#apps)). |
+| `adminPage` | No | Its settings page for administrators: `path` and an `icon`, under `/ext/<id>/` (see [Settings page](#settings-page)). |
 | `minApiVersion` | No (1) | The oldest `serverInfo.apiVersion` the extension works with. |
 | `description`, `author`, `license`, `homepage` | No | Shown in the panel. |
 
@@ -117,6 +119,15 @@ open in a window (an iframe) or a tab of their own. Each app has:
 Only the apps of extensions that are switched on and running are listed, and only to users with their permissions.
 Serve the page and its files from your package (`ExtensionContext.PackageDirectory`). The permission is about
 showing it: your API must still check what each request may do.
+
+### Settings page
+
+Settings that administrators change belong in a page of the extension declared as `adminPage`. The admin panel
+lists it under **Extensions** (with the extension's name and the page's icon) while the extension runs, and shows it
+inside the panel in an iframe, so the panel's menu does not grow with every extension. It gets the session, the
+language and the panel's look with the same host protocol as apps. Changes that need a recent authentication answer
+`reauthentication_required`: ask for the password and call `POST /rest/v1/auth/reauthenticate` with the token (it
+returns a token that counts as just signed in, without touching the refresh cookie).
 
 ### The host protocol
 

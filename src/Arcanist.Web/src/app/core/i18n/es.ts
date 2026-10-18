@@ -114,6 +114,7 @@ export const es: Dictionary = {
     dark: 'Oscuro',
   },
   nav: {
+    extensionsToggle: 'Mostrar u ocultar las extensiones',
     ai: 'AI',
     backups: 'Copias de seguridad',
     cloud: 'Ultimate Cloud',
@@ -1273,6 +1274,10 @@ export const es: Dictionary = {
     },
   },
   extensions: {
+    page: {
+      unavailable:
+        'Esta extensión no está en marcha o no tiene página de gestión. Actívala (y reinicia el servidor si hace falta) en Extensiones.',
+    },
     descriptions: {
       ai: 'Análisis de las canciones para software de DJ y clientes con asistencia de IA (el AI DJ de ULTIMATE).',
       dlna: 'Servidor DLNA/UPnP para televisores, altavoces y apps de la red local, y «reproducir en».',

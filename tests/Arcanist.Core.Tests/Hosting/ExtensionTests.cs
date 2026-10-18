@@ -27,8 +27,12 @@ public sealed class ExtensionTests
         new { id = "tools", name = "Tools", path = "/ext/hello/tools", adminOnly = true },
     ];
 
-    private static string Manifest(string id = "hello", string[]? routes = null, object[]? apps = null) =>
-        JsonSerializer.Serialize(new { id, name = "Hello", version = "1.0.0", license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes, apps = apps ?? Apps });
+    private static string Manifest(string id = "hello", string[]? routes = null, object[]? apps = null, object? adminPage = null) =>
+        JsonSerializer.Serialize(new
+        {
+            id, name = "Hello", version = "1.0.0", license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes, apps = apps ?? Apps,
+            adminPage = adminPage ?? new { path = $"/ext/{id}/admin", icon = $"/ext/{id}/icon.svg" },
+        });
 
     private static byte[] Package(string? manifest = null)
     {
@@ -73,6 +77,8 @@ public sealed class ExtensionTests
         var admin = await factory.CreateAuthenticatedClientAsync();
         var listed = Assert.Single(await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel) ?? [], e => e.GetProperty("id").GetString() == "hello");
         Assert.Equal(("RUNNING", true, false), (listed.GetProperty("status").GetString(), listed.GetProperty("enabled").GetBoolean(), listed.GetProperty("restartRequired").GetBoolean()));
+        // Its settings page, which the panel lists under Extensions.
+        Assert.Equal(("/ext/hello/admin", "/ext/hello/icon.svg"), (listed.GetProperty("adminUrl").GetString(), listed.GetProperty("iconUrl").GetString()));
 
         // Switching it off takes effect at once.
         var off = await admin.PutAsJsonAsync("/rest/v1/extensions/hello/enabled", new { enabled = false }, ArcanistFactory.Json, Cancel);
@@ -178,6 +184,11 @@ public sealed class ExtensionTests
         await using var factory = new ArcanistFactory();
         await factory.CompleteSetupAsync();
         var admin = await factory.CreateAuthenticatedClientAsync();
+
+        var outside = new MultipartFormDataContent { { new ByteArrayContent(Package(Manifest(adminPage: new { path = "/admin/settings" }))), "file", "hello.zip" } };
+        var refusedPage = await admin.PostAsync("/rest/v1/extensions", outside, Cancel);
+        Assert.Equal(HttpStatusCode.BadRequest, refusedPage.StatusCode);
+        Assert.Contains("adminPage", await refusedPage.Content.ReadAsStringAsync(Cancel));
 
         foreach (var app in new object[]
                  {

@@ -1050,6 +1050,8 @@ type Extension {
   restartRequired: Boolean!
   routes: [String!]!
   basePath: String!
+  adminUrl: String
+  iconUrl: String
 }
 
 enum ExtensionStatus {

@@ -1,11 +1,14 @@
-import { Component, computed, effect, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArchive,
   lucideBrainCircuit,
   lucideCast,
   lucideChartColumn,
+  lucideChevronDown,
   lucideCloud,
   lucideCopy,
   lucideDatabase,
@@ -25,7 +28,7 @@ import {
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { AuthService } from '../core/auth/auth.service';
 import { EnabledExtensions } from '../core/extensions/enabled-extensions';
-import { TranslatePipe } from '../core/i18n/i18n';
+import { I18n, TranslatePipe } from '../core/i18n/i18n';
 import { LanguageSelect } from '../shared/language-select';
 import { ThemeSelect } from '../shared/theme-select';
 
@@ -47,6 +50,7 @@ import { ThemeSelect } from '../shared/theme-select';
       lucideArchive,
       lucideCast,
       lucideChartColumn,
+      lucideChevronDown,
       lucideCloud,
       lucideCopy,
       lucideDatabase,
@@ -79,17 +83,74 @@ import { ThemeSelect } from '../shared/theme-select';
 
         <nav class="flex flex-row flex-wrap gap-1 md:flex-col">
           @for (item of navigation(); track item.path) {
-            <a
-              hlmBtn
-              variant="ghost"
-              class="justify-start gap-2"
-              [routerLink]="item.path"
-              routerLinkActive="bg-accent text-accent-foreground"
-              [routerLinkActiveOptions]="{ exact: item.path === '/' }"
-            >
-              <ng-icon [name]="item.icon" />
-              {{ item.label | t }}
-            </a>
+            @if (item.path === '/extensions') {
+              <!-- Extensions: their list, and below it the pages that manage each one. -->
+              <div class="flex items-center">
+                <a
+                  hlmBtn
+                  variant="ghost"
+                  class="flex-1 justify-start gap-2"
+                  routerLink="/extensions"
+                  routerLinkActive="bg-accent text-accent-foreground"
+                  [routerLinkActiveOptions]="{ exact: true }"
+                  (click)="extensionsOpen.set(true)"
+                >
+                  <ng-icon name="lucidePuzzle" />
+                  {{ 'nav.extensions' | t }}
+                </a>
+                @if (extensionPages().length > 0) {
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    class="shrink-0"
+                    [attr.aria-expanded]="extensionsExpanded()"
+                    [attr.aria-label]="'nav.extensionsToggle' | t"
+                    (click)="toggleExtensions()"
+                  >
+                    <ng-icon
+                      name="lucideChevronDown"
+                      class="transition-transform"
+                      [class.-rotate-90]="!extensionsExpanded()"
+                    />
+                  </button>
+                }
+              </div>
+              @if (extensionsExpanded()) {
+                <div class="flex flex-row flex-wrap gap-1 md:ml-4 md:flex-col md:border-l md:pl-2">
+                  @for (page of extensionPages(); track page.path) {
+                    <a
+                      hlmBtn
+                      variant="ghost"
+                      size="sm"
+                      class="justify-start gap-2"
+                      [routerLink]="page.path"
+                      routerLinkActive="bg-accent text-accent-foreground"
+                    >
+                      @if (page.iconUrl) {
+                        <img [src]="page.iconUrl" alt="" class="size-4 rounded-sm" />
+                      } @else {
+                        <ng-icon [name]="page.icon" />
+                      }
+                      {{ page.label }}
+                    </a>
+                  }
+                </div>
+              }
+            } @else {
+              <a
+                hlmBtn
+                variant="ghost"
+                class="justify-start gap-2"
+                [routerLink]="item.path"
+                routerLinkActive="bg-accent text-accent-foreground"
+                [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+              >
+                <ng-icon [name]="item.icon" />
+                {{ item.label | t }}
+              </a>
+            }
           }
         </nav>
 
@@ -131,6 +192,73 @@ import { ThemeSelect } from '../shared/theme-select';
 export class Shell {
   protected readonly auth = inject(AuthService);
   private readonly extensions = inject(EnabledExtensions);
+  private readonly i18n = inject(I18n);
+  private readonly router = inject(Router);
+
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((event) => event instanceof NavigationEnd),
+      map(() => this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  /** The Extensions group, opened or closed by the user (remembered). */
+  protected readonly extensionsOpen = signal(readOpen());
+
+  /** The pages that manage extensions, under Extensions: built-in ones while they are on, then installed ones. */
+  protected readonly extensionPages = computed(() => {
+    if (!this.auth.isAdmin()) return [];
+    this.i18n.language();
+    const builtIn = [
+      {
+        path: '/dlna',
+        label: this.i18n.t('nav.dlna'),
+        icon: 'lucideCast',
+        iconUrl: null,
+        visible: true,
+      },
+      {
+        path: '/server-audio',
+        label: this.i18n.t('nav.serverAudio'),
+        icon: 'lucideSpeaker',
+        iconUrl: null,
+        visible: this.extensions.has('server-audio'),
+      },
+      {
+        path: '/mstream',
+        label: this.i18n.t('nav.mstream'),
+        icon: 'lucideMusic',
+        iconUrl: null,
+        visible: this.extensions.has('mstream'),
+      },
+    ].filter((page) => page.visible);
+    const installed = this.extensions.pages().map((extension) => ({
+      path: `/extensions/${extension.id}`,
+      label: extension.name,
+      icon: 'lucidePuzzle',
+      iconUrl: extension.iconUrl ?? null,
+      visible: true,
+    }));
+    return [...builtIn, ...installed];
+  });
+
+  /** Open when the user opened it, or while one of its pages is shown. */
+  protected readonly extensionsExpanded = computed(
+    () =>
+      this.extensionsOpen() ||
+      this.extensionPages().some((page) => this.url().startsWith(page.path)),
+  );
+
+  protected toggleExtensions(): void {
+    const open = !this.extensionsExpanded();
+    this.extensionsOpen.set(open);
+    try {
+      localStorage.setItem(OPEN_KEY, open ? '1' : '0');
+    } catch {
+      // Without storage it is remembered while the page is open.
+    }
+  }
 
   constructor() {
     // Pages of extensions show while those are on; only administrators manage them.
@@ -203,26 +331,23 @@ export class Shell {
         icon: 'lucideCloud',
         visible: this.auth.isAdmin() && this.extensions.has('ultimate-cloud'),
       },
-      { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
       {
         path: '/ai',
         label: 'nav.ai',
         icon: 'lucideBrainCircuit',
         visible: this.auth.isAdmin() && this.extensions.has('ai'),
       },
-      {
-        path: '/server-audio',
-        label: 'nav.serverAudio',
-        icon: 'lucideSpeaker',
-        visible: this.auth.isAdmin() && this.extensions.has('server-audio'),
-      },
-      {
-        path: '/mstream',
-        label: 'nav.mstream',
-        icon: 'lucideMusic',
-        visible: this.auth.isAdmin() && this.extensions.has('mstream'),
-      },
       { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
     ].filter((item) => item.visible),
   );
+}
+
+const OPEN_KEY = 'arcanist.nav.extensions';
+
+function readOpen(): boolean {
+  try {
+    return localStorage.getItem(OPEN_KEY) !== '0';
+  } catch {
+    return true;
+  }
 }

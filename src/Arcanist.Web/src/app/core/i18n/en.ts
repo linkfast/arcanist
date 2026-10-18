@@ -226,6 +226,23 @@ export const en: Dictionary = {
           help: 'Apps such as Symfonium, DSub, Feishin or Amperfy, with app passwords.',
         },
         mstream: { name: 'mStream', help: 'mStream apps connect as to an mStream server.' },
+        ai: {
+          name: 'AI DJ',
+          help: 'Let your favorite AI agent be your personal DJ: Arcanist analyzes every song (beats, sections, energy, voice and mix points) so Ultimate mixes like a real DJ.',
+        },
+        'server-audio': {
+          name: 'Server audio',
+          help: 'The speakers attached to this machine play from “play on” and, with Ultimate Connect, from any Ultimate app.',
+        },
+      },
+      ultimate: {
+        title: 'Ultimate, the official players',
+        description:
+          'Ultimate Desktop and Ultimate Web Player, by LinkFast, are the official clients for Arcanist: they speak to your server natively and bring your library, StarTracks and statistics to all your devices. Mobile apps are coming soon.',
+        cloud:
+          'With Ultimate Cloud, your music lives in the cloud too: use it as one more library, sync it with this server and listen even when your home is offline.',
+        extensions: 'Extensions to get the most out of Ultimate',
+        learnMore: 'Discover Ultimate and Ultimate Cloud',
       },
       player: 'Web player',
       playerHelp:
@@ -249,7 +266,7 @@ export const en: Dictionary = {
       },
       addons: {
         title: 'Extensions and players',
-        description: 'What your apps and devices need. You can skip it.',
+        description: 'Ultimate, your apps and your devices. You can skip it.',
       },
       code: {
         title: 'Setup code',

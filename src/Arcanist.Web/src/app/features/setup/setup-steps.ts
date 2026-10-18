@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePlus, lucideTrash2 } from '@ng-icons/lucide';
+import { lucideExternalLink, lucidePlus, lucideSparkles, lucideTrash2 } from '@ng-icons/lucide';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
@@ -10,7 +10,12 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { TranslatePipe } from '../../core/i18n/i18n';
-import { SetupExtrasDraft, WIZARD_EXTENSIONS } from './setup-extras';
+import {
+  SetupExtrasDraft,
+  ULTIMATE_EXTENSIONS,
+  ULTIMATE_URL,
+  WIZARD_EXTENSIONS,
+} from './setup-extras';
 
 /** The users of the server: the administrator (always), those it has (running the wizard again) and new ones. */
 @Component({
@@ -237,9 +242,53 @@ export class SetupP2PStep {
     HlmSwitchImports,
     TranslatePipe,
   ],
-  providers: [provideIcons({ lucidePlus, lucideTrash2 })],
+  providers: [provideIcons({ lucideExternalLink, lucidePlus, lucideSparkles, lucideTrash2 })],
   host: { class: 'grid grid-cols-[minmax(0,1fr)] gap-4' },
   template: `
+    <section class="grid gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+      <div class="flex items-start gap-3">
+        <ng-icon name="lucideSparkles" class="mt-0.5 shrink-0 text-primary" size="20" />
+        <div class="grid gap-1">
+          <p class="font-medium">{{ 'setup.addons.ultimate.title' | t }}</p>
+          <p class="text-sm text-muted-foreground">{{ 'setup.addons.ultimate.description' | t }}</p>
+          @if (cloud()) {
+            <p class="text-sm text-muted-foreground">{{ 'setup.addons.ultimate.cloud' | t }}</p>
+          }
+        </div>
+      </div>
+      <p class="text-sm font-medium">{{ 'setup.addons.ultimate.extensions' | t }}</p>
+      @for (id of forUltimate; track id) {
+        <label
+          class="flex items-start justify-between gap-3 rounded-lg border bg-background p-3 text-sm"
+        >
+          <span class="grid gap-0.5">
+            <span class="font-medium">{{ 'setup.addons.extensions.' + id + '.name' | t }}</span>
+            <span class="text-muted-foreground">{{
+              'setup.addons.extensions.' + id + '.help' | t
+            }}</span>
+          </span>
+          <hlm-switch
+            [checked]="draft().extensions[id]"
+            (checkedChange)="draft().extensions[id] = $event"
+            [aria-label]="'setup.addons.extensions.' + id + '.name' | t"
+          />
+        </label>
+      }
+      @if (url) {
+        <a
+          hlmBtn
+          variant="outline"
+          size="sm"
+          class="justify-self-start gap-1"
+          target="_blank"
+          rel="noopener"
+          [href]="url"
+        >
+          {{ 'setup.addons.ultimate.learnMore' | t }} <ng-icon name="lucideExternalLink" />
+        </a>
+      }
+    </section>
+
     <div class="grid gap-2">
       <p class="text-sm font-medium">{{ 'setup.addons.builtIn' | t }}</p>
       @for (id of builtIn; track id) {
@@ -318,7 +367,11 @@ export class SetupP2PStep {
 })
 export class SetupAddonsStep {
   readonly draft = input.required<SetupExtrasDraft>();
-  protected readonly builtIn = WIZARD_EXTENSIONS;
+  /** Ultimate Cloud may be offered (the administrator did not turn off every outside service). */
+  readonly cloud = input(true);
+  protected readonly builtIn = WIZARD_EXTENSIONS.filter((id) => !ULTIMATE_EXTENSIONS.includes(id));
+  protected readonly forUltimate = ULTIMATE_EXTENSIONS;
+  protected readonly url = ULTIMATE_URL;
 
   protected addUrl(): void {
     this.draft().extensionUrls.update((urls) => [...urls, '']);

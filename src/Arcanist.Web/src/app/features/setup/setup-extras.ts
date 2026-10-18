@@ -23,8 +23,14 @@ export interface DraftUser {
 }
 
 /** The built-in extensions the wizard offers (Ultimate Cloud follows the privacy step). */
-export const WIZARD_EXTENSIONS = ['dlna', 'subsonic', 'mstream'] as const;
+export const WIZARD_EXTENSIONS = ['dlna', 'subsonic', 'mstream', 'ai', 'server-audio'] as const;
 export type WizardExtension = (typeof WIZARD_EXTENSIONS)[number];
+
+/** Those that make the most of Ultimate, the official clients: offered next to them. */
+export const ULTIMATE_EXTENSIONS: readonly WizardExtension[] = ['ai', 'server-audio'];
+
+/** Where to learn about Ultimate and Ultimate Cloud; the wizard shows no link while it is empty. */
+export const ULTIMATE_URL = '';
 
 export const USER_NAME = /^[\p{L}\p{N}._-]{3,64}$/u;
 
@@ -52,11 +58,15 @@ export class SetupExtrasDraft {
     dlna: false,
     subsonic: false,
     mstream: false,
+    ai: false,
+    'server-audio': false,
   };
   extensionsInitial: Record<WizardExtension, boolean> = {
     dlna: false,
     subsonic: false,
     mstream: false,
+    ai: false,
+    'server-audio': false,
   };
   readonly extensionUrls = signal<string[]>([]);
   playerUrl = '';

@@ -234,6 +234,23 @@ export const es: Dictionary = {
           name: 'mStream',
           help: 'Las apps de mStream se conectan como a un servidor mStream.',
         },
+        ai: {
+          name: 'AI DJ',
+          help: 'Usa tu agente de IA favorito como tu DJ personal: Arcanist analiza cada canción (beats, secciones, energía, voz y puntos de mezcla) para que Ultimate mezcle como un DJ de verdad.',
+        },
+        'server-audio': {
+          name: 'Audio del servidor',
+          help: 'Los altavoces conectados a este equipo suenan desde «reproducir en» y, con Ultimate Connect, desde cualquier app Ultimate.',
+        },
+      },
+      ultimate: {
+        title: 'Ultimate, los reproductores oficiales',
+        description:
+          'Ultimate Desktop y Ultimate Web Player, de LinkFast, son los clientes oficiales de Arcanist: hablan con tu servidor de forma nativa y llevan tu biblioteca, tus StarTracks y tus estadísticas a todos tus dispositivos. Las apps móviles llegarán pronto.',
+        cloud:
+          'Con Ultimate Cloud, tu música también vive en la nube: úsala como una biblioteca más, sincronízala con este servidor y escúchala aunque tu casa esté desconectada.',
+        extensions: 'Extensiones para sacarle todo el partido a Ultimate',
+        learnMore: 'Conocer Ultimate y Ultimate Cloud',
       },
       player: 'Reproductor web',
       playerHelp:
@@ -257,7 +274,7 @@ export const es: Dictionary = {
       },
       addons: {
         title: 'Extensiones y reproductores',
-        description: 'Lo que tus apps y dispositivos necesitan. Puedes saltarlo.',
+        description: 'Ultimate, tus apps y tus dispositivos. Puedes saltarlo.',
       },
       code: {
         title: 'Código de configuración',

@@ -618,7 +618,7 @@
           }
 
           @case ('addons') {
-            <app-setup-addons [draft]="extras" />
+            <app-setup-addons [draft]="extras" [cloud]="externalServices !== 'NONE'" />
           }
 
           @case ('review') {

@@ -111,6 +111,7 @@ export const en: Dictionary = {
     dark: 'Dark',
   },
   nav: {
+    ai: 'AI',
     backups: 'Backups',
     cloud: 'Ultimate Cloud',
     database: 'Database',
@@ -1074,6 +1075,65 @@ export const en: Dictionary = {
     playsCount: '{count} plays',
     hours: '{hours} h',
   },
+  ai: {
+    title: 'AI',
+    subtitle:
+      'Analyzes every song for DJ software and AI-assisted clients, such as the ULTIMATE AI DJ: beats, sections, energy, voice and mix points.',
+    activity: {
+      DISABLED: 'Off',
+      UNAVAILABLE: 'Not available on this platform',
+      IDLE: 'Idle',
+      PAUSED: 'Paused',
+      RUNNING: 'Analyzing',
+    },
+    mode: { major: 'major', minor: 'minor' },
+    analysis: {
+      title: 'Analysis',
+      description:
+        'Local songs are analyzed in the background; those on S3, Ultimate Cloud or another Arcanist, when a client asks for them.',
+      on: 'On',
+      off: 'Off',
+      speed: '{count} songs/min',
+      analyzed: 'Analyzed',
+      pending: 'Pending',
+      failed: 'Failed',
+      version: 'Analyzer version',
+      reanalyze: 'Analyze everything again',
+      reanalyzeConfirm: 'Click again to analyze everything again',
+      reanalyzing: 'Every song will be analyzed again',
+    },
+    performance: {
+      title: 'Performance',
+      description:
+        'How much of the server the analysis uses. Each thread takes a core while it analyzes a song.',
+      threads: 'Songs at once',
+      pauseWhileScanning: 'Pause while scanning',
+      pauseWhileStreaming: 'Pause while someone is listening',
+      onDemandSources:
+        'Analyze songs on S3, Ultimate Cloud and other servers when asked (they are downloaded once)',
+      shareServerStats:
+        'Share the server listening statistics with clients (everyone together, no names)',
+      saved: 'Settings saved',
+    },
+    inspector: {
+      title: 'Inspector',
+      description: 'Search for a song to see its analysis. Click anywhere to hear that moment.',
+      search: 'Title, artist or album',
+      searchButton: 'Search',
+      legend:
+        'At the top, the sections; in violet, the energy, with the bars (long lines) and beats; in yellow, the highlight; in pink, the voice; green and red arrows, mix in and out points; circles, scratch points.',
+      tempo: 'Tempo',
+      stable: 'stable',
+      varying: 'varying',
+      key: 'Key',
+      loudness: 'Loudness',
+      music: 'Music',
+      stale: 'This analysis is from an earlier version of the analyzer and is being redone.',
+      pending: 'Pending: number {position} in line.',
+      prioritize: 'Prioritize',
+      failed: 'This song could not be analyzed.',
+    },
+  },
   serverAudio: {
     title: 'Server audio',
     subtitle:
@@ -1181,6 +1241,7 @@ export const en: Dictionary = {
   },
   extensions: {
     descriptions: {
+      ai: 'Song analysis for DJ software and AI-assisted clients (the ULTIMATE AI DJ).',
       dlna: 'DLNA/UPnP server for TVs, speakers and apps on the local network, and “play on”.',
       mstream: 'The mStream API, for the mStream apps.',
       'server-audio':
@@ -2211,7 +2272,8 @@ export const en: Dictionary = {
     cloud_read_only:
       'The Ultimate Cloud account is read only (a lapsed subscription): nothing is uploaded.',
     upload_failed: 'Uploading to Ultimate Cloud failed.',
-    cloud_upload_cue: 'The song only exists as part of a file split by a CUE sheet, which cannot be uploaded on its own.',
+    cloud_upload_cue:
+      'The song only exists as part of a file split by a CUE sheet, which cannot be uploaded on its own.',
     cloud_sync_failed: 'The sync stopped because of an unexpected error. Check the server log.',
     s3_unavailable: 'Libraries in S3 need the Cloud plan.',
     s3_unreachable: 'The S3 service does not answer at that address.',
@@ -2310,6 +2372,9 @@ export const en: Dictionary = {
       'An mStream administrator account is needed, with its admin API unlocked.',
     dlna_disabled: 'DLNA is off.',
     server_audio_disabled: 'Server audio is off.',
+    ai_disabled: 'The AI extension is turned off.',
+    analysis_unavailable:
+      'That song cannot be analyzed: its copies are in sources analyzed only on request (turned off), or cannot be read.',
     server_audio_unavailable:
       'The server cannot play audio: its native player is missing or, on Linux, ALSA.',
     cloud_disabled: 'Ultimate Cloud is switched off.',

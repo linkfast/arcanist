@@ -114,6 +114,7 @@ export const es: Dictionary = {
     dark: 'Oscuro',
   },
   nav: {
+    ai: 'AI',
     backups: 'Copias de seguridad',
     cloud: 'Ultimate Cloud',
     database: 'Base de datos',
@@ -1089,6 +1090,66 @@ export const es: Dictionary = {
     playsCount: '{count} rep.',
     hours: '{hours} h',
   },
+  ai: {
+    title: 'AI',
+    subtitle:
+      'Analiza cada canción para software de DJ y clientes con asistencia de IA, como el AI DJ de ULTIMATE: beats, secciones, energía, voz y puntos de mezcla.',
+    activity: {
+      DISABLED: 'Apagado',
+      UNAVAILABLE: 'No disponible en esta plataforma',
+      IDLE: 'En espera',
+      PAUSED: 'En pausa',
+      RUNNING: 'Analizando',
+    },
+    mode: { major: 'mayor', minor: 'menor' },
+    analysis: {
+      title: 'Análisis',
+      description:
+        'Las canciones locales se analizan en segundo plano; las de S3, Ultimate Cloud u otro Arcanist, cuando un cliente las pide.',
+      on: 'Activado',
+      off: 'Apagado',
+      speed: '{count} canciones/min',
+      analyzed: 'Analizadas',
+      pending: 'Pendientes',
+      failed: 'Fallidas',
+      version: 'Versión del analizador',
+      reanalyze: 'Reanalizar todo',
+      reanalyzeConfirm: 'Pulsa otra vez para reanalizar todo',
+      reanalyzing: 'Se reanalizarán todas las canciones',
+    },
+    performance: {
+      title: 'Rendimiento',
+      description:
+        'Cuánto del servidor usa el análisis. Cada hilo ocupa un núcleo mientras analiza una canción.',
+      threads: 'Canciones a la vez',
+      pauseWhileScanning: 'Pausar mientras se escanea',
+      pauseWhileStreaming: 'Pausar mientras alguien escucha',
+      onDemandSources:
+        'Analizar bajo pedido las canciones de S3, Ultimate Cloud y otros servidores (se descargan una vez)',
+      shareServerStats:
+        'Compartir con los clientes las estadísticas de escucha del servidor (todos juntos, sin nombres)',
+      saved: 'Ajustes guardados',
+    },
+    inspector: {
+      title: 'Inspector',
+      description:
+        'Busca una canción para ver su análisis. Haz clic en cualquier punto para oír ese momento.',
+      search: 'Título, artista o álbum',
+      searchButton: 'Buscar',
+      legend:
+        'Arriba, las secciones; en violeta, la energía, con los compases (líneas largas) y los beats; en amarillo, el momento destacado; en rosa, la voz; flechas verdes y rojas, puntos de entrada y salida de mezcla; círculos, puntos de scratch.',
+      tempo: 'Tempo',
+      stable: 'estable',
+      varying: 'variable',
+      key: 'Tonalidad',
+      loudness: 'Sonoridad',
+      music: 'Música',
+      stale: 'Este análisis es de una versión anterior del analizador y se está rehaciendo.',
+      pending: 'Pendiente: puesto {position} en la cola.',
+      prioritize: 'Priorizar',
+      failed: 'No se pudo analizar esta canción.',
+    },
+  },
   serverAudio: {
     title: 'Audio del servidor',
     subtitle:
@@ -1196,6 +1257,7 @@ export const es: Dictionary = {
   },
   extensions: {
     descriptions: {
+      ai: 'Análisis de las canciones para software de DJ y clientes con asistencia de IA (el AI DJ de ULTIMATE).',
       dlna: 'Servidor DLNA/UPnP para televisores, altavoces y apps de la red local, y «reproducir en».',
       mstream: 'La API de mStream, para las apps de mStream.',
       'server-audio':
@@ -2241,7 +2303,8 @@ export const es: Dictionary = {
     cloud_read_only:
       'La cuenta de Ultimate Cloud está en solo lectura (suscripción vencida): no se sube nada.',
     upload_failed: 'La subida a Ultimate Cloud falló.',
-    cloud_upload_cue: 'La canción solo existe como parte de un archivo dividido por una hoja CUE, que no se puede subir por separado.',
+    cloud_upload_cue:
+      'La canción solo existe como parte de un archivo dividido por una hoja CUE, que no se puede subir por separado.',
     cloud_sync_failed:
       'La sincronización se detuvo por un error inesperado. Revisa el registro del servidor.',
     s3_unavailable: 'Las bibliotecas en S3 necesitan el plan Cloud.',
@@ -2345,6 +2408,9 @@ export const es: Dictionary = {
       'Hace falta una cuenta de administrador de mStream, con su API de administración desbloqueada.',
     dlna_disabled: 'DLNA está desactivado.',
     server_audio_disabled: 'El audio del servidor está desactivado.',
+    ai_disabled: 'La extensión AI está desactivada.',
+    analysis_unavailable:
+      'No se puede analizar esa canción: sus copias están en fuentes que solo se analizan bajo pedido (desactivado) o no se pueden leer.',
     server_audio_unavailable:
       'El servidor no puede reproducir audio: falta su reproductor nativo o, en Linux, ALSA.',
     cloud_disabled: 'Ultimate Cloud está desactivado.',

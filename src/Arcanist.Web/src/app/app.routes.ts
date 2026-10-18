@@ -102,6 +102,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dlna/dlna.page').then((m) => m.DlnaPage),
       },
       {
+        path: 'ai',
+        canActivate: [adminGuard],
+        loadComponent: () => import('./features/ai/ai.page').then((m) => m.AiPage),
+      },
+      {
         path: 'server-audio',
         canActivate: [adminGuard],
         loadComponent: () =>

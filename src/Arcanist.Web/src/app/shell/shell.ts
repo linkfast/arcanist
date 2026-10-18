@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArchive,
+  lucideBrainCircuit,
   lucideCast,
   lucideChartColumn,
   lucideCloud,
@@ -59,6 +60,7 @@ import { ThemeSelect } from '../shared/theme-select';
       lucideMusic,
       lucideNetwork,
       lucideSpeaker,
+      lucideBrainCircuit,
       lucideSettings,
       lucideExternalLink,
     }),
@@ -202,6 +204,12 @@ export class Shell {
         visible: this.auth.isAdmin() && this.extensions.has('ultimate-cloud'),
       },
       { path: '/dlna', label: 'nav.dlna', icon: 'lucideCast', visible: this.auth.isAdmin() },
+      {
+        path: '/ai',
+        label: 'nav.ai',
+        icon: 'lucideBrainCircuit',
+        visible: this.auth.isAdmin() && this.extensions.has('ai'),
+      },
       {
         path: '/server-audio',
         label: 'nav.serverAudio',

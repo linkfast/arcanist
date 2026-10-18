@@ -2476,3 +2476,166 @@ export const StorageUsageQuery = graphql(`
     }
   }
 `);
+
+export const AiStatusFields = graphql(`
+  fragment AiStatusFields on AiStatus {
+    enabled
+    activity
+    songsPerMinute
+    lastAnalyzedAt
+    error
+    maxThreads
+    progress {
+      analysisVersion
+      analyzed
+      pending
+      failed
+    }
+    settings {
+      threads
+      pauseWhileScanning
+      pauseWhileStreaming
+      onDemandSources
+      shareServerStats
+    }
+  }
+`);
+
+export const AiStatusQuery = graphql(`
+  query AiStatus {
+    aiStatus {
+      ...AiStatusFields
+    }
+  }
+`);
+
+export const SetAiSettingsMutation = graphql(`
+  mutation SetAiSettings($input: SetAiSettingsInput!) {
+    setAiSettings(input: $input) {
+      ...AiStatusFields
+    }
+  }
+`);
+
+export const ReanalyzeTracksMutation = graphql(`
+  mutation ReanalyzeTracks {
+    reanalyzeTracks {
+      ...AiStatusFields
+    }
+  }
+`);
+
+export const AiTrackSearchQuery = graphql(`
+  query AiTrackSearch($search: String!) {
+    tracks(search: $search, first: 8) {
+      items {
+        id
+        title
+        durationMs
+        artists {
+          name
+          role
+        }
+        album {
+          title
+        }
+      }
+    }
+  }
+`);
+
+export const TrackAnalysisFields = graphql(`
+  fragment TrackAnalysisFields on TrackAnalysisResult {
+    trackId
+    status
+    stale
+    position
+    errorCode
+    analysisVersion
+    analyzedAt
+    durationSeconds
+    musicStart
+    musicEnd
+    tempo {
+      bpm
+      confidence
+      stable
+      beatsPerBar
+      firstBeat
+      firstDownbeat
+      beats
+      downbeats
+    }
+    loudness {
+      integratedLufs
+      range
+      truePeakDb
+    }
+    key {
+      tonic
+      mode
+      camelot
+      confidence
+    }
+    energy {
+      stepSeconds
+      values
+    }
+    vocals {
+      stepSeconds
+      presence
+    }
+    silences {
+      start
+      end
+      kind
+    }
+    fades {
+      fadeInEnd
+      fadeOutStart
+    }
+    sections {
+      start
+      end
+      label
+      name
+      energy
+      trend
+      occurrence
+    }
+    highlight {
+      start
+      end
+      confidence
+    }
+    mixPoints {
+      introEnd
+      outroStart
+      mixIn
+      mixOut
+    }
+    scratchCues {
+      t
+      duration
+      kind
+      isolation
+      strength
+    }
+  }
+`);
+
+export const TrackAnalysisQuery = graphql(`
+  query TrackAnalysis($trackId: ID!) {
+    trackAnalysis(trackId: $trackId, include: "beats,energy,vocals,sections,silences,cues,loudness,key") {
+      ...TrackAnalysisFields
+    }
+  }
+`);
+
+export const PrioritizeTrackAnalysisMutation = graphql(`
+  mutation PrioritizeTrackAnalysis($trackId: ID!) {
+    prioritizeTrackAnalysis(trackId: $trackId) {
+      ...TrackAnalysisFields
+    }
+  }
+`);

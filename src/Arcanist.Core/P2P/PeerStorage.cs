@@ -117,6 +117,22 @@ internal sealed class PeerStorage(IArcanistDbContextFactory databases, PeerClien
         throw response.StatusCode == HttpStatusCode.NotFound ? new FileNotFoundException(relativePath) : new IOException(ErrorCodes.DownloadNotAllowed);
     }
 
+    /// <summary>
+    /// The audio as the other server streams it (its original unless its rules cap the bit rate): what listening
+    /// takes, without its permission to download. For analyses, which only need to hear it.
+    /// </summary>
+    public async Task<Stream> OpenStreamAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken)
+    {
+        var remote = await RemoteAsync(location, cancellationToken) ?? throw new FileNotFoundException(relativePath);
+        var response = await client.SendAsync(remote.Ticket,
+            b => new HttpRequestMessage(HttpMethod.Get, new Uri(b, $"/rest/v1/peer/stream?path={Uri.EscapeDataString(relativePath)}")),
+            HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.IsSuccessStatusCode)
+            return await response.Content.ReadAsStreamAsync(cancellationToken);
+        response.Dispose();
+        throw response.StatusCode == HttpStatusCode.NotFound ? new FileNotFoundException(relativePath) : new IOException($"HTTP {(int)response.StatusCode}");
+    }
+
     public string? TryGetLocalPath(StorageLocation location, string relativePath) => null;
 
     public bool Contains(string outer, string inner) => string.Equals(outer, inner, StringComparison.Ordinal);

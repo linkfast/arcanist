@@ -133,7 +133,8 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
                 Assert.StartsWith("arcanist-", request.Headers.GetValues("X-Device-Id").Single());
                 var anonymous = JsonNode.Parse(body)!["variables"]!;
                 foreach (var play in anonymous["p"]!.AsArray())
-                    SharedPlays.Enqueue((play!["acoustId"]!.GetValue<string>(), play["title"]?.GetValue<string>(), play["playedAt"]?.GetValue<DateTime>()));
+                    SharedPlays.Enqueue((play!["acoustId"]!.GetValue<string>(), play["title"]?.GetValue<string>(), play["playedAt"]?.GetValue<DateTime>(),
+                        play["playedMs"]?.GetValue<int>(), play["skipped"]?.GetValue<bool>(), play["completed"]?.GetValue<bool>()));
                 foreach (var album in anonymous["a"]?.AsArray() ?? [])
                     AnonymousAlbums.Enqueue((album!["artist"]!.GetValue<string>(), album["album"]!.GetValue<string>()));
                 return Json(new { data = new { recordAnonymousPlays = anonymous["p"]!.AsArray().Count } });
@@ -424,7 +425,7 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
     public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt)> Plays { get; } = new();
 
     /// <summary>Plays reported anonymously for the rankings, without an account (<c>recordAnonymousPlays</c>).</summary>
-    public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt)> SharedPlays { get; } = new();
+    public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt, int? PlayedMs, bool? Skipped, bool? Completed)> SharedPlays { get; } = new();
 
     /// <summary>Albums heard whole, reported anonymously.</summary>
     public ConcurrentQueue<(string Artist, string Album)> AnonymousAlbums { get; } = new();

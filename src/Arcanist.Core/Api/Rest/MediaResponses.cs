@@ -29,6 +29,9 @@ public static class MediaResponses
         var streams = context.RequestServices.GetRequiredService<StreamService>();
         var storages = context.RequestServices.GetRequiredService<ILibraryStorageResolver>();
         var transcoder = context.RequestServices.GetRequiredService<Transcoder>();
+        // Counted while the response lasts, so low-priority background work can wait for listeners.
+        if (!HttpMethods.IsHead(context.Request.Method) && context.RequestServices.GetService<StreamActivity>() is { } activity)
+            context.Response.RegisterForDispose(activity.Begin());
 
         // Through the P2P network, the peer's rules apply: no downloads unless allowed, and a bit-rate cap on streams.
         if (P2P.P2PRequest.Peer(context) is { } peer)

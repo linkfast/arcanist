@@ -119,6 +119,10 @@ public static class ErrorCodes
     public const string RendererInUse = "renderer_in_use";
     /// <summary>The server audio extension is off.</summary>
     public const string ServerAudioDisabled = "server_audio_disabled";
+    /// <summary>The AI extension is off.</summary>
+    public const string AiDisabled = "ai_disabled";
+    /// <summary>The song cannot be analyzed: its only copies are in sources analyzed on request while that is off, or none can be read.</summary>
+    public const string AnalysisUnavailable = "analysis_unavailable";
     /// <summary>The server cannot play audio: its native player could not load (ALSA missing on Linux) or no device opens.</summary>
     public const string ServerAudioUnavailable = "server_audio_unavailable";
     /// <summary>The P2P network is off.</summary>

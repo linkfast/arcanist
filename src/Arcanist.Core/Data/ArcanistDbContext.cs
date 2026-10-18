@@ -68,6 +68,11 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<CloudDropFetch> CloudDropFetches => Set<CloudDropFetch>();
 
     public DbSet<UserUpload> UserUploads => Set<UserUpload>();
+
+    public DbSet<TrackAnalysis> TrackAnalyses => Set<TrackAnalysis>();
+
+    public DbSet<TrackAnalysisRequest> TrackAnalysisRequests => Set<TrackAnalysisRequest>();
+
     public DbSet<TrackPlayStats> TrackPlayStats => Set<TrackPlayStats>();
     public DbSet<Playlist> Playlists => Set<Playlist>();
     public DbSet<PlaylistEntry> PlaylistEntries => Set<PlaylistEntry>();
@@ -378,6 +383,22 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             fetch.HasIndex(f => new { f.DropFolderId, f.CloudTrackId }).IsUnique();
         });
 
+        modelBuilder.Entity<TrackAnalysis>(analysis =>
+        {
+            analysis.Property(a => a.ContentHash).HasMaxLength(64);
+            analysis.HasIndex(a => a.ContentHash).IsUnique();
+            analysis.HasIndex(a => a.AnalyzedAt);
+            analysis.Property(a => a.State).HasConversion<string>().HasMaxLength(EnumLength);
+            analysis.Property(a => a.Error).HasMaxLength(NameLength);
+        });
+
+        modelBuilder.Entity<TrackAnalysisRequest>(request =>
+        {
+            request.Property(r => r.ContentHash).HasMaxLength(64);
+            request.HasIndex(r => r.ContentHash).IsUnique();
+            request.HasIndex(r => new { r.Priority, r.RequestedAt });
+        });
+
         modelBuilder.Entity<UserUpload>(upload =>
         {
             upload.HasOne(u => u.User).WithMany().OnDelete(DeleteBehavior.Cascade);
@@ -404,7 +425,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             play.HasIndex(p => new { p.UserId, p.PlayedAt });
             play.HasIndex(p => new { p.UserId, p.ExternalId });
             play.HasIndex(p => p.PlayedAt);
-            play.HasIndex(p => p.TrackId);
+            play.HasIndex(p => new { p.TrackId, p.PlayedAt });
         });
 
         modelBuilder.Entity<TrackPlayStats>(stats =>

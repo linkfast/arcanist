@@ -1711,7 +1711,7 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.HasIndex("PlayedAt");
 
-                    b.HasIndex("TrackId");
+                    b.HasIndex("TrackId", "PlayedAt");
 
                     b.HasIndex("UserId", "ExternalId");
 
@@ -2070,6 +2070,76 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.HasIndex("AlbumId", "DiscNumber", "TrackNumber");
 
                     b.ToTable("Tracks");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackAnalysis", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AnalysisVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AnalyzedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Json")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalyzedAt");
+
+                    b.HasIndex("ContentHash")
+                        .IsUnique();
+
+                    b.ToTable("TrackAnalyses");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackAnalysisRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentHash")
+                        .IsUnique();
+
+                    b.HasIndex("Priority", "RequestedAt");
+
+                    b.ToTable("TrackAnalysisRequests");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackArtist", b =>

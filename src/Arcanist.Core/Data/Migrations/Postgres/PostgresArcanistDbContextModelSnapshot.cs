@@ -1716,7 +1716,7 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.HasIndex("PlayedAt");
 
-                    b.HasIndex("TrackId");
+                    b.HasIndex("TrackId", "PlayedAt");
 
                     b.HasIndex("UserId", "ExternalId");
 
@@ -2075,6 +2075,76 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.HasIndex("AlbumId", "DiscNumber", "TrackNumber");
 
                     b.ToTable("Tracks");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackAnalysis", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AnalysisVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("AnalyzedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Json")
+                        .HasColumnType("text");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnalyzedAt");
+
+                    b.HasIndex("ContentHash")
+                        .IsUnique();
+
+                    b.ToTable("TrackAnalyses");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackAnalysisRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentHash")
+                        .IsUnique();
+
+                    b.HasIndex("Priority", "RequestedAt");
+
+                    b.ToTable("TrackAnalysisRequests");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.TrackArtist", b =>

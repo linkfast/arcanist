@@ -69,7 +69,7 @@ public static class MediaEndpoints
     }
 
     /// <summary>Signs the request in with <c>?st=</c> when it has no Bearer token.</summary>
-    private static async Task AuthenticateStreamTokenAsync(HttpContext context, CancellationToken cancellationToken)
+    internal static async Task AuthenticateStreamTokenAsync(HttpContext context, CancellationToken cancellationToken)
     {
         if (context.Items.ContainsKey(typeof(UserAccess)) || context.Request.Query[StreamTokens.QueryParameter] is not [{ } token])
             return;

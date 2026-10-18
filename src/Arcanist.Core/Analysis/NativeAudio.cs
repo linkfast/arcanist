@@ -45,6 +45,24 @@ internal static unsafe partial class NativeAudio
     [LibraryImport(Library, EntryPoint = "arcanist_audio_analyzer_free")]
     public static partial void AnalyzerFree(nint analyzer);
 
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_dj_version")]
+    public static partial uint DjVersion();
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_dj_analyze", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int DjAnalyze(Source* source, string? extension, ulong startMs, ulong endMs, out nint json);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_dj_new")]
+    public static partial nint DjNew(uint rate, uint channels);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_dj_push")]
+    public static partial int DjPush(nint analyzer, float* samples, nuint count);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_dj_finish")]
+    public static partial int DjFinish(nint analyzer, out nint json);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_dj_free")]
+    public static partial void DjFree(nint analyzer);
+
     [LibraryImport(Library, EntryPoint = "arcanist_audio_compare")]
     public static partial double Compare(uint* a, nuint aCount, uint* b, nuint bCount);
 
@@ -72,6 +90,24 @@ internal static unsafe partial class NativeAudio
 
     /// <summary>Why the library could not be loaded, for the logs and the admin panel.</summary>
     public static string? LoadError => Availability.Value.Error;
+
+    /// <summary>Whether the library has the DJ analysis (an older build of it does not).</summary>
+    public static bool HasDjAnalysis => DjAvailability.Value;
+
+    private static readonly Lazy<bool> DjAvailability = new(() =>
+    {
+        if (!IsAvailable)
+            return false;
+        try
+        {
+            DjVersion();
+            return true;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
+    });
 
     private static readonly Lazy<(bool Available, string? Error)> Availability = new(() =>
     {

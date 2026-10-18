@@ -189,7 +189,11 @@ public sealed class UltimateCloudReporter(
 
     private sealed record PlayRow(
         Guid Id, Guid UserId, Guid? TrackId, DateTime PlayedAt, Guid? AcoustId, Guid? RecordingMbid, string? Title, string? Artist,
-        Guid? ArtistMbid, string? Album, string? AlbumArtist, Guid? AlbumId, string? Genre);
+        Guid? ArtistMbid, string? Album, string? AlbumArtist, Guid? AlbumId, string? Genre, bool Counted, bool Skipped, int PlayedMs, int DurationMs)
+    {
+        /// <summary>Listened to the end (90% of it, or to its last 10 seconds).</summary>
+        public bool Completed => PlayedMs >= DurationMs * 0.9 || DurationMs - PlayedMs <= 10_000;
+    }
 
     private async Task ReportPlaysAsync(
         UltimateCloudServicesConfig config, Guid? linker, IReadOnlyDictionary<Guid, UltimateCloudServicesConfig> own, bool anonymous, CancellationToken cancellationToken)
@@ -212,7 +216,7 @@ public sealed class UltimateCloudReporter(
                 .OrderBy(e => e.Id)
                 .Take(Batch)
                 .Select(e => new PlayRow(
-                    e.Id, e.UserId, e.Counted ? e.TrackId : null, e.PlayedAt,
+                    e.Id, e.UserId, e.TrackId, e.PlayedAt,
                     e.Track!.Recording.AcoustId,
                     e.Track.Recording.MusicBrainzId,
                     e.Track.Title,
@@ -221,7 +225,11 @@ public sealed class UltimateCloudReporter(
                     e.Track.Album.Title,
                     e.Track.Album.AlbumArtist.Name,
                     e.Track.AlbumId,
-                    e.Track.Genres.Select(g => g.Genre.Name).FirstOrDefault()))
+                    e.Track.Genres.Select(g => g.Genre.Name).FirstOrDefault(),
+                    e.Counted,
+                    e.Skipped,
+                    e.PlayedMs,
+                    e.Track.DurationMs))
                 .ToListAsync(cancellationToken);
             if (rows.Count == 0)
                 return;
@@ -244,8 +252,8 @@ public sealed class UltimateCloudReporter(
 
             foreach (var play in rows)
             {
-                // Only counted plays of identified tracks; skips and the unidentified are passed over.
-                if (play.TrackId is null || play.AcoustId is not { } acoustId)
+                // Identified tracks only; counted plays, and (anonymously) skips. Other partial listens are passed over.
+                if (play.TrackId is null || play.AcoustId is not { } acoustId || !(play.Counted || play.Skipped))
                     continue;
 
                 // Whose account the play is: the user's own, or the server's when they linked it.
@@ -254,6 +262,9 @@ public sealed class UltimateCloudReporter(
                     : ((Guid?)null, (UltimateCloudServicesConfig?)null);
                 if (playConfig is { PersonalPlays: true })
                 {
+                    // The account's own statistics count plays only.
+                    if (!play.Counted)
+                        continue;
                     // The account's own: its statistics and the rankings.
                     await FlushAsync();
                     using var as_ = UltimateCloudClient.As(playAccount);
@@ -279,12 +290,14 @@ public sealed class UltimateCloudReporter(
                 }
                 else if (anonymous)
                 {
+                    // How it was listened to (for skip and completion statistics); rankings count only the counted ones.
                     plays.Add((play.Id, new
                     {
                         acoustId = acoustId.ToString(), playedAt = play.PlayedAt, title = play.Title, artist = play.Artist, album = play.Album,
                         genre = play.Genre, musicBrainzRecordingId = play.RecordingMbid?.ToString(), musicBrainzArtistId = play.ArtistMbid?.ToString(),
+                        playedMs = play.PlayedMs, skipped = play.Skipped, completed = play.Counted && play.Completed,
                     }));
-                    if (await PlaythroughAsync(db, play, cancellationToken) is { } whole)
+                    if (play.Counted && await PlaythroughAsync(db, play, cancellationToken) is { } whole)
                         albums.Add(new { artist = whole.Artist, album = whole.Album });
                 }
             }

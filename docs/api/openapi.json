@@ -1355,6 +1355,346 @@
         }
       }
     },
+    "/rest/v1/tracks/{trackId}/analysis": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "A song\u0027s analysis for DJ software (AI extension): beat grid, sections, energy, voice, mix and scratch points\u2026 \u0060include\u0060 picks blocks (beats, onsets, energy, vocals, sections, silences, cues, loudness, key, stats; all but stats by default). 202 with status PENDING and its position in line until it is ready.",
+        "operationId": "TrackAnalysis",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackAnalysisResult"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackAnalysisResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/{trackId}/analysis/prioritize": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Puts a song first in line for its analysis (it is going to be played soon).",
+        "operationId": "PrioritizeTrackAnalysis",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackAnalysisResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/analysis": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Analyses of the songs the user sees, from the least to the most recently analyzed (at most 200 a page): keep a cache with updatedSince set to the last analyzedAt held.",
+        "operationId": "TrackAnalyses",
+        "parameters": [
+          {
+            "name": "updatedSince",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackAnalysisPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/{trackId}/audio-window": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "A short piece of a song, decoded (AI extension): \u0060start\u0060 and \u0060duration\u0060 (at most 8) in seconds, as a WAV file of 16-bit stereo at 44.1 kHz (\u0060format=pcm16\u0060, the only one). For scratching or previewing a part without downloading the song. Authenticate like /stream (Bearer, or \u0060st\u0060 of a streamUrl). 503 transcoding_unavailable without ffmpeg.",
+        "operationId": "TrackAudioWindow",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          {
+            "name": "duration",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/stats/tracks": {
+      "get": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Listening statistics per song (plays, skips and where, completions, how much is listened to, hours of the day): the user\u0027s, or the server\u0027s (everyone\u0027s together). From the least to the most recently played.",
+        "operationId": "TrackStats",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updatedSince",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "timeZone",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackStatsPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ai": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "What the AI extension\u0027s analysis is doing, its progress and settings. Administrators only.",
+        "operationId": "AiStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ai/settings": {
+      "put": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Changes the AI extension\u0027s settings. Administrators only, with a recent authentication.",
+        "operationId": "SetAiSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAiSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ai/reanalyze": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Analyzes every song again; the current analyses are served (as stale) until each is redone. Administrators only, with a recent authentication.",
+        "operationId": "ReanalyzeTracks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/search": {
       "get": {
         "tags": [
@@ -7752,6 +8092,103 @@
           }
         }
       },
+      "AiActivity": {
+        "enum": [
+          "DISABLED",
+          "UNAVAILABLE",
+          "IDLE",
+          "PAUSED",
+          "RUNNING"
+        ]
+      },
+      "AiSettingsModel": {
+        "required": [
+          "threads",
+          "pauseWhileScanning",
+          "pauseWhileStreaming",
+          "onDemandSources",
+          "shareServerStats"
+        ],
+        "type": "object",
+        "properties": {
+          "threads": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pauseWhileScanning": {
+            "type": "boolean"
+          },
+          "pauseWhileStreaming": {
+            "type": "boolean"
+          },
+          "onDemandSources": {
+            "type": "boolean"
+          },
+          "shareServerStats": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiStatus": {
+        "required": [
+          "enabled",
+          "activity",
+          "progress",
+          "songsPerMinute",
+          "lastAnalyzedAt",
+          "error",
+          "settings",
+          "maxThreads"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "activity": {
+            "$ref": "#/components/schemas/AiActivity"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/TrackAnalysisProgress"
+          },
+          "songsPerMinute": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lastAnalyzedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "settings": {
+            "$ref": "#/components/schemas/AiSettingsModel"
+          },
+          "maxThreads": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Album": {
         "required": [
           "id",
@@ -7895,6 +8332,238 @@
           "RUNNING"
         ]
       },
+      "AnalysisEnergy": {
+        "required": [
+          "stepSeconds",
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "stepSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "values": {
+            "type": "string"
+          }
+        }
+      },
+      "AnalysisFades": {
+        "required": [
+          "fadeInEnd",
+          "fadeOutStart"
+        ],
+        "type": "object",
+        "properties": {
+          "fadeInEnd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fadeOutStart": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "AnalysisHighlight": {
+        "required": [
+          "start",
+          "end",
+          "confidence"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "end": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "confidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "AnalysisKey": {
+        "required": [
+          "tonic",
+          "mode",
+          "camelot",
+          "confidence"
+        ],
+        "type": "object",
+        "properties": {
+          "tonic": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "camelot": {
+            "type": "string"
+          },
+          "confidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "AnalysisLoudness": {
+        "required": [
+          "integratedLufs",
+          "range",
+          "truePeakDb"
+        ],
+        "type": "object",
+        "properties": {
+          "integratedLufs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "range": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "truePeakDb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "AnalysisMixPoints": {
+        "required": [
+          "introEnd",
+          "outroStart",
+          "mixIn",
+          "mixOut"
+        ],
+        "type": "object",
+        "properties": {
+          "introEnd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "outroStart": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "mixIn": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          "mixOut": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          }
+        }
+      },
+      "AnalysisOnsets": {
+        "required": [
+          "times",
+          "strengths"
+        ],
+        "type": "object",
+        "properties": {
+          "times": {
+            "type": "string"
+          },
+          "strengths": {
+            "type": "string"
+          }
+        }
+      },
+      "AnalysisPhrase": {
+        "required": [
+          "start",
+          "bars"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "bars": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "AnalysisProgress": {
         "required": [
           "activity",
@@ -7970,6 +8639,229 @@
           }
         }
       },
+      "AnalysisScratchCue": {
+        "required": [
+          "t",
+          "duration",
+          "kind",
+          "isolation",
+          "strength"
+        ],
+        "type": "object",
+        "properties": {
+          "t": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "duration": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "isolation": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "strength": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "AnalysisSection": {
+        "required": [
+          "start",
+          "end",
+          "label",
+          "name",
+          "energy",
+          "trend",
+          "occurrence"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "end": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "label": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "energy": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "trend": {
+            "type": "string"
+          },
+          "occurrence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "AnalysisSilence": {
+        "required": [
+          "start",
+          "end",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "end": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "AnalysisTempo": {
+        "required": [
+          "bpm",
+          "confidence",
+          "stable",
+          "beatsPerBar",
+          "firstBeat",
+          "firstDownbeat",
+          "beats",
+          "downbeats"
+        ],
+        "type": "object",
+        "properties": {
+          "bpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "confidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stable": {
+            "type": "boolean"
+          },
+          "beatsPerBar": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "firstBeat": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "firstDownbeat": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "beats": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "downbeats": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AnalysisVocals": {
+        "required": [
+          "stepSeconds",
+          "presence"
+        ],
+        "type": "object",
+        "properties": {
+          "stepSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "presence": {
+            "type": "string"
+          }
+        }
+      },
       "AnalyzeMstreamFolderInput": {
         "required": [
           "folder"
@@ -7989,7 +8881,9 @@
           "LISTENING_IMPORT",
           "STAR_TRACKS",
           "UPLOAD_HISTORY",
-          "MY_CLOUD_UPLOADS"
+          "MY_CLOUD_UPLOADS",
+          "TRACK_ANALYSIS",
+          "TRACK_STATS"
         ]
       },
       "AppPassword": {
@@ -15751,7 +16645,8 @@
           "cloudTier",
           "transcodingFormats",
           "ratingMode",
-          "features"
+          "features",
+          "trackAnalysis"
         ],
         "type": "object",
         "properties": {
@@ -15801,6 +16696,16 @@
             "items": {
               "$ref": "#/components/schemas/ApiFeature"
             }
+          },
+          "trackAnalysis": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TrackAnalysisProgress"
+              }
+            ]
           }
         }
       },
@@ -15889,6 +16794,38 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SetAiSettingsInput": {
+        "required": [
+          "threads",
+          "pauseWhileScanning",
+          "pauseWhileStreaming",
+          "onDemandSources",
+          "shareServerStats"
+        ],
+        "type": "object",
+        "properties": {
+          "threads": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pauseWhileScanning": {
+            "type": "boolean"
+          },
+          "pauseWhileStreaming": {
+            "type": "boolean"
+          },
+          "onDemandSources": {
+            "type": "boolean"
+          },
+          "shareServerStats": {
+            "type": "boolean"
           }
         }
       },
@@ -17400,6 +18337,319 @@
           }
         }
       },
+      "TrackAnalysisPage": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackAnalysisResult"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TrackAnalysisProgress": {
+        "required": [
+          "analysisVersion",
+          "analyzed",
+          "pending",
+          "failed"
+        ],
+        "type": "object",
+        "properties": {
+          "analysisVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analyzed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pending": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "TrackAnalysisResult": {
+        "required": [
+          "trackId",
+          "status",
+          "stale",
+          "position",
+          "errorCode",
+          "contentHash",
+          "analysisVersion",
+          "analyzedAt",
+          "durationSeconds",
+          "musicStart",
+          "musicEnd",
+          "tempo",
+          "phrases",
+          "loudness",
+          "key",
+          "energy",
+          "vocals",
+          "onsets",
+          "silences",
+          "fades",
+          "sections",
+          "highlight",
+          "mixPoints",
+          "scratchCues",
+          "stats"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TrackAnalysisStatus"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "position": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contentHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "analysisVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analyzedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "durationSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "musicStart": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "musicEnd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tempo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisTempo"
+              }
+            ]
+          },
+          "phrases": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AnalysisPhrase"
+            }
+          },
+          "loudness": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisLoudness"
+              }
+            ]
+          },
+          "key": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisKey"
+              }
+            ]
+          },
+          "energy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisEnergy"
+              }
+            ]
+          },
+          "vocals": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisVocals"
+              }
+            ]
+          },
+          "onsets": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisOnsets"
+              }
+            ]
+          },
+          "silences": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AnalysisSilence"
+            }
+          },
+          "fades": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisFades"
+              }
+            ]
+          },
+          "sections": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AnalysisSection"
+            }
+          },
+          "highlight": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisHighlight"
+              }
+            ]
+          },
+          "mixPoints": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AnalysisMixPoints"
+              }
+            ]
+          },
+          "scratchCues": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AnalysisScratchCue"
+            }
+          },
+          "stats": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TrackListeningStats"
+              }
+            ]
+          }
+        }
+      },
+      "TrackAnalysisStatus": {
+        "enum": [
+          "READY",
+          "PENDING",
+          "FAILED"
+        ]
+      },
       "TrackCandidate": {
         "required": [
           "key",
@@ -17596,6 +18846,85 @@
           }
         }
       },
+      "TrackListeningStats": {
+        "required": [
+          "trackId",
+          "plays",
+          "skips",
+          "avgSkipPosition",
+          "completions",
+          "avgListenRatio",
+          "lastPlayedAt",
+          "hourHistogram"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skips": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "avgSkipPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "completions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "avgListenRatio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lastPlayedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "hourHistogram": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
+      },
       "TrackLyrics": {
         "required": [
           "trackId",
@@ -17723,6 +19052,27 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "TrackStatsPage": {
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackListeningStats"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -18681,6 +20031,9 @@
     },
     {
       "name": "Uploads"
+    },
+    {
+      "name": "AI"
     },
     {
       "name": "Catalog"

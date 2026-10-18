@@ -26,6 +26,8 @@ public sealed class UltimateCloudOnlineTests : IAsyncDisposable
         AudioFixtures.WriteWav(Path.Combine(_music, "Whole", "1.wav"), 1, new FixtureTags("Opening", "Band", "Whole", "Band", TrackNumber: 1));
         AudioFixtures.WriteWav(Path.Combine(_music, "Whole", "2.wav"), 2, new FixtureTags("Closing", "Band", "Whole", "Band", TrackNumber: 2));
         AudioFixtures.WriteWav(Path.Combine(_music, "Single", "s.wav"), 3, new FixtureTags("Single", "Soloist", "Single", "Soloist", TrackNumber: 1));
+        // Long enough to be skipped.
+        AudioFixtures.WriteMusic(Path.Combine(_music, "Long", "l.wav"), new FixtureTags("Long", "Soloist", "Long", "Soloist", TrackNumber: 1), seconds: 70);
         _factory = new ArcanistFactory(new Dictionary<string, string?>
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = FakeUltimateCloud.ApiUrl,
@@ -103,14 +105,28 @@ public sealed class UltimateCloudOnlineTests : IAsyncDisposable
         // The administrator who linked the account: theirs. Everyone else: anonymous.
         Assert.Equal([_tracks["Opening"].AcoustId.ToString(), _tracks["Closing"].AcoustId.ToString()], _cloud.Plays.Select(p => p.AcoustId));
         Assert.Equal("Opening", _cloud.Plays.First().Title);
-        Assert.Equal(_tracks["Single"].AcoustId.ToString(), Assert.Single(_cloud.SharedPlays).AcoustId);
+        var shared = Assert.Single(_cloud.SharedPlays);
+        Assert.Equal(_tracks["Single"].AcoustId.ToString(), shared.AcoustId);
+        // How it was listened to goes along: to the end, not skipped.
+        Assert.Equal((false, true), (shared.Skipped, shared.Completed));
+        Assert.True(shared.PlayedMs > 0);
         Assert.Equal(("Band", "Whole"), Assert.Single(_cloud.Playthroughs));
+
+        // Skips go anonymously too (the account's own statistics count plays only).
+        var skip = await listener.PostAsJsonAsync("/rest/v1/plays",
+            new { trackId = _tracks["Long"].TrackId, playedMs = 5_000, playedAt = DateTime.UtcNow.AddMinutes(-2), client = "tests" }, ArcanistFactory.Json, Cancel);
+        Assert.True((await skip.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("skipped").GetBoolean());
+        await Reporter.RunAsync(Cancel);
+        var skipped = _cloud.SharedPlays.Last();
+        Assert.Equal(_tracks["Long"].AcoustId.ToString(), skipped.AcoustId);
+        Assert.Equal((5_000, true, false), (skipped.PlayedMs, skipped.Skipped, skipped.Completed));
+        var sent = _cloud.SharedPlays.Count;
 
         // Anonymous statistics off: nothing for the others.
         await _admin.GraphQLAsync("mutation { setAnonymousStatistics(enabled: false) }");
         await PlayAsync(listener, "Opening", 1);
         await Reporter.RunAsync(Cancel);
-        Assert.Single(_cloud.SharedPlays);
+        Assert.Equal(sent, _cloud.SharedPlays.Count);
     }
 
     [Fact]

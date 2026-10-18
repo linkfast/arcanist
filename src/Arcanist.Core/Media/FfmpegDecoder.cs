@@ -20,6 +20,27 @@ public static class FfmpegDecoder
         if (pcm is null)
             return AnalysisOutcome.Unavailable;
 
+        var error = Decode(ffmpeg, input, pcm.Push, cancellationToken, startMs, endMs);
+        return error is null ? pcm.Finish() : new AnalysisOutcome(AnalyzerStatus.Invalid, null, error);
+    }
+
+    /// <summary>The DJ analysis of audio the native decoder does not read; synchronous, like <see cref="DjAudioAnalyzer.Analyze"/>.</summary>
+    public static DjOutcome AnalyzeDj(string ffmpeg, Stream input, CancellationToken cancellationToken, int? startMs = null, int? endMs = null)
+    {
+        using var pcm = DjAudioAnalyzer.BeginPcm(SampleRate, Channels);
+        if (pcm is null)
+            return DjOutcome.Unavailable;
+
+        var error = Decode(ffmpeg, input, pcm.Push, cancellationToken, startMs, endMs);
+        return error is null ? pcm.Finish() : new DjOutcome(AnalyzerStatus.Invalid, null, error);
+    }
+
+    /// <summary>
+    /// Decodes the input to interleaved floats (48 kHz stereo) and hands them to <paramref name="push"/>, which
+    /// returns false to reject them. Returns why it failed, or null.
+    /// </summary>
+    private static string? Decode(string ffmpeg, Stream input, PushSamples push, CancellationToken cancellationToken, int? startMs, int? endMs)
+    {
         var start = new ProcessStartInfo(ffmpeg)
         {
             // First audio stream only (files may embed cover art as a video stream), downmixed and resampled to
@@ -85,8 +106,8 @@ public static class FfmpegDecoder
         {
             var available = pending + read;
             var whole = available - available % sizeof(float);
-            if (!pcm.Push(MemoryMarshal.Cast<byte, float>(buffer.AsSpan(0, whole))))
-                return new AnalysisOutcome(AnalyzerStatus.Invalid, null, "the analyzer rejected the audio");
+            if (!push(MemoryMarshal.Cast<byte, float>(buffer.AsSpan(0, whole))))
+                return "the analyzer rejected the audio";
             samples += whole / sizeof(float);
 
             // Keep a partial sample for the next read.
@@ -99,10 +120,12 @@ public static class FfmpegDecoder
         cancellationToken.ThrowIfCancellationRequested();
 
         if (process.ExitCode != 0 && samples == 0)
-            return new AnalysisOutcome(AnalyzerStatus.Invalid, null, FirstLine(errors.Result) ?? $"ffmpeg exited with {process.ExitCode}");
+            return FirstLine(errors.Result) ?? $"ffmpeg exited with {process.ExitCode}";
 
-        return pcm.Finish();
+        return null;
     }
+
+    private delegate bool PushSamples(ReadOnlySpan<float> samples);
 
     private static string Seconds(int milliseconds) =>
         (milliseconds / 1000.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);

@@ -1,4 +1,12 @@
 type Query {
+  "A song's analysis for DJ software (AI extension): beat grid, sections, energy, voice, mix and scratch points… `include` picks blocks (beats, onsets, energy, vocals, sections, silences, cues, loudness, key, stats; all but stats by default). PENDING with its position in line until it is ready."
+  trackAnalysis(trackId: ID!, include: String): TrackAnalysisResult!
+  "Analyses of the songs the user sees, from the least to the most recently analyzed (at most 200 a page): keep a cache with updatedSince set to the last analyzedAt held."
+  trackAnalyses(updatedSince: DateTime, after: String, first: Int, include: String): TrackAnalysisPage!
+  "Listening statistics per song (plays, skips and where, completions, how much is listened to, hours of the day): the user's, or the server's (everyone's together). From the least to the most recently played."
+  trackStats(scope: TrackStatsScope, updatedSince: DateTime, after: String, first: Int, timeZone: String): TrackStatsPage!
+  "What the AI extension's analysis is doing, its progress and settings. Administrators only."
+  aiStatus: AiStatus!
   "Progress of the background audio analysis (loudness, fingerprints, waveforms, tempo and key). Requires MANAGE_LIBRARIES."
   analysisProgress: AnalysisProgress!
   "The user's app passwords, for Subsonic and mStream apps; their secrets are never shown again."
@@ -162,6 +170,189 @@ type Query {
   user(id: ID!): UserAccount!
 }
 
+type TrackAnalysisResult {
+  trackId: ID!
+  status: TrackAnalysisStatus!
+  stale: Boolean!
+  position: Int
+  errorCode: String
+  contentHash: String
+  analysisVersion: Int
+  analyzedAt: DateTime
+  durationSeconds: Float
+  musicStart: Float
+  musicEnd: Float
+  tempo: AnalysisTempo
+  phrases: [AnalysisPhrase!]
+  loudness: AnalysisLoudness
+  key: AnalysisKey
+  energy: AnalysisEnergy
+  vocals: AnalysisVocals
+  onsets: AnalysisOnsets
+  silences: [AnalysisSilence!]
+  fades: AnalysisFades
+  sections: [AnalysisSection!]
+  highlight: AnalysisHighlight
+  mixPoints: AnalysisMixPoints
+  scratchCues: [AnalysisScratchCue!]
+  stats: TrackListeningStats
+}
+
+enum TrackAnalysisStatus {
+  READY
+  PENDING
+  FAILED
+}
+
+"The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
+scalar DateTime
+
+type AnalysisTempo {
+  bpm: Float!
+  confidence: Float!
+  stable: Boolean!
+  beatsPerBar: Int!
+  firstBeat: Float
+  firstDownbeat: Float
+  beats: String
+  downbeats: String
+}
+
+type AnalysisPhrase {
+  start: Float!
+  bars: Int!
+}
+
+type AnalysisLoudness {
+  integratedLufs: Float!
+  range: Float!
+  truePeakDb: Float!
+}
+
+type AnalysisKey {
+  tonic: String!
+  mode: String!
+  camelot: String!
+  confidence: Float!
+}
+
+type AnalysisEnergy {
+  stepSeconds: Float!
+  values: String!
+}
+
+type AnalysisVocals {
+  stepSeconds: Float!
+  presence: String!
+}
+
+type AnalysisOnsets {
+  times: String!
+  strengths: String!
+}
+
+type AnalysisSilence {
+  start: Float!
+  end: Float!
+  kind: String!
+}
+
+type AnalysisFades {
+  fadeInEnd: Float
+  fadeOutStart: Float
+}
+
+type AnalysisSection {
+  start: Float!
+  end: Float!
+  label: String!
+  name: String!
+  energy: Float!
+  trend: String!
+  occurrence: Int!
+}
+
+type AnalysisHighlight {
+  start: Float!
+  end: Float!
+  confidence: Float!
+}
+
+type AnalysisMixPoints {
+  introEnd: Float!
+  outroStart: Float!
+  mixIn: [Float!]!
+  mixOut: [Float!]!
+}
+
+type AnalysisScratchCue {
+  t: Float!
+  duration: Float!
+  kind: String!
+  isolation: Float!
+  strength: Float!
+}
+
+type TrackListeningStats {
+  trackId: ID!
+  plays: Int!
+  skips: Int!
+  avgSkipPosition: Float
+  completions: Int!
+  avgListenRatio: Float
+  lastPlayedAt: DateTime
+  hourHistogram: [Int!]!
+}
+
+type TrackAnalysisPage {
+  items: [TrackAnalysisResult!]!
+  nextCursor: String
+}
+
+type TrackStatsPage {
+  items: [TrackListeningStats!]!
+  nextCursor: String
+}
+
+enum TrackStatsScope {
+  ME
+  SERVER
+}
+
+type AiStatus {
+  enabled: Boolean!
+  activity: AiActivity!
+  progress: TrackAnalysisProgress!
+  songsPerMinute: Float!
+  lastAnalyzedAt: DateTime
+  error: String
+  settings: AiSettingsModel!
+  maxThreads: Int!
+}
+
+enum AiActivity {
+  DISABLED
+  UNAVAILABLE
+  IDLE
+  PAUSED
+  RUNNING
+}
+
+type TrackAnalysisProgress {
+  analysisVersion: Int!
+  analyzed: Int!
+  pending: Int!
+  failed: Int!
+}
+
+type AiSettingsModel {
+  threads: Int!
+  pauseWhileScanning: Boolean!
+  pauseWhileStreaming: Boolean!
+  onDemandSources: Boolean!
+  shareServerStats: Boolean!
+}
+
 type AnalysisProgress {
   activity: AnalysisActivity!
   enabled: Boolean!
@@ -181,9 +372,6 @@ enum AnalysisActivity {
   WAITING_FOR_SCAN
   RUNNING
 }
-
-"The `DateTime` scalar type represents a date and time. `DateTime` expects timestamps to be formatted in accordance with the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard."
-scalar DateTime
 
 type AppPassword {
   id: ID!
@@ -1886,6 +2074,7 @@ type ServerInfo {
   transcodingFormats: [TranscodeFormat!]!
   ratingMode: RatingMode!
   features: [ApiFeature!]!
+  trackAnalysis: TrackAnalysisProgress
 }
 
 enum ApiFeature {
@@ -1896,6 +2085,8 @@ enum ApiFeature {
   STAR_TRACKS
   UPLOAD_HISTORY
   MY_CLOUD_UPLOADS
+  TRACK_ANALYSIS
+  TRACK_STATS
 }
 
 type UserAccount {
@@ -1938,6 +2129,12 @@ type Session {
 }
 
 type Mutation {
+  "Puts a song first in line for its analysis (it is going to be played soon)."
+  prioritizeTrackAnalysis(trackId: ID!): TrackAnalysisResult!
+  "Changes the AI extension's settings. Administrators only, with a recent authentication."
+  setAiSettings(input: SetAiSettingsInput!): AiStatus!
+  "Analyzes every song again; the current analyses are served (as stale) until each is redone. Administrators only, with a recent authentication."
+  reanalyzeTracks: AiStatus!
   "Turns the background audio analysis on or off. Requires MANAGE_SETTINGS."
   setAnalysisEnabled(enabled: Boolean!): AnalysisProgress!
   "Creates a password for one app (Subsonic, mStream) and returns its secret, only this once. Needs a recent authentication."
@@ -2181,6 +2378,14 @@ type Mutation {
   changeMyPassword(input: ChangeMyPasswordInput!): Boolean!
   "Signs out one of the signed-in user's devices."
   revokeMySession(id: ID!): Boolean!
+}
+
+input SetAiSettingsInput {
+  threads: Int!
+  pauseWhileScanning: Boolean!
+  pauseWhileStreaming: Boolean!
+  onDemandSources: Boolean!
+  shareServerStats: Boolean!
 }
 
 type CreatedAppPassword {
@@ -2677,6 +2882,10 @@ input ChangeMyPasswordInput {
 }
 
 type Subscription {
+  "A song the user sees has its analysis (new, or redone by a newer analyzer)."
+  trackAnalysisReady: TrackAnalysisReady!
+  "The AI extension's status as it changes, at most once a second. Administrators only."
+  aiStatusChanged: AiStatus!
   "Progress of the background audio analysis, at most once a second. Requires MANAGE_LIBRARIES."
   analysisProgressChanged: AnalysisProgress!
   "Runs of backups as they change: their state at once, their progress about once a second. Administrators only."
@@ -2687,6 +2896,11 @@ type Subscription {
   starTracksChanged: StarTracksChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobUpdated(libraryId: ID): ScanJob!
+}
+
+type TrackAnalysisReady {
+  trackId: ID!
+  analysisVersion: Int!
 }
 
 type StarTracksChange {

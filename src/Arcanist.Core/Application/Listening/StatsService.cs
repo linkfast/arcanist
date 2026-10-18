@@ -184,7 +184,7 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
         return TimeZoneInfo.ConvertTimeToUtc(start, zone);
     }
 
-    private static TimeZoneInfo TimeZone(string? id)
+    internal static TimeZoneInfo TimeZone(string? id)
     {
         if (string.IsNullOrWhiteSpace(id))
             return TimeZoneInfo.Utc;

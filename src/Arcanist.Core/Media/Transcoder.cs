@@ -36,6 +36,9 @@ public sealed record TranscodeProfile(
     /// </summary>
     public static readonly TranscodeProfile Lpcm = new(null, "pcm_s16be", "s16be", "audio/L16;rate=44100;channels=2", 0, 0, 0, 44100);
 
+    /// <summary>Uncompressed 16-bit stereo at 44.1 kHz, little-endian and headerless: the samples of a WAV file.</summary>
+    public static readonly TranscodeProfile Pcm16 = new(null, "pcm_s16le", "s16le", "audio/wav", 0, 0, 0, 44100);
+
     public static readonly IReadOnlyList<TranscodeProfile> All =
     [
         new(TranscodeFormat.Opus, "libopus", "ogg", "audio/ogg", 128, 32, 256),

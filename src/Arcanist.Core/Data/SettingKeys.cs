@@ -51,6 +51,9 @@ public static class SettingKeys
     /// <summary>Server audio: the device, the name it shows, its volume and its Ultimate Connect id (<c>ServerAudioConfig</c>).</summary>
     public const string ServerAudio = "serverAudio.settings";
 
+    /// <summary>The AI extension's settings (<c>AiConfig</c>).</summary>
+    public const string Ai = "ai.settings";
+
     /// <summary>P2P network: on or off, relay, name and global limits (<c>P2PConfig</c>).</summary>
     public const string P2P = "p2p.settings";
 

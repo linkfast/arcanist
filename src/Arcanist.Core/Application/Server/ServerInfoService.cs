@@ -35,7 +35,8 @@ public sealed record ServerInfo(
     CloudTier CloudTier,
     IReadOnlyList<Core.Media.TranscodeFormat> TranscodingFormats,
     Data.Entities.RatingMode RatingMode,
-    IReadOnlyList<ApiFeature> Features);
+    IReadOnlyList<ApiFeature> Features,
+    Ai.TrackAnalysisProgress? TrackAnalysis);
 
 /// <summary>A part of the API that clients may need to know a server has (older versions lack it).</summary>
 public enum ApiFeature
@@ -63,6 +64,16 @@ public enum ApiFeature
 
     /// <summary><c>uploadTracksToMyCloud</c>: sending songs to the user's own Ultimate Cloud library.</summary>
     MyCloudUploads,
+
+    /// <summary>
+    /// Songs' analyses for DJ software (the AI extension, while it is on): <c>trackAnalysis</c>, <c>trackAnalyses</c>,
+    /// <c>prioritizeTrackAnalysis</c>, <c>trackAnalysisReady</c> and the audio windows; <c>trackAnalysis</c> in serverInfo
+    /// has the analyzer's version and the library's progress.
+    /// </summary>
+    TrackAnalysis,
+
+    /// <summary>Listening statistics per song: <c>trackStats</c> (the user's, or the server's).</summary>
+    TrackStats,
 }
 
 public sealed class ServerInfoService(
@@ -72,7 +83,9 @@ public sealed class ServerInfoService(
     IOptionsMonitor<Setup.SetupOptions> setup,
     Core.Media.FfmpegLocator ffmpeg,
     Core.Media.Transcoder transcoder,
-    Listening.RatingSettings ratings)
+    Listening.RatingSettings ratings,
+    Core.Extensions.ExtensionHost extensions,
+    Core.Ai.AiMonitor ai)
 {
     public const int ApiVersion = 1;
 
@@ -92,5 +105,8 @@ public sealed class ServerInfoService(
         cloudLink.Tier,
         transcoder.Formats(ffmpeg.Current),
         ratings.Current,
-        Enum.GetValues<ApiFeature>());
+        Enum.GetValues<ApiFeature>().Where(f => f != ApiFeature.TrackAnalysis || AnalysisOn).ToList(),
+        AnalysisOn ? ai.Current.Progress with { AnalysisVersion = Core.Analysis.DjAudioAnalyzer.Version } : null);
+
+    private bool AnalysisOn => extensions.IsEnabled(Core.Extensions.Ai.AiExtension.Id) && Core.Analysis.DjAudioAnalyzer.IsAvailable;
 }

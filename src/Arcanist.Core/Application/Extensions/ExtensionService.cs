@@ -101,6 +101,9 @@ public sealed class ExtensionService(
             return null;
         foreach (var tag in languages)
         {
+            // The base texts are in English: asked for English, they win over the server's default language.
+            if (tag.StartsWith("en", StringComparison.OrdinalIgnoreCase) && !texts.Keys.Any(k => k.StartsWith("en", StringComparison.OrdinalIgnoreCase)))
+                return null;
             foreach (var candidate in new[] { tag, tag.Split('-')[0] })
             {
                 var match = texts.FirstOrDefault(t => string.Equals(t.Key, candidate, StringComparison.OrdinalIgnoreCase));

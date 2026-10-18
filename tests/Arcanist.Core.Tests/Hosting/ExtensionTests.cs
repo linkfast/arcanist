@@ -152,6 +152,13 @@ public sealed class ExtensionTests
         Assert.Equal("Greeter", english[0].GetProperty("name").GetString());
         Assert.Equal("Says hello", english[0].GetProperty("description").GetString());
         Assert.Contains("EXTENSION_APPS", (await admin.GraphQLAsync("query { serverInfo { features } }")).GetRawText());
+        // Asked for in English, the base names win over other languages the request accepts.
+        using (var english2 = new HttpRequestMessage(HttpMethod.Get, "/rest/v1/extension-apps?language=en"))
+        {
+            english2.Headers.AcceptLanguage.ParseAdd("es");
+            var listed = await (await admin.SendAsync(english2, Cancel)).Content.ReadFromJsonAsync<List<JsonElement>>(ArcanistFactory.Json, Cancel);
+            Assert.Equal("Greeter", listed![0].GetProperty("name").GetString());
+        }
 
         // Users see those they have the permissions for, and never the ones for administrators.
         await factory.CreateUserAsync("listener");

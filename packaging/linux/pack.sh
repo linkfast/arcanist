@@ -8,6 +8,9 @@
 #
 #   packaging/linux/pack.sh [version] [--skip-panel]
 #
+# ARCHES ("x64 arm64") and FLAVORS ("self-contained dotnet") pick what to build; ARTIFACTS_PATH keeps the build's
+# bin/obj apart from the host's (packaging/synology/build.ps1 builds in a container that way).
+#
 # Each one has the server, its native libraries, the admin panel, the systemd unit and the license.
 set -eu
 root="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -20,13 +23,13 @@ panel="src/Arcanist.Web/dist/arcanist-web/browser"
 
 out="artifacts/linux"
 mkdir -p "$out"
-for arch in x64 arm64; do
+for arch in ${ARCHES:-x64 arm64}; do
     # Native libraries: audio analysis, P2P and the server audio player (need Rust and cargo-zigbuild, see
     # packaging/native/build.sh). The player uses the system's libasound (ALSA).
     [ -f "artifacts/native/linux-$arch/libarcanist_audio.so" ] && [ -f "artifacts/native/linux-$arch/libarcanist_p2p.so" ] \
         && [ -f "artifacts/native/linux-$arch/libarcanist_player.so" ] || sh packaging/native/build.sh "linux-$arch"
 
-    for flavor in self-contained dotnet; do
+    for flavor in ${FLAVORS:-self-contained dotnet}; do
         if [ "$flavor" = dotnet ]; then
             name="arcanist-$version-linux-$arch-dotnet"
             contained=false
@@ -37,7 +40,7 @@ for arch in x64 arm64; do
         dir="$out/$name"
         rm -rf "$dir"
         dotnet publish src/Arcanist.Core -c Release -r "linux-$arch" --self-contained "$contained" -p:Version="$version" \
-            -p:SkipNativeBuild=true -o "$dir"
+            -p:SkipNativeBuild=true ${ARTIFACTS_PATH:+--artifacts-path "$ARTIFACTS_PATH"} -o "$dir"
         # Debug symbols, mostly native ones from SkiaSharp, would double the download.
         find "$dir" -name '*.pdb' -delete
         mkdir -p "$dir/wwwroot"

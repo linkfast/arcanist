@@ -53,14 +53,26 @@ which a form on another site cannot send.
 
 ## Building a package to try
 
-Before a release exists, from the local tarballs (needs Docker):
+One command builds everything from this checkout (native libraries, admin panel, server and package) with **Docker
+as the only requirement** (Docker Desktop with Linux containers, on Windows, macOS or Linux), in PowerShell:
 
-```sh
-packaging/linux/pack.sh
-packaging/synology/build-local.sh       # artifacts/synology/arcanist_*.spk
+```powershell
+pwsh packaging/synology/build.ps1                 # x64 (Intel or AMD NAS)
+pwsh packaging/synology/build.ps1 -Arch arm64     # ARMv8; -Arch all for both
 ```
 
-Install the `.spk` in Package Center with "Manual Install".
+The package is `artifacts/synology/arcanist_<x64|aarch64>-7.2_<version>-<revision>.spk`: install it in Package Center
+with **Manual Install**. Each build takes the next revision, so DSM installs it over the previous one (`-Revision`
+sets it). The first build takes a while (it builds a Rust image and spksrc downloads the DSM toolchain, several GB);
+later ones reuse their caches (Docker volumes `arcanist-*` and `artifacts/spksrc`). `-SkipNative`, `-SkipPanel` and
+`-SkipServer` reuse what the last build left. On Windows PowerShell 5, use `powershell -File` instead of `pwsh`.
+
+With the tools installed instead (Rust and cargo-zigbuild, Node 24, .NET 10, Docker), from a shell:
+
+```sh
+packaging/linux/pack.sh                 # ARCHES="x64" FLAVORS="dotnet" for just what the package needs
+packaging/synology/build-local.sh       # artifacts/synology/arcanist_*.spk (ARCHES too)
+```
 
 ## Building for SynoCommunity
 

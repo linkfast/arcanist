@@ -154,6 +154,101 @@ null (and the waveform answers `not_found`); clients should cope with that.
 - **Waveform:** `trackWaveform(trackId, fileId)` / `GET /rest/v1/tracks/{trackId}/waveform` returns 1000 peak values
   (0–255) spread evenly over the duration, for seek bars. It is a separate call so track lists stay small.
 
+## Track analysis for DJ software (AI extension)
+
+With the **AI** extension switched on (it starts off), Arcanist analyzes every song for DJ software and AI-assisted
+clients such as the ULTIMATE AI DJ: beat grid, bars and phrases, named sections, energy, voice, silences, mix points
+and scratch points, so a client can mix without downloading the audio. `TRACK_ANALYSIS` is in
+`serverInfo.features` while the extension is on and the server can analyze, and `serverInfo.trackAnalysis` gives the
+progress (`analysisVersion`, `analyzed`, `pending`, `failed`). With the extension off, these operations answer 409
+`ai_disabled`.
+
+Local songs are analyzed in the background. Songs on S3, Ultimate Cloud or another Arcanist server are analyzed when
+a client asks for them (once per audio: copies with the same content share it); if the administrator turned that off,
+they answer `analysis_unavailable`.
+
+`trackAnalysis(trackId, include)` / `GET /rest/v1/tracks/{trackId}/analysis?include=`:
+
+- `status`: `READY`, `PENDING` (REST answers 202, with the song's `position` in line; asking puts it in line) or
+  `FAILED` (with `errorCode`).
+- `stale: true`: the analysis is from an earlier version of the analyzer and is being redone. It is still usable.
+- `include` is a comma-separated list of blocks: `beats`, `onsets`, `energy`, `vocals`, `sections`, `silences`,
+  `cues`, `loudness`, `key` and `stats`. Without it you get all but `stats`. Blocks not asked for are null. The tempo,
+  phrases, fades and `musicStart`/`musicEnd` always come.
+- Times are seconds from the start of the song. Dense series are base64: times as float32 little-endian, levels as
+  one byte per step (0–255).
+- When `tempo.stable` is true the tempo holds within 1% through the song: the grid is `firstBeat + n × 60 / bpm`, a
+  bar every `beatsPerBar` beats from `firstDownbeat`, and `beats`/`downbeats` are not sent. Otherwise they list every
+  beat and bar.
+- `sections` have a `label` (the same letter for parts that sound alike), a `name` (`intro`, `verse`, `build`,
+  `chorus`, `drop`, `break`, `bridge`, `outro`, or `section` when unsure), their `energy` (0–1), a `trend`
+  (`rising`, `steady`, `falling`) and which `occurrence` of that label they are. `highlight` is the most
+  representative chorus or drop.
+- `mixPoints`: `introEnd`, `outroStart`, and downbeats that start a phrase without voice, good for mixing in (`mixIn`)
+  and out (`mixOut`).
+- `scratchCues` (at most 12, best first): short isolated sounds (`vocal`, `stab` or `drum`), with `t` at the attack.
+- `vocals.presence` is how likely a voice is at each step: a light estimate, not a separation.
+
+An example (No Limit, by 2 Unlimited, with `include=sections,silences,cues,loudness,key`; trimmed):
+
+```json
+{
+  "trackId": "01a14cf2-54c4-77c8-91bd-27609330f692",
+  "status": "READY",
+  "stale": false,
+  "analysisVersion": 1,
+  "durationSeconds": 223.686,
+  "musicStart": 0,
+  "musicEnd": 222.47,
+  "tempo": { "bpm": 141.02, "confidence": 0.76, "stable": true, "beatsPerBar": 4, "firstBeat": 0.236, "firstDownbeat": 1.513, "beats": null, "downbeats": null },
+  "phrases": [{ "start": 1.513, "bars": 8 }, { "start": 15.127, "bars": 4 }, { "start": 21.935, "bars": 8 }],
+  "loudness": { "integratedLufs": -9.5, "range": 2.5, "truePeakDb": -0.4 },
+  "key": { "tonic": "Bb", "mode": "major", "camelot": "6B", "confidence": 0.24 },
+  "energy": null,
+  "vocals": null,
+  "onsets": null,
+  "silences": [{ "start": 222.47, "end": 223.685, "kind": "trailing" }],
+  "fades": { "fadeInEnd": null, "fadeOutStart": null },
+  "sections": [
+    { "start": 1.513, "end": 21.935, "label": "A", "name": "intro", "energy": 0.63, "trend": "steady", "occurrence": 1 },
+    { "start": 69.586, "end": 90.008, "label": "E", "name": "chorus", "energy": 0.96, "trend": "steady", "occurrence": 1 },
+    { "start": 139.361, "end": 152.976, "label": "E", "name": "chorus", "energy": 1, "trend": "steady", "occurrence": 2 }
+  ],
+  "highlight": { "start": 139.361, "end": 152.976, "confidence": 0.61 },
+  "mixPoints": { "introEnd": 21.935, "outroStart": 200.627, "mixIn": [1.513, 15.127, 21.935, 35.549], "mixOut": [152.976, 180.205, 185.311] },
+  "scratchCues": [
+    { "t": 148.722, "duration": 0.22, "kind": "vocal", "isolation": 0.84, "strength": 0.69 },
+    { "t": 7.265, "duration": 0.43, "kind": "stab", "isolation": 0.89, "strength": 0.97 }
+  ],
+  "stats": null
+}
+```
+
+The whole analysis of a four-minute song is about 15–20 KB.
+
+- **Prioritize:** `prioritizeTrackAnalysis(trackId)` / `POST /rest/v1/tracks/{trackId}/analysis/prioritize` puts a
+  song first in line (for example, the next ones in a set).
+- **Keep a cache:** `trackAnalyses(updatedSince, after, first, include)` / `GET /rest/v1/tracks/analysis` lists the
+  analyses of the songs the user sees, from the least to the most recently analyzed, up to 200 a page
+  (`after`/`nextCursor`). Pass the latest `analyzedAt` you hold as `updatedSince` to get only what changed.
+- **Live:** the `trackAnalysisReady` subscription sends `{ trackId, analysisVersion }` when a song the user sees is
+  analyzed.
+- **Hear a moment:** `GET /rest/v1/tracks/{trackId}/audio-window?start=148.7&duration=4` returns that piece decoded,
+  as a WAV file of 16-bit stereo at 44.1 kHz (`duration` at most 8 seconds), for scratching or previewing without
+  downloading the song. It authenticates like `/stream` (Bearer, or the `st` of a `streamUrl`) and needs ffmpeg
+  (`transcoding_unavailable` otherwise).
+
+### Listening statistics per song
+
+`trackStats(scope, updatedSince, after, first, timeZone)` / `GET /rest/v1/stats/tracks?scope=ME` (the
+`TRACK_STATS` feature; it does not need the AI extension) gives, for each song played, its counted `plays`, `skips`
+and where they happen on average (`avgSkipPosition`, seconds), `completions` (listened to 90% or to the last 10
+seconds), `avgListenRatio` (0–1), `lastPlayedAt` and `hourHistogram` (24 counts, in the IANA `timeZone` you pass).
+Songs come from the least to the most recently played; pass the latest `lastPlayedAt` you hold as `updatedSince`.
+`scope: SERVER` is everyone's plays together, with no names: the administrator can stop sharing it (it answers 403
+then, except to users who may see everyone's statistics). `include=stats` in the analysis adds the user's
+statistics of that song.
+
 ## Lyrics
 
 `Track.hasLyrics` says whether `trackLyrics(trackId)` / `GET /rest/v1/tracks/{trackId}/lyrics` has something

@@ -9,7 +9,9 @@
 
       1. Native libraries for linux-<arch> (Rust, cargo-zigbuild; image arcanist-native-builder, built once).
       2. The admin panel (Node 24).
-      3. The server for systems with .NET (artifacts/linux/arcanist-<version>-linux-<arch>-dotnet.tar.gz).
+      3. The server for systems with .NET, with the bundled web players: the releases pinned in Arcanist.Core.csproj
+         (BundledPlayer, checked by SHA-256), or with -LocalWebamp a build of a Webamp checkout (its own
+         scripts/pack.ps1, also in Docker) (artifacts/linux/arcanist-<version>-linux-<arch>-dotnet.tar.gz).
       4. The package with SynoCommunity's spksrc (cloned once into artifacts/spksrc; its first build downloads the
          DSM toolchain, several GB).
 
@@ -22,6 +24,8 @@
     pwsh packaging/synology/build.ps1 -Arch all       # x64 and ARMv8
 .EXAMPLE
     pwsh packaging/synology/build.ps1 -SkipNative -SkipPanel   # reuse what the last build made
+.EXAMPLE
+    pwsh packaging/synology/build.ps1 -LocalWebamp             # with Webamp from ../ArcanistWebPlayers/webamp
 #>
 [CmdletBinding()]
 param(
@@ -42,7 +46,13 @@ param(
     [switch]$SkipPanel,
 
     # Reuse the server tarballs already in artifacts/linux.
-    [switch]$SkipServer
+    [switch]$SkipServer,
+
+    # Bundle Webamp built from a local checkout instead of its published release.
+    [switch]$LocalWebamp,
+
+    # The Webamp checkout -LocalWebamp builds (the fork of webamp, branch arcanist).
+    [string]$WebampPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -119,12 +129,31 @@ if (-not (Test-Path (Join-Path $root 'src/Arcanist.Web/dist/arcanist-web/browser
     throw 'The admin panel is not built: build without -SkipPanel.'
 }
 
+# Webamp from a local checkout: its zip, unpacked where the server's build takes bundled players from (one folder
+# per player id).
+$bundled = ''
+if ($LocalWebamp) {
+    if ($SkipServer) { throw '-LocalWebamp needs the server built (leave out -SkipServer).' }
+    if (-not $WebampPath) { $WebampPath = Join-Path $root '../ArcanistWebPlayers/webamp' }
+    $packScript = Join-Path $WebampPath 'packages/arcanist-webamp/scripts/pack.ps1'
+    if (-not (Test-Path $packScript)) { throw "No Webamp checkout at $WebampPath (or no scripts/pack.ps1 in it): pass -WebampPath." }
+    Step "Webamp ($((Resolve-Path $WebampPath).Path))"
+    & $packScript
+    $webampVersion = (Get-Content (Join-Path $WebampPath 'packages/arcanist-webamp/package.json') -Raw | ConvertFrom-Json).version
+    $zip = Join-Path $WebampPath "packages/arcanist-webamp/release/arcanist-webamp-$webampVersion.zip"
+    $players = Join-Path $root 'artifacts/players-local'
+    Remove-Item -Recurse -Force $players -ErrorAction SilentlyContinue
+    Expand-Archive $zip -DestinationPath (Join-Path $players 'webamp')
+    $bundled = '/src/artifacts/players-local'
+}
+
 # 3. The server for systems with .NET (what the package runs with SynoCommunity's dotnet10-runtime).
 if (-not $SkipServer) {
     Step 'Server (.NET 10)'
     Invoke-Docker run --rm -v $mount -w /src `
         -v arcanist-dotnet-build:/build -v arcanist-nuget:/root/.nuget/packages `
         -e "ARCHES=$($arches -join ' ')" -e FLAVORS=dotnet -e ARTIFACTS_PATH=/build -e DOTNET_CLI_TELEMETRY_OPTOUT=1 `
+        -e "BUNDLED_PLAYERS_DIRECTORY=$bundled" `
         mcr.microsoft.com/dotnet/sdk:10.0 sh packaging/linux/pack.sh $Version --skip-panel
 }
 foreach ($a in $arches) {

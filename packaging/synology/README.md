@@ -67,6 +67,16 @@ sets it). The first build takes a while (it builds a Rust image and spksrc downl
 later ones reuse their caches (Docker volumes `arcanist-*` and `artifacts/spksrc`). `-SkipNative`, `-SkipPanel` and
 `-SkipServer` reuse what the last build left. On Windows PowerShell 5, use `powershell -File` instead of `pwsh`.
 
+The package bundles Webamp, like every Arcanist package: by default its published release, pinned by version and
+SHA-256 in `src/Arcanist.Core/Arcanist.Core.csproj` (`BundledPlayer`). To try a local Webamp instead, build it into
+the package from its checkout (by default `../ArcanistWebPlayers/webamp`, or `-WebampPath`):
+
+```powershell
+pwsh packaging/synology/build.ps1 -LocalWebamp
+```
+
+It runs Webamp's own `packages/arcanist-webamp/scripts/pack.ps1` (also in Docker), which alone builds its zip.
+
 With the tools installed instead (Rust and cargo-zigbuild, Node 24, .NET 10, Docker), from a shell:
 
 ```sh

@@ -9,7 +9,8 @@
 #   packaging/linux/pack.sh [version] [--skip-panel]
 #
 # ARCHES ("x64 arm64") and FLAVORS ("self-contained dotnet") pick what to build; ARTIFACTS_PATH keeps the build's
-# bin/obj apart from the host's (packaging/synology/build.ps1 builds in a container that way).
+# bin/obj apart from the host's (packaging/synology/build.ps1 builds in a container that way). BUNDLED_PLAYERS_DIRECTORY
+# bundles the players of that folder (one per id, such as a local build of Webamp) instead of the pinned releases.
 #
 # Each one has the server, its native libraries, the admin panel, the systemd unit and the license.
 set -eu
@@ -40,7 +41,8 @@ for arch in ${ARCHES:-x64 arm64}; do
         dir="$out/$name"
         rm -rf "$dir"
         dotnet publish src/Arcanist.Core -c Release -r "linux-$arch" --self-contained "$contained" -p:Version="$version" \
-            -p:SkipNativeBuild=true ${ARTIFACTS_PATH:+--artifacts-path "$ARTIFACTS_PATH"} -o "$dir"
+            -p:SkipNativeBuild=true ${ARTIFACTS_PATH:+--artifacts-path "$ARTIFACTS_PATH"} \
+            ${BUNDLED_PLAYERS_DIRECTORY:+-p:BundledPlayersDirectory="$BUNDLED_PLAYERS_DIRECTORY"} -o "$dir"
         # Debug symbols, mostly native ones from SkiaSharp, would double the download.
         find "$dir" -name '*.pdb' -delete
         mkdir -p "$dir/wwwroot"

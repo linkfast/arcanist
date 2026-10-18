@@ -24,6 +24,20 @@ const MAX_DECODE_ERRORS: u32 = 50;
 /// Decodes and analyzes the stream, or only the part from `range.0` to `range.1` milliseconds (a track of a cue
 /// sheet). Decoding is far cheaper than analyzing, so the part before the range is simply decoded and skipped.
 pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, flags: u32, range: Option<(u64, u64)>) -> Result<Analysis, DecodeFailure> {
+    decode(source, extension, range, |rate, channels| Analyzer::new(rate, channels, flags), |analyzer, samples| analyzer.push(samples))?
+        .finish()
+        .map_err(DecodeFailure::Invalid)
+}
+
+/// Decodes the stream (or the part from `range.0` to `range.1` milliseconds) into a consumer made by `create` from
+/// the stream's rate and channel count, `push`ing interleaved f32 samples to it; returns the consumer.
+pub fn decode<S: MediaSource + 'static, T>(
+    source: S,
+    extension: Option<&str>,
+    range: Option<(u64, u64)>,
+    create: impl FnOnce(u32, u32) -> Result<T, String>,
+    mut push: impl FnMut(&mut T, &[f32]) -> Result<(), String>,
+) -> Result<T, DecodeFailure> {
     let stream = MediaSourceStream::new(Box::new(source), Default::default());
     let mut hint = Hint::new();
     if let Some(extension) = extension {
@@ -49,7 +63,8 @@ pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, fla
         .make_audio_decoder(&params, &AudioDecoderOptions::default())
         .map_err(|e| DecodeFailure::Unsupported(e.to_string()))?;
 
-    let mut analyzer: Option<Analyzer> = None;
+    let mut create = Some(create);
+    let mut sink: Option<(T, (u32, u32))> = None;
     let mut samples: Vec<f32> = Vec::new();
     let mut errors = 0;
     // Frames decoded so far, to place each buffer relative to the range.
@@ -81,12 +96,15 @@ pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, fla
 
         let spec = buffer.spec();
         let (rate, channels) = (spec.rate(), spec.channels().count() as u32);
-        let analyzer = match analyzer.as_mut() {
+        let (consumer, format) = match sink.as_mut() {
             Some(existing) => existing,
-            None => analyzer.insert(Analyzer::new(rate, channels, flags).map_err(DecodeFailure::Invalid)?),
+            None => {
+                let make = create.take().expect("created once");
+                sink.insert((make(rate, channels).map_err(DecodeFailure::Invalid)?, (rate, channels)))
+            }
         };
         // A stream changing format midway (chained Ogg) is left to ffmpeg.
-        if analyzer.format() != (rate, channels) {
+        if *format != (rate, channels) {
             return Err(DecodeFailure::Unsupported("audio format changes within the stream".into()));
         }
 
@@ -99,7 +117,7 @@ pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, fla
         let from = start.saturating_sub(position).min(frames);
         let to = end.saturating_sub(position).min(frames);
         if to > from {
-            analyzer.push(&samples[(from * channels as u64) as usize..(to * channels as u64) as usize]).map_err(DecodeFailure::Invalid)?;
+            push(consumer, &samples[(from * channels as u64) as usize..(to * channels as u64) as usize]).map_err(DecodeFailure::Invalid)?;
         }
         position += frames;
         if position >= end {
@@ -107,10 +125,7 @@ pub fn analyze<S: MediaSource + 'static>(source: S, extension: Option<&str>, fla
         }
     }
 
-    analyzer
-        .ok_or_else(|| DecodeFailure::Invalid("no audio decoded".into()))?
-        .finish()
-        .map_err(DecodeFailure::Invalid)
+    sink.map(|(consumer, _)| consumer).ok_or_else(|| DecodeFailure::Invalid("no audio decoded".into()))
 }
 
 

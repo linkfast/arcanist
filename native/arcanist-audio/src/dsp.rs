@@ -24,7 +24,12 @@ pub struct Decimator {
 
 impl Decimator {
     pub fn new(input_rate: u32) -> Self {
-        let factor = ((input_rate as f32 / ANALYSIS_RATE).round() as usize).max(1);
+        Self::to_rate(input_rate, ANALYSIS_RATE)
+    }
+
+    /// Decimates to roughly `target` Hz (by a whole factor: 44.1 kHz to 22,050 Hz, 48 kHz to 24 kHz).
+    pub fn to_rate(input_rate: u32, target: f32) -> Self {
+        let factor = ((input_rate as f32 / target).round() as usize).max(1);
         let taps = if factor == 1 { vec![1.0] } else { lowpass(63, 0.45 / factor as f32) };
         Decimator {
             factor,

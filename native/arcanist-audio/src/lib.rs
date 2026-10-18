@@ -7,6 +7,7 @@
 mod analyzer;
 mod compare;
 mod decode;
+mod dj;
 mod dsp;
 mod key;
 mod tempo;
@@ -17,7 +18,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 pub use analyzer::{ANALYZER_VERSION, Analysis, Analyzer, FLAG_ALL, FLAG_FINGERPRINT, FLAG_KEY, FLAG_LOUDNESS, FLAG_TEMPO, FLAG_WAVEFORM};
 pub use compare::similarity;
-pub use decode::{DecodeFailure, ReaderSource, analyze};
+pub use decode::{DecodeFailure, ReaderSource, analyze, decode};
+pub use dj::{DJ_ANALYZER_VERSION, DjAnalysis, DjAnalyzer};
 
 pub const STATUS_OK: i32 = 0;
 /// The format or codec is not supported: decode it elsewhere (ffmpeg) and use the PCM functions.
@@ -169,6 +171,110 @@ pub unsafe extern "C" fn arcanist_audio_analyzer_finish(analyzer: *mut Analyzer,
 /// `analyzer` must come from `arcanist_audio_analyzer_new`, or be null.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn arcanist_audio_analyzer_free(analyzer: *mut Analyzer) {
+    if !analyzer.is_null() {
+        drop(unsafe { Box::from_raw(analyzer) });
+    }
+}
+
+/// Version of the DJ analysis; results from an older version should be recomputed.
+#[unsafe(no_mangle)]
+pub extern "C" fn arcanist_audio_dj_version() -> u32 {
+    DJ_ANALYZER_VERSION
+}
+
+/// Decodes a stream and analyzes it for DJ software (beat grid, sections, energy, voice, cues…): all of it, or
+/// from `start_ms` to `end_ms` when `end_ms` is not 0. On return, `out` holds the analysis as JSON, or
+/// `{"error": "..."}`.
+///
+/// # Safety
+/// As `arcanist_audio_analyze`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_dj_analyze(
+    source: *const ArcanistSource,
+    extension: *const c_char,
+    start_ms: u64,
+    end_ms: u64,
+    out: *mut *mut c_char,
+) -> i32 {
+    if source.is_null() || out.is_null() || (end_ms != 0 && end_ms <= start_ms) {
+        return STATUS_ARGUMENT;
+    }
+    let (source, extension) = unsafe {
+        let extension = if extension.is_null() { None } else { CStr::from_ptr(extension).to_str().ok().map(str::to_owned) };
+        (&*source, extension)
+    };
+    let reader = CallbackReader { context: source.context, read: source.read, seek: source.seek };
+    let length = (source.length >= 0).then_some(source.length as u64);
+
+    let range = (end_ms != 0).then_some((start_ms, end_ms));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        decode(ReaderSource::new(reader, length), extension.as_deref(), range, DjAnalyzer::new, |analyzer, samples| analyzer.push(samples))
+            .and_then(|analyzer| analyzer.finish().map_err(DecodeFailure::Invalid))
+    }));
+    let (status, json) = match result {
+        Ok(Ok(analysis)) => (STATUS_OK, serde_json::to_string(&analysis).unwrap_or_else(|e| error_json(&e.to_string()))),
+        Ok(Err(DecodeFailure::Unsupported(message))) => (STATUS_UNSUPPORTED, error_json(&message)),
+        Ok(Err(DecodeFailure::Invalid(message))) => (STATUS_INVALID, error_json(&message)),
+        Err(_) => (STATUS_PANIC, error_json("the decoder panicked")),
+    };
+    unsafe { *out = into_c_string(json) };
+    status
+}
+
+/// Starts a DJ analysis of PCM decoded elsewhere. Returns null if the format is invalid.
+#[unsafe(no_mangle)]
+pub extern "C" fn arcanist_audio_dj_new(rate: u32, channels: u32) -> *mut DjAnalyzer {
+    catch_unwind(|| DjAnalyzer::new(rate, channels).ok())
+        .ok()
+        .flatten()
+        .map_or(std::ptr::null_mut(), |analyzer| Box::into_raw(Box::new(analyzer)))
+}
+
+/// Adds `count` interleaved f32 samples to a DJ analysis.
+///
+/// # Safety
+/// `analyzer` must come from `arcanist_audio_dj_new` and not be finished or freed; `samples` must point to
+/// `count` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_dj_push(analyzer: *mut DjAnalyzer, samples: *const f32, count: usize) -> i32 {
+    if analyzer.is_null() || (samples.is_null() && count > 0) {
+        return STATUS_ARGUMENT;
+    }
+    let (analyzer, samples) = unsafe {
+        (&mut *analyzer, if count == 0 { &[][..] } else { std::slice::from_raw_parts(samples, count) })
+    };
+    match catch_unwind(AssertUnwindSafe(|| analyzer.push(samples))) {
+        Ok(Ok(())) => STATUS_OK,
+        Ok(Err(_)) => STATUS_INVALID,
+        Err(_) => STATUS_PANIC,
+    }
+}
+
+/// Finishes and releases a DJ analysis; `out` receives it as JSON, or `{"error": "..."}`.
+///
+/// # Safety
+/// `analyzer` must come from `arcanist_audio_dj_new` and is invalid afterwards; `out` a valid pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_dj_finish(analyzer: *mut DjAnalyzer, out: *mut *mut c_char) -> i32 {
+    if analyzer.is_null() || out.is_null() {
+        return STATUS_ARGUMENT;
+    }
+    let analyzer = unsafe { Box::from_raw(analyzer) };
+    let (status, json) = match catch_unwind(AssertUnwindSafe(|| analyzer.finish())) {
+        Ok(Ok(analysis)) => (STATUS_OK, serde_json::to_string(&analysis).unwrap_or_else(|e| error_json(&e.to_string()))),
+        Ok(Err(message)) => (STATUS_INVALID, error_json(&message)),
+        Err(_) => (STATUS_PANIC, error_json("the analyzer panicked")),
+    };
+    unsafe { *out = into_c_string(json) };
+    status
+}
+
+/// Releases a DJ analysis that will not be finished.
+///
+/// # Safety
+/// `analyzer` must come from `arcanist_audio_dj_new`, or be null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_dj_free(analyzer: *mut DjAnalyzer) {
     if !analyzer.is_null() {
         drop(unsafe { Box::from_raw(analyzer) });
     }

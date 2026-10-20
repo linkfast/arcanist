@@ -80,6 +80,12 @@ public enum ApiFeature
     /// <c>MyUpload.source</c> names the extension a file came from.
     /// </summary>
     ExtensionApps,
+
+    /// <summary>
+    /// <c>libraries(includeVirtual: true)</c> lists "All" (<c>Library.virtual</c>), every library the user can access;
+    /// its id works as any <c>libraryId</c> filter and nothing can be uploaded to it.
+    /// </summary>
+    VirtualLibraries,
 }
 
 public sealed class ServerInfoService(

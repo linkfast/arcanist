@@ -80,10 +80,10 @@ type Query {
   extensionMarketplace(language: String, refresh: Boolean): ExtensionMarketplaceInfo!
   "Installed web players; the default one is served at /. Administrators only."
   frontends: [Frontend!]!
-  "Libraries the signed-in user can access."
-  libraries: [Library!]!
+  "Libraries the signed-in user can access. With `includeVirtual`, first \"All\" (`virtual`), every one of them at once, named in `language` (or the request's Accept-Language)."
+  libraries(includeVirtual: Boolean, language: String): [Library!]!
   "A library by id. Libraries the user cannot access are reported as not found."
-  library(id: ID!): Library!
+  library(id: ID!, language: String): Library!
   "Library folder moves since the server started, the latest first, with their progress. Administrators only."
   librarySourceMoves: [LibrarySourceMove!]!
   "Folders on the server, for choosing library locations. Lists the file system roots when path is omitted. Administrators only."
@@ -1130,6 +1130,7 @@ type Library {
   canUpload: Boolean!
   disabled: Boolean!
   personal: Boolean!
+  virtual: Boolean!
 }
 
 type LibrarySource {
@@ -2162,6 +2163,7 @@ enum ApiFeature {
   TRACK_ANALYSIS
   TRACK_STATS
   EXTENSION_APPS
+  VIRTUAL_LIBRARIES
 }
 
 type UserAccount {

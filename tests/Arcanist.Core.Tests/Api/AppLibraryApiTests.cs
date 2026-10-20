@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Arcanist.Core.Application.Libraries;
 using Arcanist.Core.Data;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Scanning;
@@ -58,6 +59,40 @@ public sealed class AppLibraryApiTests : IAsyncLifetime
         await _factory.CreateUserAsync("guest");
         var guest = await _factory.CreateAuthenticatedClientAsync("guest");
         Assert.Equal(HttpStatusCode.NotFound, (await guest.GetAsync($"/rest/v1/tracks?libraryId={Guid.NewGuid()}", Cancel)).StatusCode);
+    }
+
+    [Fact]
+    public async Task All_is_a_virtual_library_of_every_one_the_user_can_access()
+    {
+        var info = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, Cancel);
+        Assert.Contains("VIRTUAL_LIBRARIES", info.GetProperty("features").EnumerateArray().Select(f => f.GetString()));
+
+        // Only when asked for, first, and named in the language asked for.
+        Assert.DoesNotContain((await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel)).EnumerateArray(),
+            l => l.GetProperty("virtual").GetBoolean());
+        var libraries = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/libraries?includeVirtual=true&language=es", ArcanistFactory.Json, Cancel))
+            .EnumerateArray().ToList();
+        var all = libraries[0];
+        Assert.Equal((VirtualLibraries.All, "Todo", true, false), (all.GetProperty("id").GetGuid(), all.GetProperty("name").GetString(),
+            all.GetProperty("virtual").GetBoolean(), all.GetProperty("canUpload").GetBoolean()));
+        Assert.Equal(JsonValueKind.Null, all.GetProperty("sources").ValueKind);
+        Assert.Equal(3, libraries.Count);
+        Assert.Equal("All", (await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/libraries/{VirtualLibraries.All}?language=en", ArcanistFactory.Json, Cancel))
+            .GetProperty("name").GetString());
+
+        // As a filter, it is every library at once.
+        Assert.Equal(["Riff", "Swing"], (await TracksAsync($"?libraryId={VirtualLibraries.All}")).Select(t => t.GetProperty("title").GetString()).Order());
+        Assert.Equal(2, (await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/albums?libraryId={VirtualLibraries.All}", ArcanistFactory.Json, Cancel))
+            .GetProperty("items").GetArrayLength());
+        var match = await _admin.PostAsJsonAsync("/rest/v1/tracks/match", new { libraryId = VirtualLibraries.All, candidates = new[] { new { key = "1", title = "Swing", artist = "Trio", album = "Smooth" } } },
+            ArcanistFactory.Json, Cancel);
+        Assert.NotEqual(JsonValueKind.Null, (await match.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel))[0].GetProperty("trackId").ValueKind);
+
+        // Nothing goes into a view: apps add it as one more library, never migrate to it.
+        var upload = await _admin.PostAsync($"/rest/v1/libraries/{VirtualLibraries.All}/uploads?fileName=x.wav", new ByteArrayContent([1, 2, 3]), Cancel);
+        Assert.Equal(HttpStatusCode.Conflict, upload.StatusCode);
+        Assert.Equal("library_virtual", (await upload.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("code").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, (await _admin.DeleteAsync($"/rest/v1/libraries/{VirtualLibraries.All}", Cancel)).StatusCode);
     }
 
     [Fact]

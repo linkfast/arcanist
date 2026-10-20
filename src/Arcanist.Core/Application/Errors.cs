@@ -110,6 +110,8 @@ public static class ErrorCodes
 
     /// <summary>The library's music is in Ultimate Cloud or S3 and the Ultimate Cloud extension is off: it can only be deleted.</summary>
     public const string LibraryDisabled = "library_disabled";
+    /// <summary>The library is a view of others ("All"): nothing can be uploaded to it or changed in it.</summary>
+    public const string LibraryVirtual = "library_virtual";
 
     /// <summary>A different file with the same name is already where a file had to go.</summary>
     public const string StorageConflict = "storage_conflict";

@@ -2817,8 +2817,24 @@
         "tags": [
           "Libraries"
         ],
-        "summary": "Libraries the signed-in user can access.",
+        "summary": "Libraries the signed-in user can access. With \u0060includeVirtual\u0060, first \u0022All\u0022 (\u0060virtual\u0060), every one of them at once, named in \u0060language\u0060 (or Accept-Language).",
         "operationId": "Libraries",
+        "parameters": [
+          {
+            "name": "includeVirtual",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -2880,6 +2896,13 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -9119,7 +9142,8 @@
           "MY_CLOUD_UPLOADS",
           "TRACK_ANALYSIS",
           "TRACK_STATS",
-          "EXTENSION_APPS"
+          "EXTENSION_APPS",
+          "VIRTUAL_LIBRARIES"
         ]
       },
       "AppPassword": {
@@ -13140,6 +13164,10 @@
             "default": false
           },
           "personal": {
+            "type": "boolean",
+            "default": false
+          },
+          "virtual": {
             "type": "boolean",
             "default": false
           }

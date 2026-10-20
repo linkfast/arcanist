@@ -47,6 +47,7 @@ describe('translations', () => {
       'marketplace_incompatible',
       'package_checksum_mismatch',
       'package_mismatch',
+      'library_virtual',
     ];
     const errors = keys(es)
       .filter((k) => k.startsWith('errors.'))

@@ -2438,6 +2438,7 @@ export const en: Dictionary = {
       'The downloaded package is not the one the catalog publishes (its SHA-256 does not match). It was not installed.',
     package_mismatch: 'The downloaded package holds a different extension than the catalog says.',
     update_check_failed: 'Could not check for a new version.',
+    library_virtual: 'It is a virtual library (All): nothing can be uploaded to it or changed in it.',
     not_ffmpeg: 'That file is not a working ffmpeg.',
     ffmpeg_platform_unsupported:
       'There is no ffmpeg download for this system; install it with the package manager and enter its path.',

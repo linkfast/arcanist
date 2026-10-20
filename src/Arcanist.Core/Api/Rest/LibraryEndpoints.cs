@@ -8,11 +8,12 @@ public static class LibraryEndpoints
     {
         var libraries = rest.MapGroup("/libraries").WithTags("Libraries");
 
-        libraries.MapGet("", (LibraryService service, CancellationToken ct) => service.ListAsync(ct))
+        libraries.MapGet("", (bool? includeVirtual, string? language, LibraryService service, CancellationToken ct) =>
+                service.ListAsync(ct, includeVirtual ?? false, language))
             .WithName("Libraries")
-            .WithSummary("Libraries the signed-in user can access.");
+            .WithSummary("Libraries the signed-in user can access. With `includeVirtual`, first \"All\" (`virtual`), every one of them at once, named in `language` (or Accept-Language).");
 
-        libraries.MapGet("/{id:guid}", (Guid id, LibraryService service, CancellationToken ct) => service.GetAsync(id, ct))
+        libraries.MapGet("/{id:guid}", (Guid id, string? language, LibraryService service, CancellationToken ct) => service.GetAsync(id, ct, language))
             .WithName("Library")
             .WithSummary("A library by id. Libraries the user cannot access are reported as not found.");
 

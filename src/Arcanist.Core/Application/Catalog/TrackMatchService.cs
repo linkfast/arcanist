@@ -62,6 +62,7 @@ public sealed class TrackMatchService(ArcanistDbContext db, AccessGuard guard, C
         if (input.Candidates.Count > MaxCandidates)
             throw ArcanistException.Field("candidates", ErrorCodes.TooMany);
 
+        input = input with { LibraryId = Libraries.VirtualLibraries.Filter(input.LibraryId) };
         var visible = catalog.Visible(access, input.LibraryId);
         var found = await FindAsync(visible, input.Candidates, cancellationToken);
 

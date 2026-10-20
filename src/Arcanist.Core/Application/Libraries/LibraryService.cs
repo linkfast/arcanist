@@ -26,9 +26,12 @@ public sealed class LibraryService(
     LibraryMoves moves,
     CloudLibraries cloud,
     Storage.ILibraryStorageResolver storages,
-    TimeProvider time)
+    TimeProvider time,
+    SettingsStore settings,
+    IHttpContextAccessor http)
 {
-    public async Task<IReadOnlyList<Library>> ListAsync(CancellationToken cancellationToken)
+    /// <param name="includeVirtual">Also "All" (first), every library the caller can access, named in <paramref name="language"/>.</param>
+    public async Task<IReadOnlyList<Library>> ListAsync(CancellationToken cancellationToken, bool includeVirtual = false, string? language = null)
     {
         var access = guard.Authenticated();
 
@@ -38,16 +41,30 @@ public sealed class LibraryService(
             .OrderBy(l => l.Name)
             .ToListAsync(cancellationToken);
 
-        return libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries), access, cloud)).ToList();
+        var models = libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries), access, cloud)).ToList();
+        if (includeVirtual)
+            models.Insert(0, await AllAsync(libraries, language, cancellationToken));
+        return models;
     }
 
-    public async Task<Library> GetAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<Library> GetAsync(Guid id, CancellationToken cancellationToken, string? language = null)
     {
         var access = guard.Authenticated();
+        if (VirtualLibraries.IsVirtual(id))
+            return await AllAsync(await Visible(access).AsNoTracking().ToListAsync(cancellationToken), language, cancellationToken);
         var library = await Visible(access).AsNoTracking().Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == id, cancellationToken)
                       ?? throw new ArcanistException.NotFound();
 
         return library.ToModel(access.Has(Permissions.ManageLibraries), access, cloud);
+    }
+
+    /// <summary>"All": every library of <paramref name="libraries"/> (those the caller can access) at once.</summary>
+    private async Task<Library> AllAsync(IReadOnlyList<LibraryEntity> libraries, string? language, CancellationToken cancellationToken)
+    {
+        var languages = await RequestLanguages.ResolveAsync(language, http.HttpContext, settings, cancellationToken);
+        return new Library(VirtualLibraries.All, VirtualLibraries.AllName(languages), true, null, false,
+            libraries.Count == 0 ? time.GetUtcNow().UtcDateTime : libraries.Min(l => l.CreatedAt),
+            libraries.Max(l => l.LastScanAt), null, null, Virtual: true);
     }
 
     public async Task<Library> CreateAsync(CreateLibraryInput input, CancellationToken cancellationToken)

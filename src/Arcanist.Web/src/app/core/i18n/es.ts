@@ -2474,6 +2474,7 @@ export const es: Dictionary = {
       'El paquete descargado no es el que publica el catálogo (su SHA-256 no coincide). No se ha instalado.',
     package_mismatch: 'El paquete descargado contiene otra extensión distinta de la del catálogo.',
     update_check_failed: 'No se pudo consultar si hay una versión nueva.',
+    library_virtual: 'Es una biblioteca virtual (Todo): no se le puede subir ni cambiar nada.',
     not_ffmpeg: 'Ese archivo no es un ffmpeg que funcione.',
     ffmpeg_platform_unsupported:
       'No hay una descarga de ffmpeg para este sistema; instálalo con el gestor de paquetes e indica su ruta.',

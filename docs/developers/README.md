@@ -19,7 +19,7 @@ Every GraphQL query and mutation has a REST operation whose `operationId` is the
 
 `GET /rest/v1/server-info` (or the `serverInfo` query) works without authentication and returns the version, API
 version, whether setup is complete, the Ultimate Cloud features enabled, `features` (parts of the API that older servers lack:
-`LIBRARY_FILTER`, `UPLOADS`, `TRACK_MATCHING`, `LISTENING_IMPORT`, `STAR_TRACKS`, `UPLOAD_HISTORY`, `MY_CLOUD_UPLOADS`) and `sourceUrl` (where to get the server's
+`LIBRARY_FILTER`, `UPLOADS`, `TRACK_MATCHING`, `LISTENING_IMPORT`, `STAR_TRACKS`, `UPLOAD_HISTORY`, `MY_CLOUD_UPLOADS`, `VIRTUAL_LIBRARIES` and others listed in the contract) and `sourceUrl` (where to get the server's
 source code, as the AGPL requires). Until setup is complete every other call answers `503` with code
 `setup_required`; send the user to `/admin/setup`.
 
@@ -85,6 +85,12 @@ query {
 `libraries` lists the libraries the user can use. To show them apart, pass `libraryId` to `artists`, `albums` or
 `tracks` (an album's counts are then those of that library); `Track.libraryIds` says which of the user's libraries
 have a copy of a track. A library the user cannot use answers `not_found`.
+
+With `libraries(includeVirtual: true)` (`VIRTUAL_LIBRARIES`), the list starts with **All** (`virtual: true`, named in
+`language`: "All", "Todo"), every library the user can use at once. Its id (`a11a11a1-0000-4000-8000-000000000001`,
+the same on every server) works wherever `libraryId` does and means no filter. It has no folder: nothing is uploaded
+to it (`library_virtual`, and `canUpload` is false), so an app that keeps a library of its own adds it as one more
+Arcanist library and never migrates its music into it.
 
 What a user sees depends on their library access: a track appears only while one of its files is present in a
 library they can use, and albums and artists appear through such tracks. Anything else answers `not_found`.

@@ -179,7 +179,7 @@ public sealed class CatalogService(
     private IQueryable<TrackEntity> VisibleTracks(UserAccess access, Guid? libraryId = null)
     {
         var files = VisibleFiles(access);
-        if (libraryId is { } library)
+        if (Libraries.VirtualLibraries.Filter(libraryId) is { } library)
         {
             // A library the caller cannot use does not exist for them.
             if (!access.CanAccessLibrary(library) || !db.Libraries.Any(l => l.Id == library))

@@ -7,14 +7,14 @@ namespace Arcanist.Core.Api.GraphQL;
 public sealed partial class Query
 {
     [Name("libraries")]
-    [Description("Libraries the signed-in user can access.")]
-    public static Task<IReadOnlyList<Library>> Libraries([FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
-        libraries.ListAsync(cancellationToken);
+    [Description("Libraries the signed-in user can access. With `includeVirtual`, first \"All\" (`virtual`), every one of them at once, named in `language` (or the request's Accept-Language).")]
+    public static Task<IReadOnlyList<Library>> Libraries(bool? includeVirtual, string? language, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
+        libraries.ListAsync(cancellationToken, includeVirtual ?? false, language);
 
     [Name("library")]
     [Description("A library by id. Libraries the user cannot access are reported as not found.")]
-    public static Task<Library> Library([Id] Guid id, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
-        libraries.GetAsync(id, cancellationToken);
+    public static Task<Library> Library([Id] Guid id, string? language, [FromServices] LibraryService libraries, CancellationToken cancellationToken) =>
+        libraries.GetAsync(id, cancellationToken, language);
 
     [Name("librarySourceMoves")]
     [Description("Library folder moves since the server started, the latest first, with their progress. Administrators only.")]

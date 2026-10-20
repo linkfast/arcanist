@@ -67,6 +67,8 @@ public sealed class UploadService(
     {
         if (access.IsDisabled || !access.Has(Permissions.Upload))
             throw new ArcanistException.Forbidden();
+        if (VirtualLibraries.IsVirtual(libraryId))
+            throw new ArcanistException.Conflict(ErrorCodes.LibraryVirtual);
         if (!access.CanAccessLibrary(libraryId))
             throw new ArcanistException.NotFound();
         if (source is { Length: > 64 })

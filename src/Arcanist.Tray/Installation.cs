@@ -3,20 +3,21 @@ using System.Reflection;
 
 namespace Arcanist.Tray;
 
-/// <summary>Where the pieces of a Windows installation live.</summary>
+/// <summary>Where the pieces of an installation live.</summary>
 /// <param name="ServerDirectory">
-/// The server shipped with this app: <c>server\</c> next to the tray executable, inside the Velopack install
-/// (<c>%LocalAppData%\Arcanist\current</c>). <c>ARCANIST_SERVER_DIR</c> overrides it during development.
+/// The server shipped with this app: <c>server</c> next to its executable, inside the Velopack install
+/// (<c>%LocalAppData%\Arcanist\current</c> on Windows, <c>Arcanist.app/Contents/MacOS</c> on macOS).
+/// <c>ARCANIST_SERVER_DIR</c> overrides it during development.
 /// </param>
 /// <param name="DataDirectory">
-/// Shared by both modes, so switching between the background app and the service keeps the same library:
-/// <c>%ProgramData%\Arcanist</c>, the server's own default on Windows, or <c>ARCANIST_DATA_DIR</c>.
+/// The server's own default, or <c>ARCANIST_DATA_DIR</c>: <c>%ProgramData%\Arcanist</c> on Windows, shared by the
+/// background app and the service; <c>~/Library/Application Support/Arcanist</c> on macOS.
 /// </param>
 internal sealed record Installation(string ServerDirectory, string DataDirectory)
 {
     public const string ServiceName = "Arcanist";
 
-    public const string ServerExecutableName = "arcanist.exe";
+    public static string ServerExecutableName { get; } = OperatingSystem.IsWindows() ? "arcanist.exe" : "arcanist";
 
     /// <summary>
     /// Where the service runs from. Not the Velopack folder: a service running as another account must not execute
@@ -44,7 +45,11 @@ internal sealed record Installation(string ServerDirectory, string DataDirectory
             : Path.Combine(AppContext.BaseDirectory, "server"),
         Environment.GetEnvironmentVariable("ARCANIST_DATA_DIR") is { Length: > 0 } data
             ? Path.GetFullPath(data)
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Arcanist"));
+            : DefaultDataDirectory());
+
+    private static string DefaultDataDirectory() => OperatingSystem.IsMacOS()
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "Arcanist")
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Arcanist");
 
     /// <summary>Product version of a server executable, which identifies its build; null if it is missing.</summary>
     public static string? VersionOf(string executable) =>

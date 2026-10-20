@@ -114,6 +114,15 @@ jobs:
         with:
           name: synology
           path: upload
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*
+          path: upload
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: macports
+          path: upload
       # Replaced only now, with every package ready: the previous edge stays downloadable while this one builds.
       - run: |
           ls -l upload
@@ -122,6 +131,7 @@ jobs:
           Edge build **$VERSION** of \`main\` ($GITHUB_SHA), for testing: it may be unstable. Every change to \`main\` replaces it.
 
           - **Windows** (x64 and arm64): \`Arcanist-edge-Setup.exe\` / \`Arcanist-edge-arm64-Setup.exe\`. It updates itself from later edge builds only.
+          - **macOS** (Apple Silicon \`arm64\`, Intel \`x64\`): the \`.dmg\` (drag Arcanist.app to Applications) or the \`.pkg\`. It is not notarized: confirm it the first time in System Settings → Privacy & Security → Open Anyway. It updates itself from later edge builds only.
           - **Ubuntu 24.04+ / Debian 12+**: \`sudo apt install ./arcanist_*_amd64.deb\` (or \`_arm64\`).
           - **Synology DSM 7.2+**: Package Center → Manual Install with the \`.spk\` of your NAS (\`x64\` or \`aarch64\`). It needs SynoCommunity's .NET 10 runtime and FFmpeg packages.
           - **Docker**: \`ghcr.io/${GITHUB_REPOSITORY_OWNER}/arcanist:edge\`.

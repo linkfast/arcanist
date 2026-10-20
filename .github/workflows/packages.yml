@@ -3,6 +3,8 @@ name: Packages
 # Builds every installable package of a version, for release.yml and edge.yml, as one artifact per kind (the caller
 # attaches them all to its GitHub Release at the end):
 # - windows-x64, windows-arm64: Velopack's Setup.exe and update packages (the tray app with the server).
+# - macos-arm64, macos-x64: Arcanist.app (the menu bar app with the server) as .dmg, .pkg and .zip, the server alone,
+#   and Velopack's update packages; macports: the port, for both (packaging/macos).
 # - linux: the Linux tarballs (self-contained and -dotnet) and the .deb packages for Ubuntu 24.04+ and Debian 12+.
 # - synology: the .spk packages for DSM 7.2 (x64 and arm64), from the -dotnet tarballs.
 
@@ -95,6 +97,58 @@ jobs:
           name: windows-${{ matrix.arch }}
           path: artifacts/upload
           compression-level: 0
+
+  macos:
+    name: macOS (${{ matrix.arch }})
+    needs: panel
+    # Apple Silicon; the x64 build is cross-compiled there.
+    runs-on: macos-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [arm64, x64]
+    env:
+      VERSION: ${{ inputs.version }}
+      # osx-arm64 and osx-x64 for releases; edge-osx-arm64 and edge-osx-x64 for edge builds.
+      CHANNEL: ${{ inputs.channel-prefix != '' && format('{0}-osx-{1}', inputs.channel-prefix, matrix.arch) || format('osx-{0}', matrix.arch) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: panel
+          path: src/Arcanist.Web/dist/arcanist-web/browser
+      - run: sh packaging/macos/pack.sh "$VERSION" "${{ matrix.arch }}" "$CHANNEL" --skip-panel
+      - run: |
+          mkdir -p artifacts/upload
+          find "artifacts/macos/${{ matrix.arch }}" -maxdepth 2 -type f -exec cp {} artifacts/upload/ \;
+          ls -l artifacts/upload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: artifacts/upload
+          compression-level: 0
+
+  macports:
+    name: MacPorts port
+    needs: macos
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*
+          path: macos
+          merge-multiple: true
+      - run: sh packaging/macos/portfile.sh "$VERSION" "macos/Arcanist-$VERSION-macos-arm64.zip" "macos/Arcanist-$VERSION-macos-x64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macports
+          path: artifacts/macos/arcanist-macports-*.tar.gz
 
   linux:
     name: Linux tarballs and .deb

@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Security.Principal;
-using System.ServiceProcess;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
@@ -48,6 +47,7 @@ internal sealed class TrayController : IDisposable
     private int _crashes;
     private bool _checkingUpdates;
     private bool _upToDate;
+    private bool _openWhenReady = Program.FirstRun;
 
     public TrayController(IClassicDesktopStyleApplicationLifetime lifetime)
     {
@@ -65,7 +65,7 @@ internal sealed class TrayController : IDisposable
             await StopAsync();
             await StartAsync();
         }));
-        _autoStart = Item(_text.StartWithWindows, () => AutoStart.Set(!AutoStart.IsEnabled));
+        _autoStart = Item(_text.StartAutomatically, () => AutoStart.Set(!AutoStart.IsEnabled));
         _autoStart.ToggleType = MenuItemToggleType.CheckBox;
         _installService = Item(_text.InstallService, () => RunAsync(InstallServiceAsync));
         _updateService = Item("", () => RunAsync(UpdateServiceAsync));
@@ -86,7 +86,9 @@ internal sealed class TrayController : IDisposable
 
         _icon = new TrayIcon
         {
-            Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://Arcanist.Tray/Assets/arcanist.ico"))),
+            Icon = new WindowIcon(AssetLoader.Open(new Uri(OperatingSystem.IsWindows()
+                ? "avares://Arcanist.Tray/Assets/arcanist.ico"
+                : "avares://Arcanist.Tray/Assets/arcanist.png"))),
             ToolTipText = "Arcanist",
             Menu = menu,
         };
@@ -137,27 +139,26 @@ internal sealed class TrayController : IDisposable
         _refreshing = true;
         try
         {
-            var serviceStatus = WindowsService.Status();
+            var service = WindowsService.IsInstalled;
             var info = _probe.ReadRuntimeInfo();
             _url = info is null ? null : ServerProbe.LocalUrl(info.Addresses);
             var healthy = _url is not null && await _probe.IsHealthyAsync(_url);
             if (!healthy)
                 _url = null;
 
-            var state = serviceStatus switch
-            {
-                null when healthy => ServerState.Running,
-                null when _failed => ServerState.Failed,
-                null when _server.IsRunning => ServerState.Starting,
-                null when !_server.CanStart => ServerState.Missing,
-                null => ServerState.Stopped,
-                ServiceControllerStatus.Running => healthy ? ServerState.Running : ServerState.Starting,
-                ServiceControllerStatus.StartPending or ServiceControllerStatus.ContinuePending => ServerState.Starting,
-                ServiceControllerStatus.StopPending or ServiceControllerStatus.PausePending => ServerState.Stopping,
-                _ => ServerState.Stopped,
-            };
+            var state = WindowsService.State(healthy) ?? (
+                healthy ? ServerState.Running
+                : _failed ? ServerState.Failed
+                : _server.IsRunning ? ServerState.Starting
+                : !_server.CanStart ? ServerState.Missing
+                : ServerState.Stopped);
 
-            Render(state, serviceStatus is not null);
+            Render(state, service);
+            if (_openWhenReady && state == ServerState.Running)
+            {
+                _openWhenReady = false;
+                Open(new Uri(_url!, "admin/"));
+            }
         }
         finally
         {
@@ -189,8 +190,10 @@ internal sealed class TrayController : IDisposable
         _start.IsEnabled = idle && state is ServerState.Stopped or ServerState.Failed;
         _stop.IsEnabled = _restart.IsEnabled = idle && controllable && state is ServerState.Running or ServerState.Starting;
 
+        _autoStart.IsVisible = AutoStart.IsSupported;
         _autoStart.IsChecked = AutoStart.IsEnabled;
-        _installService.IsVisible = !service;
+        // The service mode is Windows's; macOS starts the app at login instead.
+        _installService.IsVisible = !service && OperatingSystem.IsWindows();
         _installService.IsEnabled = idle && _server.CanStart;
         _uninstallService.IsVisible = service;
         _uninstallService.IsEnabled = idle;
@@ -249,6 +252,9 @@ internal sealed class TrayController : IDisposable
 
     private async Task InstallServiceAsync()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         var folders = await new ServiceWindow().AskAsync();
         if (folders is null)
             return;
@@ -271,6 +277,9 @@ internal sealed class TrayController : IDisposable
 
     private async Task UninstallServiceAsync()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         if (!await MessageWindow.ShowAsync(_text.ServiceTitle, _text.UninstallServiceConfirm, _text.Uninstall, _text.Cancel))
             return;
 
@@ -282,6 +291,9 @@ internal sealed class TrayController : IDisposable
 
     private async Task UpdateServiceAsync()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
+
         if (!await WindowsService.RunHelperAsync(_installation, "update"))
             await MessageWindow.ShowAsync(_text.ServiceTitle, _text.ServiceFailed, _text.Close);
     }

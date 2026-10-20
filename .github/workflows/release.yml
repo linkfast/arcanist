@@ -1,8 +1,10 @@
 name: Release
 
 # Pushing a tag such as v0.2.0 tests everything, then publishes:
-# - GitHub Release: the Windows installers (x64 and arm64) and Velopack update packages, the Linux tarballs, the .deb
-#   packages and the Synology .spk packages (packages.yml builds them all).
+# - GitHub Release: the Windows installers (x64 and arm64) and Velopack update packages, macOS's Arcanist.app (.dmg,
+#   .pkg, .zip and the MacPorts port, Apple Silicon and Intel), the Linux tarballs, the .deb packages and the Synology
+#   .spk packages (packages.yml builds them all). The Homebrew cask (github.com/linkfast/homebrew-arcanist) follows
+#   the releases by itself.
 # - ghcr.io/<owner>/arcanist: the Docker image for linux/amd64 and linux/arm64.
 # The release is created as a draft and only published once every package is attached.
 
@@ -109,6 +111,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: synology
+          path: upload
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: macos-*
+          path: upload
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: macports
           path: upload
       - env:
           GH_TOKEN: ${{ github.token }}

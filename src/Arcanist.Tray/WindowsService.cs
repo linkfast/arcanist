@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.ServiceProcess;
 
 namespace Arcanist.Tray;
@@ -11,8 +12,12 @@ namespace Arcanist.Tray;
 /// </summary>
 internal static class WindowsService
 {
+    /// <summary>Null when there is no service (or not on Windows).</summary>
     public static ServiceControllerStatus? Status()
     {
+        if (!OperatingSystem.IsWindows())
+            return null;
+
         try
         {
             using var service = new ServiceController(Installation.ServiceName);
@@ -24,11 +29,25 @@ internal static class WindowsService
         }
     }
 
-    public static bool IsInstalled => Status() is not null;
+    [SupportedOSPlatformGuard("windows")]
+    public static bool IsInstalled => OperatingSystem.IsWindows() && Status() is not null;
+
+    /// <summary>The server's state as the service reports it; null when there is no service (or not on Windows).</summary>
+    /// <param name="healthy">Whether the server answers its health check.</param>
+    public static ServerState? State(bool healthy) => OperatingSystem.IsWindows() && Status() is { } status
+        ? status switch
+        {
+            ServiceControllerStatus.Running => healthy ? ServerState.Running : ServerState.Starting,
+            ServiceControllerStatus.StartPending or ServiceControllerStatus.ContinuePending => ServerState.Starting,
+            ServiceControllerStatus.StopPending or ServiceControllerStatus.PausePending => ServerState.Stopping,
+            _ => ServerState.Stopped,
+        }
+        : null;
 
     public static string? InstalledVersion => Installation.VersionOf(Installation.ServiceExecutable);
 
     /// <summary>Starts or stops the service, asking for elevation if this user was not granted the right.</summary>
+    [SupportedOSPlatform("windows")]
     public static async Task<bool> ControlAsync(bool start, Installation installation)
     {
         try
@@ -47,6 +66,7 @@ internal static class WindowsService
     }
 
     /// <summary>Runs <see cref="ServiceHelper"/> elevated. False if it failed or the user declined the UAC prompt.</summary>
+    [SupportedOSPlatform("windows")]
     public static async Task<bool> RunHelperAsync(Installation installation, string command, params IEnumerable<string> arguments)
     {
         var start = new ProcessStartInfo(Environment.ProcessPath!)

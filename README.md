@@ -10,7 +10,7 @@ Arcanist is a self-hosted music server: your own personal and family "Spotify". 
 - **Users and permissions** — an administrator account, regular users, and per-user access to each library.
 - **Open APIs** — GraphQL as the primary API and an equivalent OpenAPI (REST) contract, documented so anyone can build a player.
 - **Replaceable web player** — Ultimate Web Player ships by default; alternative players can be installed from the admin panel.
-- **Runs anywhere you do** — Windows (installer, service, tray icon), Linux, Docker and NAS (Synology first).
+- **Runs anywhere you do** — Windows (installer, service, tray icon), macOS (a menu bar app), Linux, Docker and NAS (Synology first).
 - **Reach your music without a public IP** through a peer-to-peer network based on [iroh](https://github.com/n0-computer/iroh), and share libraries between Arcanist instances.
 - **mStream compatibility** — mStream clients can use Arcanist as their server, and existing mStream installations can be imported.
 - **Optional Ultimate Cloud integration** — use music stored in Ultimate Cloud, and with a paid plan sync libraries to Ultimate Cloud or S3-compatible storage.
@@ -33,6 +33,15 @@ music on a NAS share, keep the app mode or change the service account in `servic
 controlling and updating the service.
 
 The setup code is in `%ProgramData%\Arcanist\setup-code.txt` (you do not need it on the machine itself).
+
+### macOS
+
+macOS 14 or later, Apple Silicon or Intel. Open the `.dmg` and drag **Arcanist.app** to Applications (or run the
+`.pkg`), or install it with Homebrew (`brew install --cask linkfast/arcanist/arcanist`) or MacPorts. The app lives
+in the menu bar: it runs the server, opens at login and installs updates. Data lives in
+`~/Library/Application Support/Arcanist`. It is not notarized yet: the first time, confirm it in **System Settings →
+Privacy & Security → Open Anyway**. Details, MacPorts and running the server alone: see
+[packaging/macos](packaging/macos/README.md).
 
 ### Linux
 
@@ -62,10 +71,10 @@ wizard shows the setup code.
 |---|---|
 | `src/Arcanist.Core` | Server (ASP.NET Core, .NET 10), executable `arcanist` |
 | `src/Arcanist.Web` | Admin panel (Angular + spartan-ng), served at `/admin` |
-| `src/Arcanist.Tray` | Windows tray app (Avalonia), installed with Velopack |
+| `src/Arcanist.Tray` | The Windows tray app and macOS menu bar app (Avalonia), installed with Velopack |
 | `native/arcanist-audio` | Audio analysis in Rust (Symphonia): loudness, fingerprints, waveform, tempo and key |
 | `tests/` | Server and tray tests |
-| `packaging/` | Windows installer, Linux tarballs and systemd unit, Synology package |
+| `packaging/` | Windows installer, macOS app (.dmg, .pkg, MacPorts), Linux tarballs, .deb and systemd unit, Synology package |
 | `.github/workflows` | CI, and releases on `v*` tags |
 
 ## Building

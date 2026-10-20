@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Arcanist.Tray;
 
-/// <summary>User-facing text in the Windows display language: Spanish or English, like the admin panel.</summary>
+/// <summary>User-facing text in the system's display language: Spanish or English, like the admin panel.</summary>
 internal sealed class Strings
 {
     public static Strings Current { get; } =
@@ -21,7 +21,7 @@ internal sealed class Strings
     public required string Stop { get; init; }
     public required string Restart { get; init; }
     public required string OpenLogs { get; init; }
-    public required string StartWithWindows { get; init; }
+    public required string StartAutomatically { get; init; }
     public required string InstallService { get; init; }
     public required string UpdateService { get; init; }
     public required string UninstallService { get; init; }
@@ -63,7 +63,7 @@ internal sealed class Strings
         Stop = "Detener",
         Restart = "Reiniciar",
         OpenLogs = "Ver registros",
-        StartWithWindows = "Iniciar con Windows",
+        StartAutomatically = OperatingSystem.IsWindows() ? "Iniciar con Windows" : "Abrir al iniciar sesión",
         InstallService = "Ejecutar como servicio de Windows…",
         UpdateService = "Actualizar el servicio a {0}",
         UninstallService = "Dejar de ejecutar como servicio…",
@@ -109,7 +109,7 @@ internal sealed class Strings
         Stop = "Stop",
         Restart = "Restart",
         OpenLogs = "Show logs",
-        StartWithWindows = "Start with Windows",
+        StartAutomatically = OperatingSystem.IsWindows() ? "Start with Windows" : "Open at login",
         InstallService = "Run as a Windows service…",
         UpdateService = "Update the service to {0}",
         UninstallService = "Stop running as a service…",

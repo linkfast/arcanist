@@ -1,19 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Windows companion app: the tray icon that installs with Velopack, runs the server in the background (or manages
-    it as a Windows service) and updates both. Windows-only by design; Linux and NAS use their service managers.
+    The companion app that installs with Velopack, runs the server in the background and updates both: a tray icon
+    on Windows (which can also manage the server as a Windows service), Arcanist.app in the menu bar on macOS
+    (net10.0, published for osx-arm64 and osx-x64). Linux and NAS use their service managers.
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFrameworks>net10.0-windows;net10.0</TargetFrameworks>
     <!-- Lets the solution build on Linux CI too. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
     <ApplicationIcon>Assets/arcanist.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>

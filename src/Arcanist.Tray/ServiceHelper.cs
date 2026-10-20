@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Security.Principal;
 using System.ServiceProcess;
 
@@ -18,6 +19,7 @@ namespace Arcanist.Tray;
 /// </list>
 /// Progress and errors go to <c>logs\service-helper.log</c> in the data directory.
 /// </summary>
+[SupportedOSPlatform("windows")]
 internal sealed class ServiceHelper
 {
     public const string Switch = "--service-helper";

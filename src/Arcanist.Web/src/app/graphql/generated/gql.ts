@@ -162,6 +162,12 @@ type Documents = {
     "\n  mutation ClearRemoteLibraryCache {\n    clearRemoteLibraryCache {\n      ...RemoteLibrarySettingsFields\n    }\n  }\n": typeof types.ClearRemoteLibraryCacheDocument,
     "\n  mutation SetReceivedSharePlays($input: SetReceivedSharePlaysInput!) {\n    setReceivedSharePlays(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": typeof types.SetReceivedSharePlaysDocument,
     "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": typeof types.NetworkDocument,
+    "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    track {\n      id\n      title\n      album {\n        id\n        title\n      }\n    }\n  }\n": typeof types.WishFieldsFragmentDoc,
+    "\n  query WishList {\n    wishList {\n      wanted\n      unseen\n      items {\n        ...WishFields\n      }\n    }\n  }\n": typeof types.WishListDocument,
+    "\n  mutation AddWish($input: WishInput!) {\n    addWish(input: $input) {\n      ...WishFields\n    }\n  }\n": typeof types.AddWishDocument,
+    "\n  mutation RemoveWish($id: ID!) {\n    removeWish(id: $id)\n  }\n": typeof types.RemoveWishDocument,
+    "\n  mutation MarkWishesSeen {\n    markWishesSeen\n  }\n": typeof types.MarkWishesSeenDocument,
+    "\n  subscription WishObtained {\n    wishObtained {\n      wishId\n      title\n      artist\n      trackId\n    }\n  }\n": typeof types.WishObtainedDocument,
     "\n  query MyDevices {\n    networkPeers(kind: DEVICE) {\n      ...NetworkPeerFields\n    }\n  }\n": typeof types.MyDevicesDocument,
     "\n  mutation SetP2PSettings($input: P2PSettingsInput!) {\n    setP2pSettings(input: $input) {\n      ...P2PStatusFields\n    }\n  }\n": typeof types.SetP2PSettingsDocument,
     "\n  mutation CreateDeviceInvitation($input: CreateDeviceInvitationInput!) {\n    createDeviceInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": typeof types.CreateDeviceInvitationDocument,
@@ -387,6 +393,12 @@ const documents: Documents = {
     "\n  mutation ClearRemoteLibraryCache {\n    clearRemoteLibraryCache {\n      ...RemoteLibrarySettingsFields\n    }\n  }\n": types.ClearRemoteLibraryCacheDocument,
     "\n  mutation SetReceivedSharePlays($input: SetReceivedSharePlaysInput!) {\n    setReceivedSharePlays(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": types.SetReceivedSharePlaysDocument,
     "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": types.NetworkDocument,
+    "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    track {\n      id\n      title\n      album {\n        id\n        title\n      }\n    }\n  }\n": types.WishFieldsFragmentDoc,
+    "\n  query WishList {\n    wishList {\n      wanted\n      unseen\n      items {\n        ...WishFields\n      }\n    }\n  }\n": types.WishListDocument,
+    "\n  mutation AddWish($input: WishInput!) {\n    addWish(input: $input) {\n      ...WishFields\n    }\n  }\n": types.AddWishDocument,
+    "\n  mutation RemoveWish($id: ID!) {\n    removeWish(id: $id)\n  }\n": types.RemoveWishDocument,
+    "\n  mutation MarkWishesSeen {\n    markWishesSeen\n  }\n": types.MarkWishesSeenDocument,
+    "\n  subscription WishObtained {\n    wishObtained {\n      wishId\n      title\n      artist\n      trackId\n    }\n  }\n": types.WishObtainedDocument,
     "\n  query MyDevices {\n    networkPeers(kind: DEVICE) {\n      ...NetworkPeerFields\n    }\n  }\n": types.MyDevicesDocument,
     "\n  mutation SetP2PSettings($input: P2PSettingsInput!) {\n    setP2pSettings(input: $input) {\n      ...P2PStatusFields\n    }\n  }\n": types.SetP2PSettingsDocument,
     "\n  mutation CreateDeviceInvitation($input: CreateDeviceInvitationInput!) {\n    createDeviceInvitation(input: $input) {\n      link\n      expiresAt\n    }\n  }\n": types.CreateDeviceInvitationDocument,
@@ -1070,6 +1082,30 @@ export function graphql(source: "\n  mutation SetReceivedSharePlays($input: SetR
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n"): (typeof documents)["\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    track {\n      id\n      title\n      album {\n        id\n        title\n      }\n    }\n  }\n"): (typeof documents)["\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    track {\n      id\n      title\n      album {\n        id\n        title\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query WishList {\n    wishList {\n      wanted\n      unseen\n      items {\n        ...WishFields\n      }\n    }\n  }\n"): (typeof documents)["\n  query WishList {\n    wishList {\n      wanted\n      unseen\n      items {\n        ...WishFields\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AddWish($input: WishInput!) {\n    addWish(input: $input) {\n      ...WishFields\n    }\n  }\n"): (typeof documents)["\n  mutation AddWish($input: WishInput!) {\n    addWish(input: $input) {\n      ...WishFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RemoveWish($id: ID!) {\n    removeWish(id: $id)\n  }\n"): (typeof documents)["\n  mutation RemoveWish($id: ID!) {\n    removeWish(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation MarkWishesSeen {\n    markWishesSeen\n  }\n"): (typeof documents)["\n  mutation MarkWishesSeen {\n    markWishesSeen\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  subscription WishObtained {\n    wishObtained {\n      wishId\n      title\n      artist\n      trackId\n    }\n  }\n"): (typeof documents)["\n  subscription WishObtained {\n    wishObtained {\n      wishId\n      title\n      artist\n      trackId\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

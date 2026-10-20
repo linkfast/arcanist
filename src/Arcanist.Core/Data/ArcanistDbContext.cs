@@ -71,6 +71,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
 
     public DbSet<UserUpload> UserUploads => Set<UserUpload>();
 
+    public DbSet<WishListItem> WishListItems => Set<WishListItem>();
+
     public DbSet<TrackAnalysis> TrackAnalyses => Set<TrackAnalysis>();
 
     public DbSet<TrackAnalysisRequest> TrackAnalysisRequests => Set<TrackAnalysisRequest>();
@@ -416,6 +418,19 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             upload.Property(u => u.ErrorCode).HasMaxLength(NameLength);
             upload.HasIndex(u => new { u.UserId, u.CreatedAt });
             upload.HasIndex(u => new { u.Kind, u.Status });
+        });
+
+        modelBuilder.Entity<WishListItem>(wish =>
+        {
+            wish.HasOne(w => w.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            wish.HasOne<Track>().WithMany().HasForeignKey(w => w.TrackId).OnDelete(DeleteBehavior.SetNull);
+            wish.Property(w => w.Title).HasMaxLength(NameLength);
+            wish.Property(w => w.Artist).HasMaxLength(NameLength);
+            wish.Property(w => w.Album).HasMaxLength(NameLength);
+            wish.Property(w => w.Note).HasMaxLength(1000);
+            wish.Property(w => w.MatchedBy).HasConversion<string>().HasMaxLength(EnumLength);
+            wish.HasIndex(w => new { w.UserId, w.CreatedAt });
+            wish.HasIndex(w => w.ObtainedAt);
         });
 
         modelBuilder.Entity<RemotePlayEvent>(play =>

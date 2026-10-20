@@ -182,6 +182,8 @@ type Query {
   users: [UserAccount!]!
   "A user by id. Requires the MANAGE_USERS permission."
   user(id: ID!): UserAccount!
+  "The user's wish list: songs they want (newest first), then those that arrived (by when). Optionally only the wanted or the obtained ones."
+  wishList(status: WishStatus): WishListResult!
 }
 
 type TrackAnalysisResult {
@@ -2267,6 +2269,7 @@ enum ApiFeature {
   TRACK_STATS
   EXTENSION_APPS
   VIRTUAL_LIBRARIES
+  WISH_LIST
 }
 
 type UserAccount {
@@ -2306,6 +2309,35 @@ type Session {
   lastSeenAt: DateTime!
   expiresAt: DateTime!
   isCurrent: Boolean!
+}
+
+type WishListResult {
+  items: [Wish!]!
+  wanted: Int!
+  unseen: Int!
+}
+
+type Wish {
+  id: ID!
+  title: String!
+  artist: String!
+  album: String
+  musicBrainzRecordingId: ID
+  acoustId: String
+  durationMs: Int
+  note: String
+  status: WishStatus!
+  createdAt: DateTime!
+  obtainedAt: DateTime
+  track: Track
+  matchedBy: TrackMatchKind
+  foundWhenAdded: Boolean!
+  seen: Boolean!
+}
+
+enum WishStatus {
+  WANTED
+  OBTAINED
 }
 
 type Mutation {
@@ -2578,6 +2610,14 @@ type Mutation {
   changeMyPassword(input: ChangeMyPasswordInput!): Boolean!
   "Signs out one of the signed-in user's devices."
   revokeMySession(id: ID!): Boolean!
+  "Adds a song to the user's wish list (title and artist; album, duration, MusicBrainz recording or AcoustID narrow it). When a library the user can play has it already, it comes obtained (foundWhenAdded)."
+  addWish(input: WishInput!): Wish!
+  "Changes a wish of the user. Another song makes it wanted again, and it is looked for at once."
+  updateWish(id: ID!, input: WishInput!): Wish!
+  "Removes a wish (wanted or obtained) from the user's list."
+  removeWish(id: ID!): Boolean!
+  "The user saw the wishes that came true (WishListResult.unseen goes to 0). Returns how many were new."
+  markWishesSeen: Int!
 }
 
 input SetAiSettingsInput {
@@ -3123,6 +3163,16 @@ input ChangeMyPasswordInput {
   newPassword: String!
 }
 
+input WishInput {
+  title: String!
+  artist: String!
+  album: String
+  musicBrainzRecordingId: ID
+  acoustId: String
+  durationMs: Int
+  note: String
+}
+
 type Subscription {
   "A song the user sees has its analysis (new, or redone by a newer analyzer)."
   trackAnalysisReady: TrackAnalysisReady!
@@ -3138,6 +3188,8 @@ type Subscription {
   starTracksChanged: StarTracksChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobUpdated(libraryId: ID): ScanJob!
+  "A song of the user's wish list arrived in a library they can play (after a scan, an upload, an import or a sync)."
+  wishObtained: WishObtained!
 }
 
 type TrackAnalysisReady {
@@ -3147,4 +3199,12 @@ type TrackAnalysisReady {
 
 type StarTracksChange {
   changedAt: DateTime!
+}
+
+type WishObtained {
+  wishId: ID!
+  title: String!
+  artist: String!
+  trackId: ID
+  obtainedAt: DateTime!
 }

@@ -2473,6 +2473,71 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("UserUploads");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.WishListItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AcoustId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Album")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Artist")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("FoundWhenAdded")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MatchedBy")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ObtainedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("RecordingMbid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Seen")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ObtainedAt");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("WishListItems");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Album", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.Artist", "AlbumArtist")
@@ -2972,6 +3037,22 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasForeignKey("LibraryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", null)
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.WishListItem", b =>
+                {
                     b.HasOne("Arcanist.Core.Data.Entities.Track", null)
                         .WithMany()
                         .HasForeignKey("TrackId")

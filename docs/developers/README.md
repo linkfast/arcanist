@@ -329,6 +329,20 @@ days and hours are theirs.
 moved (`removePlaylistEntries`, `movePlaylistEntries`), since a track can appear twice. Tracks from libraries the user
 cannot access stay in the playlist but are not listed for them. `artworkIds` has up to four covers for a collage.
 
+## Wish lists
+
+With `WISH_LIST` in `serverInfo.features`, each user keeps a list of songs they want. `addWish` /
+`POST /rest/v1/me/wishes` takes a `title` and an `artist` (both required), and optionally an `album` and a
+`durationMs` (give or take three seconds) that narrow it, a `musicBrainzRecordingId` or an `acoustId` that identify it
+exactly, and a `note`. When a library the user can play has it already, it comes back `OBTAINED` with
+`foundWhenAdded: true`; otherwise it is `WANTED`, and the server looks for it after every scan (so also after uploads,
+imports and syncs): by MusicBrainz recording, AcoustID, or title and artist, the same rules as `matchTracks`.
+
+`wishList(status)` / `GET /rest/v1/me/wishes` lists the wanted ones first and then those that arrived (the history),
+each with its `track` and `matchedBy`, plus `wanted` and `unseen` counts. The `wishObtained` subscription tells the
+user as soon as one arrives; `markWishesSeen` (`POST /rest/v1/me/wishes/seen`) clears `unseen`. `updateWish` changes
+one (another song is wanted again) and `removeWish` drops it. Every user sees only their own.
+
 ## Apps with a library of their own
 
 An app that keeps its own library (Ultimate Desktop, for one) can use the server next to it, or move to it:

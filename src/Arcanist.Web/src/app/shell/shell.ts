@@ -8,6 +8,7 @@ import {
   lucideBrainCircuit,
   lucideCast,
   lucideChartColumn,
+  lucideGift,
   lucideChevronDown,
   lucideCloud,
   lucideCopy,
@@ -52,6 +53,7 @@ import { UpdateNotice } from './update-notice';
       lucideArchive,
       lucideCast,
       lucideChartColumn,
+      lucideGift,
       lucideChevronDown,
       lucideCloud,
       lucideCopy,
@@ -343,6 +345,7 @@ export class Shell {
         icon: 'lucideBrainCircuit',
         visible: this.auth.isAdmin() && this.extensions.has('ai'),
       },
+      { path: '/wishes', label: 'nav.wishes', icon: 'lucideGift', visible: true },
       { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
     ].filter((item) => item.visible),
   );

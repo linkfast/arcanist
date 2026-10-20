@@ -4496,6 +4496,163 @@
         }
       }
     },
+    "/rest/v1/me/wishes": {
+      "get": {
+        "tags": [
+          "Wish list"
+        ],
+        "summary": "The user\u0027s wish list: songs they want (newest first), then those that arrived (by when). Optionally only the WANTED or the OBTAINED ones.",
+        "operationId": "WishList",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WishListResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Wish list"
+        ],
+        "summary": "Adds a song to the user\u0027s wish list (title and artist; album, duration, MusicBrainz recording or AcoustID narrow it). When a library the user can play has it already, it comes obtained (foundWhenAdded).",
+        "operationId": "AddWish",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wish"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/wishes/{id}": {
+      "put": {
+        "tags": [
+          "Wish list"
+        ],
+        "summary": "Changes a wish of the user. Another song makes it wanted again, and it is looked for at once.",
+        "operationId": "UpdateWish",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wish"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Wish list"
+        ],
+        "summary": "Removes a wish (wanted or obtained) from the user\u0027s list.",
+        "operationId": "RemoveWish",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/wishes/seen": {
+      "post": {
+        "tags": [
+          "Wish list"
+        ],
+        "summary": "The user saw the wishes that came true (WishListResult.unseen goes to 0). Returns how many were new.",
+        "operationId": "MarkWishesSeen",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "pattern": "^-?(?:0|[1-9]\\d*)$",
+                  "type": [
+                    "integer",
+                    "string"
+                  ],
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/frontends": {
       "get": {
         "tags": [
@@ -10016,7 +10173,8 @@
           "TRACK_ANALYSIS",
           "TRACK_STATS",
           "EXTENSION_APPS",
-          "VIRTUAL_LIBRARIES"
+          "VIRTUAL_LIBRARIES",
+          "WISH_LIST"
         ]
       },
       "AppPassword": {
@@ -22310,6 +22468,199 @@
             }
           }
         }
+      },
+      "Wish": {
+        "required": [
+          "id",
+          "title",
+          "artist",
+          "album",
+          "musicBrainzRecordingId",
+          "acoustId",
+          "durationMs",
+          "note",
+          "status",
+          "createdAt",
+          "obtainedAt",
+          "track",
+          "matchedBy",
+          "foundWhenAdded",
+          "seen"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "musicBrainzRecordingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "acoustId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/WishStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "obtainedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "track": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Track"
+              }
+            ]
+          },
+          "matchedBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TrackMatchKind"
+              }
+            ]
+          },
+          "foundWhenAdded": {
+            "type": "boolean"
+          },
+          "seen": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WishInput": {
+        "required": [
+          "title",
+          "artist"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "musicBrainzRecordingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "acoustId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "WishListResult": {
+        "required": [
+          "items",
+          "wanted",
+          "unseen"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Wish"
+            }
+          },
+          "wanted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unseen": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "WishStatus": {
+        "enum": [
+          "WANTED",
+          "OBTAINED"
+        ]
       }
     },
     "securitySchemes": {
@@ -22397,6 +22748,9 @@
     },
     {
       "name": "Import"
+    },
+    {
+      "name": "Wish list"
     },
     {
       "name": "Frontends"

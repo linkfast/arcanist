@@ -124,6 +124,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/mstream/mstream.page').then((m) => m.MstreamPage),
       },
       {
+        path: 'wishes',
+        loadComponent: () => import('./features/wishes/wishes.page').then((m) => m.WishesPage),
+      },
+      {
         path: 'account',
         loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
       },

@@ -122,6 +122,10 @@ builder.Services.Configure<Arcanist.Core.Application.Libraries.UploadOptions>(bu
 builder.Services.AddScoped<Arcanist.Core.Application.Libraries.UploadService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.UploadScans>();
 builder.Services.AddScoped<Arcanist.Core.Application.Uploads.MyUploadService>();
+builder.Services.AddScoped<Arcanist.Core.Application.WishList.WishListService>();
+builder.Services.AddSingleton<Arcanist.Core.Application.WishList.WishListSignals>();
+builder.Services.AddSingleton<Arcanist.Core.Application.WishList.WishListMatcher>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<Arcanist.Core.Application.WishList.WishListMatcher>());
 builder.Services.AddScoped<DuplicateService>();
 builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<ImportService>();

@@ -86,6 +86,12 @@ public enum ApiFeature
     /// its id works as any <c>libraryId</c> filter and nothing can be uploaded to it.
     /// </summary>
     VirtualLibraries,
+
+    /// <summary>
+    /// Each user's wish list: <c>wishList</c>, <c>addWish</c>, <c>updateWish</c>, <c>removeWish</c>,
+    /// <c>markWishesSeen</c> and the <c>wishObtained</c> subscription; <c>albums(sort:)</c> too.
+    /// </summary>
+    WishList,
 }
 
 public sealed class ServerInfoService(

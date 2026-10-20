@@ -2478,6 +2478,71 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("UserUploads");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.WishListItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcoustId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Album")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Artist")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("FoundWhenAdded")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MatchedBy")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ObtainedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RecordingMbid")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Seen")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ObtainedAt");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("WishListItems");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Album", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.Artist", "AlbumArtist")
@@ -2977,6 +3042,22 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasForeignKey("LibraryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", null)
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.WishListItem", b =>
+                {
                     b.HasOne("Arcanist.Core.Data.Entities.Track", null)
                         .WithMany()
                         .HasForeignKey("TrackId")

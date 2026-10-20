@@ -1776,6 +1776,73 @@ export const NetworkQuery = graphql(`
   }
 `);
 
+export const WishFields = graphql(`
+  fragment WishFields on Wish {
+    id
+    title
+    artist
+    album
+    note
+    status
+    createdAt
+    obtainedAt
+    matchedBy
+    foundWhenAdded
+    seen
+    track {
+      id
+      title
+      album {
+        id
+        title
+      }
+    }
+  }
+`);
+
+export const WishListQuery = graphql(`
+  query WishList {
+    wishList {
+      wanted
+      unseen
+      items {
+        ...WishFields
+      }
+    }
+  }
+`);
+
+export const AddWishMutation = graphql(`
+  mutation AddWish($input: WishInput!) {
+    addWish(input: $input) {
+      ...WishFields
+    }
+  }
+`);
+
+export const RemoveWishMutation = graphql(`
+  mutation RemoveWish($id: ID!) {
+    removeWish(id: $id)
+  }
+`);
+
+export const MarkWishesSeenMutation = graphql(`
+  mutation MarkWishesSeen {
+    markWishesSeen
+  }
+`);
+
+export const WishObtainedSubscription = graphql(`
+  subscription WishObtained {
+    wishObtained {
+      wishId
+      title
+      artist
+      trackId
+    }
+  }
+`);
+
 export const MyDevicesQuery = graphql(`
   query MyDevices {
     networkPeers(kind: DEVICE) {

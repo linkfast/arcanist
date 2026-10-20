@@ -9,6 +9,7 @@ import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
@@ -38,6 +39,20 @@ import { PackageDropzone } from './package-dropzone';
 
 type Kind = 'frontend' | 'extension';
 
+const Tabs = ['installed', 'marketplace', 'players'] as const;
+type Tab = (typeof Tabs)[number];
+const TabKey = 'arcanist.extensions.tab';
+
+function initialTab(): Tab {
+  try {
+    const stored = localStorage.getItem(TabKey);
+    if ((Tabs as readonly string[]).includes(stored ?? '')) return stored as Tab;
+  } catch {
+    // Without storage the page opens on its first tab.
+  }
+  return 'installed';
+}
+
 /** A package waiting for the administrator to accept that it runs with full trust. */
 interface PendingInstall {
   kind: Kind;
@@ -65,6 +80,7 @@ interface PendingInstall {
     HlmButtonImports,
     HlmCardImports,
     HlmInputImports,
+    HlmSpinnerImports,
     HlmSwitchImports,
     TranslatePipe,
   ],
@@ -74,15 +90,31 @@ interface PendingInstall {
       <p class="text-sm text-muted-foreground">{{ 'extensions.subtitle' | t }}</p>
     </header>
 
-    <div class="grid gap-6">
-      @if (restartNeeded() || restarting()) {
+    <div class="grid grid-cols-[minmax(0,1fr)] gap-6">
+      <div class="flex flex-wrap gap-1 border-b pb-2" role="tablist">
+        @for (option of tabs; track option) {
+          <button
+            hlmBtn
+            size="sm"
+            type="button"
+            role="tab"
+            [attr.aria-selected]="tab() === option"
+            [variant]="tab() === option ? 'default' : 'ghost'"
+            (click)="choose(option)"
+          >
+            {{ 'extensions.tabs.' + option | t }}
+            @if (option === 'installed') {
+              <span class="ml-1 text-xs opacity-70">{{ extensions().length }}</span>
+            } @else if (option === 'players') {
+              <span class="ml-1 text-xs opacity-70">{{ frontends().length }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      @if (restartNeeded() && !restarting()) {
         <div hlmAlert class="flex flex-wrap items-center justify-between gap-3">
-          <p hlmAlertDescription>
-            {{
-              (restarting() ? 'extensions.list.restartWaiting' : 'extensions.list.restartNeeded')
-                | t
-            }}
-          </p>
+          <p hlmAlertDescription>{{ 'extensions.list.restartNeeded' | t }}</p>
           <button
             hlmBtn
             size="sm"
@@ -95,168 +127,180 @@ interface PendingInstall {
         </div>
       }
 
-      <section hlmCard>
-        <div hlmCardHeader>
-          <h2 hlmCardTitle>{{ 'extensions.list.title' | t }}</h2>
-          <p hlmCardDescription>{{ 'extensions.list.description' | t }}</p>
-        </div>
-        <div hlmCardContent class="grid gap-4">
-          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
-            @for (extension of extensions(); track extension.id) {
-              <li
-                class="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-md border p-3"
-              >
-                <div class="min-w-0 text-sm">
-                  <p class="font-medium">
-                    {{ extension.name }}
-                    <span class="text-muted-foreground">{{ extension.version }}</span>
-                    @if (extension.builtIn) {
-                      <span hlmBadge variant="secondary" class="ml-1">{{
-                        'extensions.builtIn' | t
-                      }}</span>
-                    }
-                    @if (extension.status === 'FAILED') {
-                      <span hlmBadge variant="destructive" class="ml-1">{{
-                        'extensions.list.failed' | t
-                      }}</span>
-                    }
-                    @if (extension.restartRequired) {
-                      <span hlmBadge variant="outline" class="ml-1">{{
-                        'extensions.list.restartRequired' | t
-                      }}</span>
-                    }
-                  </p>
-                  @if (extension.builtIn) {
-                    <p class="text-xs text-muted-foreground">
-                      {{ 'extensions.descriptions.' + extension.id | t }}
-                    </p>
-                  } @else if (extension.description) {
-                    <p class="text-xs text-muted-foreground">{{ extension.description }}</p>
-                  }
-                  <p class="text-xs text-muted-foreground">
-                    {{ 'extensions.list.routes' | t }}:
-                    {{ [extension.basePath].concat(extension.routes).join(', ') }}
-                  </p>
-                  @if (extension.errorCode) {
-                    <p class="text-xs text-destructive">{{ i18n.error(extension.errorCode) }}</p>
-                  }
-                </div>
-                <div class="flex items-center gap-3">
-                  <label class="flex items-center gap-2 text-sm">
-                    @for (version of [switchVersion()]; track version) {
-                      <hlm-switch
-                        [checked]="extension.enabled"
-                        [disabled]="busy()"
-                        (checkedChange)="setEnabled(extension, $event)"
-                      />
-                    }
-                    {{ 'extensions.list.enabled' | t }}
-                  </label>
-                  @if (!extension.builtIn) {
-                    <button
-                      hlmBtn
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      [disabled]="busy()"
-                      (click)="uninstallExtension(extension)"
-                    >
-                      {{ 'extensions.uninstall' | t }}
-                    </button>
-                  }
-                </div>
-              </li>
-            }
-          </ul>
-          <app-package-dropzone
-            kind="extension"
-            [busy]="busy()"
-            (file)="pending.set({ kind: 'extension', file: $event, url: null })"
-            (urlChosen)="pending.set({ kind: 'extension', file: null, url: $event })"
-          />
-        </div>
-      </section>
-
-      <app-extension-marketplace [busy]="busy()" (installed)="afterInstall($event)" />
-
-      <section hlmCard>
-        <div hlmCardHeader>
-          <h2 hlmCardTitle>{{ 'extensions.players.title' | t }}</h2>
-          <p hlmCardDescription>{{ 'extensions.players.description' | t }}</p>
-        </div>
-        <div hlmCardContent class="grid gap-4">
-          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
-            @for (frontend of frontends(); track frontend.id) {
-              <li
-                class="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-md border p-3"
-              >
-                <div class="min-w-0 text-sm">
-                  <p class="font-medium">
-                    {{ frontend.name }}
-                    <span class="text-muted-foreground">{{ frontend.version }}</span>
-                    @if (frontend.isDefault) {
-                      <span hlmBadge class="ml-1">{{ 'extensions.players.default' | t }}</span>
-                    }
-                    @if (frontend.builtIn) {
-                      <span hlmBadge variant="secondary" class="ml-1">{{
-                        'extensions.builtIn' | t
-                      }}</span>
-                    }
-                  </p>
-                  @if (frontend.description) {
-                    <p class="text-xs text-muted-foreground">{{ frontend.description }}</p>
-                  }
-                  <p class="text-xs text-muted-foreground">
-                    <a class="underline" [href]="frontend.path" target="_blank" rel="noopener">{{
-                      frontend.path
-                    }}</a>
-                    @if (frontend.author) {
-                      · {{ frontend.author }}
-                    }
-                    @if (frontend.license) {
-                      · {{ frontend.license }}
-                    }
-                  </p>
-                </div>
-                <div class="flex gap-2">
-                  @if (!frontend.isDefault) {
-                    <button
-                      hlmBtn
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      [disabled]="busy()"
-                      (click)="makeDefault(frontend)"
-                    >
-                      {{ 'extensions.players.makeDefault' | t }}
-                    </button>
-                  }
-                  @if (!frontend.builtIn) {
-                    <button
-                      hlmBtn
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      [disabled]="busy()"
-                      (click)="uninstallFrontend(frontend)"
-                    >
-                      {{ 'extensions.uninstall' | t }}
-                    </button>
-                  }
-                </div>
-              </li>
-            } @empty {
-              <li class="text-sm text-muted-foreground">{{ 'extensions.players.none' | t }}</li>
-            }
-          </ul>
-          <app-package-dropzone
-            kind="frontend"
-            [busy]="busy()"
-            (file)="pending.set({ kind: 'frontend', file: $event, url: null })"
-            (urlChosen)="pending.set({ kind: 'frontend', file: null, url: $event })"
-          />
-        </div>
-      </section>
+      @switch (tab()) {
+        @case ('installed') {
+          <section hlmCard>
+            <div hlmCardHeader>
+              <h2 hlmCardTitle>{{ 'extensions.list.title' | t }}</h2>
+              <p hlmCardDescription>{{ 'extensions.list.description' | t }}</p>
+            </div>
+            <div hlmCardContent class="grid gap-4">
+              <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+                @for (extension of extensions(); track extension.id) {
+                  <li
+                    class="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-md border p-3"
+                  >
+                    <div class="min-w-0 text-sm">
+                      <p class="font-medium">
+                        {{ extension.name }}
+                        <span class="text-muted-foreground">{{ extension.version }}</span>
+                        @if (extension.builtIn) {
+                          <span hlmBadge variant="secondary" class="ml-1">{{
+                            'extensions.builtIn' | t
+                          }}</span>
+                        }
+                        @if (extension.status === 'FAILED') {
+                          <span hlmBadge variant="destructive" class="ml-1">{{
+                            'extensions.list.failed' | t
+                          }}</span>
+                        }
+                        @if (extension.restartRequired) {
+                          <span hlmBadge variant="outline" class="ml-1">{{
+                            'extensions.list.restartRequired' | t
+                          }}</span>
+                        }
+                      </p>
+                      @if (extension.builtIn) {
+                        <p class="text-xs text-muted-foreground">
+                          {{ 'extensions.descriptions.' + extension.id | t }}
+                        </p>
+                      } @else if (extension.description) {
+                        <p class="text-xs text-muted-foreground">{{ extension.description }}</p>
+                      }
+                      <p class="text-xs text-muted-foreground">
+                        {{ 'extensions.list.routes' | t }}:
+                        {{ [extension.basePath].concat(extension.routes).join(', ') }}
+                      </p>
+                      @if (extension.errorCode) {
+                        <p class="text-xs text-destructive">
+                          {{ i18n.error(extension.errorCode) }}
+                        </p>
+                      }
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <label class="flex items-center gap-2 text-sm">
+                        @for (version of [switchVersion()]; track version) {
+                          <hlm-switch
+                            [checked]="extension.enabled"
+                            [disabled]="busy()"
+                            (checkedChange)="setEnabled(extension, $event)"
+                          />
+                        }
+                        {{ 'extensions.list.enabled' | t }}
+                      </label>
+                      @if (!extension.builtIn) {
+                        <button
+                          hlmBtn
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          [disabled]="busy()"
+                          (click)="uninstallExtension(extension)"
+                        >
+                          {{ 'extensions.uninstall' | t }}
+                        </button>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+              <app-package-dropzone
+                kind="extension"
+                [busy]="busy()"
+                (file)="pending.set({ kind: 'extension', file: $event, url: null })"
+                (urlChosen)="pending.set({ kind: 'extension', file: null, url: $event })"
+              />
+            </div>
+          </section>
+        }
+        @case ('marketplace') {
+          <app-extension-marketplace [busy]="busy()" (installed)="afterInstall($event)" />
+        }
+        @case ('players') {
+          <section hlmCard>
+            <div hlmCardHeader>
+              <h2 hlmCardTitle>{{ 'extensions.players.title' | t }}</h2>
+              <p hlmCardDescription>{{ 'extensions.players.description' | t }}</p>
+            </div>
+            <div hlmCardContent class="grid gap-4">
+              <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+                @for (frontend of frontends(); track frontend.id) {
+                  <li
+                    class="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-md border p-3"
+                  >
+                    <div class="min-w-0 text-sm">
+                      <p class="font-medium">
+                        {{ frontend.name }}
+                        <span class="text-muted-foreground">{{ frontend.version }}</span>
+                        @if (frontend.isDefault) {
+                          <span hlmBadge class="ml-1">{{ 'extensions.players.default' | t }}</span>
+                        }
+                        @if (frontend.builtIn) {
+                          <span hlmBadge variant="secondary" class="ml-1">{{
+                            'extensions.builtIn' | t
+                          }}</span>
+                        }
+                      </p>
+                      @if (frontend.description) {
+                        <p class="text-xs text-muted-foreground">{{ frontend.description }}</p>
+                      }
+                      <p class="text-xs text-muted-foreground">
+                        <a
+                          class="underline"
+                          [href]="frontend.path"
+                          target="_blank"
+                          rel="noopener"
+                          >{{ frontend.path }}</a
+                        >
+                        @if (frontend.author) {
+                          · {{ frontend.author }}
+                        }
+                        @if (frontend.license) {
+                          · {{ frontend.license }}
+                        }
+                      </p>
+                    </div>
+                    <div class="flex gap-2">
+                      @if (!frontend.isDefault) {
+                        <button
+                          hlmBtn
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          [disabled]="busy()"
+                          (click)="makeDefault(frontend)"
+                        >
+                          {{ 'extensions.players.makeDefault' | t }}
+                        </button>
+                      }
+                      @if (!frontend.builtIn) {
+                        <button
+                          hlmBtn
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          [disabled]="busy()"
+                          (click)="uninstallFrontend(frontend)"
+                        >
+                          {{ 'extensions.uninstall' | t }}
+                        </button>
+                      }
+                    </div>
+                  </li>
+                } @empty {
+                  <li class="text-sm text-muted-foreground">{{ 'extensions.players.none' | t }}</li>
+                }
+              </ul>
+              <app-package-dropzone
+                kind="frontend"
+                [busy]="busy()"
+                (file)="pending.set({ kind: 'frontend', file: $event, url: null })"
+                (urlChosen)="pending.set({ kind: 'frontend', file: null, url: $event })"
+              />
+            </div>
+          </section>
+        }
+      }
     </div>
 
     <app-cloud-off-dialog
@@ -285,6 +329,28 @@ interface PendingInstall {
             {{ 'extensions.install.confirm' | t }}
           </button>
         </hlm-alert-dialog-footer>
+      </hlm-alert-dialog-content>
+    </hlm-alert-dialog>
+
+    <hlm-alert-dialog [state]="restarting() ? 'open' : 'closed'">
+      <hlm-alert-dialog-content *brnAlertDialogContent="let ctx" class="sm:max-w-md">
+        <hlm-alert-dialog-header>
+          <h3 hlmAlertDialogTitle class="flex items-center gap-2">
+            <hlm-spinner class="size-5" />
+            {{ 'extensions.restartDialog.title' | t }}
+          </h3>
+          <p hlmAlertDialogDescription>
+            {{
+              (restartPhase() === 'stopping'
+                ? 'extensions.restartDialog.stopping'
+                : 'extensions.restartDialog.starting'
+              ) | t
+            }}
+          </p>
+          <p class="text-xs text-muted-foreground" aria-live="polite">
+            {{ 'extensions.restartDialog.elapsed' | t: { seconds: restartSeconds() } }}
+          </p>
+        </hlm-alert-dialog-header>
       </hlm-alert-dialog-content>
     </hlm-alert-dialog>
 
@@ -334,6 +400,21 @@ export class ExtensionsPage implements OnInit {
     this.extensions().some((e) => e.restartRequired),
   );
   protected readonly pending = signal<PendingInstall | null>(null);
+  /** While restarting: going down first, then coming back. */
+  protected readonly restartPhase = signal<'stopping' | 'starting'>('stopping');
+  protected readonly restartSeconds = signal(0);
+
+  protected readonly tabs = Tabs;
+  protected readonly tab = signal<Tab>(initialTab());
+
+  protected choose(tab: Tab): void {
+    this.tab.set(tab);
+    try {
+      localStorage.setItem(TabKey, tab);
+    } catch {
+      // Only a convenience.
+    }
+  }
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -477,17 +558,22 @@ export class ExtensionsPage implements OnInit {
       this.busy.set(false);
       return;
     }
+    this.restartPhase.set('stopping');
+    this.restartSeconds.set(0);
     this.restarting.set(true);
     const started = Date.now();
     let wentDown = false;
     // Down first (up to 15 s), then up again (up to 2 min).
     while (Date.now() - started < 120_000) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
+      this.restartSeconds.set(Math.round((Date.now() - started) / 1000));
       const up = await fetch('/health', { cache: 'no-store' })
         .then((r) => r.ok)
         .catch(() => false);
-      if (!up) wentDown = true;
-      else if (wentDown || Date.now() - started > 15_000) break;
+      if (!up) {
+        wentDown = true;
+        this.restartPhase.set('starting');
+      } else if (wentDown || Date.now() - started > 15_000) break;
     }
     this.restarting.set(false);
     this.busy.set(false);

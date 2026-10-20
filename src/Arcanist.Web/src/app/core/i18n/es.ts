@@ -1434,7 +1434,6 @@ export const es: Dictionary = {
       restartNeeded:
         'Hay extensiones instaladas o activadas que funcionarán cuando el servidor se reinicie.',
       restartNow: 'Reiniciar ahora',
-      restartWaiting: 'Reiniciando el servidor… vuelve en unos segundos.',
       restartDone: 'El servidor se reinició',
       restartUnreachable:
         'El servidor no respondió. Si no tiene un supervisor (servicio, Docker, systemd o la bandeja), hay que volver a iniciarlo a mano.',
@@ -1455,8 +1454,37 @@ export const es: Dictionary = {
       installed: 'Instalada',
       needs: 'Necesita Arcanist {version}',
       none: 'No hay extensiones que coincidan.',
+      categories: 'Categorías',
+      allCategories: 'Todas',
+      create: {
+        title: 'Crea y publica tu extensión',
+        description:
+          'Cualquiera puede hacer una extensión para Arcanist y ofrecerla en este marketplace.',
+        write: 'Escríbela con el SDK de Arcanist (C#), siguiendo la guía para desarrolladores.',
+        release:
+          'Publica su .zip como release de un repositorio público de GitHub, con su código fuente.',
+        propose:
+          'Propónla en el catálogo con un issue («Add an extension»): una automatización comprueba el paquete y el equipo la revisa antes de listarla.',
+        manage:
+          'Después publicas versiones nuevas, cambias su ficha o la retiras tú mismo, también con issues.',
+        guide: 'Guía para desarrolladores',
+        howToPublish: 'Cómo se publica',
+        proposeButton: 'Proponer una extensión',
+      },
       communityTrust:
         'Esta extensión es de la comunidad, no del proyecto Arcanist. Se ejecuta dentro del servidor con todos sus permisos: puede leer y cambiar cualquier dato y archivo al que el servidor tenga acceso. Instálala solo si confías en su autor.',
+    },
+    tabs: {
+      installed: 'Instaladas',
+      marketplace: 'Marketplace',
+      players: 'Reproductores',
+    },
+    restartDialog: {
+      title: 'Reiniciando el servidor',
+      stopping: 'Deteniendo el servidor…',
+      starting:
+        'Esperando a que el servidor vuelva a estar en marcha. Suele tardar unos segundos; no cierres esta página.',
+      elapsed: '{seconds} s',
     },
     installedDialog: {
       title: '«{name}» está instalada',

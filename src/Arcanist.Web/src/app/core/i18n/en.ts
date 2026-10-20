@@ -1417,7 +1417,6 @@ export const en: Dictionary = {
       restartRequiredHelp: 'The change applies when the server restarts.',
       restartNeeded: 'Some installed or switched on extensions will run once the server restarts.',
       restartNow: 'Restart now',
-      restartWaiting: 'Restarting the server… it is back in a few seconds.',
       restartDone: 'The server restarted',
       restartUnreachable:
         'The server did not answer. Without a supervisor (service, Docker, systemd or the tray), start it again by hand.',
@@ -1438,8 +1437,36 @@ export const en: Dictionary = {
       installed: 'Installed',
       needs: 'Needs Arcanist {version}',
       none: 'No extensions match.',
+      categories: 'Categories',
+      allCategories: 'All',
+      create: {
+        title: 'Make and publish your extension',
+        description: 'Anyone can make an extension for Arcanist and offer it in this marketplace.',
+        write: 'Write it with the Arcanist SDK (C#), following the developer guide.',
+        release:
+          'Publish its .zip as a release of a public GitHub repository, with its source code.',
+        propose:
+          'Propose it to the catalog with an issue ("Add an extension"): an automation checks the package and the team reviews it before listing it.',
+        manage:
+          'Then you publish new versions, change its entry or withdraw it yourself, with issues too.',
+        guide: 'Developer guide',
+        howToPublish: 'How publishing works',
+        proposeButton: 'Propose an extension',
+      },
       communityTrust:
         'This extension comes from the community, not from the Arcanist project. It runs inside the server with all its permissions: it can read and change any data and file the server can reach. Install it only if you trust its author.',
+    },
+    tabs: {
+      installed: 'Installed',
+      marketplace: 'Marketplace',
+      players: 'Players',
+    },
+    restartDialog: {
+      title: 'Restarting the server',
+      stopping: 'Stopping the server…',
+      starting:
+        'Waiting for the server to be up again. It usually takes a few seconds; keep this page open.',
+      elapsed: '{seconds} s',
     },
     installedDialog: {
       title: '“{name}” is installed',

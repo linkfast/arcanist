@@ -1,7 +1,14 @@
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideBadgeCheck, lucidePuzzle, lucideRefreshCw, lucideSearch } from '@ng-icons/lucide';
+import {
+  lucideBadgeCheck,
+  lucideBookOpen,
+  lucideExternalLink,
+  lucidePuzzle,
+  lucideRefreshCw,
+  lucideSearch,
+} from '@ng-icons/lucide';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
@@ -47,7 +54,16 @@ type Entry = Marketplace['extensions'][number];
     TranslatePipe,
     BytesPipe,
   ],
-  providers: [provideIcons({ lucideBadgeCheck, lucidePuzzle, lucideRefreshCw, lucideSearch })],
+  providers: [
+    provideIcons({
+      lucideBadgeCheck,
+      lucideBookOpen,
+      lucideExternalLink,
+      lucidePuzzle,
+      lucideRefreshCw,
+      lucideSearch,
+    }),
+  ],
   template: `
     <section hlmCard>
       <div hlmCardHeader>
@@ -76,20 +92,49 @@ type Entry = Marketplace['extensions'][number];
               </p>
             </div>
           } @else {
-            @if (market.extensions.length > 6) {
-              <div class="relative">
-                <ng-icon
-                  name="lucideSearch"
-                  class="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
-                />
-                <input
-                  hlmInput
-                  class="w-full pl-8"
-                  type="search"
-                  [placeholder]="'extensions.marketplace.search' | t"
-                  [ngModel]="query()"
-                  (ngModelChange)="query.set($event)"
-                />
+            <div class="relative">
+              <ng-icon
+                name="lucideSearch"
+                class="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                hlmInput
+                class="w-full pl-8"
+                type="search"
+                [attr.aria-label]="'extensions.marketplace.search' | t"
+                [placeholder]="'extensions.marketplace.search' | t"
+                [ngModel]="query()"
+                (ngModelChange)="query.set($event)"
+              />
+            </div>
+            @if (categories().length > 1) {
+              <div
+                class="flex flex-wrap gap-1"
+                role="group"
+                [attr.aria-label]="'extensions.marketplace.categories' | t"
+              >
+                <button
+                  hlmBtn
+                  size="sm"
+                  type="button"
+                  [variant]="category() === null ? 'secondary' : 'ghost'"
+                  [attr.aria-pressed]="category() === null"
+                  (click)="category.set(null)"
+                >
+                  {{ 'extensions.marketplace.allCategories' | t }}
+                </button>
+                @for (option of categories(); track option) {
+                  <button
+                    hlmBtn
+                    size="sm"
+                    type="button"
+                    [variant]="category() === option ? 'secondary' : 'ghost'"
+                    [attr.aria-pressed]="category() === option"
+                    (click)="category.set(category() === option ? null : option)"
+                  >
+                    {{ option }}
+                  </button>
+                }
               </div>
             }
             <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -197,6 +242,38 @@ type Entry = Marketplace['extensions'][number];
       </div>
     </section>
 
+    <section hlmCard class="mt-6">
+      <div hlmCardHeader>
+        <h2 hlmCardTitle class="flex items-center gap-2">
+          <ng-icon name="lucideBookOpen" />
+          {{ 'extensions.marketplace.create.title' | t }}
+        </h2>
+        <p hlmCardDescription>{{ 'extensions.marketplace.create.description' | t }}</p>
+      </div>
+      <div hlmCardContent class="grid gap-3 text-sm">
+        <ol class="grid list-decimal gap-1.5 pl-5 text-muted-foreground">
+          <li>{{ 'extensions.marketplace.create.write' | t }}</li>
+          <li>{{ 'extensions.marketplace.create.release' | t }}</li>
+          <li>{{ 'extensions.marketplace.create.propose' | t }}</li>
+          <li>{{ 'extensions.marketplace.create.manage' | t }}</li>
+        </ol>
+        <div class="flex flex-wrap gap-2">
+          <a hlmBtn variant="outline" size="sm" [href]="guideUrl" target="_blank" rel="noopener">
+            {{ 'extensions.marketplace.create.guide' | t }}
+            <ng-icon name="lucideExternalLink" class="ml-1.5" />
+          </a>
+          <a hlmBtn variant="outline" size="sm" [href]="publishUrl" target="_blank" rel="noopener">
+            {{ 'extensions.marketplace.create.howToPublish' | t }}
+            <ng-icon name="lucideExternalLink" class="ml-1.5" />
+          </a>
+          <a hlmBtn size="sm" [href]="proposeUrl" target="_blank" rel="noopener">
+            {{ 'extensions.marketplace.create.proposeButton' | t }}
+            <ng-icon name="lucideExternalLink" class="ml-1.5" />
+          </a>
+        </div>
+      </div>
+    </section>
+
     <hlm-alert-dialog [state]="confirming() ? 'open' : 'closed'" (closed)="confirming.set(null)">
       <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
         <hlm-alert-dialog-header>
@@ -235,11 +312,33 @@ export class ExtensionMarketplace implements OnInit {
   protected readonly installing = signal<string | null>(null);
   protected readonly confirming = signal<Entry | null>(null);
   protected readonly query = signal('');
+  protected readonly category = signal<string | null>(null);
+
+  /** How to write one, and how the catalog takes proposals (issues with forms). */
+  protected readonly guideUrl =
+    'https://github.com/linkfast/arcanist/blob/main/docs/developers/extensions.md';
+  protected readonly publishUrl =
+    'https://github.com/linkfast/arcanist-extensions#proposing-and-managing-extensions';
+  protected readonly proposeUrl =
+    'https://github.com/linkfast/arcanist-extensions/issues/new/choose';
+
+  /** The catalog's categories, by how many extensions have them. */
+  protected readonly categories = computed(() => {
+    const counts = new Map<string, number>();
+    for (const entry of this.marketplace()?.extensions ?? [])
+      for (const category of entry.categories)
+        counts.set(category, (counts.get(category) ?? 0) + 1);
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([c]) => c);
+  });
   protected readonly brokenIcons = signal(new Set<string>());
 
   protected readonly shown = computed(() => {
     const words = this.query().trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const category = this.category();
     return (this.marketplace()?.extensions ?? []).filter((entry) => {
+      if (category && !entry.categories.includes(category)) return false;
       const text = [entry.name, entry.description, entry.author, ...entry.categories]
         .join(' ')
         .toLowerCase();

@@ -79,13 +79,12 @@ mkdir -p "$bundle"
 ditto -x -k "$out/releases/Arcanist-$channel-Portable.zip" "$bundle"
 rm "$out/releases/Arcanist-$channel-Portable.zip"
 [ -d "$bundle/Arcanist.app" ] || { echo "Velopack's portable zip has no Arcanist.app" >&2; exit 1; }
-# Ad hoc, with no certificate: every binary (the server's included, outside the standard folders that --deep reaches,
-# and Rust's x86_64 libraries, which the linker leaves unsigned), then the bundle, so Gatekeeper can ask instead of
-# calling it damaged.
-find "$bundle/Arcanist.app/Contents" -type f | while IFS= read -r file; do
-    case "$(file -b "$file")" in
-        *Mach-O*) codesign --force --sign - "$file" ;;
-    esac
+# Ad hoc, with no certificate: every file in Contents/MacOS (codesign wants all of it signed: .NET's assemblies live
+# there too, and get their signature in an extended attribute, which the .dmg, the .zip and the .pkg keep; the server's
+# files, outside the folders --deep reaches; Rust's x86_64 libraries, which the linker leaves unsigned), then the
+# bundle, so Gatekeeper can ask instead of calling it damaged.
+find "$bundle/Arcanist.app/Contents/MacOS" -type f | while IFS= read -r file; do
+    codesign --force --sign - "$file"
 done
 codesign --force --sign - "$bundle/Arcanist.app"
 codesign --verify --deep "$bundle/Arcanist.app"

@@ -71,7 +71,8 @@ foreach ($library in "arcanist_audio.dll", "arcanist_p2p.dll") {
 }
 Copy-Item $panel "$app/server/wwwroot/admin" -Recurse
 
-dotnet publish src/Arcanist.Tray -c Release -r $Runtime --self-contained -p:Version=$Version -o $app
+# The tray also builds for macOS (net10.0): this is its Windows build.
+dotnet publish src/Arcanist.Tray -f net10.0-windows -c Release -r $Runtime --self-contained -p:Version=$Version -o $app
 # Debug symbols, mostly native ones from SkiaSharp and HarfBuzz, would make up half of the download.
 Get-ChildItem $app -Recurse -Filter *.pdb | Remove-Item
 

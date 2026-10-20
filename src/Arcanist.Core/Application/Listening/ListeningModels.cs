@@ -117,7 +117,11 @@ public sealed record ListeningStats(
     IReadOnlyList<int> PlaysByWeekday);
 
 /// <summary>One user's listening in a period, for the server's statistics.</summary>
-public sealed record UserListening(Guid UserId, string UserName, string? DisplayName, int Plays, long ListenedMs, DateTime? LastPlayedAt);
+/// <param name="UserId">The user; for a <paramref name="Remote"/> listener, the server they are on (the peer).</param>
+/// <param name="Remote">A user of another server that plays the libraries this one shares with it (rule <c>countPlays</c>):
+/// their name there, and the server's in <paramref name="Server"/>.</param>
+public sealed record UserListening(
+    Guid UserId, string UserName, string? DisplayName, int Plays, long ListenedMs, DateTime? LastPlayedAt, bool Remote = false, string? Server = null);
 
 public sealed record FormatTotals(string Format, int Files, long SizeBytes);
 

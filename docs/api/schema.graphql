@@ -124,6 +124,8 @@ type Query {
   networkPeers(kind: P2PPeerKind): [NetworkPeer!]!
   "Libraries other servers share with this one, each shown here as a library. Administrators only."
   receivedShares: [ReceivedShare!]!
+  "How libraries other servers share are played here: their cache (and what it takes) and where their songs are converted. Administrators only."
+  remoteLibrarySettings: RemoteLibrarySettings!
   "What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only."
   p2pActivity(peerId: ID, limit: Int): [P2PActivityEntry!]!
   "The user's playlists, those they collaborate on and public ones, most recently changed first."
@@ -1313,6 +1315,8 @@ type UserListening {
   plays: Int!
   listenedMs: Long!
   lastPlayedAt: DateTime
+  remote: Boolean!
+  server: String
 }
 
 type FfmpegStatus {
@@ -1698,6 +1702,8 @@ type PeerRules {
   maxBitRate: Int
   bandwidthKbps: Int
   maxStreams: Int
+  allowCache: Boolean!
+  countPlays: Boolean!
 }
 
 type ReceivedShare {
@@ -1711,6 +1717,7 @@ type ReceivedShare {
   createdAt: DateTime!
   lastContactAt: DateTime
   copy: ShareCopyProgress
+  sharePlays: Boolean!
 }
 
 type ShareCopyProgress {
@@ -1726,6 +1733,21 @@ enum ShareCopyStatus {
   RUNNING
   COMPLETED
   FAILED
+}
+
+type RemoteLibrarySettings {
+  cacheEnabled: Boolean!
+  cacheMaxBytes: Long!
+  cacheMaxAgeDays: Int!
+  transcoding: RemoteTranscoding!
+  cacheBytes: Long!
+  cacheFiles: Int!
+}
+
+enum RemoteTranscoding {
+  AUTO
+  HERE
+  OWNER
 }
 
 type P2PActivityEntry {
@@ -2411,6 +2433,12 @@ type Mutation {
   updateNetworkPeer(input: UpdateNetworkPeerInput!): NetworkPeer!
   "Ends a peer's access at once. Users revoke their own devices; administrators, any peer."
   revokeNetworkPeer(id: ID!): NetworkPeer!
+  "The cache of other servers' music (on or off, size, age) and where their songs are converted. Administrators only."
+  setRemoteLibrarySettings(input: SetRemoteLibrarySettingsInput!): RemoteLibrarySettings!
+  "Empties the cache of other servers' music; it is fetched again as it is played. Administrators only."
+  clearRemoteLibraryCache: RemoteLibrarySettings!
+  "Whether plays of a received share's music go to its server, with the users' names, when it counts them (its rule countPlays). Administrators only."
+  setReceivedSharePlays(input: SetReceivedSharePlaysInput!): ReceivedShare!
   "Copies a received share's files into a folder of one of this server's libraries, when its owner allows downloads. Runs in the background; its progress shows in the share. Administrators only, with a recent authentication."
   copyReceivedShare(input: CopyReceivedShareInput!): ReceivedShare!
   "Accepts another server's share with its invitation link: its libraries become one library here, scanned at once (nothing is downloaded: the music streams from that server). Administrators only, with a recent authentication."
@@ -2894,6 +2922,8 @@ input PeerRulesInput {
   maxBitRate: Int
   bandwidthKbps: Int
   maxStreams: Int
+  allowCache: Boolean!
+  countPlays: Boolean!
 }
 
 input UpdateNetworkPeerInput {
@@ -2902,6 +2932,18 @@ input UpdateNetworkPeerInput {
   rules: PeerRulesInput!
   libraryIds: [ID!]
   expiresAt: DateTime
+}
+
+input SetRemoteLibrarySettingsInput {
+  cacheEnabled: Boolean!
+  cacheMaxBytes: Long!
+  cacheMaxAgeDays: Int!
+  transcoding: RemoteTranscoding!
+}
+
+input SetReceivedSharePlaysInput {
+  shareId: ID!
+  sharePlays: Boolean!
 }
 
 input CopyReceivedShareInput {

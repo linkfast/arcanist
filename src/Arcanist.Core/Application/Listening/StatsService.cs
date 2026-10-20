@@ -66,12 +66,20 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
             .Select(u => new { u.Id, u.UserName, u.DisplayName })
             .ToListAsync(cancellationToken);
 
+        // Users of other servers that count here, by their name there.
+        var remote = await db.RemotePlayEvents.Where(p => from == null || p.PlayedAt >= from)
+            .GroupBy(p => new { p.PeerId, p.Peer.Name, p.RemoteUser })
+            .Select(g => new UserListening(g.Key.PeerId, g.Key.RemoteUser, null, g.Count(p => p.Counted), g.Sum(p => (long)p.PlayedMs),
+                g.Where(p => p.Counted).Max(p => (DateTime?)p.PlayedAt), true, g.Key.Name))
+            .ToListAsync(cancellationToken);
+
         return new ServerStats(
             library,
             listening,
             users.Select(u => perUser.TryGetValue(u.Id, out var p)
                     ? new UserListening(u.Id, u.UserName, u.DisplayName, p.Plays, p.ListenedMs, p.Last)
                     : new UserListening(u.Id, u.UserName, u.DisplayName, 0, 0, null))
+                .Concat(remote)
                 .OrderByDescending(u => u.ListenedMs)
                 .ToList());
     }

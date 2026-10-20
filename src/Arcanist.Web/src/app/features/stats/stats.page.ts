@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
@@ -19,6 +20,7 @@ type Stats = Result['serverStats'];
 @Component({
   selector: 'app-stats-page',
   imports: [
+    HlmBadgeImports,
     HlmCardImports,
     HlmButtonImports,
     HlmSpinnerImports,
@@ -213,9 +215,17 @@ type Stats = Result['serverStats'];
                 </tr>
               </thead>
               <tbody hlmTBody>
-                @for (user of s.users; track user.userId) {
+                <!-- Users of another server share its id: their names tell them apart. -->
+                @for (user of s.users; track user.userId + user.userName) {
                   <tr hlmTr>
-                    <td hlmTd>{{ user.displayName || user.userName }}</td>
+                    <td hlmTd>
+                      {{ user.displayName || user.userName }}
+                      @if (user.remote) {
+                        <span hlmBadge variant="outline" class="ml-1">{{
+                          'stats.remote' | t: { server: user.server ?? '' }
+                        }}</span>
+                      }
+                    </td>
                     <td hlmTd class="text-right">{{ user.plays | count }}</td>
                     <td hlmTd class="text-right">
                       {{ 'stats.hours' | t: { hours: hours(user.listenedMs) } }}

@@ -5898,6 +5898,119 @@
         }
       }
     },
+    "/rest/v1/p2p/shares/{id}/share-plays": {
+      "put": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Whether plays of a received share\u0027s music go to its server, with the users\u0027 names, when it counts them (its rule countPlays). Administrators only.",
+        "operationId": "SetReceivedSharePlays",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetReceivedSharePlaysInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceivedShare"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/remote-libraries": {
+      "get": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "How libraries other servers share are played here: their cache (and what it takes) and where their songs are converted. Administrators only.",
+        "operationId": "RemoteLibrarySettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteLibrarySettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "The cache of other servers\u0027 music (on or off, size, age) and where their songs are converted. Administrators only.",
+        "operationId": "SetRemoteLibrarySettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRemoteLibrarySettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteLibrarySettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/remote-libraries/cache": {
+      "delete": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Empties the cache of other servers\u0027 music; it is fetched again as it is played. Administrators only.",
+        "operationId": "ClearRemoteLibraryCache",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoteLibrarySettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/p2p/activity": {
       "get": {
         "tags": [
@@ -6200,6 +6313,71 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/peer/analyses": {
+      "post": {
+        "tags": [
+          "Peer"
+        ],
+        "summary": "Server to server: this server\u0027s analyses (loudness, tempo, key, fingerprints, waveform) of shared files\u0027 audio, by content hash, up to 200.",
+        "operationId": "PeerAnalyses",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeerAnalysesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PeerAnalysis"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/peer/plays": {
+      "post": {
+        "tags": [
+          "Peer"
+        ],
+        "summary": "Server to server: plays of shared songs by the calling server\u0027s users, when the share\u0027s rules count them (countPlays), up to 500.",
+        "operationId": "PeerPlays",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeerPlaysRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerPlaysResult"
+                }
+              }
+            }
           }
         }
       }
@@ -15493,6 +15671,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "allowCache": {
+            "type": "boolean"
+          },
+          "countPlays": {
+            "type": "boolean"
           }
         }
       },
@@ -15701,6 +15885,171 @@
           }
         }
       },
+      "PeerAnalysesRequest": {
+        "required": [
+          "hashes"
+        ],
+        "type": "object",
+        "properties": {
+          "hashes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PeerAnalysis": {
+        "required": [
+          "contentHash",
+          "analyzerVersion",
+          "analyzedAt",
+          "durationMs",
+          "loudness",
+          "loudnessRange",
+          "truePeak",
+          "loudnessHistogram",
+          "bpm",
+          "bpmConfidence",
+          "keyTonic",
+          "keyMinor",
+          "keyConfidence",
+          "acoustIdFingerprint",
+          "fingerprint",
+          "fingerprintDurationMs",
+          "waveform"
+        ],
+        "type": "object",
+        "properties": {
+          "contentHash": {
+            "type": "string"
+          },
+          "analyzerVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analyzedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "loudness": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "loudnessRange": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "truePeak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "loudnessHistogram": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "float"
+          },
+          "bpmConfidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "float"
+          },
+          "keyTonic": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "keyMinor": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "keyConfidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "float"
+          },
+          "acoustIdFingerprint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fingerprint": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
+          },
+          "fingerprintDurationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "waveform": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "byte"
+          }
+        }
+      },
       "PeerFile": {
         "required": [
           "id",
@@ -15813,12 +16162,94 @@
           }
         }
       },
+      "PeerPlay": {
+        "required": [
+          "id",
+          "path",
+          "cueTrack",
+          "user",
+          "playedAt",
+          "playedMs",
+          "counted",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "cueTrack": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "user": {
+            "type": "string"
+          },
+          "playedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "playedMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "counted": {
+            "type": "boolean"
+          },
+          "skipped": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PeerPlaysRequest": {
+        "required": [
+          "plays"
+        ],
+        "type": "object",
+        "properties": {
+          "plays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PeerPlay"
+            }
+          }
+        }
+      },
+      "PeerPlaysResult": {
+        "required": [
+          "recorded"
+        ],
+        "type": "object",
+        "properties": {
+          "recorded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PeerRules": {
         "required": [
           "allowDownload",
           "maxBitRate",
           "bandwidthKbps",
-          "maxStreams"
+          "maxStreams",
+          "allowCache",
+          "countPlays"
         ],
         "type": "object",
         "properties": {
@@ -15851,6 +16282,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "allowCache": {
+            "type": "boolean"
+          },
+          "countPlays": {
+            "type": "boolean"
           }
         }
       },
@@ -15892,6 +16329,14 @@
               "string"
             ],
             "format": "int32"
+          },
+          "allowCache": {
+            "type": "boolean",
+            "default": true
+          },
+          "countPlays": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -16445,7 +16890,8 @@
           "online",
           "createdAt",
           "lastContactAt",
-          "copy"
+          "copy",
+          "sharePlays"
         ],
         "type": "object",
         "properties": {
@@ -16492,6 +16938,9 @@
                 "$ref": "#/components/schemas/ShareCopyProgress"
               }
             ]
+          },
+          "sharePlays": {
+            "type": "boolean"
           }
         }
       },
@@ -16611,6 +17060,64 @@
             ]
           }
         }
+      },
+      "RemoteLibrarySettings": {
+        "required": [
+          "cacheEnabled",
+          "cacheMaxBytes",
+          "cacheMaxAgeDays",
+          "transcoding",
+          "cacheBytes",
+          "cacheFiles"
+        ],
+        "type": "object",
+        "properties": {
+          "cacheEnabled": {
+            "type": "boolean"
+          },
+          "cacheMaxBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheMaxAgeDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "transcoding": {
+            "$ref": "#/components/schemas/RemoteTranscoding"
+          },
+          "cacheBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheFiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RemoteTranscoding": {
+        "enum": [
+          "AUTO",
+          "HERE",
+          "OWNER"
+        ]
       },
       "ResetResult": {
         "required": [
@@ -17686,6 +18193,55 @@
         "properties": {
           "mode": {
             "$ref": "#/components/schemas/RatingMode"
+          }
+        }
+      },
+      "SetReceivedSharePlaysInput": {
+        "required": [
+          "shareId",
+          "sharePlays"
+        ],
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sharePlays": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetRemoteLibrarySettingsInput": {
+        "required": [
+          "cacheEnabled",
+          "cacheMaxBytes",
+          "cacheMaxAgeDays",
+          "transcoding"
+        ],
+        "type": "object",
+        "properties": {
+          "cacheEnabled": {
+            "type": "boolean"
+          },
+          "cacheMaxBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheMaxAgeDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "transcoding": {
+            "$ref": "#/components/schemas/RemoteTranscoding"
           }
         }
       },
@@ -20846,6 +21402,16 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "remote": {
+            "type": "boolean",
+            "default": false
+          },
+          "server": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

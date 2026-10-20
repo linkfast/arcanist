@@ -6,9 +6,11 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Arcanist.Core.Application.P2P;
 using Arcanist.Core.Api.Rest;
+using Arcanist.Core.Data;
 using Arcanist.Core.P2P;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Scanning;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.P2P;
 
@@ -26,14 +28,19 @@ public sealed class P2PTests : IAsyncDisposable
     /// <summary>A server listening on a real port, with its P2P node on a known UDP port.</summary>
     private sealed record Server(ArcanistFactory Factory, int NodePort, HttpClient Admin);
 
-    private async Task<Server> StartServerAsync(params SetupLibrary[] libraries)
+    private Task<Server> StartServerAsync(params SetupLibrary[] libraries) => StartServerAsync(null, libraries);
+
+    private async Task<Server> StartServerAsync(IReadOnlyDictionary<string, string?>? settings, params SetupLibrary[] libraries)
     {
         var nodePort = FreeUdpPort();
-        var factory = new ArcanistFactory(new Dictionary<string, string?>
+        var configuration = new Dictionary<string, string?>
         {
             ["Arcanist:P2P:Relay"] = "Local",
             ["Arcanist:P2P:BindPort"] = nodePort.ToString(),
-        });
+        };
+        foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
+            configuration[key] = value;
+        var factory = new ArcanistFactory(configuration);
         _disposables.Add(factory);
         factory.UseKestrel(options => options.Listen(IPAddress.Loopback, 0));
         factory.StartServer();
@@ -161,7 +168,7 @@ public sealed class P2PTests : IAsyncDisposable
             .GetProperty("id").GetGuid();
 
         var (link, _) = Local(await InviteAsync(owner.Admin, "/rest/v1/p2p/invitations/share",
-            new CreateShareInvitationInput("Ana", [ownerLibrary], new PeerRulesInput(false, null, null, 1), null)), owner.NodePort);
+            new CreateShareInvitationInput("Ana", [ownerLibrary], new PeerRulesInput(false, null, null, 1, AllowCache: false), null)), owner.NodePort);
         var accepted = await receiver.Admin.PostAsJsonAsync("/rest/v1/p2p/shares", new AcceptShareInput(link), ArcanistFactory.Json, Cancel);
         Assert.True(accepted.IsSuccessStatusCode, await accepted.Content.ReadAsStringAsync(Cancel));
         var share = await accepted.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
@@ -214,6 +221,91 @@ public sealed class P2PTests : IAsyncDisposable
         Assert.False(received.GetProperty("active").GetBoolean());
         // Nothing was marked missing: the catalog stays as it was.
         Assert.Equal(2, (await receiver.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task A_share_is_cached_converted_here_brings_its_analyses_and_counts_plays()
+    {
+        Assert.SkipUnless(NativeP2P.IsAvailable, "The P2P library is not built for this platform.");
+        Assert.SkipUnless(Core.Analysis.AudioAnalyzer.IsAvailable, "The audio analysis library is not built for this platform.");
+        var ffmpeg = Media.TestFfmpeg.Require();
+        var music = Directory.CreateTempSubdirectory("arcanist-p2p-").FullName;
+        _folders.Add(music);
+        AudioFixtures.WriteMusic(Path.Combine(music, "Song.wav"), new FixtureTags("Groove", "Band", "Grooves", "Band", TrackNumber: 1), seconds: 8);
+        var tools = new Dictionary<string, string?> { ["Arcanist:Ffmpeg:Path"] = ffmpeg, ["Arcanist:Ffmpeg:SearchSystem"] = "false" };
+        var owner = await StartServerAsync(new Dictionary<string, string?>(tools) { ["Arcanist:Analysis:Enabled"] = "true" }, new SetupLibrary("Música", [music]));
+        await owner.Factory.WaitForScansAsync(owner.Admin);
+        await owner.Factory.WaitForAnalysisAsync();
+        var receiver = await StartServerAsync(tools);
+        var ownerLibrary = (await owner.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))![0]
+            .GetProperty("id").GetGuid();
+
+        var (link, _) = Local(await InviteAsync(owner.Admin, "/rest/v1/p2p/invitations/share",
+            new CreateShareInvitationInput("Eva", [ownerLibrary], new PeerRulesInput(false, null, null, null, AllowCache: true, CountPlays: true), null)), owner.NodePort);
+        var accepted = await receiver.Admin.PostAsJsonAsync("/rest/v1/p2p/shares", new AcceptShareInput(link), ArcanistFactory.Json, Cancel);
+        Assert.True(accepted.IsSuccessStatusCode, await accepted.Content.ReadAsStringAsync(Cancel));
+        var share = await accepted.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        Assert.True(share.GetProperty("rules").GetProperty("countPlays").GetBoolean());
+        await receiver.Factory.WaitForScansAsync(receiver.Admin);
+        var track = (await receiver.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items")[0];
+        var trackId = track.GetProperty("id").GetString();
+
+        // The owner's analysis comes along: this server never heard the song.
+        await receiver.Factory.Services.GetRequiredService<PeerAnalysisImporter>().RunAsync(Cancel);
+        var analyzed = await receiver.Admin.GetFromJsonAsync<JsonElement>($"/rest/v1/tracks/{trackId}", ArcanistFactory.Json, Cancel);
+        Assert.NotEqual(JsonValueKind.Null, analyzed.GetProperty("files")[0].GetProperty("loudness").ValueKind);
+
+        // Played once, it is kept: the whole original, in the background.
+        var original = await File.ReadAllBytesAsync(Path.Combine(music, "Song.wav"), Cancel);
+        Assert.Equal(original, await receiver.Admin.GetByteArrayAsync($"/rest/v1/stream/{trackId}", Cancel));
+        var cached = await receiver.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/p2p/remote-libraries", ArcanistFactory.Json, Cancel);
+        for (var tries = 0; cached.GetProperty("cacheFiles").GetInt32() == 0 && tries < 100; tries++)
+        {
+            await Task.Delay(200, Cancel);
+            cached = await receiver.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/p2p/remote-libraries", ArcanistFactory.Json, Cancel);
+        }
+
+        Assert.Equal(1, cached.GetProperty("cacheFiles").GetInt32());
+        Assert.Equal(original.Length, cached.GetProperty("cacheBytes").GetInt64());
+
+        // From then on it plays from here, converted here: the owner is not asked.
+        async Task<int> StreamedAsync() => (await owner.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/p2p/activity", ArcanistFactory.Json, Cancel))!
+            .Count(a => a.GetProperty("kind").GetString() == "STREAMED");
+        var streamed = await StreamedAsync();
+        var converted = await receiver.Admin.GetAsync($"/rest/v1/stream/{trackId}?format=mp3&maxBitRate=128", Cancel);
+        Assert.Equal(HttpStatusCode.OK, converted.StatusCode);
+        Assert.Equal("audio/mpeg", converted.Content.Headers.ContentType?.MediaType);
+        await converted.Content.ReadAsByteArrayAsync(Cancel);
+        using (var range = new HttpRequestMessage(HttpMethod.Get, $"/rest/v1/stream/{trackId}"))
+        {
+            range.Headers.Range = new RangeHeaderValue(100, 199);
+            var partial = await receiver.Admin.SendAsync(range, Cancel);
+            Assert.Equal(original[100..200], await partial.Content.ReadAsByteArrayAsync(Cancel));
+        }
+
+        Assert.Equal(streamed, await StreamedAsync());
+
+        // Plays count on the owner under the user's name here, flagged as remote; only those made from now on.
+        var reporter = receiver.Factory.Services.GetRequiredService<PeerPlayReporter>();
+        await reporter.RunAsync(Cancel);
+        (await receiver.Admin.PostAsJsonAsync("/rest/v1/plays", new { trackId, playedMs = 6000 }, ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+        await reporter.RunAsync(Cancel);
+        var stats = await owner.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/stats/server?period=ALL", ArcanistFactory.Json, Cancel);
+        var remote = Assert.Single(stats.GetProperty("users").EnumerateArray(), u => u.GetProperty("remote").GetBoolean());
+        Assert.Equal((ArcanistFactory.AdminUserName, 6000L), (remote.GetProperty("userName").GetString(), remote.GetProperty("listenedMs").GetInt64()));
+        Assert.Equal("Eva", remote.GetProperty("server").GetString());
+        // Sent again, not counted twice.
+        await receiver.Factory.Services.GetRequiredService<SettingsStore>().SetAsync<Guid?>(SettingKeys.P2PPlaysCursor, Guid.Empty, Cancel);
+        await reporter.RunAsync(Cancel);
+        stats = await owner.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/stats/server?period=ALL", ArcanistFactory.Json, Cancel);
+        Assert.Equal(6000, Assert.Single(stats.GetProperty("users").EnumerateArray(), u => u.GetProperty("remote").GetBoolean()).GetProperty("listenedMs").GetInt64());
+
+        // Revoked: once the receiver knows it, the cache plays nothing of it either.
+        var peer = Assert.Single((await owner.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/p2p/peers?kind=SERVER", ArcanistFactory.Json, Cancel))!);
+        await owner.Admin.PostAsync($"/rest/v1/p2p/peers/{peer.GetProperty("id").GetString()}/revoke", null, Cancel);
+        await receiver.Admin.PostAsJsonAsync($"/rest/v1/libraries/{share.GetProperty("libraryId").GetString()}/scans", new { full = false }, Cancel);
+        await receiver.Factory.WaitForScansAsync(receiver.Admin);
+        Assert.Equal(HttpStatusCode.NotFound, (await receiver.Admin.GetAsync($"/rest/v1/stream/{trackId}", Cancel)).StatusCode);
     }
 
     [Fact]

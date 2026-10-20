@@ -1483,10 +1483,16 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         {
                             b1.IsRequired();
 
+                            b1.Property<bool>("AllowCache")
+                                .HasColumnType("INTEGER");
+
                             b1.Property<bool>("AllowDownload")
                                 .HasColumnType("INTEGER");
 
                             b1.Property<int?>("BandwidthKbps")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<bool>("CountPlays")
                                 .HasColumnType("INTEGER");
 
                             b1.Property<int?>("MaxBitRate")
@@ -1572,10 +1578,16 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         {
                             b1.IsRequired();
 
+                            b1.Property<bool>("AllowCache")
+                                .HasColumnType("INTEGER");
+
                             b1.Property<bool>("AllowDownload")
                                 .HasColumnType("INTEGER");
 
                             b1.Property<int?>("BandwidthKbps")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<bool>("CountPlays")
                                 .HasColumnType("INTEGER");
 
                             b1.Property<int?>("MaxBitRate")
@@ -1634,6 +1646,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("SharePlays")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -1648,10 +1663,16 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         {
                             b1.IsRequired();
 
+                            b1.Property<bool>("AllowCache")
+                                .HasColumnType("INTEGER");
+
                             b1.Property<bool>("AllowDownload")
                                 .HasColumnType("INTEGER");
 
                             b1.Property<int?>("BandwidthKbps")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<bool>("CountPlays")
                                 .HasColumnType("INTEGER");
 
                             b1.Property<int?>("MaxBitRate")
@@ -1830,6 +1851,51 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsUnique();
 
                     b.ToTable("Recordings");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.RemotePlayEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Counted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PeerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PlayedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlayedMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RemoteUser")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Skipped")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayedAt");
+
+                    b.HasIndex("PeerId", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("TrackId", "PlayedAt");
+
+                    b.ToTable("RemotePlayEvents");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.RestoreJob", b =>
@@ -2741,6 +2807,24 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Playlist");
+
+                    b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.RemotePlayEvent", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.P2PPeer", "Peer")
+                        .WithMany()
+                        .HasForeignKey("PeerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Peer");
 
                     b.Navigation("Track");
                 });

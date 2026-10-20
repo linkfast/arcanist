@@ -65,6 +65,8 @@ public static class ErrorCodes
     public const string DownloadFailed = "download_failed";
     /// <summary>The list of Arcanist's releases could not be read.</summary>
     public const string UpdateCheckFailed = "update_check_failed";
+    /// <summary>The server that shares the music does not count this server's plays.</summary>
+    public const string PlaysNotAccepted = "plays_not_accepted";
     /// <summary>The extension catalog (the marketplace) could not be read.</summary>
     public const string MarketplaceUnavailable = "marketplace_unavailable";
     /// <summary>The extension needs a newer Arcanist than this one.</summary>

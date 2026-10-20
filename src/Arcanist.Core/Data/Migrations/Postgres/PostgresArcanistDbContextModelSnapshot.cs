@@ -1488,11 +1488,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         {
                             b1.IsRequired();
 
+                            b1.Property<bool>("AllowCache")
+                                .HasColumnType("boolean");
+
                             b1.Property<bool>("AllowDownload")
                                 .HasColumnType("boolean");
 
                             b1.Property<int?>("BandwidthKbps")
                                 .HasColumnType("integer");
+
+                            b1.Property<bool>("CountPlays")
+                                .HasColumnType("boolean");
 
                             b1.Property<int?>("MaxBitRate")
                                 .HasColumnType("integer");
@@ -1577,11 +1583,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         {
                             b1.IsRequired();
 
+                            b1.Property<bool>("AllowCache")
+                                .HasColumnType("boolean");
+
                             b1.Property<bool>("AllowDownload")
                                 .HasColumnType("boolean");
 
                             b1.Property<int?>("BandwidthKbps")
                                 .HasColumnType("integer");
+
+                            b1.Property<bool>("CountPlays")
+                                .HasColumnType("boolean");
 
                             b1.Property<int?>("MaxBitRate")
                                 .HasColumnType("integer");
@@ -1639,6 +1651,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<bool>("SharePlays")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -1653,11 +1668,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         {
                             b1.IsRequired();
 
+                            b1.Property<bool>("AllowCache")
+                                .HasColumnType("boolean");
+
                             b1.Property<bool>("AllowDownload")
                                 .HasColumnType("boolean");
 
                             b1.Property<int?>("BandwidthKbps")
                                 .HasColumnType("integer");
+
+                            b1.Property<bool>("CountPlays")
+                                .HasColumnType("boolean");
 
                             b1.Property<int?>("MaxBitRate")
                                 .HasColumnType("integer");
@@ -1835,6 +1856,51 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("Recordings");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.RemotePlayEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Counted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("PeerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("PlayedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PlayedMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RemoteUser")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<bool>("Skipped")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlayedAt");
+
+                    b.HasIndex("PeerId", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("TrackId", "PlayedAt");
+
+                    b.ToTable("RemotePlayEvents");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.RestoreJob", b =>
@@ -2746,6 +2812,24 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Playlist");
+
+                    b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.RemotePlayEvent", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.P2PPeer", "Peer")
+                        .WithMany()
+                        .HasForeignKey("PeerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Peer");
 
                     b.Navigation("Track");
                 });

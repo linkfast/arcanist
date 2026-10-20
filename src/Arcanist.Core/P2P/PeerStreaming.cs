@@ -9,7 +9,8 @@ namespace Arcanist.Core.P2P;
 /// <summary>
 /// Plays files of a shared library: the request goes to the server that shares them, which applies its own rules
 /// (converting, limiting the bit rate, refusing downloads), and its answer is relayed as it arrives, ranges
-/// included. This server converts nothing.
+/// included. Songs in the cache (<see cref="PeerCache"/>), and conversions this server makes itself
+/// (<see cref="Application.P2P.RemoteTranscoding"/>), never come here.
 /// </summary>
 internal static class PeerStreaming
 {
@@ -20,9 +21,10 @@ internal static class PeerStreaming
         "X-Content-Duration", "Cache-Control",
     ];
 
+    /// <param name="convertHere">When the other server cannot convert (it answers 503, without ffmpeg), converts here instead.</param>
     public static async Task<IResult> ProxyAsync(
         HttpContext context, StreamTarget target, bool download, TranscodeProfile? requested, int? maxBitRate, double offset,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, Func<Task<IResult>>? convertHere = null)
     {
         var storage = (PeerStorage)context.RequestServices.GetRequiredService<ILibraryStorageResolver>().For(target.Location.Kind);
         var client = context.RequestServices.GetRequiredService<PeerClient>();
@@ -59,6 +61,12 @@ internal static class PeerStreaming
         catch (ArcanistException e)
         {
             return Problems.Create(StatusCodes.Status503ServiceUnavailable, e.Code);
+        }
+
+        if (convertHere is not null && response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+        {
+            response.Dispose();
+            return await convertHere();
         }
 
         return new RelayResult(response);

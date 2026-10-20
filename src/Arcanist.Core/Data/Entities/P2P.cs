@@ -32,6 +32,15 @@ public sealed class P2PRules
 
     /// <summary>Audio streams the peer may receive at once.</summary>
     public int? MaxStreams { get; set; }
+
+    /// <summary>
+    /// A server may keep what it plays from the shared libraries in its cache, to play it again (and seek in it)
+    /// without asking for it: never as a download or a copy in its own libraries.
+    /// </summary>
+    public bool AllowCache { get; set; } = true;
+
+    /// <summary>The plays of a server's users count here, under their names on that server.</summary>
+    public bool CountPlays { get; set; }
 }
 
 /// <summary>
@@ -178,6 +187,42 @@ public sealed class P2PRemote : Entity
     public DateTime CreatedAt { get; init; }
 
     public DateTime? LastContactAt { get; set; }
+
+    /// <summary>
+    /// Plays of the shared music go to the other server when it counts them (<see cref="P2PRules.CountPlays"/>),
+    /// with the user's name: an administrator here can keep them home.
+    /// </summary>
+    public bool SharePlays { get; set; } = true;
+}
+
+/// <summary>
+/// A play of a shared song by a user of another server (a peer that shares libraries with this one counts them,
+/// <see cref="P2PRules.CountPlays"/>): known by their name there, not as a user here.
+/// </summary>
+public sealed class RemotePlayEvent : Entity
+{
+    public Guid PeerId { get; init; }
+
+    public P2PPeer Peer { get; init; } = null!;
+
+    /// <summary>The user's name on the other server.</summary>
+    public required string RemoteUser { get; init; }
+
+    /// <summary>Null once the track left the catalog.</summary>
+    public Guid? TrackId { get; set; }
+
+    public Track? Track { get; init; }
+
+    public DateTime PlayedAt { get; init; }
+
+    public int PlayedMs { get; init; }
+
+    public bool Counted { get; init; }
+
+    public bool Skipped { get; init; }
+
+    /// <summary>The play's id on the other server, so a report sent again is recognized.</summary>
+    public required string ExternalId { get; init; }
 }
 
 public enum P2PActivityKind

@@ -92,4 +92,10 @@ public static class SettingKeys
 
     /// <summary>How converted audio is kept: its cache and the versions made ahead of time.</summary>
     public const string Transcoding = "transcoding.settings";
+
+    /// <summary>How libraries shared by other servers are played here: their cache and where they are converted.</summary>
+    public const string RemoteLibraries = "p2p.remoteLibraries";
+
+    /// <summary>The last play sent to the servers that count this server's plays.</summary>
+    public const string P2PPlaysCursor = "p2p.playsCursor";
 }

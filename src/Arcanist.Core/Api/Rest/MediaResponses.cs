@@ -44,15 +44,80 @@ public static class MediaResponses
 
         var target = await streams.ResolveAsync(trackId, fileId, download, cancellationToken);
         var offset = Math.Max(0, timeOffset ?? 0);
-        if (target.Location.Kind == Data.Entities.LibrarySourceKind.Peer)
-            return await P2P.PeerStreaming.ProxyAsync(context, target, download, requested, maxBitRate, offset, cancellationToken);
         var storage = storages.For(target.Location.Kind);
 
         // A bit-rate cap the original already meets needs no conversion.
         var fits = requested is null && offset == 0 && maxBitRate is { } cap && target.BitRate is { } bitRate && bitRate <= cap;
         // A cue track is part of a file: it can only be sent converted, losslessly unless the file is lossy.
         var segment = target.StartMs is not null;
-        if (!download && (requested is not null || maxBitRate is not null || offset > 0 || segment) && !fits)
+        var convert = !download && (requested is not null || maxBitRate is not null || offset > 0 || segment) && !fits;
+
+        // Where the audio is read from: a file here when there is one (ffmpeg seeks in it), or a stream.
+        var localPath = storage.TryGetLocalPath(target.Location, target.RelativePath);
+        Func<Task<Stream>> open = () => storage.OpenReadAsync(target.Location, target.RelativePath, cancellationToken);
+
+        // Songs of a library another server shares: from the cache when they are in it, otherwise from that server,
+        // which converts them or sends the original for this one to convert.
+        if (target.Location.Kind == Data.Entities.LibrarySourceKind.Peer)
+        {
+            // A share revoked (as last known), or whose owner no longer allows a cache, plays nothing from it.
+            var peerStorage = (P2P.PeerStorage)storage;
+            if (await peerStorage.RemoteAsync(target.Location, cancellationToken) is not { } remote)
+                return Problems.Create(StatusCodes.Status404NotFound, Application.ErrorCodes.NotFound);
+            var peerCache = context.RequestServices.GetRequiredService<P2P.PeerCache>();
+            if (download || !P2P.PeerCache.Allowed(remote.Remote.Rules) || peerCache.Find(target) is not { } cached)
+            {
+                if (!download)
+                    peerCache.Prefetch(target, remote.Remote.Rules);
+
+                // A server that caps the bit rate never sends the original: it always converts.
+                var where = context.RequestServices.GetRequiredService<P2P.RemoteLibrariesSettings>().Current.Transcoding;
+                var mayConvertHere = convert && remote.Remote.Rules.MaxBitRate is null;
+                Func<Task<IResult>> here = () => ConvertAsync(null, () => peerStorage.OpenStreamAsync(target.Location, target.RelativePath, cancellationToken));
+                if (mayConvertHere && where == Application.P2P.RemoteTranscoding.Here)
+                    return await here();
+                return await P2P.PeerStreaming.ProxyAsync(context, target, download, requested, maxBitRate, offset, cancellationToken,
+                    mayConvertHere && where == Application.P2P.RemoteTranscoding.Auto ? here : null);
+            }
+
+            localPath = cached;
+            open = () => Task.FromResult<Stream>(File.OpenRead(cached));
+        }
+
+        if (convert)
+            return await ConvertAsync(localPath, open);
+
+        // Originals in Ultimate Cloud come from their signed URLs, Range included.
+        if (target.Location.Kind == Data.Entities.LibrarySourceKind.UltimateCloud)
+        {
+            if (!context.RequestServices.GetRequiredService<Cloud.UltimateCloudAccount>().Enabled)
+                return Problems.Create(StatusCodes.Status503ServiceUnavailable, Application.ErrorCodes.CloudDisabled);
+            return await Cloud.UltimateCloudStreaming.ProxyAsync(context, target, download, cancellationToken);
+        }
+
+        Stream stream;
+        try
+        {
+            stream = await open();
+        }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Deleted since the last scan, or the share is gone.
+            return Problems.Create(StatusCodes.Status404NotFound, Application.ErrorCodes.NotFound);
+        }
+
+        // Private: the response depends on who is asking.
+        context.Response.Headers.CacheControl = "private, max-age=3600";
+
+        return Results.Stream(
+            stream,
+            target.ContentType,
+            fileDownloadName: download ? target.FileName : null,
+            lastModified: target.ModifiedAt,
+            entityTag: new EntityTagHeaderValue($"\"{target.ContentHash}\""),
+            enableRangeProcessing: true);
+
+        async Task<IResult> ConvertAsync(string? inputPath, Func<Task<Stream>> openInput)
         {
             var profile = requested ?? TranscodeProfile.For(segment && maxBitRate is null && AudioFormats.IsLossless(target.RelativePath)
                 ? TranscodeFormat.Flac
@@ -79,8 +144,8 @@ public static class MediaResponses
             }
 
             var session = await transcoder.StartAsync(
-                storage.TryGetLocalPath(target.Location, target.RelativePath),
-                () => storage.OpenReadAsync(target.Location, target.RelativePath, cancellationToken),
+                inputPath,
+                openInput,
                 profile,
                 rate,
                 (target.StartMs ?? 0) / 1000.0 + offset,
@@ -95,35 +160,5 @@ public static class MediaResponses
                 ? Problems.Create(StatusCodes.Status503ServiceUnavailable, Application.ErrorCodes.TranscodingUnavailable)
                 : new TranscodeResult(session, profile.ContentType, remaining, cache, cache is null ? null : TranscodeStore.Key(target.ContentHash, profile, rate));
         }
-
-        // Originals in Ultimate Cloud come from their signed URLs, Range included.
-        if (target.Location.Kind == Data.Entities.LibrarySourceKind.UltimateCloud)
-        {
-            if (!context.RequestServices.GetRequiredService<Cloud.UltimateCloudAccount>().Enabled)
-                return Problems.Create(StatusCodes.Status503ServiceUnavailable, Application.ErrorCodes.CloudDisabled);
-            return await Cloud.UltimateCloudStreaming.ProxyAsync(context, target, download, cancellationToken);
-        }
-
-        Stream stream;
-        try
-        {
-            stream = await storage.OpenReadAsync(target.Location, target.RelativePath, cancellationToken);
-        }
-        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
-        {
-            // Deleted since the last scan, or the share is gone.
-            return Problems.Create(StatusCodes.Status404NotFound, Application.ErrorCodes.NotFound);
-        }
-
-        // Private: the response depends on who is asking.
-        context.Response.Headers.CacheControl = "private, max-age=3600";
-
-        return Results.Stream(
-            stream,
-            target.ContentType,
-            fileDownloadName: download ? target.FileName : null,
-            lastModified: target.ModifiedAt,
-            entityTag: new EntityTagHeaderValue($"\"{target.ContentHash}\""),
-            enableRangeProcessing: true);
     }
 }

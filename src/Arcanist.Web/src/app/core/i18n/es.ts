@@ -1082,6 +1082,7 @@ export const es: Dictionary = {
     },
   },
   stats: {
+    remote: 'Remoto · {server}',
     title: 'Estadísticas',
     subtitle: 'Qué hay en las bibliotecas y cómo se escucha.',
     periods: { WEEK: 'Semana', MONTH: 'Mes', YEAR: 'Año', ALL: 'Siempre' },
@@ -1785,6 +1786,28 @@ export const es: Dictionary = {
       },
     },
   },
+  remoteLibraries: {
+    title: 'Escuchar música de otros servidores',
+    description: 'Cómo se escucha aquí la música que comparten otros servidores Arcanist.',
+    cache: 'Guardar en caché lo que se escucha',
+    cacheHelp:
+      'Si el otro servidor lo permite, cada canción que se escucha se guarda entera: la próxima vez suena al instante, se puede adelantar y no depende del otro servidor ni de la red. Nunca es una descarga.',
+    size: 'Tamaño máximo',
+    age: 'Quitar lo que no se escucha en',
+    usage: 'Ocupa {bytes} en {count} canciones.',
+    clear: 'Vaciar la caché',
+    cleared: 'Caché vaciada',
+    transcoding: 'Dónde se convierten',
+    transcodingHelp:
+      'Para escuchar en otro formato o con menos calidad. Si el otro servidor limita la calidad, convierte siempre él.',
+    modes: {
+      AUTO: 'Automático: aquí si está en la caché; si no, el otro servidor (y aquí si él no puede)',
+      HERE: 'Siempre aquí: el otro servidor solo envía el original',
+      OWNER: 'Siempre en el servidor que comparte',
+    },
+    save: 'Guardar',
+    saved: 'Ajustes guardados',
+  },
   network: {
     title: 'Red P2P',
     subtitle:
@@ -1842,6 +1865,13 @@ export const es: Dictionary = {
     fromUltimateHelp:
       'Un dispositivo de tu cuenta de Ultimate Cloud: conecta sin emparejar y deja de hacerlo si sale de la cuenta.',
     rules: {
+      allowCache: 'Permitir que guarde en caché',
+      allowCacheHelp:
+        'Ese servidor puede guardar lo que escucha para volver a escucharlo, y adelantar dentro, sin pedírtelo. Nunca como descarga ni como copia en sus bibliotecas.',
+      countPlays: 'Contar sus reproducciones',
+      countPlaysHelp:
+        'Sus usuarios cuentan en las estadísticas de este servidor, con su nombre allí y marcados como remotos.',
+      countsPlays: 'cuenta las reproducciones',
       allowDownload: 'Permitir descargas',
       allowDownloadHelp:
         'Descargar los originales y copiarlos a sus propias bibliotecas. Si no, solo puede escuchar.',
@@ -1878,6 +1908,7 @@ export const es: Dictionary = {
       empty: 'Ningún dispositivo emparejado.',
     },
     received: {
+      sharePlays: 'Enviar las reproducciones a {name}, con el nombre de cada usuario',
       title: 'Bibliotecas que te comparten',
       description:
         'Bibliotecas de otros servidores. Aparecen en Bibliotecas, al principio solo para administradores: dales acceso a quien quieras.',
@@ -2515,6 +2546,7 @@ export const es: Dictionary = {
     package_mismatch: 'El paquete descargado contiene otra extensión distinta de la del catálogo.',
     update_check_failed: 'No se pudo consultar si hay una versión nueva.',
     library_virtual: 'Es una biblioteca virtual (Todo): no se le puede subir ni cambiar nada.',
+    plays_not_accepted: 'Ese servidor no cuenta las reproducciones de este.',
     not_ffmpeg: 'Ese archivo no es un ffmpeg que funcione.',
     ffmpeg_platform_unsupported:
       'No hay una descarga de ffmpeg para este sistema; instálalo con el gestor de paquetes e indica su ruta.',

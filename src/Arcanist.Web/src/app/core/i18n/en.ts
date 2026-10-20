@@ -1067,6 +1067,7 @@ export const en: Dictionary = {
     },
   },
   stats: {
+    remote: 'Remote · {server}',
     title: 'Statistics',
     subtitle: 'What the libraries hold and how they are listened to.',
     periods: { WEEK: 'Week', MONTH: 'Month', YEAR: 'Year', ALL: 'All time' },
@@ -1761,6 +1762,28 @@ export const en: Dictionary = {
       done: { KEEP: 'The file stays where it is', MOVE: 'File moved', DELETE: 'File deleted' },
     },
   },
+  remoteLibraries: {
+    title: "Playing other servers' music",
+    description: 'How music other Arcanist servers share is played here.',
+    cache: 'Keep what is played in a cache',
+    cacheHelp:
+      'When the other server allows it, each song played is kept whole: the next time it starts at once, can be sought in and needs neither the other server nor the network. It is never a download.',
+    size: 'Maximum size',
+    age: 'Remove what is not played in',
+    usage: 'It takes {bytes} in {count} songs.',
+    clear: 'Empty the cache',
+    cleared: 'Cache emptied',
+    transcoding: 'Where songs are converted',
+    transcodingHelp:
+      'To listen in another format or at a lower quality. A server that caps the quality always converts itself.',
+    modes: {
+      AUTO: 'Automatic: here when cached; otherwise the other server (and here when it cannot)',
+      HERE: 'Always here: the other server only sends the original',
+      OWNER: 'Always on the server that shares it',
+    },
+    save: 'Save',
+    saved: 'Settings saved',
+  },
   network: {
     title: 'P2P network',
     subtitle:
@@ -1816,6 +1839,13 @@ export const en: Dictionary = {
     fromUltimateHelp:
       'A device of your Ultimate Cloud account: it connects without pairing, and stops when it leaves the account.',
     rules: {
+      allowCache: 'Let it keep a cache',
+      allowCacheHelp:
+        'That server can keep what it plays to play it again, and seek in it, without asking you. Never as a download nor a copy in its libraries.',
+      countPlays: 'Count its plays',
+      countPlaysHelp:
+        "Its users count in this server's statistics, under their names there and marked as remote.",
+      countsPlays: 'counts plays',
       allowDownload: 'Allow downloads',
       allowDownloadHelp:
         'Download the originals and copy them into its own libraries. Otherwise it can only listen.',
@@ -1851,6 +1881,7 @@ export const en: Dictionary = {
       empty: 'No devices paired.',
     },
     received: {
+      sharePlays: "Send plays to {name}, with each user's name",
       title: 'Libraries shared with you',
       description:
         'Libraries of other servers. They appear in Libraries, at first only for administrators: give access to whoever you want.',
@@ -2480,6 +2511,7 @@ export const en: Dictionary = {
     update_check_failed: 'Could not check for a new version.',
     library_virtual:
       'It is a virtual library (All): nothing can be uploaded to it or changed in it.',
+    plays_not_accepted: 'That server does not count the plays of this one.',
     not_ffmpeg: 'That file is not a working ffmpeg.',
     ffmpeg_platform_unsupported:
       'There is no ffmpeg download for this system; install it with the package manager and enter its path.',

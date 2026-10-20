@@ -140,6 +140,7 @@ public sealed class ServerAdminService(
         await services.GetRequiredService<Core.Extensions.Mstream.MstreamSettings>().SetAsync(Core.Extensions.Mstream.MstreamConfig.Default, cancellationToken);
         await services.GetRequiredService<Core.P2P.P2PSettings>().SetAsync(Core.P2P.P2PConfig.Default, cancellationToken);
         await services.GetRequiredService<Core.Media.TranscodingSettings>().SetAsync(Core.Media.TranscodingConfig.Default, cancellationToken);
+        await services.GetRequiredService<Core.P2P.RemoteLibrariesSettings>().SetAsync(Core.P2P.RemoteLibrariesConfig.Default, cancellationToken);
         services.GetRequiredService<Core.P2P.P2PNode>().Changed();
         services.GetRequiredService<Core.Cloud.UltimateCloudAccount>().Wake();
 

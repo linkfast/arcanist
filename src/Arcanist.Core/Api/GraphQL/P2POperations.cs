@@ -21,6 +21,11 @@ public sealed partial class Query
     public static Task<IReadOnlyList<ReceivedShare>> ReceivedShares([FromServices] P2PService p2p, CancellationToken cancellationToken) =>
         p2p.ReceivedSharesAsync(cancellationToken);
 
+    [Name("remoteLibrarySettings")]
+    [Description("How libraries other servers share are played here: their cache (and what it takes) and where their songs are converted. Administrators only.")]
+    public static Task<RemoteLibrarySettings> RemoteLibrarySettings([FromServices] P2PService p2p, CancellationToken cancellationToken) =>
+        p2p.RemoteLibrarySettingsAsync(cancellationToken);
+
     [Name("p2pActivity")]
     [Description("What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only.")]
     public static Task<IReadOnlyList<P2PActivityEntry>> P2PActivity([Id] Guid? peerId, int? limit, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
@@ -53,6 +58,21 @@ public sealed partial class Mutation
     [Description("Ends a peer's access at once. Users revoke their own devices; administrators, any peer.")]
     public static Task<NetworkPeer> RevokeNetworkPeer([Id] Guid id, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
         p2p.RevokePeerAsync(id, cancellationToken);
+
+    [Name("setRemoteLibrarySettings")]
+    [Description("The cache of other servers' music (on or off, size, age) and where their songs are converted. Administrators only.")]
+    public static Task<RemoteLibrarySettings> SetRemoteLibrarySettings(SetRemoteLibrarySettingsInput input, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
+        p2p.SetRemoteLibrarySettingsAsync(input, cancellationToken);
+
+    [Name("clearRemoteLibraryCache")]
+    [Description("Empties the cache of other servers' music; it is fetched again as it is played. Administrators only.")]
+    public static Task<RemoteLibrarySettings> ClearRemoteLibraryCache([FromServices] P2PService p2p, CancellationToken cancellationToken) =>
+        p2p.ClearRemoteLibraryCacheAsync(cancellationToken);
+
+    [Name("setReceivedSharePlays")]
+    [Description("Whether plays of a received share's music go to its server, with the users' names, when it counts them (its rule countPlays). Administrators only.")]
+    public static Task<ReceivedShare> SetReceivedSharePlays(SetReceivedSharePlaysInput input, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
+        p2p.SetReceivedSharePlaysAsync(input, cancellationToken);
 
     [Name("copyReceivedShare")]
     [Description("Copies a received share's files into a folder of one of this server's libraries, when its owner allows downloads. Runs in the background; its progress shows in the share. Administrators only, with a recent authentication.")]

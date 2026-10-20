@@ -38,7 +38,15 @@ internal sealed class PeerStorage(IArcanistDbContextFactory databases, PeerClien
             return new StorageProbe(StorageProblem.NotFound);
         try
         {
-            await client.GetAsync<PeerShareInfo>(remote.Ticket, "/rest/v1/peer/info", cancellationToken);
+            var info = await client.GetAsync<PeerShareInfo>(remote.Ticket, "/rest/v1/peer/info", cancellationToken);
+            // What the other server allows now (it may have changed its rules since the share began).
+            await using var db = databases.CreateDbContext();
+            if (await db.P2PRemotes.SingleOrDefaultAsync(r => r.Id == remote.Remote.Id, cancellationToken) is { } stored)
+            {
+                stored.Rules = info.Rules;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
             return StorageProbe.Available;
         }
         catch (ArcanistException e) when (e is ArcanistException.Forbidden)

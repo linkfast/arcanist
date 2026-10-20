@@ -64,9 +64,11 @@ public sealed record P2PSettingsInput(bool Enabled, P2PRelayMode Relay, string? 
 /// <param name="MaxBitRate">kbit/s: streams are converted to at most this ("compressed only").</param>
 /// <param name="BandwidthKbps">kbit/s for everything the peer receives.</param>
 /// <param name="MaxStreams">Audio streams it may receive at once.</param>
-public sealed record PeerRules(bool AllowDownload, int? MaxBitRate, int? BandwidthKbps, int? MaxStreams);
+/// <param name="AllowCache">A server may keep what it plays in its cache (never as a download or a copy).</param>
+/// <param name="CountPlays">The plays of a server's users count here, under their names there.</param>
+public sealed record PeerRules(bool AllowDownload, int? MaxBitRate, int? BandwidthKbps, int? MaxStreams, bool AllowCache, bool CountPlays);
 
-public sealed record PeerRulesInput(bool AllowDownload, int? MaxBitRate, int? BandwidthKbps, int? MaxStreams);
+public sealed record PeerRulesInput(bool AllowDownload, int? MaxBitRate, int? BandwidthKbps, int? MaxStreams, bool AllowCache = true, bool CountPlays = false);
 
 /// <summary>A node allowed through the P2P network: a user's device, or a server libraries are shared with.</summary>
 /// <param name="UserId">The user a device belongs to.</param>
@@ -117,9 +119,32 @@ public sealed record UpdateNetworkPeerInput(Guid Id, string Name, PeerRulesInput
 /// <param name="Active">False once the other server revoked the share or it expired.</param>
 /// <param name="Online">There is a connection to the other server now.</param>
 /// <param name="Copy">The last copy into a library of this server, since the server started.</param>
+/// <param name="SharePlays">Plays of its music go to the other server when it counts them (<c>rules.countPlays</c>).</param>
 public sealed record ReceivedShare(
     Guid Id, string Name, string NodeId, Guid LibraryId, PeerRules Rules, bool Active, bool Online, DateTime CreatedAt, DateTime? LastContactAt,
-    ShareCopyProgress? Copy);
+    ShareCopyProgress? Copy, bool SharePlays);
+
+public sealed record SetReceivedSharePlaysInput(Guid ShareId, bool SharePlays);
+
+/// <summary>Where songs of other servers' libraries are converted. Part of the API contract.</summary>
+public enum RemoteTranscoding
+{
+    /// <summary>Here when the song is in the cache; otherwise the server that shares it, and here if it cannot.</summary>
+    Auto,
+    /// <summary>Always on this server: the other only sends the original.</summary>
+    Here,
+    /// <summary>Always on the server that shares it.</summary>
+    Owner,
+}
+
+/// <summary>How libraries shared by other servers are played here. Part of the API contract.</summary>
+/// <param name="CacheEnabled">Keep what is played (when the other server allows it) to play it again and seek in it without asking for it.</param>
+/// <param name="Transcoding">Where songs are converted. A server that caps the bit rate always converts itself.</param>
+/// <param name="CacheBytes">What the cache takes now.</param>
+public sealed record RemoteLibrarySettings(bool CacheEnabled, long CacheMaxBytes, int CacheMaxAgeDays, RemoteTranscoding Transcoding,
+    long CacheBytes, int CacheFiles);
+
+public sealed record SetRemoteLibrarySettingsInput(bool CacheEnabled, long CacheMaxBytes, int CacheMaxAgeDays, RemoteTranscoding Transcoding);
 
 /// <param name="TargetSourceId">The library folder the files are copied into, keeping their paths.</param>
 public sealed record CopyReceivedShareInput(Guid ShareId, Guid TargetSourceId);
@@ -399,6 +424,53 @@ public sealed class P2PService(
         return ToModel(remote, Node.State.Connected.ToHashSet(StringComparer.Ordinal));
     }
 
+    /// <summary>How libraries shared by other servers are played here: their cache and where they are converted.</summary>
+    public async Task<RemoteLibrarySettings> RemoteLibrarySettingsAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var config = await services.GetRequiredService<RemoteLibrariesSettings>().GetAsync(cancellationToken);
+        var (bytes, files) = services.GetRequiredService<PeerCache>().Cache.Usage();
+        return new RemoteLibrarySettings(config.CacheEnabled, config.CacheMaxBytes, config.CacheMaxAgeDays, config.Transcoding, bytes, files);
+    }
+
+    public async Task<RemoteLibrarySettings> SetRemoteLibrarySettingsAsync(SetRemoteLibrarySettingsInput input, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var errors = new ValidationErrors();
+        if (input.CacheMaxBytes < 100_000_000)
+            errors.Add("cacheMaxBytes", ErrorCodes.InvalidFormat);
+        if (input.CacheMaxAgeDays is < 1 or > 3650)
+            errors.Add("cacheMaxAgeDays", ErrorCodes.InvalidFormat);
+        errors.ThrowIfAny();
+
+        await services.GetRequiredService<RemoteLibrariesSettings>().SetAsync(
+            new RemoteLibrariesConfig(input.CacheEnabled, input.CacheMaxBytes, input.CacheMaxAgeDays, input.Transcoding), cancellationToken);
+        var cache = services.GetRequiredService<PeerCache>().Cache;
+        if (!input.CacheEnabled)
+            cache.Clear();
+        cache.Trim();
+        return await RemoteLibrarySettingsAsync(cancellationToken);
+    }
+
+    /// <summary>Empties the cache of other servers' music (it is fetched again as it is played).</summary>
+    public async Task<RemoteLibrarySettings> ClearRemoteLibraryCacheAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        services.GetRequiredService<PeerCache>().Cache.Clear();
+        return await RemoteLibrarySettingsAsync(cancellationToken);
+    }
+
+    /// <summary>Whether plays of a received share's music go to its server when it counts them.</summary>
+    public async Task<ReceivedShare> SetReceivedSharePlaysAsync(SetReceivedSharePlaysInput input, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var remote = await db.P2PRemotes.SingleOrDefaultAsync(r => r.Id == input.ShareId, cancellationToken) ?? throw new ArcanistException.NotFound();
+        remote.SharePlays = input.SharePlays;
+        await db.SaveChangesAsync(cancellationToken);
+        services.GetRequiredService<PeerPlayReporter>().Wake();
+        return (await ReceivedSharesAsync(cancellationToken)).Single(s => s.Id == remote.Id);
+    }
+
     public async Task<IReadOnlyList<P2PActivityEntry>> ActivityAsync(Guid? peerId, int? limit, CancellationToken cancellationToken)
     {
         guard.Admin();
@@ -564,6 +636,7 @@ public sealed class P2PService(
     private static P2PRules ValidRules(PeerRulesInput? input, ValidationErrors errors)
     {
         input ??= new PeerRulesInput(false, null, null, null);
+        // Rules only a server uses mean nothing for a device; they are kept as asked.
         ValidateLimit(input.MaxBitRate, "rules.maxBitRate", errors);
         ValidateLimit(input.BandwidthKbps, "rules.bandwidthKbps", errors);
         ValidateLimit(input.MaxStreams, "rules.maxStreams", errors);
@@ -573,6 +646,8 @@ public sealed class P2PService(
             MaxBitRate = input.MaxBitRate,
             BandwidthKbps = input.BandwidthKbps,
             MaxStreams = input.MaxStreams,
+            AllowCache = input.AllowCache,
+            CountPlays = input.CountPlays,
         };
     }
 
@@ -618,7 +693,7 @@ public sealed class P2PService(
         var seconds = peer.ConnectedSeconds + (traffic is null ? 0 : Interlocked.Read(ref traffic.ConnectedSeconds) - traffic.SavedSeconds);
         var streams = peer.Streams + (traffic is null ? 0 : Interlocked.Read(ref traffic.StreamsStarted) - traffic.SavedStreams);
         return new NetworkPeer(peer.Id, peer.Kind, peer.Source, peer.Name, peer.NodeId, peer.UserId, peer.User?.UserName,
-            new PeerRules(peer.Rules.AllowDownload, peer.Rules.MaxBitRate, peer.Rules.BandwidthKbps, peer.Rules.MaxStreams),
+            ToModel(peer.Rules),
             peer.Libraries.Select(l => l.LibraryId).ToList(), peer.CreatedAt, peer.ExpiresAt, peer.RevokedAt, peer.LastSeenAt,
             traffic?.OpenConnections > 0, traffic?.ActiveStreams ?? 0, sent, received, traffic?.CurrentRate ?? 0,
             seconds > 0 ? sent / seconds : 0, Math.Max(peer.PeakBytesPerSecond, traffic?.Peak ?? 0), streams);
@@ -626,9 +701,12 @@ public sealed class P2PService(
 
     private ReceivedShare ToModel(P2PRemote remote, IReadOnlySet<string> connected) => new(
         remote.Id, remote.Name, remote.NodeId, remote.LibraryId,
-        new PeerRules(remote.Rules.AllowDownload, remote.Rules.MaxBitRate, remote.Rules.BandwidthKbps, remote.Rules.MaxStreams),
+        ToModel(remote.Rules),
         remote.Status == P2PRemoteStatus.Active, connected.Contains(remote.NodeId), remote.CreatedAt, remote.LastContactAt,
-        services.GetRequiredService<ShareCopier>().Progress(remote.Id));
+        services.GetRequiredService<ShareCopier>().Progress(remote.Id), remote.SharePlays);
+
+    private static PeerRules ToModel(P2PRules rules) =>
+        new(rules.AllowDownload, rules.MaxBitRate, rules.BandwidthKbps, rules.MaxStreams, rules.AllowCache, rules.CountPlays);
 
     private static P2PRelayMode ToMode(P2PRelay relay) => relay switch
     {

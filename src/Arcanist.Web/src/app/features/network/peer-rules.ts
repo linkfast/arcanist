@@ -14,6 +14,8 @@ export interface RulesForm {
   maxBitRate: number;
   bandwidthKbps: string;
   maxStreams: string;
+  allowCache: boolean;
+  countPlays: boolean;
 }
 
 export const BitRates = [96, 128, 160, 192, 256, 320];
@@ -23,6 +25,8 @@ export function rulesForm(rules?: {
   maxBitRate?: number | null;
   bandwidthKbps?: number | null;
   maxStreams?: number | null;
+  allowCache?: boolean;
+  countPlays?: boolean;
 }): RulesForm {
   return {
     allowDownload: rules?.allowDownload ?? false,
@@ -30,6 +34,8 @@ export function rulesForm(rules?: {
     maxBitRate: rules?.maxBitRate ?? 192,
     bandwidthKbps: rules?.bandwidthKbps?.toString() ?? '',
     maxStreams: rules?.maxStreams?.toString() ?? '',
+    allowCache: rules?.allowCache ?? true,
+    countPlays: rules?.countPlays ?? false,
   };
 }
 
@@ -43,6 +49,8 @@ export function rulesInput(form: RulesForm): PeerRulesInput {
     maxBitRate: form.compressedOnly ? form.maxBitRate : null,
     bandwidthKbps: limit(form.bandwidthKbps),
     maxStreams: limit(form.maxStreams),
+    allowCache: form.allowCache,
+    countPlays: form.countPlays,
   };
 }
 
@@ -71,6 +79,26 @@ export function rulesInput(form: RulesForm): PeerRulesInput {
           (checkedChange)="form().allowDownload = $event"
         />
       </label>
+      @if (server()) {
+        <label class="flex items-start justify-between gap-3 text-sm">
+          <span>
+            {{ 'network.rules.allowCache' | t }}
+            <span class="block text-xs text-muted-foreground">{{
+              'network.rules.allowCacheHelp' | t
+            }}</span>
+          </span>
+          <hlm-switch [checked]="form().allowCache" (checkedChange)="form().allowCache = $event" />
+        </label>
+        <label class="flex items-start justify-between gap-3 text-sm">
+          <span>
+            {{ 'network.rules.countPlays' | t }}
+            <span class="block text-xs text-muted-foreground">{{
+              'network.rules.countPlaysHelp' | t
+            }}</span>
+          </span>
+          <hlm-switch [checked]="form().countPlays" (checkedChange)="form().countPlays = $event" />
+        </label>
+      }
       <label class="flex items-start justify-between gap-3 text-sm">
         <span>
           {{ 'network.rules.compressedOnly' | t }}
@@ -132,5 +160,7 @@ export class PeerRules {
   readonly form = input.required<RulesForm>();
   /** Prefix for the ids of the fields, unique in the page. */
   readonly id = input('rules');
+  /** The rules of a server libraries are shared with: also its cache and its plays. */
+  readonly server = input(false);
   protected readonly bitRates = BitRates;
 }

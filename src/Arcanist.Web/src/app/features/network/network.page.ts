@@ -37,8 +37,10 @@ import {
   NetworkQuery,
   RevokeNetworkPeerMutation,
   SetP2PSettingsMutation,
+  SetReceivedSharePlaysMutation,
   UpdateNetworkPeerMutation,
 } from '../../graphql/operations';
+import { RemoteLibrariesCard } from './remote-libraries-card';
 import { BytesPipe, CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 import { Invitation } from '../../shared/invitation';
 import { PeerRules, RulesForm, rulesForm, rulesInput } from './peer-rules';
@@ -80,6 +82,7 @@ interface EditForm {
 @Component({
   selector: 'app-network-page',
   imports: [
+    RemoteLibrariesCard,
     FormsModule,
     NgTemplateOutlet,
     NgIcon,
@@ -201,7 +204,16 @@ export class NetworkPage implements OnInit {
       parts.push(this.i18n.t('network.rules.bandwidthOf', { rate: rules.bandwidthKbps }));
     if (rules.maxStreams)
       parts.push(this.i18n.t('network.rules.streamsAtOnce', { count: rules.maxStreams }));
+    if (rules.countPlays) parts.push(this.i18n.t('network.rules.countsPlays'));
     return parts.join(' · ');
+  }
+
+  protected async setSharePlays(share: { id: string }, sharePlays: boolean): Promise<void> {
+    await this.run(async () => {
+      await this.gql.mutate(SetReceivedSharePlaysMutation, {
+        input: { shareId: share.id, sharePlays },
+      });
+    });
   }
 
   protected async saveSettings(): Promise<void> {

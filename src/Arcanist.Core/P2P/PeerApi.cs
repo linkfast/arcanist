@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Arcanist.Core.Application;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
@@ -34,8 +35,45 @@ public sealed record PeerFile(
 
 public sealed record PeerFilePage(IReadOnlyList<PeerFile> Items, Guid? NextCursor);
 
+/// <summary>Content hashes of shared files whose analyses the receiving server wants (up to 200).</summary>
+public sealed record PeerAnalysesRequest(IReadOnlyList<string> Hashes);
+
+/// <summary>
+/// The sharing server's analysis of a shared file's audio (loudness, tempo, key, fingerprints, waveform), so the
+/// receiving server has them without hearing it. Byte arrays travel as base64.
+/// </summary>
+public sealed record PeerAnalysis(
+    string ContentHash,
+    int AnalyzerVersion,
+    DateTime AnalyzedAt,
+    int DurationMs,
+    double? Loudness,
+    double? LoudnessRange,
+    double? TruePeak,
+    string? LoudnessHistogram,
+    float? Bpm,
+    float? BpmConfidence,
+    int? KeyTonic,
+    bool? KeyMinor,
+    float? KeyConfidence,
+    string? AcoustIdFingerprint,
+    byte[]? Fingerprint,
+    int? FingerprintDurationMs,
+    byte[]? Waveform);
+
+/// <summary>A play of a shared song by a user of the receiving server.</summary>
+/// <param name="Id">Its id there, so a play sent again is recognized.</param>
+/// <param name="User">The user's name there.</param>
+public sealed record PeerPlay(string Id, string Path, int CueTrack, string User, DateTime PlayedAt, int PlayedMs, bool Counted, bool Skipped);
+
+/// <summary>Plays of shared songs (up to 500), for a server that counts them (its rule <c>countPlays</c>).</summary>
+public sealed record PeerPlaysRequest(IReadOnlyList<PeerPlay> Plays);
+
+/// <param name="Recorded">New plays; those sent before are not counted again.</param>
+public sealed record PeerPlaysResult(int Recorded);
+
 /// <summary>Serves the peer API to server peers, within the libraries shared with each.</summary>
-public sealed class PeerApi(IArcanistDbContextFactory databases, P2PSettings settings)
+public sealed class PeerApi(IArcanistDbContextFactory databases, P2PSettings settings, TimeProvider time)
 {
     public const int PageSize = 500;
 
@@ -112,6 +150,70 @@ public sealed class PeerApi(IArcanistDbContextFactory databases, P2PSettings set
         }
 
         return null;
+    }
+
+    public const int MaxAnalyses = 200;
+    public const int MaxPlays = 500;
+
+    /// <summary>The analyses of the audio of files shared with the peer, among <paramref name="hashes"/>.</summary>
+    public async Task<IReadOnlyList<PeerAnalysis>> AnalysesAsync(P2PPeerSnapshot peer, IReadOnlyList<string> hashes, CancellationToken cancellationToken)
+    {
+        if (hashes.Count > MaxAnalyses)
+            throw ArcanistException.Field("hashes", ErrorCodes.TooMany);
+        await using var db = databases.CreateDbContext();
+        var prefixes = await PrefixesAsync(db, peer, cancellationToken);
+        var shared = db.MediaFiles.Where(f => f.MissingSince == null && prefixes.Keys.Contains(f.LibrarySourceId) && hashes.Contains(f.ContentHash))
+            .Select(f => f.ContentHash);
+        return await db.AudioAnalyses.AsNoTracking()
+            .Where(a => a.State == AnalysisState.Analyzed && shared.Contains(a.ContentHash))
+            .Select(a => new PeerAnalysis(a.ContentHash, a.AnalyzerVersion, a.AnalyzedAt, a.DurationMs, a.Loudness, a.LoudnessRange, a.TruePeak,
+                a.LoudnessHistogram, a.Bpm, a.BpmConfidence, a.KeyTonic, a.KeyMinor, a.KeyConfidence, a.AcoustIdFingerprint, a.Fingerprint,
+                a.FingerprintDurationMs, a.Waveform))
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Records plays of shared songs by the peer's users, when its rules say they count here. Each keeps the user's
+    /// name there; plays older than 14 days, of songs not shared, or sent before are left out.
+    /// </summary>
+    public async Task<PeerPlaysResult> RecordPlaysAsync(P2PPeerSnapshot peer, IReadOnlyList<PeerPlay> plays, CancellationToken cancellationToken)
+    {
+        if (!peer.Rules.CountPlays)
+            throw new ArcanistException.Forbidden(ErrorCodes.PlaysNotAccepted);
+        if (plays.Count > MaxPlays)
+            throw ArcanistException.Field("plays", ErrorCodes.TooMany);
+
+        var now = time.GetUtcNow().UtcDateTime;
+        await using var db = databases.CreateDbContext();
+        var ids = plays.Select(p => p.Id).ToList();
+        var known = (await db.RemotePlayEvents.Where(p => p.PeerId == peer.Id && ids.Contains(p.ExternalId)).Select(p => p.ExternalId)
+            .ToListAsync(cancellationToken)).ToHashSet(StringComparer.Ordinal);
+        var recorded = 0;
+        foreach (var play in plays)
+        {
+            var playedAt = DateTime.SpecifyKind(play.PlayedAt, DateTimeKind.Utc);
+            if (known.Contains(play.Id) || play.Id.Length is 0 or > 128 || string.IsNullOrWhiteSpace(play.User)
+                || playedAt < now.AddDays(-14) || playedAt > now.AddDays(1) || play.PlayedMs < 0)
+                continue;
+            if (await FindAsync(peer, play.Path, play.CueTrack, cancellationToken) is not { } file)
+                continue;
+            db.RemotePlayEvents.Add(new RemotePlayEvent
+            {
+                PeerId = peer.Id,
+                RemoteUser = play.User.Trim()[..Math.Min(play.User.Trim().Length, 128)],
+                TrackId = file.TrackId,
+                PlayedAt = playedAt,
+                PlayedMs = play.PlayedMs,
+                Counted = play.Counted,
+                Skipped = play.Skipped,
+                ExternalId = play.Id,
+            });
+            known.Add(play.Id);
+            recorded++;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return new PeerPlaysResult(recorded);
     }
 
     /// <summary>The artwork a peer may see: of a track in its shared libraries.</summary>

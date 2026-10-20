@@ -68,6 +68,23 @@ public static class P2PEndpoints
             .WithSummary("Copies a received share's files into a folder of one of this server's libraries, when its owner allows downloads. " +
                          "Runs in the background; its progress shows in the share. Administrators only, with a recent authentication.");
 
+        p2p.MapPut("/shares/{id:guid}/share-plays", (Guid id, SetReceivedSharePlaysInput input, P2PService service, CancellationToken ct) =>
+                service.SetReceivedSharePlaysAsync(input with { ShareId = id }, ct))
+            .WithName("SetReceivedSharePlays")
+            .WithSummary("Whether plays of a received share's music go to its server, with the users' names, when it counts them (its rule countPlays). Administrators only.");
+
+        p2p.MapGet("/remote-libraries", (P2PService service, CancellationToken ct) => service.RemoteLibrarySettingsAsync(ct))
+            .WithName("RemoteLibrarySettings")
+            .WithSummary("How libraries other servers share are played here: their cache (and what it takes) and where their songs are converted. Administrators only.");
+
+        p2p.MapPut("/remote-libraries", (SetRemoteLibrarySettingsInput input, P2PService service, CancellationToken ct) => service.SetRemoteLibrarySettingsAsync(input, ct))
+            .WithName("SetRemoteLibrarySettings")
+            .WithSummary("The cache of other servers' music (on or off, size, age) and where their songs are converted. Administrators only.");
+
+        p2p.MapDelete("/remote-libraries/cache", (P2PService service, CancellationToken ct) => service.ClearRemoteLibraryCacheAsync(ct))
+            .WithName("ClearRemoteLibraryCache")
+            .WithSummary("Empties the cache of other servers' music; it is fetched again as it is played. Administrators only.");
+
         p2p.MapGet("/activity", (Guid? peerId, int? limit, P2PService service, CancellationToken ct) => service.ActivityAsync(peerId, limit, ct))
             .WithName("P2pActivity")
             .WithSummary("What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only.");
@@ -125,6 +142,16 @@ public static class P2PEndpoints
             })
             .WithName("PeerStream")
             .WithSummary("Server to server: a shared file's audio, under the share's rules (conversion, bit-rate cap, downloads).");
+
+        peer.MapPost("/analyses", (HttpContext context, PeerAnalysesRequest request, PeerApi api, CancellationToken ct) =>
+                api.AnalysesAsync(Caller(context), request.Hashes, ct))
+            .WithName("PeerAnalyses")
+            .WithSummary("Server to server: this server's analyses (loudness, tempo, key, fingerprints, waveform) of shared files' audio, by content hash, up to 200.");
+
+        peer.MapPost("/plays", (HttpContext context, PeerPlaysRequest request, PeerApi api, CancellationToken ct) =>
+                api.RecordPlaysAsync(Caller(context), request.Plays, ct))
+            .WithName("PeerPlays")
+            .WithSummary("Server to server: plays of shared songs by the calling server's users, when the share's rules count them (countPlays), up to 500.");
 
         peer.MapGet("/artwork/{hash}", async (HttpContext context, string hash, PeerApi api, ArtworkStore store, CancellationToken ct) =>
                 await api.ArtworkAsync(Caller(context), hash, ct) is { } artwork

@@ -65,6 +65,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<TrackRating> TrackRatings => Set<TrackRating>();
     public DbSet<PlayEvent> PlayEvents => Set<PlayEvent>();
 
+    public DbSet<RemotePlayEvent> RemotePlayEvents => Set<RemotePlayEvent>();
+
     public DbSet<CloudDropFetch> CloudDropFetches => Set<CloudDropFetch>();
 
     public DbSet<UserUpload> UserUploads => Set<UserUpload>();
@@ -414,6 +416,17 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             upload.Property(u => u.ErrorCode).HasMaxLength(NameLength);
             upload.HasIndex(u => new { u.UserId, u.CreatedAt });
             upload.HasIndex(u => new { u.Kind, u.Status });
+        });
+
+        modelBuilder.Entity<RemotePlayEvent>(play =>
+        {
+            play.HasOne(p => p.Peer).WithMany().HasForeignKey(p => p.PeerId).OnDelete(DeleteBehavior.Cascade);
+            play.HasOne(p => p.Track).WithMany().HasForeignKey(p => p.TrackId).OnDelete(DeleteBehavior.SetNull);
+            play.Property(p => p.RemoteUser).HasMaxLength(NameLength);
+            play.Property(p => p.ExternalId).HasMaxLength(128);
+            play.HasIndex(p => new { p.PeerId, p.ExternalId }).IsUnique();
+            play.HasIndex(p => new { p.TrackId, p.PlayedAt });
+            play.HasIndex(p => p.PlayedAt);
         });
 
         modelBuilder.Entity<PlayEvent>(play =>

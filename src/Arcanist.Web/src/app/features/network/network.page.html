@@ -256,6 +256,16 @@
                 }
               </p>
             }
+            @if (share.active && share.rules.countPlays) {
+              <label class="flex items-center gap-2 text-xs">
+                <hlm-switch
+                  [checked]="share.sharePlays"
+                  [disabled]="busy()"
+                  (checkedChange)="setSharePlays(share, $event)"
+                />
+                {{ 'network.received.sharePlays' | t: { name: share.name } }}
+              </label>
+            }
             @if (share.active && share.rules.allowDownload) {
               <button
                 hlmBtn
@@ -280,6 +290,8 @@
         }
       </ul>
     </section>
+
+    <app-remote-libraries-card />
 
     <section hlmCard>
       <div hlmCardHeader>
@@ -423,7 +435,7 @@
             </label>
           }
         </div>
-        <app-peer-rules id="share" [form]="form.rules" />
+        <app-peer-rules id="share" [form]="form.rules" [server]="true" />
         <hlm-field>
           <label hlmFieldLabel for="share-until">{{ 'network.accessUntil' | t }}</label>
           <input hlmInput id="share-until" name="until" type="date" [(ngModel)]="form.expiresOn" />
@@ -474,7 +486,7 @@
             }
           </div>
         }
-        <app-peer-rules id="edit" [form]="form.rules" />
+        <app-peer-rules id="edit" [form]="form.rules" [server]="form.peer.kind === 'SERVER'" />
         <hlm-field>
           <label hlmFieldLabel for="edit-until">{{ 'network.accessUntil' | t }}</label>
           <input hlmInput id="edit-until" name="until" type="date" [(ngModel)]="form.expiresOn" />

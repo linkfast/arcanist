@@ -895,6 +895,8 @@ export const ServerStatsQuery = graphql(`
         plays
         listenedMs
         lastPlayedAt
+        remote
+        server
       }
     }
   }
@@ -1606,6 +1608,8 @@ export const NetworkPeerFields = graphql(`
       maxBitRate
       bandwidthKbps
       maxStreams
+      allowCache
+      countPlays
     }
     libraryIds
     createdAt
@@ -1634,6 +1638,8 @@ export const ReceivedShareFields = graphql(`
       maxBitRate
       bandwidthKbps
       maxStreams
+      allowCache
+      countPlays
     }
     active
     online
@@ -1645,6 +1651,50 @@ export const ReceivedShareFields = graphql(`
       copied
       skipped
       errorCode
+    }
+    sharePlays
+  }
+`);
+
+export const RemoteLibrarySettingsFields = graphql(`
+  fragment RemoteLibrarySettingsFields on RemoteLibrarySettings {
+    cacheEnabled
+    cacheMaxBytes
+    cacheMaxAgeDays
+    transcoding
+    cacheBytes
+    cacheFiles
+  }
+`);
+
+export const RemoteLibrarySettingsQuery = graphql(`
+  query RemoteLibrarySettings {
+    remoteLibrarySettings {
+      ...RemoteLibrarySettingsFields
+    }
+  }
+`);
+
+export const SetRemoteLibrarySettingsMutation = graphql(`
+  mutation SetRemoteLibrarySettings($input: SetRemoteLibrarySettingsInput!) {
+    setRemoteLibrarySettings(input: $input) {
+      ...RemoteLibrarySettingsFields
+    }
+  }
+`);
+
+export const ClearRemoteLibraryCacheMutation = graphql(`
+  mutation ClearRemoteLibraryCache {
+    clearRemoteLibraryCache {
+      ...RemoteLibrarySettingsFields
+    }
+  }
+`);
+
+export const SetReceivedSharePlaysMutation = graphql(`
+  mutation SetReceivedSharePlays($input: SetReceivedSharePlaysInput!) {
+    setReceivedSharePlays(input: $input) {
+      ...ReceivedShareFields
     }
   }
 `);

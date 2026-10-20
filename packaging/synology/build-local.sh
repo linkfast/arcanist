@@ -5,13 +5,15 @@
 #   packaging/linux/pack.sh               # artifacts/linux/arcanist-<version>-linux-{x64,arm64}-dotnet.tar.gz
 #   packaging/synology/build-local.sh     # artifacts/synology/arcanist_<arch>-7.2_<version>-<rev>.spk
 #   SPK_REV=2 packaging/synology/build-local.sh   # the same version again, to install over the first
+#   VERSION=0.2.0-alpha.1 SPK_REV=812 packaging/synology/build-local.sh   # what the workflows do
 #
 # Needs Docker (spksrc's build image); clones spksrc into artifacts/spksrc the first time.
 set -eu
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
 
-version="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)"
+# VERSION=x.y.z-tag picks the tarballs of that version (the workflows'); by default the project's.
+version="${VERSION:-$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)}"
 spksrc="$root/artifacts/spksrc"
 for arch in x64 arm64; do
     [ -f "artifacts/linux/arcanist-$version-linux-$arch-dotnet.tar.gz" ] \

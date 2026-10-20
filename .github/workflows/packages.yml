@@ -1,0 +1,148 @@
+name: Packages
+
+# Builds every installable package of a version, for release.yml and edge.yml, as one artifact per kind (the caller
+# attaches them all to its GitHub Release at the end):
+# - windows-x64, windows-arm64: Velopack's Setup.exe and update packages (the tray app with the server).
+# - linux: the Linux tarballs (self-contained and -dotnet) and the .deb packages for Ubuntu 24.04+ and Debian 12+.
+# - synology: the .spk packages for DSM 7.2 (x64 and arm64), from the -dotnet tarballs.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "SemVer 2 version of the build"
+        required: true
+        type: string
+      channel-prefix:
+        description: "Velopack channels: '' for releases (win, win-arm64), 'edge' for edge builds (edge, edge-arm64)"
+        required: false
+        type: string
+        default: ""
+      delta:
+        description: "Download the newest release of each channel so Velopack builds delta packages"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  panel:
+    name: Admin panel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.15.0 # keep in sync with mise.toml
+          cache: npm
+          cache-dependency-path: src/Arcanist.Web/package-lock.json
+      - run: sh packaging/build-panel.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: panel
+          path: src/Arcanist.Web/dist/arcanist-web/browser
+
+  windows:
+    name: Windows installer (${{ matrix.arch }})
+    needs: panel
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [x64, arm64]
+    env:
+      VERSION: ${{ inputs.version }}
+      RUNTIME: win-${{ matrix.arch }}
+      # win and win-arm64 for releases (x64 keeps the channel the first releases used); edge and edge-arm64.
+      CHANNEL: ${{ inputs.channel-prefix != '' && (matrix.arch == 'x64' && inputs.channel-prefix || format('{0}-arm64', inputs.channel-prefix)) || (matrix.arch == 'x64' && 'win' || 'win-arm64') }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: panel
+          path: src/Arcanist.Web/dist/arcanist-web/browser
+      # The arm64 native libraries are cross-built here with MSVC's ARM64 tools; ring (the P2P crate's TLS) also needs
+      # clang, which the runner has in LLVM's folder (or gets from Chocolatey).
+      - if: matrix.arch == 'arm64'
+        run: |
+          if (-not (Get-Command clang -ErrorAction SilentlyContinue)) {
+              if (-not (Test-Path 'C:/Program Files/LLVM/bin/clang.exe')) { choco install llvm -y --no-progress }
+              'C:/Program Files/LLVM/bin' | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          }
+      - if: matrix.arch == 'arm64'
+        shell: bash
+        run: bash packaging/native/build.sh win-arm64
+      - run: dotnet tool restore
+      # The previous release of this channel lets vpk build a delta package, so updates download only what changed.
+      - if: inputs.delta
+        run: dotnet vpk download github --repoUrl "${{ github.server_url }}/${{ github.repository }}" --token "$env:GH_TOKEN" --channel $env:CHANNEL --outputDir artifacts/windows/releases
+        continue-on-error: true
+      - run: ./packaging/windows/pack.ps1 -Version $env:VERSION -SkipPanel -Runtime $env:RUNTIME -Channel $env:CHANNEL
+      # Only this version's files: the folder may also hold the previous full package used for the delta.
+      - run: |
+          New-Item -ItemType Directory -Force artifacts/upload | Out-Null
+          Get-ChildItem artifacts/windows/releases | Where-Object {
+              $_.Name -like "*-$env:VERSION-*.nupkg" -or $_.Name -notlike "*.nupkg" } | Copy-Item -Destination artifacts/upload
+          Get-ChildItem artifacts/upload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: artifacts/upload
+          compression-level: 0
+
+  linux:
+    name: Linux tarballs and .deb
+    needs: panel
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: panel
+          path: src/Arcanist.Web/dist/arcanist-web/browser
+      # The native libraries are cross-built for glibc 2.27 with Zig.
+      - run: pip install cargo-zigbuild ziglang
+      - run: sh packaging/linux/pack.sh "$VERSION" --skip-panel
+      # Packages for Ubuntu 24.04+ and Debian 12+ (amd64 and arm64), from the self-contained builds.
+      - run: sh packaging/linux/deb.sh "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            artifacts/linux/*.tar.gz
+            artifacts/linux/*.deb
+          compression-level: 0
+
+  synology:
+    name: Synology packages
+    needs: linux
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the package revision counts the commits
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: artifacts/linux
+      # DSM compares versions without pre-release suffixes: the revision is the number of commits, which only grows,
+      # so every build (release or edge) installs over an older one.
+      - run: SPK_REV="$(git rev-list --count HEAD)" sh packaging/synology/build-local.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: synology
+          path: artifacts/synology/*.spk
+          compression-level: 0

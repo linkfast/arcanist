@@ -1,7 +1,8 @@
 name: Release
 
 # Pushing a tag such as v0.2.0 tests everything, then publishes:
-# - GitHub Release: the Windows installer and Velopack update packages, the Linux tarballs and the .deb packages.
+# - GitHub Release: the Windows installers (x64 and arm64) and Velopack update packages, the Linux tarballs, the .deb
+#   packages and the Synology .spk packages (packages.yml builds them all).
 # - ghcr.io/<owner>/arcanist: the Docker image for linux/amd64 and linux/arm64.
 # The release is created as a draft and only published once every package is attached.
 
@@ -42,76 +43,12 @@ jobs:
           case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
           gh release create "$TAG" --draft --verify-tag --title "Arcanist $VERSION" --generate-notes $prerelease
 
-  panel:
-    name: Admin panel
-    needs: ci
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24.15.0 # keep in sync with mise.toml
-          cache: npm
-          cache-dependency-path: src/Arcanist.Web/package-lock.json
-      - run: sh packaging/build-panel.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: panel
-          path: src/Arcanist.Web/dist/arcanist-web/browser
-
-  windows:
-    name: Windows installer
-    needs: [draft, panel]
-    runs-on: windows-latest
-    permissions:
-      contents: write
-    env:
-      VERSION: ${{ needs.draft.outputs.version }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
-        with:
-          global-json-file: global.json
-      - uses: actions/download-artifact@v4
-        with:
-          name: panel
-          path: src/Arcanist.Web/dist/arcanist-web/browser
-      - run: dotnet tool restore
-      # The previous release lets vpk build a delta package, so updates download only what changed.
-      - run: dotnet vpk download github --repoUrl "${{ github.server_url }}/${{ github.repository }}" --token "$env:GH_TOKEN" --outputDir artifacts/windows/releases
-        continue-on-error: true
-      - run: ./packaging/windows/pack.ps1 -Version $env:VERSION -SkipPanel
-      # Only this version's files: the folder also holds the previous full package used for the delta.
-      - run: |
-          $files = Get-ChildItem artifacts/windows/releases | Where-Object {
-              $_.Name -like "*-$env:VERSION-*.nupkg" -or $_.Name -notlike "*.nupkg" } | ForEach-Object FullName
-          gh release upload $env:TAG @files --clobber
-
-  linux:
-    name: Linux tarballs
-    needs: [draft, panel]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      VERSION: ${{ needs.draft.outputs.version }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
-        with:
-          global-json-file: global.json
-      - uses: actions/download-artifact@v4
-        with:
-          name: panel
-          path: src/Arcanist.Web/dist/arcanist-web/browser
-      # The native libraries are cross-built for glibc 2.27 with Zig.
-      - run: pip install cargo-zigbuild ziglang
-      - run: sh packaging/linux/pack.sh "$VERSION" --skip-panel
-      # Packages for Ubuntu 24.04+ and Debian 12+ (amd64 and arm64), from the self-contained builds.
-      - run: sh packaging/linux/deb.sh "$VERSION"
-      - run: gh release upload "$TAG" artifacts/linux/*.tar.gz artifacts/linux/*.deb --clobber
+  packages:
+    needs: draft
+    uses: ./.github/workflows/packages.yml
+    with:
+      version: ${{ needs.draft.outputs.version }}
+      delta: true
 
   docker:
     name: Docker image
@@ -155,11 +92,27 @@ jobs:
 
   publish:
     name: Publish release
-    needs: [windows, linux, docker]
+    needs: [packages, docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: windows-*
+          path: upload
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: upload
+      - uses: actions/download-artifact@v4
+        with:
+          name: synology
+          path: upload
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit "$TAG" --repo "${{ github.repository }}" --draft=false
+        run: |
+          ls -l upload
+          gh release upload "$TAG" upload/* --repo "${{ github.repository }}" --clobber
+          gh release edit "$TAG" --repo "${{ github.repository }}" --draft=false

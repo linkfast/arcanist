@@ -39,8 +39,9 @@ The first build takes a while (Rust); later ones reuse Docker's cache. `-Port` c
 ## Publish it for testers
 
 - **Automatically:** every change to `main` publishes `ghcr.io/linkfast/arcanist:edge` and `:edge-<commit>`
-  (`.github/workflows/docker-edge.yml`, amd64 and arm64). Run that workflow by hand (Actions → *Docker image (edge)* →
-  *Run workflow*) to publish another tag, such as one for a particular test.
+  (`.github/workflows/edge.yml`, amd64 and arm64), along with the `edge` pre-release on GitHub (Windows, .deb and
+  Synology packages of the same build). Run that workflow by hand (Actions → *Edge* → *Run workflow*) to publish
+  another tag, such as one for a particular test.
 - **From your machine:** `docker login ghcr.io` (user: your GitHub user; password: a token with `write:packages`),
   then `pwsh packaging/docker/build.ps1 -Push -Tag <tag>`: amd64 and arm64, straight to the registry.
 - **Releases** (a `v*` tag) publish `<version>`, `preview` and, for stable versions, `latest` (`release.yml`).

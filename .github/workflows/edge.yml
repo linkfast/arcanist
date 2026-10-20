@@ -1,0 +1,130 @@
+name: Edge
+
+# For testing between releases, every change to main publishes:
+# - ghcr.io/<owner>/arcanist:edge (and :edge-<commit>), for linux/amd64 and linux/arm64.
+# - The `edge` pre-release on GitHub, replaced by every build: the Windows installers (x64 and arm64), the .deb
+#   packages, the Synology .spk packages and the Linux tarballs (packages.yml). Its Windows installs update from
+#   their own channels (edge, edge-arm64), so they never mix with releases.
+# Run it by hand (Actions → Edge → Run workflow) to publish another Docker tag, such as one for a tester.
+# Releases publish their own tags and packages (release.yml).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "native/**"
+      - "packaging/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "Directory.Build.props"
+      - "global.json"
+      - ".github/workflows/edge.yml"
+      - ".github/workflows/packages.yml"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Docker tag to publish besides edge-<commit> (edge by default)"
+        required: false
+        default: edge
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edge-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      value: ${{ steps.version.outputs.value }}
+      short: ${{ steps.version.outputs.short }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: version
+        run: |
+          version="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -n 1)"
+          # What the server reports: the project's version, marked as an edge build (and always growing).
+          case "$version" in *-*) echo "value=$version.edge.$GITHUB_RUN_NUMBER" ;; *) echo "value=$version-edge.$GITHUB_RUN_NUMBER" ;; esac >> "$GITHUB_OUTPUT"
+          echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+  docker:
+    name: Docker image
+    needs: version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: VERSION=${{ needs.version.outputs.value }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/arcanist:${{ inputs.tag || 'edge' }}
+            ghcr.io/${{ github.repository_owner }}/arcanist:edge-${{ needs.version.outputs.short }}
+          labels: |
+            org.opencontainers.image.title=Arcanist
+            org.opencontainers.image.description=Self-hosted music server (edge build, for testing)
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=edge
+          cache-to: type=gha,scope=edge,mode=max
+
+  packages:
+    needs: version
+    uses: ./.github/workflows/packages.yml
+    with:
+      version: ${{ needs.version.outputs.value }}
+      channel-prefix: edge
+
+  release:
+    name: GitHub release (edge)
+    needs: [version, packages]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.version.outputs.value }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: windows-*
+          path: upload
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: upload
+      - uses: actions/download-artifact@v4
+        with:
+          name: synology
+          path: upload
+      # Replaced only now, with every package ready: the previous edge stays downloadable while this one builds.
+      - run: |
+          ls -l upload
+          gh release delete edge --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+          cat > notes.md <<EOF
+          Edge build **$VERSION** of \`main\` ($GITHUB_SHA), for testing: it may be unstable. Every change to \`main\` replaces it.
+
+          - **Windows** (x64 and arm64): \`Arcanist-edge-Setup.exe\` / \`Arcanist-edge-arm64-Setup.exe\`. It updates itself from later edge builds only.
+          - **Ubuntu 24.04+ / Debian 12+**: \`sudo apt install ./arcanist_*_amd64.deb\` (or \`_arm64\`).
+          - **Synology DSM 7.2+**: Package Center → Manual Install with the \`.spk\` of your NAS (\`x64\` or \`aarch64\`). It needs SynoCommunity's .NET 10 runtime and FFmpeg packages.
+          - **Docker**: \`ghcr.io/${GITHUB_REPOSITORY_OWNER}/arcanist:edge\`.
+          EOF
+          gh release create edge upload/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+              --title "Arcanist edge ($VERSION)" --notes-file notes.md

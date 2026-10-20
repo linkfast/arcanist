@@ -144,6 +144,24 @@ export const en: Dictionary = {
     confirm: 'Confirm',
   },
   setup: {
+    ultimate: {
+      intro:
+        "Arcanist works with any compatible app, but it shines with Ultimate, LinkFast's official clients: they speak to your server natively and take your music, your StarTracks and your statistics to all your devices.",
+      desktop: {
+        tagline: 'The official desktop app',
+        features:
+          'AI DJ: your favorite AI agent spins for you, mixing by tempo and key · Ultimate Connect: control the music of any device from another, also what plays on this server · Your library, playlists and StarTracks, offline when you need them · Visualizations and gapless playback',
+        free: 'It connects to this server with your Arcanist user.',
+      },
+      cloud: {
+        tagline: 'Your music, in the cloud too',
+        features:
+          "Use it as one more library of this server, and Cloud Drop to bring songs from anywhere · Sync it with your libraries both ways · S3 libraries and the seamless P2P connection with the Cloud plan · Ultimate's global rankings, fed by anonymous statistics",
+        plans:
+          'A free account is enough to use it as a library; the Cloud plan unlocks the rest. Link it later, from the panel.',
+      },
+      enhancers: 'AI and Ultimate enhancers for this server',
+    },
     restore: {
       offerTitle: 'Coming from a backup?',
       offer:
@@ -257,6 +275,10 @@ export const en: Dictionary = {
     stepOf: 'Step {current} of {total}',
     finish: 'Finish setup',
     steps: {
+      ultimate: {
+        title: 'Ultimate',
+        description: 'The official players, and your music in the cloud.',
+      },
       users: {
         title: 'Users',
         description: 'Who else listens on this server. You can skip it.',
@@ -267,7 +289,7 @@ export const en: Dictionary = {
       },
       addons: {
         title: 'Extensions and players',
-        description: 'Ultimate, your apps and your devices. You can skip it.',
+        description: 'Your apps and your devices. You can skip it.',
       },
       code: {
         title: 'Setup code',

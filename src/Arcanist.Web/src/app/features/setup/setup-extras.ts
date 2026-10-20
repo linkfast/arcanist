@@ -58,7 +58,8 @@ export class SetupExtrasDraft {
     dlna: false,
     subsonic: false,
     mstream: false,
-    ai: false,
+    // AI enhancers (the AI DJ's analyses) start on; the administrator can switch them off.
+    ai: true,
     'server-audio': false,
   };
   extensionsInitial: Record<WizardExtension, boolean> = {

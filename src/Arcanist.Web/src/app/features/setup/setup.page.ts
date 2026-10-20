@@ -64,6 +64,7 @@ import {
   WIZARD_EXTENSIONS,
   applySetupExtras,
 } from './setup-extras';
+import { SetupUltimateStep } from './setup-ultimate';
 import { SetupAddonsStep, SetupP2PStep, SetupUsersStep } from './setup-steps';
 import { SetupRestoreDialog, SetupRestoring } from './setup-restore';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
@@ -87,6 +88,7 @@ type Step =
   | 'ratings'
   | 'privacy'
   | 'p2p'
+  | 'ultimate'
   | 'addons'
   | 'review'
   | 'progress';
@@ -125,6 +127,7 @@ const PROGRESS_MS = 1500;
     SetupUsersStep,
     SetupP2PStep,
     SetupAddonsStep,
+    SetupUltimateStep,
     SetupRestoreDialog,
     SetupRestoring,
     DlnaImportForm,
@@ -181,6 +184,7 @@ export class SetupPage implements OnInit {
         'ratings',
         'privacy',
         'p2p',
+        'ultimate',
         'addons',
         'review',
       ];
@@ -196,6 +200,7 @@ export class SetupPage implements OnInit {
       'ratings',
       'privacy',
       'p2p',
+      'ultimate',
       'addons',
       'review',
     ];
@@ -294,7 +299,7 @@ export class SetupPage implements OnInit {
     if (this.extras.playerUrl.trim()) parts.push(this.i18n.t('setup.review.player'));
     return parts.join(', ');
   }
-  protected shareStatistics: 'yes' | 'no' | null = null;
+  protected shareStatistics: 'yes' | 'no' | null = 'yes';
   /** Another server to bring music, users and their data from. */
   protected migrateFrom: 'none' | 'mstream' | 'dlna' = 'none';
   /** The copy chosen from a DLNA server; it starts once the server is set up (or at the end, running the wizard again). */

@@ -645,6 +645,10 @@
             <app-setup-p2p [draft]="extras" />
           }
 
+          @case ('ultimate') {
+            <app-setup-ultimate [draft]="extras" [cloud]="externalServices !== 'NONE'" />
+          }
+
           @case ('addons') {
             <app-setup-addons [draft]="extras" [cloud]="externalServices !== 'NONE'" />
           }

@@ -148,6 +148,24 @@ export const es: Dictionary = {
     confirm: 'Confirmar',
   },
   setup: {
+    ultimate: {
+      intro:
+        'Arcanist funciona con cualquier app compatible, pero brilla con Ultimate, los clientes oficiales de LinkFast: hablan con tu servidor de forma nativa y llevan tu música, tus StarTracks y tus estadísticas a todos tus dispositivos.',
+      desktop: {
+        tagline: 'La app de escritorio oficial',
+        features:
+          'AI DJ: tu agente de IA favorito pincha para ti, con transiciones por tempo y tonalidad · Ultimate Connect: controla la música de cualquier dispositivo desde otro, también la que suena en este servidor · Tu biblioteca, tus playlists y tus StarTracks, sin conexión cuando haga falta · Visualizaciones y reproducción sin cortes',
+        free: 'Se conecta a este servidor con tu usuario de Arcanist.',
+      },
+      cloud: {
+        tagline: 'Tu música, también en la nube',
+        features:
+          'Úsala como una biblioteca más de este servidor, y Cloud Drop para traer canciones desde cualquier sitio · Sincronízala con tus bibliotecas en ambos sentidos · Bibliotecas en S3 y conexión P2P transparente con el plan Cloud · Los rankings globales de Ultimate, alimentados por las estadísticas anónimas',
+        plans:
+          'Una cuenta gratuita basta para usarla como biblioteca; el plan Cloud desbloquea el resto. Se vincula después, desde el panel.',
+      },
+      enhancers: 'Mejoras de IA y Ultimate para este servidor',
+    },
     restore: {
       offerTitle: '¿Vienes de una copia de seguridad?',
       offer:
@@ -265,6 +283,10 @@ export const es: Dictionary = {
     stepOf: 'Paso {current} de {total}',
     finish: 'Terminar la configuración',
     steps: {
+      ultimate: {
+        title: 'Ultimate',
+        description: 'Los reproductores oficiales y la nube de tu música.',
+      },
       users: {
         title: 'Usuarios',
         description: 'Quién más escucha en este servidor. Puedes saltarlo.',
@@ -275,7 +297,7 @@ export const es: Dictionary = {
       },
       addons: {
         title: 'Extensiones y reproductores',
-        description: 'Ultimate, tus apps y tus dispositivos. Puedes saltarlo.',
+        description: 'Tus apps y tus dispositivos. Puedes saltarlo.',
       },
       code: {
         title: 'Código de configuración',

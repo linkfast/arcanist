@@ -85,6 +85,21 @@ public static class P2PEndpoints
             .WithName("ClearRemoteLibraryCache")
             .WithSummary("Empties the cache of other servers' music; it is fetched again as it is played. Administrators only.");
 
+        // Query binding of enums is case-sensitive; the API spells them in upper case (JOINED).
+        p2p.MapGet("/activity/log", (Guid? peerId, string? kind, string? search, int? offset, int? first, P2PService service, CancellationToken ct) =>
+                service.ActivityLogAsync(new P2PActivityQuery(peerId,
+                    kind is null ? null
+                    : Enum.TryParse<P2PActivityKind>(kind.Replace("_", ""), ignoreCase: true, out var parsed) ? parsed
+                    : throw ArcanistException.Field("kind", ErrorCodes.InvalidFormat),
+                    search, offset ?? 0, first ?? 100), ct))
+            .WithName("P2pActivityLog")
+            .WithSummary("The P2P network's activity a page at a time (1 to 500), newest first, by peer, kind or words in the peer's name and the detail. Administrators only.");
+
+        p2p.MapPut("/shares/{id:guid}/name", (Guid id, RenameReceivedShareInput input, P2PService service, CancellationToken ct) =>
+                service.RenameReceivedShareAsync(input with { ShareId = id }, ct))
+            .WithName("RenameReceivedShare")
+            .WithSummary("Renames the library a received share is shown as here. Administrators only.");
+
         p2p.MapGet("/activity", (Guid? peerId, int? limit, P2PService service, CancellationToken ct) => service.ActivityAsync(peerId, limit, ct))
             .WithName("P2pActivity")
             .WithSummary("What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only.");

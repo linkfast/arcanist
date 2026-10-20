@@ -95,6 +95,12 @@ public sealed class P2PPeer : Entity
     public long? BackupQuotaBytes { get; set; }
 
     public List<P2PPeerLibrary> Libraries { get; } = [];
+
+    /// <summary>
+    /// Shares "All": every library of this server that can be shared (its own folders, not personal), also those
+    /// made later, instead of <see cref="Libraries"/>.
+    /// </summary>
+    public bool AllLibraries { get; set; }
 }
 
 /// <summary>A library shared with a server peer.</summary>

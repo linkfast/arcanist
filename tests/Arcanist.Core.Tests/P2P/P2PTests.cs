@@ -322,6 +322,58 @@ public sealed class P2PTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Sharing_all_includes_libraries_made_later_and_the_receiver_names_it()
+    {
+        Assert.SkipUnless(NativeP2P.IsAvailable, "The P2P library is not built for this platform.");
+        var rock = Music(("Rock/01.wav", new FixtureTags("Riff", "Band", "Loud", "Band", TrackNumber: 1)));
+        var jazz = Music(("Jazz/01.wav", new FixtureTags("Swing", "Trio", "Smooth", "Trio", TrackNumber: 1)));
+        var owner = await StartServerAsync(new SetupLibrary("Rock", [rock]));
+        await owner.Factory.WaitForScansAsync(owner.Admin);
+        var receiver = await StartServerAsync();
+
+        var (link, _) = Local(await InviteAsync(owner.Admin, "/rest/v1/p2p/invitations/share",
+            new CreateShareInvitationInput("Pia", [Core.Application.Libraries.VirtualLibraries.All], new PeerRulesInput(false, null, null, null), null)), owner.NodePort);
+        var accepted = await receiver.Admin.PostAsJsonAsync("/rest/v1/p2p/shares", new AcceptShareInput(link), ArcanistFactory.Json, Cancel);
+        Assert.True(accepted.IsSuccessStatusCode, await accepted.Content.ReadAsStringAsync(Cancel));
+        var share = await accepted.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        await receiver.Factory.WaitForScansAsync(receiver.Admin);
+        var peer = Assert.Single((await owner.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/p2p/peers?kind=SERVER", ArcanistFactory.Json, Cancel))!);
+        Assert.Equal([Core.Application.Libraries.VirtualLibraries.All], peer.GetProperty("libraryIds").EnumerateArray().Select(l => l.GetGuid()));
+
+        async Task<List<string>> TitlesAsync() =>
+            (await receiver.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items")
+            .EnumerateArray().Select(t => t.GetProperty("title").GetString()!).Order().ToList();
+        Assert.Equal(["Riff"], await TitlesAsync());
+
+        // A library made afterwards is shared too, at the receiver's next scan.
+        (await owner.Admin.PostAsJsonAsync("/rest/v1/libraries", new { name = "Jazz", sources = new[] { new { location = jazz } }, visibleToAll = true },
+            ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+        await owner.Factory.WaitForScansAsync(owner.Admin);
+        await owner.Factory.Services.GetRequiredService<P2PPeerDirectory>().InvalidateAsync(Cancel);
+        var libraryId = share.GetProperty("libraryId").GetString();
+        await receiver.Admin.PostAsJsonAsync($"/rest/v1/libraries/{libraryId}/scans", new { full = false }, Cancel);
+        await receiver.Factory.WaitForScansAsync(receiver.Admin);
+        Assert.Equal(["Riff", "Swing"], await TitlesAsync());
+
+        // The receiver calls it what it likes; libraries say whose they are.
+        var renamed = await receiver.Admin.PutAsJsonAsync($"/rest/v1/p2p/shares/{share.GetProperty("id").GetString()}/name",
+            new RenameReceivedShareInput(Guid.Empty, "Música de Pía"), ArcanistFactory.Json, Cancel);
+        Assert.True(renamed.IsSuccessStatusCode, await renamed.Content.ReadAsStringAsync(Cancel));
+        var library = await receiver.Admin.GetFromJsonAsync<JsonElement>($"/rest/v1/libraries/{libraryId}", ArcanistFactory.Json, Cancel);
+        Assert.Equal("Música de Pía", library.GetProperty("name").GetString());
+        Assert.StartsWith("Server", library.GetProperty("sharedBy").GetString());
+
+        // The activity log, a page at a time and filtered.
+        var all = await owner.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/p2p/activity/log?first=1", ArcanistFactory.Json, Cancel);
+        Assert.True(all.GetProperty("totalCount").GetInt32() >= 1);
+        Assert.Equal(1, all.GetProperty("items").GetArrayLength());
+        var joined = await owner.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/p2p/activity/log?kind=JOINED&search=pia", ArcanistFactory.Json, Cancel);
+        Assert.Equal("Pia", Assert.Single(joined.GetProperty("items").EnumerateArray()).GetProperty("peerName").GetString());
+        var none = await owner.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/p2p/activity/log?search=nobody", ArcanistFactory.Json, Cancel);
+        Assert.Equal(0, none.GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
     public async Task A_share_whose_owner_allows_downloads_can_be_copied_into_a_local_library()
     {
         Assert.SkipUnless(NativeP2P.IsAvailable, "The P2P library is not built for this platform.");

@@ -58,9 +58,15 @@ public sealed class P2PPeerDirectory(IArcanistDbContextFactory databases, TimePr
                 return;
             await using var db = databases.CreateDbContext();
             var peers = await db.P2PPeers.AsNoTracking().Include(p => p.Libraries).ToListAsync(cancellationToken);
+            // "All": this server's libraries with folders of its own, not personal ones: new ones join at the next load.
+            IReadOnlySet<Guid> all = peers.Any(p => p.AllLibraries)
+                ? (await db.Libraries.AsNoTracking()
+                    .Where(l => l.OwnerUserId == null && l.Sources.Any() && l.Sources.All(s => s.Kind == LibrarySourceKind.Local))
+                    .Select(l => l.Id).ToListAsync(cancellationToken)).ToHashSet()
+                : new HashSet<Guid>();
             _peers = peers.ToDictionary(p => p.NodeId, p => new P2PPeerSnapshot(
                 p.Id, p.Kind, p.NodeId, p.Name, p.UserId, p.Rules, p.ExpiresAt, p.RevokedAt,
-                p.Libraries.Select(l => l.LibraryId).ToHashSet()), StringComparer.Ordinal);
+                p.AllLibraries ? all : p.Libraries.Select(l => l.LibraryId).ToHashSet()), StringComparer.Ordinal);
             _loadedAt = time.GetTimestamp();
         }
         finally

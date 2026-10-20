@@ -1517,6 +1517,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AllLibraries")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("BackupFolder")
                         .HasMaxLength(4096)
                         .HasColumnType("TEXT");

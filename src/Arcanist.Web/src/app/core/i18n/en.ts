@@ -1806,6 +1806,12 @@ export const en: Dictionary = {
     saved: 'Settings saved',
   },
   network: {
+    tabs: {
+      node: 'Node and settings',
+      servers: 'Servers',
+      devices: 'Devices',
+      activity: 'Activity',
+    },
     title: 'P2P network',
     subtitle:
       'Reach your server from anywhere without opening ports, and share libraries with other Arcanist servers. Traffic is end-to-end encrypted.',
@@ -1882,6 +1888,9 @@ export const en: Dictionary = {
       streamsAtOnce: '{count} at once',
     },
     servers: {
+      all: 'All',
+      allHelp:
+        'Every library of this server, also those you make later (not personal ones, nor those shared with you).',
       title: 'Sharing with other servers',
       description:
         'Another Arcanist server gets the libraries you choose as “… library”, and its people listen to them from here.',
@@ -1902,6 +1911,9 @@ export const en: Dictionary = {
       empty: 'No devices paired.',
     },
     received: {
+      rename: 'Rename',
+      renameHelp:
+        'The name the music {server} shares with you has here. Nothing changes on the other server.',
       sharePlays: "Send plays to {name}, with each user's name",
       title: 'Libraries shared with you',
       description:
@@ -1926,6 +1938,24 @@ export const en: Dictionary = {
       },
     },
     activity: {
+      description: 'What happened in the P2P network, newest first.',
+      search: 'Search by name or detail',
+      allPeers: 'Every node',
+      allKinds: 'Every kind',
+      perPage: '{count} per page',
+      range: '{from}–{to} of {total}',
+      previous: 'Previous',
+      next: 'Next',
+      page: 'Page {page} of {pages}',
+      kinds: {
+        JOINED: 'Joins',
+        CONNECTED: 'Connections',
+        STREAMED: 'Plays',
+        DOWNLOADED: 'Downloads',
+        REFUSED: 'Refusals',
+        CHANGED: 'Rule changes',
+        REVOKED: 'Revocations',
+      },
       title: 'Activity',
       empty: 'Nothing yet.',
       JOINED: '{peer} joined',

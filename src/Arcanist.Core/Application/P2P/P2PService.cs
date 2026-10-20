@@ -72,7 +72,7 @@ public sealed record PeerRulesInput(bool AllowDownload, int? MaxBitRate, int? Ba
 
 /// <summary>A node allowed through the P2P network: a user's device, or a server libraries are shared with.</summary>
 /// <param name="UserId">The user a device belongs to.</param>
-/// <param name="LibraryIds">Libraries shared with a server.</param>
+/// <param name="LibraryIds">Libraries shared with a server; "All" (<c>VirtualLibraries.All</c>) for every one, also those made later.</param>
 /// <param name="Online">It has a connection open now.</param>
 /// <param name="AverageBytesPerSecond">What it received on average while connected.</param>
 /// <param name="Streams">Audio streams it started.</param>
@@ -150,6 +150,15 @@ public sealed record SetRemoteLibrarySettingsInput(bool CacheEnabled, long Cache
 public sealed record CopyReceivedShareInput(Guid ShareId, Guid TargetSourceId);
 
 public sealed record P2PActivityEntry(Guid Id, DateTime At, P2PActivityKind Kind, Guid? PeerId, string PeerName, string? Detail);
+
+/// <summary>A page of the activity log, newest first. Part of the API contract.</summary>
+/// <param name="TotalCount">Entries that match, on every page.</param>
+public sealed record P2PActivityPage(IReadOnlyList<P2PActivityEntry> Items, int TotalCount, int Offset);
+
+/// <summary>Filters for the activity log: a peer, a kind, words in the peer's name or the detail; a page of 1 to 500.</summary>
+public sealed record P2PActivityQuery(Guid? PeerId, P2PActivityKind? Kind, string? Search, int Offset = 0, int First = 100);
+
+public sealed record RenameReceivedShareInput(Guid ShareId, string Name);
 
 /// <summary>Sent by a device through the P2P network to pair, with the token of its invitation.</summary>
 /// <param name="Name">The device's own name (its model, for example); the invitation's when null.</param>
@@ -305,11 +314,7 @@ public sealed class P2PService(
         peer.Rules = rules;
         peer.ExpiresAt = input.ExpiresAt?.ToUniversalTime();
         if (libraries is not null)
-        {
-            peer.Libraries.RemoveAll(l => !libraries.Contains(l.LibraryId));
-            foreach (var id in libraries.Where(id => peer.Libraries.All(l => l.LibraryId != id)))
-                peer.Libraries.Add(new P2PPeerLibrary { PeerId = peer.Id, LibraryId = id });
-        }
+            SetLibraries(peer, libraries);
 
         await db.SaveChangesAsync(cancellationToken);
         await Directory.InvalidateAsync(cancellationToken);
@@ -482,6 +487,41 @@ public sealed class P2PService(
         return entries.Select(a => new P2PActivityEntry(a.Id, a.At, a.Kind, a.PeerId, a.PeerName, a.Detail)).ToList();
     }
 
+    /// <summary>The activity log a page at a time, with filters. Administrators only.</summary>
+    public async Task<P2PActivityPage> ActivityLogAsync(P2PActivityQuery input, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        await Activity.FlushAsync(cancellationToken);
+        var query = db.P2PActivities.AsNoTracking();
+        if (input.PeerId is { } peer)
+            query = query.Where(a => a.PeerId == peer);
+        if (input.Kind is { } kind)
+            query = query.Where(a => a.Kind == kind);
+        if (!string.IsNullOrWhiteSpace(input.Search))
+        {
+            var search = input.Search.Trim().ToLowerInvariant();
+            query = query.Where(a => a.PeerName.ToLower().Contains(search) || (a.Detail != null && a.Detail.ToLower().Contains(search)));
+        }
+
+        var offset = Math.Max(0, input.Offset);
+        var total = await query.CountAsync(cancellationToken);
+        var entries = await query.OrderByDescending(a => a.At).ThenByDescending(a => a.Id)
+            .Skip(offset).Take(Math.Clamp(input.First, 1, 500)).ToListAsync(cancellationToken);
+        return new P2PActivityPage(entries.Select(a => new P2PActivityEntry(a.Id, a.At, a.Kind, a.PeerId, a.PeerName, a.Detail)).ToList(), total, offset);
+    }
+
+    /// <summary>Renames the library a received share is shown as here. Administrators only.</summary>
+    public async Task<ReceivedShare> RenameReceivedShareAsync(RenameReceivedShareInput input, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var remote = await db.P2PRemotes.AsNoTracking().Include(r => r.Library).SingleOrDefaultAsync(r => r.Id == input.ShareId, cancellationToken)
+                     ?? throw new ArcanistException.NotFound();
+        var library = remote.Library;
+        await services.GetRequiredService<LibraryService>().UpdateAsync(library.Id,
+            new UpdateLibraryInput(input.Name, library.VisibleToAll, library.ScanIntervalMinutes, library.WatchForChanges), cancellationToken);
+        return (await ReceivedSharesAsync(cancellationToken)).Single(s => s.Id == remote.Id);
+    }
+
     // Handshakes, made by nodes through the P2P network without signing in.
 
     public async Task<PairDeviceResult> PairAsync(string nodeId, PairDeviceRequest request, CancellationToken cancellationToken)
@@ -555,9 +595,7 @@ public sealed class P2PService(
         peer.ExpiresAt = invitation.AccessExpiresAt;
         peer.RevokedAt = null;
         var libraries = JsonSerializer.Deserialize<List<Guid>>(invitation.LibraryIds) ?? [];
-        peer.Libraries.RemoveAll(l => !libraries.Contains(l.LibraryId));
-        foreach (var id in libraries.Where(id => peer.Libraries.All(l => l.LibraryId != id)))
-            peer.Libraries.Add(new P2PPeerLibrary { PeerId = peer.Id, LibraryId = id });
+        SetLibraries(peer, libraries);
 
         invitation.UsedAt = Now();
         invitation.PeerId = peer.Id;
@@ -620,9 +658,22 @@ public sealed class P2PService(
         }, cancellationToken);
     }
 
+    /// <summary>The libraries shared with a peer: "All" (every one, now and later), or those listed.</summary>
+    private static void SetLibraries(P2PPeer peer, IReadOnlyList<Guid> libraries)
+    {
+        peer.AllLibraries = libraries.Contains(VirtualLibraries.All);
+        var listed = peer.AllLibraries ? [] : libraries;
+        peer.Libraries.RemoveAll(l => !listed.Contains(l.LibraryId));
+        foreach (var id in listed.Where(id => peer.Libraries.All(l => l.LibraryId != id)))
+            peer.Libraries.Add(new P2PPeerLibrary { PeerId = peer.Id, LibraryId = id });
+    }
+
     private async Task<List<Guid>> ValidLibrariesAsync(IReadOnlyList<Guid>? ids, ValidationErrors errors, CancellationToken cancellationToken)
     {
         var libraries = (ids ?? []).Distinct().ToList();
+        // "All" stands for every library that can be shared, now and later.
+        if (libraries.Contains(VirtualLibraries.All))
+            return [VirtualLibraries.All];
         // A share received from another server cannot be shared on, nor an Ultimate Cloud library (the account is personal).
         var existing = await db.Libraries.Where(l => libraries.Contains(l.Id) && l.Sources.All(s => s.Kind == LibrarySourceKind.Local))
             .CountAsync(cancellationToken);
@@ -694,7 +745,7 @@ public sealed class P2PService(
         var streams = peer.Streams + (traffic is null ? 0 : Interlocked.Read(ref traffic.StreamsStarted) - traffic.SavedStreams);
         return new NetworkPeer(peer.Id, peer.Kind, peer.Source, peer.Name, peer.NodeId, peer.UserId, peer.User?.UserName,
             ToModel(peer.Rules),
-            peer.Libraries.Select(l => l.LibraryId).ToList(), peer.CreatedAt, peer.ExpiresAt, peer.RevokedAt, peer.LastSeenAt,
+            peer.AllLibraries ? [VirtualLibraries.All] : peer.Libraries.Select(l => l.LibraryId).ToList(), peer.CreatedAt, peer.ExpiresAt, peer.RevokedAt, peer.LastSeenAt,
             traffic?.OpenConnections > 0, traffic?.ActiveStreams ?? 0, sent, received, traffic?.CurrentRate ?? 0,
             seconds > 0 ? sent / seconds : 0, Math.Max(peer.PeakBytesPerSecond, traffic?.Peak ?? 0), streams);
     }

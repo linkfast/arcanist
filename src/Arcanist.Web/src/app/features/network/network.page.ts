@@ -35,17 +35,18 @@ import {
   CreateDeviceInvitationMutation,
   CreateShareInvitationMutation,
   NetworkQuery,
+  RenameReceivedShareMutation,
   RevokeNetworkPeerMutation,
   SetP2PSettingsMutation,
   SetReceivedSharePlaysMutation,
   UpdateNetworkPeerMutation,
 } from '../../graphql/operations';
 import { RemoteLibrariesCard } from './remote-libraries-card';
+import { P2PActivityLog } from './activity-log';
 import { BytesPipe, CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 import { Invitation } from '../../shared/invitation';
 import { PeerRules, RulesForm, rulesForm, rulesInput } from './peer-rules';
 
-type Activity = NetworkResult['p2pActivity'][number];
 type Library = NetworkResult['libraries'][number];
 
 /** How often the page refreshes while open: traffic and connections change by themselves. */
@@ -79,10 +80,27 @@ interface EditForm {
  * The P2P network: its settings and status, the servers this one shares libraries with, every paired device, the
  * shares received from other servers and the activity log. Administrators only.
  */
+/** The id of "All", the same on every server (VirtualLibraries.All). */
+const AllLibraries = 'a11a11a1-0000-4000-8000-000000000001';
+const Tabs = ['node', 'servers', 'devices', 'activity'] as const;
+type Tab = (typeof Tabs)[number];
+const TabKey = 'arcanist.network.tab';
+
+function initialTab(): Tab {
+  try {
+    const stored = localStorage.getItem(TabKey);
+    if ((Tabs as readonly string[]).includes(stored ?? '')) return stored as Tab;
+  } catch {
+    // Ignore unavailable storage.
+  }
+  return 'node';
+}
+
 @Component({
   selector: 'app-network-page',
   imports: [
     RemoteLibrariesCard,
+    P2PActivityLog,
     FormsModule,
     NgTemplateOutlet,
     NgIcon,
@@ -118,10 +136,35 @@ export class NetworkPage implements OnInit {
 
   protected readonly relays: P2PRelayMode[] = ['N0', 'CUSTOM', 'DIRECT'];
 
+  /** "All": every library, also those made later. */
+  protected readonly all = AllLibraries;
+  protected readonly tabs = Tabs;
+  protected readonly tab = signal<Tab>(initialTab());
+  protected readonly renaming = signal<{ share: Share; name: string } | null>(null);
+
+  protected choose(tab: Tab): void {
+    this.tab.set(tab);
+    try {
+      localStorage.setItem(TabKey, tab);
+    } catch {
+      // Without storage the page opens on its first tab next time.
+    }
+  }
+
+  protected async rename(): Promise<void> {
+    const form = this.renaming();
+    if (!form) return;
+    this.renaming.set(null);
+    await this.run(async () => {
+      await this.gql.mutate(RenameReceivedShareMutation, {
+        input: { shareId: form.share.id, name: form.name.trim() },
+      });
+    });
+  }
+
   protected readonly status = signal<Status | null>(null);
   protected readonly peers = signal<Peer[]>([]);
   protected readonly shares = signal<Share[]>([]);
-  protected readonly activity = signal<Activity[]>([]);
   protected readonly libraries = signal<Library[]>([]);
   protected readonly busy = signal(false);
   protected settings: SettingsForm | null = null;
@@ -168,7 +211,6 @@ export class NetworkPage implements OnInit {
       this.status.set(result.p2pStatus);
       this.peers.set(result.networkPeers);
       this.shares.set(result.receivedShares);
-      this.activity.set(result.p2pActivity);
       this.libraries.set(result.libraries);
       if (resetForm || !this.settings) this.settings = this.formFor(result.p2pStatus);
     } catch {
@@ -192,6 +234,7 @@ export class NetworkPage implements OnInit {
   }
 
   protected peerLibraries(peer: Peer): string {
+    if (peer.libraryIds.includes(AllLibraries)) return this.i18n.t('network.servers.all');
     return peer.libraryIds.map((id) => this.libraryName(id)).join(', ');
   }
 
@@ -241,7 +284,8 @@ export class NetworkPage implements OnInit {
   // Sharing with another server
 
   protected openShare(): void {
-    this.sharing.set({ name: '', libraryIds: [], rules: rulesForm(), expiresOn: '' });
+    // Everything, also what comes later, unless chosen otherwise.
+    this.sharing.set({ name: '', libraryIds: [AllLibraries], rules: rulesForm(), expiresOn: '' });
   }
 
   protected toggle(list: string[], id: string, on: boolean): string[] {

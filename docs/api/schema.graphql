@@ -128,6 +128,8 @@ type Query {
   receivedShares: [ReceivedShare!]!
   "How libraries other servers share are played here: their cache (and what it takes) and where their songs are converted. Administrators only."
   remoteLibrarySettings: RemoteLibrarySettings!
+  "The P2P network's activity a page at a time (1 to 500), newest first, by peer, kind or words in the peer's name and the detail. Administrators only."
+  p2pActivityLog(input: P2PActivityQuery!): P2PActivityPage!
   "What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only."
   p2pActivity(peerId: ID, limit: Int): [P2PActivityEntry!]!
   "The user's playlists, those they collaborate on and public ones, most recently changed first."
@@ -1772,6 +1774,12 @@ enum RemoteTranscoding {
   OWNER
 }
 
+type P2PActivityPage {
+  items: [P2PActivityEntry!]!
+  totalCount: Int!
+  offset: Int!
+}
+
 type P2PActivityEntry {
   id: ID!
   at: DateTime!
@@ -1789,6 +1797,14 @@ enum P2PActivityKind {
   REFUSED
   CHANGED
   REVOKED
+}
+
+input P2PActivityQuery {
+  peerId: ID
+  kind: P2PActivityKind
+  search: String
+  offset: Int!
+  first: Int!
 }
 
 type PlaylistEntryPage {
@@ -2459,6 +2475,8 @@ type Mutation {
   setRemoteLibrarySettings(input: SetRemoteLibrarySettingsInput!): RemoteLibrarySettings!
   "Empties the cache of other servers' music; it is fetched again as it is played. Administrators only."
   clearRemoteLibraryCache: RemoteLibrarySettings!
+  "Renames the library a received share is shown as here. Administrators only."
+  renameReceivedShare(input: RenameReceivedShareInput!): ReceivedShare!
   "Whether plays of a received share's music go to its server, with the users' names, when it counts them (its rule countPlays). Administrators only."
   setReceivedSharePlays(input: SetReceivedSharePlaysInput!): ReceivedShare!
   "Copies a received share's files into a folder of one of this server's libraries, when its owner allows downloads. Runs in the background; its progress shows in the share. Administrators only, with a recent authentication."
@@ -2961,6 +2979,11 @@ input SetRemoteLibrarySettingsInput {
   cacheMaxBytes: Long!
   cacheMaxAgeDays: Int!
   transcoding: RemoteTranscoding!
+}
+
+input RenameReceivedShareInput {
+  shareId: ID!
+  name: String!
 }
 
 input SetReceivedSharePlaysInput {

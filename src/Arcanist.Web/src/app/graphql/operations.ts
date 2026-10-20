@@ -1685,6 +1685,31 @@ export const ReceivedShareFields = graphql(`
   }
 `);
 
+export const P2PActivityLogQuery = graphql(`
+  query P2PActivityLog($input: P2PActivityQuery!) {
+    p2pActivityLog(input: $input) {
+      totalCount
+      offset
+      items {
+        id
+        at
+        kind
+        peerId
+        peerName
+        detail
+      }
+    }
+  }
+`);
+
+export const RenameReceivedShareMutation = graphql(`
+  mutation RenameReceivedShare($input: RenameReceivedShareInput!) {
+    renameReceivedShare(input: $input) {
+      ...ReceivedShareFields
+    }
+  }
+`);
+
 export const RemoteLibrarySettingsFields = graphql(`
   fragment RemoteLibrarySettingsFields on RemoteLibrarySettings {
     cacheEnabled
@@ -1738,14 +1763,6 @@ export const NetworkQuery = graphql(`
     }
     receivedShares {
       ...ReceivedShareFields
-    }
-    p2pActivity(limit: 50) {
-      id
-      at
-      kind
-      peerId
-      peerName
-      detail
     }
     libraries {
       id

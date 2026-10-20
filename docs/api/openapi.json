@@ -6051,6 +6051,117 @@
         }
       }
     },
+    "/rest/v1/p2p/activity/log": {
+      "get": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "The P2P network\u0027s activity a page at a time (1 to 500), newest first, by peer, kind or words in the peer\u0027s name and the detail. Administrators only.",
+        "operationId": "P2pActivityLog",
+        "parameters": [
+          {
+            "name": "peerId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/P2PActivityPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/p2p/shares/{id}/name": {
+      "put": {
+        "tags": [
+          "P2P"
+        ],
+        "summary": "Renames the library a received share is shown as here. Administrators only.",
+        "operationId": "RenameReceivedShare",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameReceivedShareInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceivedShare"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/p2p/activity": {
       "get": {
         "tags": [
@@ -15769,6 +15880,38 @@
           "REVOKED"
         ]
       },
+      "P2PActivityPage": {
+        "required": [
+          "items",
+          "totalCount",
+          "offset"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/P2PActivityEntry"
+            }
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "offset": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "P2PInvitationLink": {
         "required": [
           "link",
@@ -17283,6 +17426,22 @@
           "HERE",
           "OWNER"
         ]
+      },
+      "RenameReceivedShareInput": {
+        "required": [
+          "shareId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "shareId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
       },
       "ResetResult": {
         "required": [

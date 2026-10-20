@@ -26,6 +26,11 @@ public sealed partial class Query
     public static Task<RemoteLibrarySettings> RemoteLibrarySettings([FromServices] P2PService p2p, CancellationToken cancellationToken) =>
         p2p.RemoteLibrarySettingsAsync(cancellationToken);
 
+    [Name("p2pActivityLog")]
+    [Description("The P2P network's activity a page at a time (1 to 500), newest first, by peer, kind or words in the peer's name and the detail. Administrators only.")]
+    public static Task<P2PActivityPage> P2PActivityLog(P2PActivityQuery input, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
+        p2p.ActivityLogAsync(input, cancellationToken);
+
     [Name("p2pActivity")]
     [Description("What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only.")]
     public static Task<IReadOnlyList<P2PActivityEntry>> P2PActivity([Id] Guid? peerId, int? limit, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
@@ -68,6 +73,11 @@ public sealed partial class Mutation
     [Description("Empties the cache of other servers' music; it is fetched again as it is played. Administrators only.")]
     public static Task<RemoteLibrarySettings> ClearRemoteLibraryCache([FromServices] P2PService p2p, CancellationToken cancellationToken) =>
         p2p.ClearRemoteLibraryCacheAsync(cancellationToken);
+
+    [Name("renameReceivedShare")]
+    [Description("Renames the library a received share is shown as here. Administrators only.")]
+    public static Task<ReceivedShare> RenameReceivedShare(RenameReceivedShareInput input, [FromServices] P2PService p2p, CancellationToken cancellationToken) =>
+        p2p.RenameReceivedShareAsync(input, cancellationToken);
 
     [Name("setReceivedSharePlays")]
     [Description("Whether plays of a received share's music go to its server, with the users' names, when it counts them (its rule countPlays). Administrators only.")]

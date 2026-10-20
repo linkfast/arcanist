@@ -1830,6 +1830,12 @@ export const es: Dictionary = {
     saved: 'Ajustes guardados',
   },
   network: {
+    tabs: {
+      node: 'Nodo y ajustes',
+      servers: 'Servidores',
+      devices: 'Dispositivos',
+      activity: 'Actividad',
+    },
     title: 'Red P2P',
     subtitle:
       'Llega a tu servidor desde cualquier sitio sin abrir puertos, y comparte bibliotecas con otros servidores Arcanist. El tráfico va cifrado de extremo a extremo.',
@@ -1909,6 +1915,9 @@ export const es: Dictionary = {
       streamsAtOnce: '{count} a la vez',
     },
     servers: {
+      all: 'Todo',
+      allHelp:
+        'Todas las bibliotecas de este servidor, también las que crees después (no las personales ni las que te comparten).',
       title: 'Compartir con otros servidores',
       description:
         'Otro servidor Arcanist recibe las bibliotecas que elijas como «Biblioteca de…», y su gente las escucha desde aquí.',
@@ -1929,6 +1938,9 @@ export const es: Dictionary = {
       empty: 'Ningún dispositivo emparejado.',
     },
     received: {
+      rename: 'Renombrar',
+      renameHelp:
+        'El nombre con que se ve aquí la música que te comparte {server}. En el otro servidor no cambia nada.',
       sharePlays: 'Enviar las reproducciones a {name}, con el nombre de cada usuario',
       title: 'Bibliotecas que te comparten',
       description:
@@ -1953,6 +1965,24 @@ export const es: Dictionary = {
       },
     },
     activity: {
+      description: 'Lo que pasó en la red P2P, lo más reciente primero.',
+      search: 'Buscar por nombre o detalle',
+      allPeers: 'Todos los nodos',
+      allKinds: 'Todo tipo',
+      perPage: '{count} por página',
+      range: '{from}–{to} de {total}',
+      previous: 'Anterior',
+      next: 'Siguiente',
+      page: 'Página {page} de {pages}',
+      kinds: {
+        JOINED: 'Uniones',
+        CONNECTED: 'Conexiones',
+        STREAMED: 'Reproducciones',
+        DOWNLOADED: 'Descargas',
+        REFUSED: 'Rechazos',
+        CHANGED: 'Cambios de reglas',
+        REVOKED: 'Revocaciones',
+      },
       title: 'Actividad',
       empty: 'Nada todavía.',
       JOINED: '{peer} se unió',

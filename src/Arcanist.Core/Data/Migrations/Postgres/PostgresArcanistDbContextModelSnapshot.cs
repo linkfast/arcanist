@@ -1522,6 +1522,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AllLibraries")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("BackupFolder")
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");

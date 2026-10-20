@@ -85,6 +85,18 @@ public sealed class ArcanistFactory(
             RatingMode: Core.Data.Entities.RatingMode.Stars), Json);
 
         response.EnsureSuccessStatusCode();
+
+        // The settings file's watcher reloads the configuration on its own too: on Linux that reload sometimes lands
+        // after the request and the server still sees the setup as pending for a moment.
+        for (var i = 0; i < 100; i++)
+        {
+            var status = await CreateClient().GetFromJsonAsync<SetupStatus>("/rest/v1/setup/status", Json);
+            if (status!.Completed)
+                return;
+            await Task.Delay(50);
+        }
+
+        throw new TimeoutException("The setup did not show as completed.");
     }
 
     public async Task<User> CreateUserAsync(string userName, UserRole role = UserRole.User, Permissions permissions = Permissions.None)

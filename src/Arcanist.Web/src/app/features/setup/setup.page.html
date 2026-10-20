@@ -456,6 +456,34 @@
             } @else {
               <hlm-spinner class="size-5" />
             }
+            @if (ffmpegDownload(); as download) {
+              @if (ffmpegDownloading()) {
+                <div class="space-y-2">
+                  <p class="text-sm">
+                    {{
+                      download.progress.state === 'INSTALLING'
+                        ? ('setup.media.installing' | t)
+                        : ('settings.ffmpeg.downloading'
+                          | t
+                            : {
+                                received: (download.progress.bytesReceived | bytes),
+                                total: (download.progress.totalBytes | bytes),
+                              })
+                    }}
+                  </p>
+                  <hlm-progress [value]="ffmpegDownloadPercent()" class="h-2">
+                    <hlm-progress-indicator />
+                  </hlm-progress>
+                </div>
+              } @else if (download.canDownload && !ffmpegDetected()?.available) {
+                <div class="space-y-1.5 rounded-lg border p-3">
+                  <button hlmBtn type="button" [disabled]="busy()" (click)="downloadFfmpeg()">
+                    {{ 'settings.ffmpeg.download' | t }}
+                  </button>
+                  <p class="text-xs text-muted-foreground">{{ 'setup.media.downloadHelp' | t }}</p>
+                </div>
+              }
+            }
             <div hlmField>
               <label hlmFieldLabel for="ffmpeg-path">{{ 'setup.media.path' | t }}</label>
               <div class="flex gap-2">

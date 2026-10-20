@@ -7,6 +7,7 @@ import {
   ServerDirectory,
   ServerDirectoryListing,
   SetupFfmpegCheck,
+  SetupFfmpegDownload,
   SetupRequest,
   SetupRestoreSource,
   SetupStatus,
@@ -86,6 +87,24 @@ export class SetupService {
     const params = path ? new HttpParams().set('path', path) : undefined;
     return this.call(
       this.http.get<SetupFfmpegCheck>('/rest/v1/setup/ffmpeg', { params, headers: this.headers() }),
+    );
+  }
+
+  /** Whether ffmpeg can be downloaded, and how its download goes. */
+  ffmpegDownload(): Promise<SetupFfmpegDownload> {
+    return this.call(
+      this.http.get<SetupFfmpegDownload>('/rest/v1/setup/ffmpeg/install', {
+        headers: this.headers(),
+      }),
+    );
+  }
+
+  /** Starts downloading ffmpeg into the server's data folder. */
+  installFfmpeg(): Promise<SetupFfmpegDownload> {
+    return this.call(
+      this.http.post<SetupFfmpegDownload>('/rest/v1/setup/ffmpeg/install', null, {
+        headers: this.headers(),
+      }),
     );
   }
 

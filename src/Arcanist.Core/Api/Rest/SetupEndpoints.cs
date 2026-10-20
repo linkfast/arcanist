@@ -6,6 +6,7 @@ using Arcanist.Core.Backups;
 using Arcanist.Core.Dlna;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Libraries;
+using Arcanist.Core.Media;
 using Arcanist.Core.Setup;
 
 namespace Arcanist.Core.Api.Rest;
@@ -42,6 +43,26 @@ public static class SetupEndpoints
                 service.CheckFfmpegAsync(path, cancellationToken))
             .WithName("CheckSetupFfmpeg")
             .WithSummary("Checks the ffmpeg at the given path, or which one would be found automatically.");
+
+        guarded.MapPost("/ffmpeg/install", (FfmpegDownloader downloader) =>
+            {
+                if (FfmpegDownloader.Platform is null)
+                    return Problems.Create(StatusCodes.Status409Conflict, ErrorCodes.FfmpegPlatformUnsupported);
+                downloader.Start();
+                return Results.Accepted(value: new SetupFfmpegDownload(true, downloader.Progress));
+            })
+            .WithName("InstallSetupFfmpeg")
+            .WithSummary("Downloads ffmpeg (a static build from BtbN/FFmpeg-Builds, checked against its SHA-256) into the data folder.")
+            .Produces<SetupFfmpegDownload>(StatusCodes.Status202Accepted);
+
+        // Only the progress, which tells nothing: outside the rate limit, so the wizard can follow it every second.
+        setup.MapGet("/ffmpeg/install", (FfmpegDownloader downloader, SetupService service) =>
+                service.IsCompleted
+                    ? Problems.Create(StatusCodes.Status409Conflict, ErrorCodes.SetupCompleted)
+                    : Results.Ok(new SetupFfmpegDownload(FfmpegDownloader.Platform is not null, downloader.Progress)))
+            .WithName("GetSetupFfmpegDownload")
+            .WithSummary("Whether ffmpeg can be downloaded for this machine, and how its download goes.")
+            .Produces<SetupFfmpegDownload>();
 
         guarded.MapPost("/mstream/analyze", (SetupMstreamSource request, SetupService service, CancellationToken cancellationToken) =>
                 service.AnalyzeMstreamAsync(request, cancellationToken))

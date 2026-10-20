@@ -75,6 +75,9 @@ public sealed record SetupRequest(
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
 
+/// <param name="CanDownload">Whether a build exists for this machine (not for macOS or 32-bit systems).</param>
+public sealed record SetupFfmpegDownload(bool CanDownload, FfmpegDownloadProgress Progress);
+
 public sealed record DatabaseTestResult(bool Success, string? Error);
 
 public abstract record SetupResult

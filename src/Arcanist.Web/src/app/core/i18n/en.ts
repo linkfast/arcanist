@@ -372,7 +372,10 @@ export const en: Dictionary = {
     },
     media: {
       explanation:
-        'Arcanist uses ffmpeg to convert songs to lighter formats when listening away from home and to analyze some formats (such as Opus or WMA). It is optional: without it, you can download it later from Settings.',
+        'Arcanist uses ffmpeg to convert songs to lighter formats when listening away from home and to analyze some formats (such as Opus or WMA). It is optional: without it, you can download it here now or later from Settings.',
+      installing: 'Installing ffmpeg…',
+      downloadHelp:
+        "A static build from BtbN/FFmpeg-Builds (GPL) checked against its SHA-256, in Arcanist's data folder.",
       found: 'Found ffmpeg {version} at {path}.',
       notFound: 'ffmpeg was not found on this server.',
       path: 'Use another ffmpeg (optional)',

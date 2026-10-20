@@ -35,6 +35,46 @@
         }
       }
     },
+    "/rest/v1/setup/ffmpeg/install": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Whether ffmpeg can be downloaded for this machine, and how its download goes.",
+        "operationId": "GetSetupFfmpegDownload",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupFfmpegDownload"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Downloads ffmpeg (a static build from BtbN/FFmpeg-Builds, checked against its SHA-256) into the data folder.",
+        "operationId": "InstallSetupFfmpeg",
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupFfmpegDownload"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/setup/database/test": {
       "post": {
         "tags": [
@@ -17224,6 +17264,21 @@
                 "$ref": "#/components/schemas/FfmpegSource"
               }
             ]
+          }
+        }
+      },
+      "SetupFfmpegDownload": {
+        "required": [
+          "canDownload",
+          "progress"
+        ],
+        "type": "object",
+        "properties": {
+          "canDownload": {
+            "type": "boolean"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/FfmpegDownloadProgress"
           }
         }
       },

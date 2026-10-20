@@ -88,6 +88,20 @@ export interface SetupFfmpegCheck {
   source: 'CONFIGURED' | 'DOWNLOADED' | 'SYSTEM' | null;
 }
 
+export type FfmpegDownloadState = 'IDLE' | 'DOWNLOADING' | 'INSTALLING' | 'COMPLETED' | 'FAILED';
+
+/** Whether ffmpeg can be downloaded for the server's machine, and how its download goes. */
+export interface SetupFfmpegDownload {
+  canDownload: boolean;
+  progress: {
+    state: FfmpegDownloadState;
+    bytesReceived: number;
+    totalBytes: number | null;
+    version: string | null;
+    error: string | null;
+  };
+}
+
 export interface ServerDirectory {
   name: string;
   path: string;

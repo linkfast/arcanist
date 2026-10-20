@@ -23,6 +23,7 @@ import {
   OnlineServicesChoice,
   RatingMode,
   SetupFfmpegCheck,
+  SetupFfmpegDownload,
   SetupStatus,
 } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
@@ -37,6 +38,7 @@ import {
   CreateLibraryMutation,
   CreateServerDirectoryMutation,
   FfmpegQuery,
+  InstallFfmpegMutation,
   LibrariesQuery,
   MstreamImportsQuery,
   ReconfigureServerMutation,
@@ -65,7 +67,7 @@ import {
 import { SetupAddonsStep, SetupP2PStep, SetupUsersStep } from './setup-steps';
 import { SetupRestoreDialog, SetupRestoring } from './setup-restore';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
-import { CountPipe } from '../../shared/format';
+import { BytesPipe, CountPipe } from '../../shared/format';
 import {
   MstreamImportDraft,
   MstreamImportForm,
@@ -135,6 +137,7 @@ const PROGRESS_MS = 1500;
     FolderPicker,
     MstreamImportForm,
     CountPipe,
+    BytesPipe,
   ],
   providers: [provideIcons({ lucideCheck, lucideFolderPlus, lucidePlus, lucideTrash2, lucideX })],
   templateUrl: './setup.page.html',
@@ -379,6 +382,17 @@ export class SetupPage implements OnInit {
   protected readonly ffmpegDetected = signal<SetupFfmpegCheck | null>(null);
   /** Result of checking the path the user typed. */
   protected readonly ffmpegCheck = signal<SetupFfmpegCheck | null>(null);
+  /** Whether ffmpeg can be downloaded here, and how its download goes (null until known). */
+  protected readonly ffmpegDownload = signal<SetupFfmpegDownload | null>(null);
+  protected readonly ffmpegDownloading = computed(() =>
+    ['DOWNLOADING', 'INSTALLING'].includes(this.ffmpegDownload()?.progress.state ?? ''),
+  );
+  protected readonly ffmpegDownloadPercent = computed(() => {
+    const progress = this.ffmpegDownload()?.progress;
+    return progress?.totalBytes
+      ? Math.round((progress.bytesReceived / progress.totalBytes) * 100)
+      : 0;
+  });
 
   // Last screen: the first scans and the import, once the server is set up
   protected readonly scanJobs = signal<ScanJob[]>([]);
@@ -502,6 +516,7 @@ export class SetupPage implements OnInit {
           version: ffmpeg.version ?? null,
           source: ffmpeg.source ?? null,
         } as SetupFfmpegCheck);
+        this.ffmpegDownload.set(this.fromStatus(ffmpeg));
       } catch {
         this.ffmpegDetected.set({ available: false, path: null, version: null, source: null });
       }
@@ -509,9 +524,58 @@ export class SetupPage implements OnInit {
     }
     try {
       this.ffmpegDetected.set(await this.setup.checkFfmpeg(null));
+      this.ffmpegDownload.set(await this.setup.ffmpegDownload());
     } catch {
       this.ffmpegDetected.set({ available: false, path: null, version: null, source: null });
     }
+  }
+
+  /** Downloads ffmpeg into the server's data folder and follows the download until it ends. */
+  protected async downloadFfmpeg(): Promise<void> {
+    this.error.set(null);
+    try {
+      this.ffmpegDownload.set(
+        this.reconfigure
+          ? this.fromStatus((await this.gql.mutate(InstallFfmpegMutation, {})).installFfmpeg)
+          : await this.setup.installFfmpeg(),
+      );
+      while (this.ffmpegDownloading()) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        this.ffmpegDownload.set(
+          this.reconfigure
+            ? this.fromStatus((await this.gql.query(FfmpegQuery)).ffmpeg)
+            : await this.setup.ffmpegDownload(),
+        );
+      }
+      const progress = this.ffmpegDownload()?.progress;
+      if (progress?.state === 'FAILED') {
+        this.error.set(this.i18n.error(progress.error ?? 'ffmpeg_download_failed'));
+        return;
+      }
+      // Found from now on in the data folder, as any other ffmpeg would be.
+      this.ffmpegPath = '';
+      this.ffmpegCheck.set(null);
+      this.ffmpegDetected.set(null);
+      await this.detectFfmpeg();
+    } catch (error) {
+      this.error.set(this.i18n.error(ApiError.from(error).code));
+    }
+  }
+
+  private fromStatus(ffmpeg: {
+    canDownload: boolean;
+    download: { state: string; bytesReceived: number; totalBytes?: number | null };
+  }): SetupFfmpegDownload {
+    return {
+      canDownload: ffmpeg.canDownload,
+      progress: {
+        state: ffmpeg.download.state as SetupFfmpegDownload['progress']['state'],
+        bytesReceived: ffmpeg.download.bytesReceived,
+        totalBytes: ffmpeg.download.totalBytes ?? null,
+        version: null,
+        error: null,
+      },
+    };
   }
 
   protected async checkFfmpeg(): Promise<boolean> {

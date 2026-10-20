@@ -171,6 +171,29 @@ public sealed class FfmpegIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_setup_wizard_follows_a_download_until_setup_is_done()
+    {
+        var factory = Create(null);
+        var client = factory.CreateClient();
+
+        // Nothing is downloaded here (tests stay offline): only its state, which needs no setup code.
+        var download = await client.GetFromJsonAsync<JsonElement>("/rest/v1/setup/ffmpeg/install", ArcanistFactory.Json, Cancel);
+        Assert.Equal(FfmpegDownloader.Platform is not null, download.GetProperty("canDownload").GetBoolean());
+        Assert.Equal("IDLE", download.GetProperty("progress").GetProperty("state").GetString());
+
+        // Starting it is for the wizard, with the code from other devices.
+        var remote = factory.CreateClient();
+        remote.DefaultRequestHeaders.Add("X-Forwarded-For", "203.0.113.9");
+        Assert.Equal(HttpStatusCode.Forbidden, (await remote.PostAsync("/rest/v1/setup/ffmpeg/install", null, Cancel)).StatusCode);
+
+        (await client.PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
+            new SetupDatabase(Core.Data.DatabaseProvider.Sqlite, null), new SetupAdmin("admin", ArcanistFactory.Password, null), [], false, null),
+            ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Conflict, (await client.GetAsync("/rest/v1/setup/ffmpeg/install", Cancel)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync("/rest/v1/setup/ffmpeg/install", null, Cancel)).StatusCode);
+    }
+
+    [Fact]
     public async Task The_setup_wizard_checks_and_stores_the_path()
     {
         var factory = Create(null);

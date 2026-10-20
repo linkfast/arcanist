@@ -31,6 +31,7 @@ import { EnabledExtensions } from '../core/extensions/enabled-extensions';
 import { I18n, TranslatePipe } from '../core/i18n/i18n';
 import { LanguageSelect } from '../shared/language-select';
 import { ThemeSelect } from '../shared/theme-select';
+import { UpdateNotice } from './update-notice';
 
 /** Layout of the signed-in panel: navigation on the side (on top on small screens) and the page content. */
 @Component({
@@ -44,6 +45,7 @@ import { ThemeSelect } from '../shared/theme-select';
     TranslatePipe,
     LanguageSelect,
     ThemeSelect,
+    UpdateNotice,
   ],
   providers: [
     provideIcons({
@@ -186,6 +188,10 @@ import { ThemeSelect } from '../shared/theme-select';
       <main class="min-w-0 flex-1 p-4 md:p-8">
         <router-outlet />
       </main>
+      <!-- In a chunk of its own: most visits have nothing to tell. -->
+      @defer (on idle) {
+        <app-update-notice />
+      }
     </div>
   `,
 })

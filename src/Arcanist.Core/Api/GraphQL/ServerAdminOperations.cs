@@ -11,6 +11,11 @@ public sealed partial class Query
     public static Task<ServerConfiguration> ServerConfiguration([FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>
         admin.ConfigurationAsync(cancellationToken);
 
+    [Name("serverUpdate")]
+    [Description("Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only.")]
+    public static Task<ServerUpdate> ServerUpdate([FromServices] UpdateService updates, CancellationToken cancellationToken) =>
+        updates.GetAsync(cancellationToken);
+
     [Name("privacy")]
     [Description("No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS.")]
     public static Task<Privacy> Privacy([FromServices] PrivacyService privacy, CancellationToken cancellationToken) =>
@@ -24,6 +29,16 @@ public sealed partial class Query
 
 public sealed partial class Mutation
 {
+    [Name("checkServerUpdate")]
+    [Description("Checks now for a newer Arcanist. Administrators only.")]
+    public static Task<ServerUpdate> CheckServerUpdate([FromServices] UpdateService updates, CancellationToken cancellationToken) =>
+        updates.CheckAsync(cancellationToken);
+
+    [Name("setServerUpdateSettings")]
+    [Description("Switches the checks for newer versions on or off. Administrators only.")]
+    public static Task<ServerUpdate> SetServerUpdateSettings(SetServerUpdateSettingsInput input, [FromServices] UpdateService updates, CancellationToken cancellationToken) =>
+        updates.SetSettingsAsync(input, cancellationToken);
+
     [Name("reconfigureServer")]
     [Description("The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication.")]
     public static Task<ServerConfiguration> ReconfigureServer(ReconfigureServerInput input, [FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>

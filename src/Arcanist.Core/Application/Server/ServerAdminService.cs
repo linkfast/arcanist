@@ -131,6 +131,7 @@ public sealed class ServerAdminService(
         foreach (var key in new[]
                  {
                      SettingKeys.AcoustIdKey, SettingKeys.DefaultLanguage, SettingKeys.AnalysisEnabled, SettingKeys.UltimateCloudServices, SettingKeys.Privacy,
+                     SettingKeys.UpdatesEnabled,
                  })
             await db.Settings.Where(s => s.Key == key).ExecuteDeleteAsync(cancellationToken);
         await services.GetRequiredService<Media.FfmpegService>().SetPathAsync(null, cancellationToken);

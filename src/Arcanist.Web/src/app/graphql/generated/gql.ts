@@ -101,6 +101,10 @@ type Documents = {
     "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": typeof types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
+    "\n  fragment ServerUpdateFields on ServerUpdate {\n    enabled\n    currentVersion\n    installKind\n    updateAvailable\n    checkedAt\n    errorCode\n    latest {\n      version\n      name\n      notes\n      url\n      publishedAt\n      prerelease\n    }\n  }\n": typeof types.ServerUpdateFieldsFragmentDoc,
+    "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.ServerUpdateDocument,
+    "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.CheckServerUpdateDocument,
+    "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.SetServerUpdateSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n      }\n    }\n  }\n": typeof types.ExtensionMarketplaceDocument,
     "\n  mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {\n    installMarketplaceExtension(input: $input) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallMarketplaceExtensionDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.SetExtensionEnabledDocument,
@@ -310,6 +314,10 @@ const documents: Documents = {
     "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
+    "\n  fragment ServerUpdateFields on ServerUpdate {\n    enabled\n    currentVersion\n    installKind\n    updateAvailable\n    checkedAt\n    errorCode\n    latest {\n      version\n      name\n      notes\n      url\n      publishedAt\n      prerelease\n    }\n  }\n": types.ServerUpdateFieldsFragmentDoc,
+    "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.ServerUpdateDocument,
+    "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.CheckServerUpdateDocument,
+    "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": types.SetServerUpdateSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n      }\n    }\n  }\n": types.ExtensionMarketplaceDocument,
     "\n  mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {\n    installMarketplaceExtension(input: $input) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallMarketplaceExtensionDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": types.SetExtensionEnabledDocument,
@@ -794,6 +802,22 @@ export function graphql(source: "\n  query Extensions {\n    extensions {\n     
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment ServerUpdateFields on ServerUpdate {\n    enabled\n    currentVersion\n    installKind\n    updateAvailable\n    checkedAt\n    errorCode\n    latest {\n      version\n      name\n      notes\n      url\n      publishedAt\n      prerelease\n    }\n  }\n"): (typeof documents)["\n  fragment ServerUpdateFields on ServerUpdate {\n    enabled\n    currentVersion\n    installKind\n    updateAvailable\n    checkedAt\n    errorCode\n    latest {\n      version\n      name\n      notes\n      url\n      publishedAt\n      prerelease\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n"): (typeof documents)["\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n"): (typeof documents)["\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

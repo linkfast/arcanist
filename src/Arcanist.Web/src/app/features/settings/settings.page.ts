@@ -6,6 +6,7 @@ import { MaintenanceCard } from './maintenance-card';
 import { OnlineServicesCard } from './online-services-card';
 import { PrivacyCard } from './privacy-card';
 import { RatingModeCard } from './rating-mode-card';
+import { UpdatesCard } from './updates-card';
 
 /** Server-wide settings: ratings, online services and media tools. */
 @Component({
@@ -17,6 +18,7 @@ import { RatingModeCard } from './rating-mode-card';
     MaintenanceCard,
     OnlineServicesCard,
     RatingModeCard,
+    UpdatesCard,
   ],
   template: `
     <header class="mb-6">
@@ -32,6 +34,7 @@ import { RatingModeCard } from './rating-mode-card';
       }
       <app-ffmpeg-card />
       @if (auth.isAdmin()) {
+        <app-updates-card />
         <app-maintenance-card />
       }
     </div>

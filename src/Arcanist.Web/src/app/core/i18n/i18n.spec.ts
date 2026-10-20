@@ -42,6 +42,11 @@ describe('translations', () => {
       'interrupted',
       'scan_finished',
       'invalid_refresh_token',
+      'update_check_failed',
+      'marketplace_unavailable',
+      'marketplace_incompatible',
+      'package_checksum_mismatch',
+      'package_mismatch',
     ];
     const errors = keys(es)
       .filter((k) => k.startsWith('errors.'))

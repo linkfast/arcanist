@@ -140,6 +140,8 @@ type Query {
   search(query: String!, first: Int): SearchResults!
   "What the setup wizard chose, as it is now, to run it again. Administrators only."
   serverConfiguration: ServerConfiguration!
+  "Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only."
+  serverUpdate: ServerUpdate!
   "No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS."
   privacy: Privacy!
   "Whether anonymous play counts go to Ultimate Cloud's global statistics. Requires MANAGE_SETTINGS."
@@ -1798,6 +1800,33 @@ enum ExternalServices {
   NONE
 }
 
+type ServerUpdate {
+  enabled: Boolean!
+  currentVersion: String!
+  installKind: InstallKind!
+  latest: ArcanistRelease
+  updateAvailable: Boolean!
+  checkedAt: DateTime
+  errorCode: String
+}
+
+enum InstallKind {
+  WINDOWS
+  DOCKER
+  SYNOLOGY
+  DEBIAN_PACKAGE
+  OTHER
+}
+
+type ArcanistRelease {
+  version: String!
+  name: String!
+  notes: String!
+  url: String!
+  publishedAt: DateTime!
+  prerelease: Boolean!
+}
+
 type ServerAudioStatus {
   enabled: Boolean!
   available: Boolean!
@@ -2366,6 +2395,10 @@ type Mutation {
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
   cancelScan(id: ID!): Boolean!
+  "Checks now for a newer Arcanist. Administrators only."
+  checkServerUpdate: ServerUpdate!
+  "Switches the checks for newer versions on or off. Administrators only."
+  setServerUpdateSettings(input: SetServerUpdateSettingsInput!): ServerUpdate!
   "The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication."
   reconfigureServer(input: ReconfigureServerInput!): ServerConfiguration!
   "Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud's extension off too). What they leave out is turned off. The music server's own services are not affected. Requires MANAGE_SETTINGS."
@@ -2852,6 +2885,10 @@ type S3ConnectionTest {
 input CreateS3LibraryInput {
   name: String!
   connection: S3ConnectionInput!
+}
+
+input SetServerUpdateSettingsInput {
+  enabled: Boolean!
 }
 
 input ReconfigureServerInput {

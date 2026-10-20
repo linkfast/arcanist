@@ -135,6 +135,16 @@ builder.Services.AddScoped<ExtensionService>();
 builder.Services.Configure<MarketplaceOptions>(builder.Configuration.GetSection(MarketplaceOptions.Section));
 builder.Services.AddSingleton<MarketplaceCatalog>();
 builder.Services.AddScoped<ExtensionMarketplaceService>();
+builder.Services.Configure<UpdateOptions>(builder.Configuration.GetSection(UpdateOptions.Section));
+builder.Services.AddHttpClient(UpdateChecker.HttpClientName, client =>
+{
+    // The GitHub API rejects requests without a user agent.
+    client.DefaultRequestHeaders.UserAgent.ParseAdd($"Arcanist/{Arcanist.Core.Hosting.ArcanistVersion.Current}");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddSingleton<UpdateChecker>();
+builder.Services.AddScoped<UpdateService>();
+builder.Services.AddHostedService<UpdateCheckWorker>();
 builder.Services.AddScoped<AppPasswordService>();
 builder.Services.AddHttpClient(FrontendService.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddSingleton<RatingSettings>();

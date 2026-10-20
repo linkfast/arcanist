@@ -46,6 +46,8 @@ public sealed class ArcanistFactory(
         builder.UseSetting("Arcanist:Analysis:Enabled", "false");
         // No UDP multicast from tests: DLNA discovery is tested through its messages.
         builder.UseSetting("Arcanist:Dlna:Ssdp", "false");
+        // Nor checks for newer versions on GitHub.
+        builder.UseSetting("Arcanist:Updates:CheckInBackground", "false");
 
         foreach (var (key, value) in settings ?? new Dictionary<string, string?>())
             builder.UseSetting(key, value);

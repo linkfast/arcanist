@@ -1,11 +1,16 @@
 import { Injectable, Pipe, PipeTransform, computed, inject, signal } from '@angular/core';
-import { en } from './en';
-import { es } from './es';
 
 export type Language = 'en' | 'es';
 export type Dictionary = { [key: string]: string | Dictionary };
 
-const dictionaries: Record<Language, Dictionary> = { en, es };
+/**
+ * Each language in a chunk of its own: only the one in use is downloaded (the dictionaries are the largest part of
+ * the panel's first load), the other when the user switches to it.
+ */
+const loaders: Record<Language, () => Promise<Dictionary>> = {
+  en: () => import('./en').then((m) => m.en),
+  es: () => import('./es').then((m) => m.es),
+};
 const storageKey = 'arcanist.language';
 
 /** Minimal translations: nested dictionaries addressed by dotted keys, with {placeholder} substitution. */
@@ -13,9 +18,17 @@ const storageKey = 'arcanist.language';
 export class I18n {
   readonly languages: readonly Language[] = ['es', 'en'];
   readonly language = signal<Language>(initialLanguage());
-  private readonly dictionary = computed(() => dictionaries[this.language()]);
+  private readonly loaded = signal<Partial<Record<Language, Dictionary>>>({});
+  private readonly dictionary = computed(() => this.loaded()[this.language()] ?? {});
 
-  setLanguage(language: Language): void {
+  /** Loads the language in use; the app waits for it before showing anything. */
+  async ready(): Promise<void> {
+    await this.load(this.language());
+    document.documentElement.lang = this.language();
+  }
+
+  async setLanguage(language: Language): Promise<void> {
+    await this.load(language);
     this.language.set(language);
     document.documentElement.lang = language;
     try {
@@ -25,8 +38,14 @@ export class I18n {
     }
   }
 
+  private async load(language: Language): Promise<void> {
+    if (this.loaded()[language]) return;
+    const dictionary = await loaders[language]();
+    this.loaded.update((loaded) => ({ ...loaded, [language]: dictionary }));
+  }
+
   t(key: string, params?: Record<string, string | number>): string {
-    const value = lookup(this.dictionary(), key) ?? lookup(en, key) ?? key;
+    const value = lookup(this.dictionary(), key) ?? key;
     return params
       ? value.replace(/\{(\w+)\}/g, (_, name: string) => String(params[name] ?? `{${name}}`))
       : value;

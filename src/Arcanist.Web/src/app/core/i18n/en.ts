@@ -1260,6 +1260,35 @@ export const en: Dictionary = {
       fewer: 'Show fewer',
     },
   },
+  updates: {
+    notice: {
+      title: 'Arcanist {version} is available',
+      current: 'You have {current}. Released on {date}.',
+      later: 'Remind me tomorrow',
+      open: 'Go to the release page',
+    },
+    howTo: {
+      WINDOWS:
+        "The tray app installs the update (and the service's, if you use it): tray menu → Check for updates.",
+      DOCKER:
+        'Pull the new image and recreate the container: docker compose pull && docker compose up -d.',
+      SYNOLOGY: "Update it from DSM's Package Center once it is available there.",
+      DEBIAN_PACKAGE:
+        'Download the .deb from the release page and install it with sudo apt install ./arcanist_….deb: the service restarts by itself.',
+      OTHER: "Download your system's package from the release page.",
+    },
+    card: {
+      title: 'Updates',
+      description:
+        'Arcanist checks GitHub every 12 hours for a new version and tells administrators in the panel. It only reads the list of versions: nothing is sent.',
+      enabled: 'Check for new versions',
+      current: 'Installed version: {version}',
+      available: 'A new one is out: {version}',
+      upToDate: 'it is the latest',
+      checked: 'Checked {when}',
+      check: 'Check now',
+    },
+  },
   extensions: {
     page: {
       unavailable:
@@ -2408,6 +2437,7 @@ export const en: Dictionary = {
     package_checksum_mismatch:
       'The downloaded package is not the one the catalog publishes (its SHA-256 does not match). It was not installed.',
     package_mismatch: 'The downloaded package holds a different extension than the catalog says.',
+    update_check_failed: 'Could not check for a new version.',
     not_ffmpeg: 'That file is not a working ffmpeg.',
     ffmpeg_platform_unsupported:
       'There is no ffmpeg download for this system; install it with the package manager and enter its path.',

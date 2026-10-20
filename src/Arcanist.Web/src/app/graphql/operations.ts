@@ -1017,6 +1017,49 @@ export const InstallExtensionFromUrlMutation = graphql(`
   }
 `);
 
+export const ServerUpdateFields = graphql(`
+  fragment ServerUpdateFields on ServerUpdate {
+    enabled
+    currentVersion
+    installKind
+    updateAvailable
+    checkedAt
+    errorCode
+    latest {
+      version
+      name
+      notes
+      url
+      publishedAt
+      prerelease
+    }
+  }
+`);
+
+export const ServerUpdateQuery = graphql(`
+  query ServerUpdate {
+    serverUpdate {
+      ...ServerUpdateFields
+    }
+  }
+`);
+
+export const CheckServerUpdateMutation = graphql(`
+  mutation CheckServerUpdate {
+    checkServerUpdate {
+      ...ServerUpdateFields
+    }
+  }
+`);
+
+export const SetServerUpdateSettingsMutation = graphql(`
+  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {
+    setServerUpdateSettings(input: $input) {
+      ...ServerUpdateFields
+    }
+  }
+`);
+
 export const ExtensionMarketplaceQuery = graphql(`
   query ExtensionMarketplace($language: String, $refresh: Boolean) {
     extensionMarketplace(language: $language, refresh: $refresh) {

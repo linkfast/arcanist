@@ -83,4 +83,10 @@ public static class SettingKeys
 
     /// <summary>The StarTracks this server and the account last agreed on (AcoustIDs), to merge changes from both sides.</summary>
     public const string UltimateCloudStars = "ultimateCloud.stars";
+
+    /// <summary>Whether to check for newer versions of Arcanist (true by default).</summary>
+    public const string UpdatesEnabled = "updates.enabled";
+
+    /// <summary>The last check for a newer Arcanist and what it found.</summary>
+    public const string UpdatesLastCheck = "updates.lastCheck";
 }

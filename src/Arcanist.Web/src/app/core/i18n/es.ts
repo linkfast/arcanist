@@ -1276,6 +1276,35 @@ export const es: Dictionary = {
       fewer: 'Ver menos',
     },
   },
+  updates: {
+    notice: {
+      title: 'Arcanist {version} está disponible',
+      current: 'Tienes la {current}. Publicada el {date}.',
+      later: 'Recordarme mañana',
+      open: 'Ir a la página del release',
+    },
+    howTo: {
+      WINDOWS:
+        'La app de la bandeja instala la actualización (y la del servicio, si lo usas): menú de la bandeja → Buscar actualizaciones.',
+      DOCKER:
+        'Baja la imagen nueva y vuelve a crear el contenedor: docker compose pull && docker compose up -d.',
+      SYNOLOGY: 'Actualízalo desde el Centro de paquetes de DSM cuando esté disponible allí.',
+      DEBIAN_PACKAGE:
+        'Descarga el .deb de la página del release e instálalo con sudo apt install ./arcanist_….deb: el servicio se reinicia solo.',
+      OTHER: 'Descarga el paquete de tu sistema desde la página del release.',
+    },
+    card: {
+      title: 'Actualizaciones',
+      description:
+        'Arcanist mira en GitHub cada 12 horas si hay una versión nueva y avisa a los administradores en el panel. Solo se consulta la lista de versiones: no se envía nada.',
+      enabled: 'Buscar versiones nuevas',
+      current: 'Versión instalada: {version}',
+      available: 'Hay una nueva: {version}',
+      upToDate: 'es la más reciente',
+      checked: 'Comprobado {when}',
+      check: 'Buscar ahora',
+    },
+  },
   extensions: {
     page: {
       unavailable:
@@ -2444,6 +2473,7 @@ export const es: Dictionary = {
     package_checksum_mismatch:
       'El paquete descargado no es el que publica el catálogo (su SHA-256 no coincide). No se ha instalado.',
     package_mismatch: 'El paquete descargado contiene otra extensión distinta de la del catálogo.',
+    update_check_failed: 'No se pudo consultar si hay una versión nueva.',
     not_ffmpeg: 'Ese archivo no es un ffmpeg que funcione.',
     ffmpeg_platform_unsupported:
       'No hay una descarga de ffmpeg para este sistema; instálalo con el gestor de paquetes e indica su ruta.',

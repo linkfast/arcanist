@@ -25,6 +25,18 @@ public static class ServerAdminEndpoints
             .WithName("ReconfigureServer")
             .WithSummary("The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication.");
 
+        server.MapGet("/update", (UpdateService service, CancellationToken ct) => service.GetAsync(ct))
+            .WithName("ServerUpdate")
+            .WithSummary("Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only.");
+
+        server.MapPost("/update/check", (UpdateService service, CancellationToken ct) => service.CheckAsync(ct))
+            .WithName("CheckServerUpdate")
+            .WithSummary("Checks now for a newer Arcanist. Administrators only.");
+
+        server.MapPut("/update/settings", (SetServerUpdateSettingsInput input, UpdateService service, CancellationToken ct) => service.SetSettingsAsync(input, ct))
+            .WithName("SetServerUpdateSettings")
+            .WithSummary("Switches the checks for newer versions on or off. Administrators only.");
+
         server.MapPost("/restart", (ServerAdminService service) => service.Restart())
             .WithName("RestartServer")
             .WithSummary("Restarts the server (to load extensions installed or switched on since it started). It stops with exit code 75 and its supervisor starts it again; wait for /health. Administrators only, with a recent authentication.");

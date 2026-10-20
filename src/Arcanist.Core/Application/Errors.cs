@@ -63,6 +63,8 @@ public static class ErrorCodes
     public const string ApiVersionUnsupported = "api_version_unsupported";
     /// <summary>Downloading from the given URL failed.</summary>
     public const string DownloadFailed = "download_failed";
+    /// <summary>The list of Arcanist's releases could not be read.</summary>
+    public const string UpdateCheckFailed = "update_check_failed";
     /// <summary>The extension catalog (the marketplace) could not be read.</summary>
     public const string MarketplaceUnavailable = "marketplace_unavailable";
     /// <summary>The extension needs a newer Arcanist than this one.</summary>

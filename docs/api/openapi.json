@@ -6699,6 +6699,79 @@
         }
       }
     },
+    "/rest/v1/server/update": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only.",
+        "operationId": "ServerUpdate",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerUpdate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server/update/check": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Checks now for a newer Arcanist. Administrators only.",
+        "operationId": "CheckServerUpdate",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerUpdate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/server/update/settings": {
+      "put": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Switches the checks for newer versions on or off. Administrators only.",
+        "operationId": "SetServerUpdateSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetServerUpdateSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerUpdate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/server/restart": {
       "post": {
         "tags": [
@@ -9075,6 +9148,38 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ArcanistRelease": {
+        "required": [
+          "version",
+          "name",
+          "notes",
+          "url",
+          "publishedAt",
+          "prerelease"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prerelease": {
+            "type": "boolean"
           }
         }
       },
@@ -12914,6 +13019,15 @@
             "type": "string"
           }
         }
+      },
+      "InstallKind": {
+        "enum": [
+          "WINDOWS",
+          "DOCKER",
+          "SYNOLOGY",
+          "DEBIAN_PACKAGE",
+          "OTHER"
+        ]
       },
       "InstallMarketplaceExtensionInput": {
         "required": [
@@ -17122,6 +17236,55 @@
           }
         }
       },
+      "ServerUpdate": {
+        "required": [
+          "enabled",
+          "currentVersion",
+          "installKind",
+          "latest",
+          "updateAvailable",
+          "checkedAt",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "currentVersion": {
+            "type": "string"
+          },
+          "installKind": {
+            "$ref": "#/components/schemas/InstallKind"
+          },
+          "latest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ArcanistRelease"
+              }
+            ]
+          },
+          "updateAvailable": {
+            "type": "boolean"
+          },
+          "checkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Session": {
         "required": [
           "id",
@@ -17366,6 +17529,17 @@
         "properties": {
           "mode": {
             "$ref": "#/components/schemas/RatingMode"
+          }
+        }
+      },
+      "SetServerUpdateSettingsInput": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
           }
         }
       },

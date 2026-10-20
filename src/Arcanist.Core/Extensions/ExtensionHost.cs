@@ -218,7 +218,7 @@ public sealed class ExtensionHost
             errors.Add("routes", ErrorCodes.RouteNotAllowed);
         if (!AppsAreValid(manifest))
             errors.Add("apps", ErrorCodes.InvalidFormat);
-        if (manifest.AdminPage is { } admin && (!OwnPath(manifest, admin.Path) || admin.Icon is not null && !OwnPath(manifest, admin.Icon)))
+        if (manifest.AdminPage is { Icon: { } icon } && !OwnPath(manifest, icon))
             errors.Add("adminPage", ErrorCodes.InvalidFormat);
 
         var assembly = string.IsNullOrWhiteSpace(manifest.Assembly) ? null : Path.GetFullPath(Path.Combine(root, manifest.Assembly));

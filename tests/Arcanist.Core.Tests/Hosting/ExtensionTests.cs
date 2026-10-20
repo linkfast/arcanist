@@ -31,7 +31,7 @@ public sealed class ExtensionTests
         JsonSerializer.Serialize(new
         {
             id, name = "Hello", version = "1.0.0", license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes, apps = apps ?? Apps,
-            adminPage = adminPage ?? new { path = $"/ext/{id}/admin", icon = $"/ext/{id}/icon.svg" },
+            adminPage = adminPage ?? new { icon = $"/ext/{id}/icon.svg" },
         });
 
     internal static byte[] Package(string? manifest = null)
@@ -78,12 +78,51 @@ public sealed class ExtensionTests
         var listed = Assert.Single(await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel) ?? [], e => e.GetProperty("id").GetString() == "hello");
         Assert.Equal(("RUNNING", true, false), (listed.GetProperty("status").GetString(), listed.GetProperty("enabled").GetBoolean(), listed.GetProperty("restartRequired").GetBoolean()));
         // Its settings page, which the panel lists under Extensions.
-        Assert.Equal(("/ext/hello/admin", "/ext/hello/icon.svg"), (listed.GetProperty("adminUrl").GetString(), listed.GetProperty("iconUrl").GetString()));
+        Assert.Equal(("/admin/extensions/hello", "/ext/hello/icon.svg"), (listed.GetProperty("adminUrl").GetString(), listed.GetProperty("iconUrl").GetString()));
 
         // Switching it off takes effect at once.
         var off = await admin.PutAsJsonAsync("/rest/v1/extensions/hello/enabled", new { enabled = false }, ArcanistFactory.Json, Cancel);
         Assert.Equal(HttpStatusCode.OK, off.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/ext/hello/hello", Cancel)).StatusCode);
+    }
+
+    [Fact]
+    public async Task An_extension_describes_its_settings_page_and_the_panel_draws_it()
+    {
+        await using var factory = await StartedWithAsync(enabled: true);
+        var admin = await factory.CreateAuthenticatedClientAsync();
+
+        var page = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/extensions/hello/admin?language=es", ArcanistFactory.Json, Cancel);
+        var section = page.GetProperty("sections")[0];
+        Assert.Equal("Saludo", section.GetProperty("title").GetString());
+        Assert.Equal(["FIELD", "FIELD", "STATUS"], section.GetProperty("blocks").EnumerateArray().Select(b => b.GetProperty("kind").GetString()));
+        Assert.Equal(("TEXT", "hi"), (section.GetProperty("blocks")[0].GetProperty("type").GetString(), section.GetProperty("blocks")[0].GetProperty("value").GetString()));
+
+        async Task<JsonElement> SaveAsync(object values) =>
+            await (await admin.PutAsJsonAsync("/rest/v1/extensions/hello/admin", new { values }, ArcanistFactory.Json, Cancel)).Content
+                .ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        var refused = await SaveAsync(new { greeting = "" });
+        Assert.Equal((false, "required"), (refused.GetProperty("ok").GetBoolean(), refused.GetProperty("errors").GetProperty("greeting").GetString()));
+        Assert.True((await SaveAsync(new { greeting = "hola", loud = true })).GetProperty("ok").GetBoolean());
+        page = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/extensions/hello/admin", ArcanistFactory.Json, Cancel);
+        Assert.Equal(("hola", "LOUD", "WARNING"), (page.GetProperty("sections")[0].GetProperty("blocks")[0].GetProperty("value").GetString(),
+            page.GetProperty("sections")[0].GetProperty("blocks")[2].GetProperty("text").GetString(),
+            page.GetProperty("sections")[0].GetProperty("blocks")[2].GetProperty("tone").GetString()));
+
+        var shout = await admin.PostAsJsonAsync("/rest/v1/extensions/hello/admin/actions/shout", new { values = new { } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal("HOLA", (await shout.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("message").GetString());
+        // A page that throws does not take the request down.
+        var broken = await admin.PostAsJsonAsync("/rest/v1/extensions/hello/admin/actions/break", new { values = new { } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.Conflict, broken.StatusCode);
+        Assert.Contains("extension_failed", await broken.Content.ReadAsStringAsync(Cancel));
+
+        await factory.CreateUserAsync("listener");
+        var listener = await factory.CreateAuthenticatedClientAsync("listener");
+        Assert.Equal(HttpStatusCode.Forbidden, (await listener.GetAsync("/rest/v1/extensions/hello/admin", Cancel)).StatusCode);
+
+        // Switched off, it has no page.
+        await admin.PutAsJsonAsync("/rest/v1/extensions/hello/enabled", new { enabled = false }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/rest/v1/extensions/hello/admin", Cancel)).StatusCode);
     }
 
     [Fact]
@@ -185,7 +224,7 @@ public sealed class ExtensionTests
         await factory.CompleteSetupAsync();
         var admin = await factory.CreateAuthenticatedClientAsync();
 
-        var outside = new MultipartFormDataContent { { new ByteArrayContent(Package(Manifest(adminPage: new { path = "/admin/settings" }))), "file", "hello.zip" } };
+        var outside = new MultipartFormDataContent { { new ByteArrayContent(Package(Manifest(adminPage: new { icon = "/admin/icon.svg" }))), "file", "hello.zip" } };
         var refusedPage = await admin.PostAsync("/rest/v1/extensions", outside, Cancel);
         Assert.Equal(HttpStatusCode.BadRequest, refusedPage.StatusCode);
         Assert.Contains("adminPage", await refusedPage.Content.ReadAsStringAsync(Cancel));

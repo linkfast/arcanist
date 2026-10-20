@@ -16,8 +16,11 @@ public sealed record Greeting(string Text);
 /// <summary>Greets, reports where it was loaded and, when asked to misbehave, maps a route it may not use.</summary>
 public sealed class HelloExtension : IArcanistExtension
 {
-    public void ConfigureServices(IServiceCollection services, ExtensionContext context) =>
+    public void ConfigureServices(IServiceCollection services, ExtensionContext context)
+    {
         services.AddSingleton(new Greeting($"hello from {context.Id}"));
+        services.AddKeyedSingleton<IExtensionAdminPage, HelloAdminPage>(context.Id);
+    }
 
     public void MapEndpoints(IEndpointRouteBuilder endpoints, ExtensionContext context)
     {
@@ -52,4 +55,40 @@ public sealed class HelloExtension : IArcanistExtension
         if (context.Configuration.GetValue<bool>("Misbehave"))
             endpoints.MapGet("/rest/v1/hijacked", () => "hijacked");
     }
+}
+
+/// <summary>A settings page: a greeting to edit, a switch, and an action that fails on purpose when asked to.</summary>
+public sealed class HelloAdminPage : IExtensionAdminPage
+{
+    private string _greeting = "hi";
+    private bool _loud;
+
+    public Task<AdminPage> GetAsync(AdminPageContext context, CancellationToken cancellationToken) =>
+        Task.FromResult(new AdminPage([
+            new AdminSection("main", context.Language == "es" ? "Saludo" : "Greeting", Blocks:
+            [
+                AdminBlock.Field("greeting", "Text", AdminFieldType.Text, _greeting),
+                AdminBlock.Field("loud", "Loud", AdminFieldType.Switch, _loud),
+                AdminBlock.Status("State", _loud ? "LOUD" : "quiet", _loud ? AdminTone.Warning : AdminTone.Good),
+            ], Actions: [new AdminAction("shout", "Shout", AdminActionStyle.Primary), new AdminAction("break", "Break")]),
+        ]));
+
+    public Task<AdminPageResult> SaveAsync(AdminPageContext context, IReadOnlyDictionary<string, System.Text.Json.JsonElement> values,
+        CancellationToken cancellationToken)
+    {
+        if (values.TryGetValue("greeting", out var greeting))
+        {
+            if (string.IsNullOrWhiteSpace(greeting.GetString()))
+                return Task.FromResult(AdminPageResult.Failed("Say something", new Dictionary<string, string> { ["greeting"] = "required" }));
+            _greeting = greeting.GetString()!;
+        }
+
+        if (values.TryGetValue("loud", out var loud))
+            _loud = loud.GetBoolean();
+        return Task.FromResult(AdminPageResult.Done("Saved"));
+    }
+
+    public Task<AdminPageResult> RunAsync(AdminPageContext context, string action, IReadOnlyDictionary<string, System.Text.Json.JsonElement> values,
+        CancellationToken cancellationToken) =>
+        action == "break" ? throw new InvalidOperationException("broken on purpose") : Task.FromResult(AdminPageResult.Done(_greeting.ToUpperInvariant()));
 }

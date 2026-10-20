@@ -71,12 +71,11 @@ public sealed record ExtensionManifest(
 
 /// <summary>
 /// An extension's settings page for administrators. The admin panel lists it under Extensions, with the extension's
-/// name and this icon, and shows it inside the panel (an iframe) while the extension runs. Like apps, it gets the
-/// session, the language and the panel's look with the host protocol.
+/// name and this icon, and draws it itself from what the extension's <see cref="IExtensionAdminPage"/> describes:
+/// native, never a frame. Pages of the extension itself are for users (<see cref="ExtensionApp"/>).
 /// </summary>
-/// <param name="Path">Where it is served, under <c>/ext/&lt;id&gt;/</c>.</param>
-/// <param name="Icon">A square SVG icon, also under <c>/ext/&lt;id&gt;/</c>.</param>
-public sealed record ExtensionAdminPage(string Path, string? Icon = null);
+/// <param name="Icon">A square SVG icon, under <c>/ext/&lt;id&gt;/</c>.</param>
+public sealed record ExtensionAdminPage(string? Icon = null);
 
 /// <summary>
 /// A page of an extension that users open from their players: in a window (an iframe) or a tab of its own. It talks

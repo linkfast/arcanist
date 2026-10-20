@@ -4803,6 +4803,146 @@
         }
       }
     },
+    "/rest/v1/extensions/{id}/admin": {
+      "get": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "An installed extension\u0027s settings page, as it describes it (sections with fields, statuses and actions), for the admin panel to draw. Administrators only.",
+        "operationId": "ExtensionAdminPage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Saves the fields of an extension\u0027s settings page. Administrators only, with a recent authentication.",
+        "operationId": "SaveExtensionAdminPage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionAdminValues"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPageResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/extensions/{id}/admin/actions/{action}": {
+      "post": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Runs an action of an extension\u0027s settings page, with its fields\u0027 values. Administrators only, with a recent authentication.",
+        "operationId": "RunExtensionAdminAction",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtensionAdminValues"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPageResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/extensions/{id}/enabled": {
       "put": {
         "tags": [
@@ -8752,6 +8892,318 @@
           }
         }
       },
+      "AdminAction": {
+        "required": [
+          "id",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "What Task\u0026lt;AdminPageResult\u0026gt; IExtensionAdminPage.RunAsync(AdminPageContext context, string action, IReadOnlyDictionary\u0026lt;string, JsonElement\u0026gt; values, CancellationToken cancellationToken) receives."
+          },
+          "label": {
+            "type": "string",
+            "description": "Its text."
+          },
+          "style": {
+            "description": "How it looks.",
+            "$ref": "#/components/schemas/AdminActionStyle"
+          },
+          "confirm": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "A question the panel asks before running it; null runs it at once."
+          }
+        },
+        "description": "A button of a section."
+      },
+      "AdminActionStyle": {
+        "enum": [
+          "PRIMARY",
+          "SECONDARY",
+          "DESTRUCTIVE"
+        ],
+        "description": "How an action\u0027s button looks.",
+        "default": "SECONDARY"
+      },
+      "AdminBlock": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "description": "What it is.",
+            "$ref": "#/components/schemas/AdminBlockKind"
+          },
+          "key": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "A field\u0027s key, the one its value is saved under."
+          },
+          "label": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "The label of a field, status, progress or list."
+          },
+          "help": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "A line under it."
+          },
+          "type": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "How a field is edited.",
+                "$ref": "#/components/schemas/AdminFieldType"
+              }
+            ]
+          },
+          "value": {
+            "description": "A field\u0027s current value, as JSON."
+          },
+          "options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AdminOption"
+            },
+            "description": "The choices of a select."
+          },
+          "placeholder": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "What an empty text field shows."
+          },
+          "min": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "The smallest number a field takes.",
+            "format": "double"
+          },
+          "max": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "The largest number a field takes.",
+            "format": "double"
+          },
+          "readOnly": {
+            "type": "boolean",
+            "description": "A field shown but not edited.",
+            "default": false
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "The value of a status, the paragraph of a notice, or a progress\u0027s line."
+          },
+          "tone": {
+            "description": "The color of a status or notice.",
+            "$ref": "#/components/schemas/AdminTone"
+          },
+          "percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "description": "How far a progress went, from 0 to 100.",
+            "format": "double"
+          },
+          "items": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "The texts of a list."
+          }
+        },
+        "description": "A piece of a section. Build them with AdminBlock AdminBlock.Field(string key, string label, AdminFieldType type, object? value, string? help = null, IReadOnlyList\u0026lt;AdminOption\u0026gt;? options = null, string? placeholder = null, double? min = null, double? max = null, bool readOnly = false), AdminBlock AdminBlock.Status(string label, string text, AdminTone tone = AdminTone.Neutral, string? help = null), AdminBlock AdminBlock.Notice(string text, AdminTone tone = AdminTone.Neutral),\r\n            AdminBlock AdminBlock.Progress(string label, double percent, string? text = null) and AdminBlock AdminBlock.List(string label, IReadOnlyList\u0026lt;string\u0026gt; items)."
+      },
+      "AdminBlockKind": {
+        "enum": [
+          "FIELD",
+          "STATUS",
+          "NOTICE",
+          "PROGRESS",
+          "LIST"
+        ],
+        "description": "What a block is."
+      },
+      "AdminFieldType": {
+        "enum": [
+          "TEXT",
+          "SECRET",
+          "NUMBER",
+          "SWITCH",
+          "SELECT",
+          "MULTI_SELECT",
+          "TEXT_AREA",
+          "URL",
+          "LIBRARY",
+          null
+        ]
+      },
+      "AdminOption": {
+        "required": [
+          "value",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "What is saved."
+          },
+          "label": {
+            "type": "string",
+            "description": "What is shown."
+          }
+        },
+        "description": "A choice of a select."
+      },
+      "AdminPage": {
+        "required": [
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminSection"
+            },
+            "description": "Its sections, in order."
+          },
+          "refreshSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Read the page again this often while it is open (to follow a progress); null never.",
+            "format": "int32"
+          }
+        },
+        "description": "An extension\u0027s settings page."
+      },
+      "AdminPageResult": {
+        "required": [
+          "ok"
+        ],
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "It went well."
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "What happened, for a notice in the panel."
+          },
+          "errors": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Problems by field key, in the extension\u0027s words."
+          }
+        },
+        "description": "How saving or an action went."
+      },
+      "AdminSection": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable among the page\u0027s sections."
+          },
+          "title": {
+            "type": "string",
+            "description": "Its heading."
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "A line under the heading."
+          },
+          "blocks": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AdminBlock"
+            },
+            "description": "What it shows, in order."
+          },
+          "actions": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AdminAction"
+            },
+            "description": "Buttons at the end of the section."
+          }
+        },
+        "description": "A card of the page."
+      },
+      "AdminTone": {
+        "enum": [
+          "NEUTRAL",
+          "GOOD",
+          "WARNING",
+          "BAD"
+        ],
+        "description": "The color a status or notice is shown in.",
+        "default": "NEUTRAL"
+      },
       "AiActivity": {
         "enum": [
           "DISABLED",
@@ -12406,6 +12858,20 @@
             "type": [
               "null",
               "string"
+            ]
+          }
+        }
+      },
+      "ExtensionAdminValues": {
+        "required": [
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": [
+              "null",
+              "object"
             ]
           }
         }

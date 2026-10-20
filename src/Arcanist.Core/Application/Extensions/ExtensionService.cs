@@ -13,7 +13,7 @@ namespace Arcanist.Core.Application.Extensions;
 /// <param name="Status">What happened at startup: NOT_LOADED, RUNNING or FAILED.</param>
 /// <param name="RestartRequired">The server must restart for the extension to run as installed and enabled.</param>
 /// <param name="Routes">Prefixes it claims besides its own /ext/&lt;id&gt;.</param>
-/// <param name="AdminUrl">Its settings page, which the admin panel shows under Extensions while it runs; null when it has none.</param>
+/// <param name="AdminUrl">Its settings page in the admin panel (which draws it, see <c>IExtensionAdminPage</c>), shown under Extensions while it runs; null when it has none.</param>
 /// <param name="IconUrl">Its icon (of its settings page, or of its first app); null when it has none.</param>
 public sealed record Extension(
     string Id,
@@ -245,7 +245,7 @@ public sealed class ExtensionService(
                       && (loaded is not { Status: ExtensionStatus.Running } || loaded.Manifest.Version != manifest.Version);
         return new Extension(manifest.Id, manifest.Name, manifest.Version, manifest.Description, manifest.Author, manifest.License,
             manifest.Homepage, registration.BuiltIn, enabled, registration.Status, registration.ErrorCode, restart,
-            manifest.Routes ?? [], $"/ext/{manifest.Id}", manifest.AdminPage?.Path,
+            manifest.Routes ?? [], $"/ext/{manifest.Id}", manifest.AdminPage is null ? null : $"/admin/extensions/{manifest.Id}",
             manifest.AdminPage?.Icon ?? manifest.Apps?.FirstOrDefault(a => a.Icon is not null)?.Icon);
     }
 

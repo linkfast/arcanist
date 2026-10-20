@@ -1391,6 +1391,10 @@ export const es: Dictionary = {
   },
   extensions: {
     page: {
+      noLibrary: 'Ninguna',
+      secretKept: 'Guardado (escribe para cambiarlo)',
+      emptyList: 'Nada.',
+      unsaved: 'Hay cambios sin guardar.',
       unavailable:
         'Esta extensión no está en marcha o no tiene página de gestión. Actívala (y reinicia el servidor si hace falta) en Extensiones.',
     },

@@ -60,6 +60,23 @@ public static class ExtensionEndpoints
             .WithName("InstallExtensionFromUrl")
             .WithSummary("Downloads an extension's .zip and installs it (or updates it); it runs once enabled and the server restarts. Extensions run inside the server with full trust. Administrators only, with a recent authentication.");
 
+        extensions.MapGet("/{id}/admin", (string id, string? language, ExtensionAdminPages pages, CancellationToken ct) => pages.GetAsync(id, language, ct))
+            .WithName("ExtensionAdminPage")
+            .WithSummary("An installed extension's settings page, as it describes it (sections with fields, statuses and actions), for the admin panel to draw. Administrators only.")
+            .Produces<Arcanist.Extensibility.AdminPage>();
+
+        extensions.MapPut("/{id}/admin", (string id, string? language, ExtensionAdminValues input, ExtensionAdminPages pages, CancellationToken ct) =>
+                pages.SaveAsync(id, input, language, ct))
+            .WithName("SaveExtensionAdminPage")
+            .WithSummary("Saves the fields of an extension's settings page. Administrators only, with a recent authentication.")
+            .Produces<Arcanist.Extensibility.AdminPageResult>();
+
+        extensions.MapPost("/{id}/admin/actions/{action}", (string id, string action, string? language, ExtensionAdminValues input, ExtensionAdminPages pages,
+                CancellationToken ct) => pages.RunAsync(id, action, input, language, ct))
+            .WithName("RunExtensionAdminAction")
+            .WithSummary("Runs an action of an extension's settings page, with its fields' values. Administrators only, with a recent authentication.")
+            .Produces<Arcanist.Extensibility.AdminPageResult>();
+
         extensions.MapPut("/{id}/enabled", (string id, SetExtensionEnabledInput input, ExtensionService service, CancellationToken ct) =>
                 service.SetEnabledAsync(id, input.Enabled, ct))
             .WithName("SetExtensionEnabled")

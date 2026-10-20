@@ -1375,6 +1375,10 @@ export const en: Dictionary = {
   },
   extensions: {
     page: {
+      noLibrary: 'None',
+      secretKept: 'Saved (type to change it)',
+      emptyList: 'Nothing.',
+      unsaved: 'There are unsaved changes.',
       unavailable:
         'This extension is not running or has no settings page. Switch it on (and restart the server if needed) in Extensions.',
     },

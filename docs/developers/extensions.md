@@ -85,7 +85,7 @@ folder:
       "height": 640
     }
   ],
-  "adminPage": { "path": "/ext/hello/admin", "icon": "/ext/hello/icon.svg" }
+  "adminPage": { "icon": "/ext/hello/icon.svg" }
 }
 ```
 
@@ -96,7 +96,7 @@ folder:
 | `assembly` | Yes | The file, relative to the package, with the `IArcanistExtension` implementation (exactly one public, non-abstract class). |
 | `routes` | No | Prefixes claimed besides `/ext/<id>`. |
 | `apps` | No | Pages users open from their players (see [Apps](#apps)). |
-| `adminPage` | No | Its settings page for administrators: `path` and an `icon`, under `/ext/<id>/` (see [Settings page](#settings-page)). |
+| `adminPage` | No | It has a settings page for administrators, with an optional `icon` under `/ext/<id>/` (see [Settings page](#settings-page)). |
 | `minApiVersion` | No (1) | The oldest `serverInfo.apiVersion` the extension works with. |
 | `description`, `author`, `license`, `homepage` | No | Shown in the panel. |
 
@@ -122,12 +122,53 @@ showing it: your API must still check what each request may do.
 
 ### Settings page
 
-Settings that administrators change belong in a page of the extension declared as `adminPage`. The admin panel
-lists it under **Extensions** (with the extension's name and the page's icon) while the extension runs, and shows it
-inside the panel in an iframe, so the panel's menu does not grow with every extension. It gets the session, the
-language and the panel's look with the same host protocol as apps. Changes that need a recent authentication answer
-`reauthentication_required`: ask for the password and call `POST /rest/v1/auth/reauthenticate` with the token (it
-returns a token that counts as just signed in, without touching the refresh cookie).
+Settings that administrators change belong in the extension's settings page, declared as `adminPage` in the
+manifest. The admin panel lists it under **Extensions** (with the extension's name and the page's icon) while the
+extension runs, and **draws it with its own components**: the extension describes the page as data and no code of
+the extension runs in the panel, so it looks like the rest of the panel, in light and dark, on any screen.
+
+Implement `IExtensionAdminPage` and register it keyed by the extension's id:
+
+```csharp
+public void ConfigureServices(IServiceCollection services, ExtensionContext context) =>
+    services.AddKeyedScoped<IExtensionAdminPage, HelloAdminPage>(context.Id);
+
+public sealed class HelloAdminPage(HelloSettings settings) : IExtensionAdminPage
+{
+    public Task<AdminPage> GetAsync(AdminPageContext context, CancellationToken ct) => Task.FromResult(new AdminPage(
+    [
+        new AdminSection("greeting", context.Language == "es" ? "Saludo" : "Greeting", null,
+        [
+            AdminBlock.Field("text", context.Language == "es" ? "Texto" : "Text", AdminFieldType.Text, settings.Text),
+            AdminBlock.Status("Status", settings.Text.Length > 0 ? "Ready" : "Empty", AdminTone.Good),
+        ], [new AdminAction("reset", "Reset", AdminActionStyle.Destructive, "The greeting goes back to its default.")]),
+    ]));
+
+    public Task<AdminPageResult> SaveAsync(AdminPageContext context, IReadOnlyDictionary<string, JsonElement> values, CancellationToken ct)
+    {
+        if (values.TryGetValue("text", out var text))
+            settings.Save(text.GetString() ?? "");
+        return Task.FromResult(AdminPageResult.Done("Saved"));
+    }
+
+    public Task<AdminPageResult> RunAsync(AdminPageContext context, string action, IReadOnlyDictionary<string, JsonElement> values, CancellationToken ct) =>
+        Task.FromResult(action == "reset" ? AdminPageResult.Done("Reset") : AdminPageResult.Failed("Unknown action"));
+}
+```
+
+- A page is a list of **sections** (cards), each with a title, a description, **blocks** and **actions** (buttons).
+- Blocks are fields (`Text`, `Secret`, `Number`, `Switch`, `Select`, `MultiSelect`, `TextArea`, `Url`, `Library`),
+  statuses (a label and a value with a tone), notices, progress bars and lists. `RefreshSeconds` reads the page again
+  while it is open, to follow something in progress.
+- The panel sends every field to `SaveAsync` by its key, and the fields as they are on screen to `RunAsync`. A
+  `Secret` field is never shown back: it comes empty, and empty means "keep what there is".
+- Write the texts in `AdminPageContext.Language`. `AdminPageResult.Failed` takes a message and the problems by
+  field key, which the panel shows under each field.
+- Every call comes from an administrator; saving and actions also need a recent authentication (the panel asks for
+  the password when needed). An exception becomes `extension_failed`.
+
+The panel uses `GET /rest/v1/extensions/{id}/admin`, `PUT /rest/v1/extensions/{id}/admin` (`{ "values": { … } }`)
+and `POST /rest/v1/extensions/{id}/admin/actions/{action}`, which other admin tools can use too.
 
 ### The host protocol
 
@@ -142,6 +183,7 @@ the language and the look of the player that opened it through `postMessage`, be
 | player | `arcanist:session` | `{ token, expiresAt, language, theme }`. Sent again when the token is refreshed or the theme changes. |
 | app | `arcanist:token-expired` | The token was refused (`401`): the player refreshes it and sends `arcanist:session`. |
 | app | `arcanist:open` | `{ target: "uploads" }` opens the user's uploads in the player; `{ target: "track", id }` shows a song. |
+| app | `arcanist:play` | `{ trackIds: ["…"] }`: the player plays these songs of the library, after what plays now (at once if nothing does; up to 50). |
 | app | `arcanist:notify` | `{ kind: "info" \| "success" \| "error", text }`: a notice from the player (optional). |
 
 Every message is an object with its name in `type` and the data beside it:

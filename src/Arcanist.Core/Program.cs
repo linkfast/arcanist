@@ -136,6 +136,7 @@ builder.Services.AddScoped<ExtensionService>();
 builder.Services.Configure<MarketplaceOptions>(builder.Configuration.GetSection(MarketplaceOptions.Section));
 builder.Services.AddSingleton<MarketplaceCatalog>();
 builder.Services.AddScoped<ExtensionMarketplaceService>();
+builder.Services.AddScoped<ExtensionAdminPages>();
 builder.Services.Configure<UpdateOptions>(builder.Configuration.GetSection(UpdateOptions.Section));
 builder.Services.AddHttpClient(UpdateChecker.HttpClientName, client =>
 {

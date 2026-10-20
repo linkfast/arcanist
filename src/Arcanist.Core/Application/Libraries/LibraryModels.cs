@@ -17,6 +17,7 @@ namespace Arcanist.Core.Application.Libraries;
 /// writes to (on this server or in S3). A folder that turns out read-only still answers <c>read_only</c>.</param>
 /// <param name="Virtual">A view, not a folder: "All" (<c>VirtualLibraries.All</c>), every library the caller can access.
 /// It has no sources, nothing is uploaded to it, and as a <c>libraryId</c> filter it means no filter.</param>
+/// <param name="SharedBy">For a library another server shares with this one: that server's name.</param>
 /// <param name="Personal">The caller's own Ultimate Cloud music (<c>myUltimateCloud</c>): only they see it, and it goes
 /// when they unlink their account.</param>
 public sealed record Library(
@@ -32,7 +33,8 @@ public sealed record Library(
     bool CanUpload = false,
     bool Disabled = false,
     bool Personal = false,
-    bool Virtual = false);
+    bool Virtual = false,
+    string? SharedBy = null);
 
 public sealed record LibrarySource(Guid Id, LibrarySourceKind Kind, string Location);
 

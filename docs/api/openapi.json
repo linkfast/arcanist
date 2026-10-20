@@ -1186,6 +1186,14 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -1207,7 +1215,7 @@
         "tags": [
           "Statistics"
         ],
-        "summary": "What the libraries hold and how the server is listened to over a \u0060period\u0060 (WEEK, MONTH, YEAR, ALL), per user. Requires VIEW_ALL_STATS.",
+        "summary": "What the libraries hold and how the server is listened to over a \u0060period\u0060 (WEEK, MONTH, YEAR, ALL), per user; with libraryId, of one library. Requires VIEW_ALL_STATS.",
         "operationId": "ServerStats",
         "parameters": [
           {
@@ -1224,6 +1232,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -1233,6 +1249,30 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServerStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/stats/libraries": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Each library the user sees at a glance: songs, albums, files, size and length, and with VIEW_ALL_STATS its plays and listeners of the last 30 days.",
+        "operationId": "LibrarySummaries",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibrarySummary"
+                  }
                 }
               }
             }
@@ -13421,6 +13461,12 @@
           "virtual": {
             "type": "boolean",
             "default": false
+          },
+          "sharedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13699,6 +13745,91 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "LibrarySummary": {
+        "required": [
+          "libraryId",
+          "tracks",
+          "albums",
+          "files",
+          "sizeBytes",
+          "durationMs",
+          "plays",
+          "listeners",
+          "lastPlayedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "albums": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "listeners": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastPlayedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -14010,6 +14141,40 @@
               ],
               "format": "int32"
             }
+          },
+          "skips": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "listeners": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "activeDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -17897,6 +18062,33 @@
             "items": {
               "$ref": "#/components/schemas/UserListening"
             }
+          },
+          "addedTracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "remotePlays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "remoteListenedMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 0
           }
         }
       },

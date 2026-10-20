@@ -1,4 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -11,7 +14,7 @@ import type {
   StatsPeriod,
   StatsTrackFieldsFragment,
 } from '../../graphql/generated/graphql';
-import { ServerStatsQuery } from '../../graphql/operations';
+import { LibrariesQuery, ServerStatsQuery } from '../../graphql/operations';
 import { BytesPipe, CountPipe, RelativeTimePipe } from '../../shared/format';
 
 type Stats = Result['serverStats'];
@@ -20,6 +23,8 @@ type Stats = Result['serverStats'];
 @Component({
   selector: 'app-stats-page',
   imports: [
+    FormsModule,
+    HlmNativeSelectImports,
     HlmBadgeImports,
     HlmCardImports,
     HlmButtonImports,
@@ -36,20 +41,34 @@ type Stats = Result['serverStats'];
         <h1 class="text-2xl font-semibold">{{ 'stats.title' | t }}</h1>
         <p class="text-sm text-muted-foreground">{{ 'stats.subtitle' | t }}</p>
       </div>
-      <div class="flex flex-wrap gap-1" role="tablist">
-        @for (option of periods; track option) {
-          <button
-            hlmBtn
-            size="sm"
-            type="button"
-            role="tab"
-            [attr.aria-selected]="period() === option"
-            [variant]="period() === option ? 'default' : 'ghost'"
-            (click)="show(option)"
-          >
-            {{ 'stats.periods.' + option | t }}
-          </button>
-        }
+      <div class="flex flex-wrap items-center gap-2">
+        <select
+          hlmNativeSelect
+          class="max-w-56"
+          [attr.aria-label]="'stats.libraryFilter' | t"
+          [ngModel]="library()"
+          (ngModelChange)="showLibrary($event)"
+        >
+          <option value="">{{ 'stats.allLibraries' | t }}</option>
+          @for (option of libraries(); track option.id) {
+            <option [value]="option.id">{{ option.name }}</option>
+          }
+        </select>
+        <div class="flex flex-wrap gap-1" role="tablist">
+          @for (option of periods; track option) {
+            <button
+              hlmBtn
+              size="sm"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="period() === option"
+              [variant]="period() === option ? 'default' : 'ghost'"
+              (click)="show(option)"
+            >
+              {{ 'stats.periods.' + option | t }}
+            </button>
+          }
+        </div>
       </div>
     </header>
 
@@ -103,21 +122,16 @@ type Stats = Result['serverStats'];
             <h2 hlmCardTitle>{{ 'stats.listening' | t }}</h2>
           </div>
           <div hlmCardContent class="grid gap-6">
-            <dl class="grid grid-cols-3 gap-3">
-              <div class="rounded-lg border p-3">
-                <dt class="text-xs text-muted-foreground">{{ 'stats.plays' | t }}</dt>
-                <dd class="text-xl font-semibold">{{ s.listening.plays | count }}</dd>
-              </div>
-              <div class="rounded-lg border p-3">
-                <dt class="text-xs text-muted-foreground">{{ 'stats.listened' | t }}</dt>
-                <dd class="text-xl font-semibold">
-                  {{ 'stats.hours' | t: { hours: hours(s.listening.listenedMs) } }}
-                </dd>
-              </div>
-              <div class="rounded-lg border p-3">
-                <dt class="text-xs text-muted-foreground">{{ 'stats.distinctTracks' | t }}</dt>
-                <dd class="text-xl font-semibold">{{ s.listening.distinctTracks | count }}</dd>
-              </div>
+            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              @for (figure of listeningFigures(); track figure.label) {
+                <div class="rounded-lg border p-3">
+                  <dt class="text-xs text-muted-foreground">{{ figure.label | t }}</dt>
+                  <dd class="text-xl font-semibold">{{ figure.value }}</dd>
+                  @if (figure.note) {
+                    <p class="text-xs text-muted-foreground">{{ figure.note }}</p>
+                  }
+                </div>
+              }
             </dl>
 
             @if (s.listening.plays === 0) {
@@ -196,6 +210,70 @@ type Stats = Result['serverStats'];
                   </ol>
                 </div>
               </div>
+
+              <div class="grid gap-6 lg:grid-cols-3">
+                <div class="grid content-start gap-2">
+                  <h3 class="text-sm font-medium">{{ 'stats.topGenres' | t }}</h3>
+                  <ol class="grid gap-1 text-sm">
+                    @for (item of s.listening.topGenres; track item.genre) {
+                      <li class="flex items-center gap-2">
+                        <span class="w-28 truncate">{{ item.genre }}</span>
+                        <div class="h-2 flex-1 rounded bg-muted">
+                          <div
+                            class="h-2 rounded bg-primary/70"
+                            [style.width.%]="(item.plays / s.listening.topGenres[0].plays) * 100"
+                          ></div>
+                        </div>
+                        <span class="w-8 text-right text-muted-foreground">{{ item.plays }}</span>
+                      </li>
+                    } @empty {
+                      <li class="text-muted-foreground">{{ 'stats.noGenres' | t }}</li>
+                    }
+                  </ol>
+                </div>
+                <div class="grid content-start gap-2">
+                  <h3 class="text-sm font-medium">{{ 'stats.byHour' | t }}</h3>
+                  <div
+                    class="flex h-24 items-end gap-px"
+                    role="img"
+                    [attr.aria-label]="'stats.byHour' | t"
+                  >
+                    @for (plays of s.listening.playsByHour; track $index) {
+                      <div
+                        class="min-w-0.5 flex-1 rounded-t bg-primary/70"
+                        [style.height.%]="(plays / maxOf(s.listening.playsByHour)) * 100"
+                        [title]="$index + ':00 · ' + plays"
+                      ></div>
+                    }
+                  </div>
+                  <div class="flex justify-between text-[10px] text-muted-foreground">
+                    <span>0</span><span>6</span><span>12</span><span>18</span><span>23</span>
+                  </div>
+                </div>
+                <div class="grid content-start gap-2">
+                  <h3 class="text-sm font-medium">{{ 'stats.byWeekday' | t }}</h3>
+                  <ol class="grid gap-1 text-sm">
+                    @for (day of weekdays(); track day.index) {
+                      <li class="flex items-center gap-2">
+                        <span class="w-10 text-muted-foreground">{{ day.name }}</span>
+                        <div class="h-2 flex-1 rounded bg-muted">
+                          <div
+                            class="h-2 rounded bg-primary/70"
+                            [style.width.%]="
+                              (s.listening.playsByWeekday[day.index] /
+                                maxOf(s.listening.playsByWeekday)) *
+                              100
+                            "
+                          ></div>
+                        </div>
+                        <span class="w-8 text-right text-muted-foreground">{{
+                          s.listening.playsByWeekday[day.index]
+                        }}</span>
+                      </li>
+                    }
+                  </ol>
+                </div>
+              </div>
             }
           </div>
         </section>
@@ -250,6 +328,74 @@ type Stats = Result['serverStats'];
 export class StatsPage implements OnInit {
   private readonly gql = inject(Gql);
   private readonly i18n = inject(I18n);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /** The library the statistics are of ("" for all of them), kept in the address (?library=). */
+  protected readonly library = signal('');
+  protected readonly libraries = signal<{ id: string; name: string }[]>([]);
+
+  protected readonly listeningFigures = computed(() => {
+    const s = this.stats();
+    if (!s) return [];
+    const count = new Intl.NumberFormat(this.i18n.language(), { maximumFractionDigits: 1 });
+    const l = s.listening;
+    const figures: { label: string; value: string; note?: string }[] = [
+      { label: 'stats.plays', value: count.format(l.plays) },
+      {
+        label: 'stats.listened',
+        value: this.i18n.t('stats.hours', { hours: this.hours(l.listenedMs) }),
+      },
+      { label: 'stats.distinctTracks', value: count.format(l.distinctTracks) },
+      { label: 'stats.listeners', value: count.format(l.listeners) },
+      {
+        label: 'stats.skips',
+        value: count.format(l.skips),
+        note:
+          l.plays + l.skips
+            ? this.i18n.t('stats.skipRate', {
+                rate: Math.round((l.skips / (l.plays + l.skips)) * 100),
+              })
+            : undefined,
+      },
+      {
+        label: 'stats.activeDays',
+        value: count.format(l.activeDays),
+        note: l.activeDays
+          ? this.i18n.t('stats.perDay', { plays: count.format(l.plays / l.activeDays) })
+          : undefined,
+      },
+      { label: 'stats.added', value: count.format(s.addedTracks) },
+    ];
+    if (s.remotePlays || s.remoteListenedMs)
+      figures.push({
+        label: 'stats.remotePlays',
+        value: count.format(s.remotePlays),
+        note: this.i18n.t('stats.hours', { hours: this.hours(s.remoteListenedMs) }),
+      });
+    return figures;
+  });
+
+  /** Monday first, as most of the world counts weeks. */
+  protected readonly weekdays = computed(() => {
+    const names = new Intl.DateTimeFormat(this.i18n.language(), { weekday: 'short' });
+    return [1, 2, 3, 4, 5, 6, 0].map((index) => ({
+      index,
+      // 2023-01-01 was a Sunday.
+      name: names.format(new Date(2023, 0, 1 + index)),
+    }));
+  });
+
+  protected maxOf(values: readonly number[]): number {
+    return Math.max(1, ...values);
+  }
+
+  protected async showLibrary(id: string): Promise<void> {
+    this.library.set(id);
+    await this.router.navigate([], { queryParams: { library: id || null }, replaceUrl: true });
+    this.stats.set(null);
+    await this.load();
+  }
 
   protected readonly periods: StatsPeriod[] = ['WEEK', 'MONTH', 'YEAR', 'ALL'];
   protected readonly period = signal<StatsPeriod>('MONTH');
@@ -277,6 +423,9 @@ export class StatsPage implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    this.library.set(this.route.snapshot.queryParamMap.get('library') ?? '');
+    const libraries = await this.gql.query(LibrariesQuery);
+    this.libraries.set(libraries.libraries.map((l) => ({ id: l.id, name: l.name })));
     await this.load();
   }
 
@@ -301,7 +450,11 @@ export class StatsPage implements OnInit {
 
   private async load(): Promise<void> {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const result = await this.gql.query(ServerStatsQuery, { period: this.period(), timeZone });
+    const result = await this.gql.query(ServerStatsQuery, {
+      period: this.period(),
+      timeZone,
+      libraryId: this.library() || null,
+    });
     this.stats.set(result.serverStats);
   }
 }

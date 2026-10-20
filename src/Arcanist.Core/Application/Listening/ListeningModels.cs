@@ -101,6 +101,10 @@ public sealed record GenrePlays(string Genre, int Plays);
 /// <param name="TopGenres">Genres by counted plays (a track with several genres counts for each).</param>
 /// <param name="PlaysByHour">Counted plays per hour of the day in the requested time zone, 24 entries (0 = midnight).</param>
 /// <param name="PlaysByWeekday">Counted plays per day of the week in the requested time zone, 7 entries (0 = Sunday).</param>
+/// <param name="Skips">Songs stopped within their first 30 seconds.</param>
+/// <param name="Listeners">Users who listened (1 or 0 for one user's statistics).</param>
+/// <param name="ActiveDays">Days with at least one counted play, in the requested time zone.</param>
+/// <param name="LibraryId">The library the statistics are limited to; null for all of them.</param>
 public sealed record ListeningStats(
     StatsPeriod Period,
     DateTime? From,
@@ -114,7 +118,11 @@ public sealed record ListeningStats(
     IReadOnlyList<AlbumPlays> TopAlbums,
     IReadOnlyList<GenrePlays> TopGenres,
     IReadOnlyList<int> PlaysByHour,
-    IReadOnlyList<int> PlaysByWeekday);
+    IReadOnlyList<int> PlaysByWeekday,
+    int Skips = 0,
+    int Listeners = 0,
+    int ActiveDays = 0,
+    Guid? LibraryId = null);
 
 /// <summary>One user's listening in a period, for the server's statistics.</summary>
 /// <param name="UserId">The user; for a <paramref name="Remote"/> listener, the server they are on (the peer).</param>
@@ -129,7 +137,16 @@ public sealed record FormatTotals(string Format, int Files, long SizeBytes);
 public sealed record LibraryTotals(int Artists, int Albums, int Tracks, int Files, long DurationMs, long SizeBytes, IReadOnlyList<FormatTotals> Formats);
 
 /// <summary>The server's catalog and listening, for administrators (VIEW_ALL_STATS).</summary>
-public sealed record ServerStats(LibraryTotals Library, ListeningStats Listening, IReadOnlyList<UserListening> Users);
+/// <param name="AddedTracks">Songs that arrived in the period (all of them for all time).</param>
+/// <param name="RemotePlays">Counted plays of users of other servers (<c>remote</c> users), not in <paramref name="Listening"/>.</param>
+public sealed record ServerStats(
+    LibraryTotals Library, ListeningStats Listening, IReadOnlyList<UserListening> Users, int AddedTracks = 0, int RemotePlays = 0, long RemoteListenedMs = 0);
+
+/// <summary>A library at a glance, for its card in the admin panel. Part of the API contract.</summary>
+/// <param name="Plays">Counted plays of its songs in the last 30 days; null without VIEW_ALL_STATS.</param>
+/// <param name="Listeners">Users who played its songs in the last 30 days; null without VIEW_ALL_STATS.</param>
+public sealed record LibrarySummary(
+    Guid LibraryId, int Tracks, int Albums, int Files, long SizeBytes, long DurationMs, int? Plays, int? Listeners, DateTime? LastPlayedAt);
 
 /// <summary>Opaque cursor for lists ordered by time, newest first: the time and id of the last item.</summary>
 internal static class TimeCursor

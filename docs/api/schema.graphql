@@ -95,9 +95,11 @@ type Query {
   "The user's counted plays, newest first."
   playHistory(after: String, first: Int): PlayHistoryPage!
   "Listening over a period: the user's own, or another user's with VIEW_ALL_STATS. timeZone is an IANA id (UTC by default) for days and months."
-  listeningStats(period: StatsPeriod!, timeZone: String, userId: ID): ListeningStats!
-  "What the libraries hold and how the server is listened to, per user. Requires VIEW_ALL_STATS."
-  serverStats(period: StatsPeriod!, timeZone: String): ServerStats!
+  listeningStats(period: StatsPeriod!, timeZone: String, userId: ID, libraryId: ID): ListeningStats!
+  "What the libraries hold and how the server is listened to, per user; with libraryId, of one library. Requires VIEW_ALL_STATS."
+  serverStats(period: StatsPeriod!, timeZone: String, libraryId: ID): ServerStats!
+  "Each library the user sees at a glance: songs, albums, files, size and length, and with VIEW_ALL_STATS its plays and listeners of the last 30 days."
+  librarySummaries: [LibrarySummary!]!
   "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS."
   ffmpeg: FfmpegStatus!
   "The conversion cache and the versions of the music made ahead of time (passive transcoding), with their progress. Requires MANAGE_SETTINGS."
@@ -1135,6 +1137,7 @@ type Library {
   disabled: Boolean!
   personal: Boolean!
   virtual: Boolean!
+  sharedBy: String
 }
 
 type LibrarySource {
@@ -1243,6 +1246,10 @@ type ListeningStats {
   topGenres: [GenrePlays!]!
   playsByHour: [Int!]!
   playsByWeekday: [Int!]!
+  skips: Int!
+  listeners: Int!
+  activeDays: Int!
+  libraryId: ID
 }
 
 enum StatsPeriod {
@@ -1290,6 +1297,9 @@ type ServerStats {
   library: LibraryTotals!
   listening: ListeningStats!
   users: [UserListening!]!
+  addedTracks: Int!
+  remotePlays: Int!
+  remoteListenedMs: Long!
 }
 
 type LibraryTotals {
@@ -1317,6 +1327,18 @@ type UserListening {
   lastPlayedAt: DateTime
   remote: Boolean!
   server: String
+}
+
+type LibrarySummary {
+  libraryId: ID!
+  tracks: Int!
+  albums: Int!
+  files: Int!
+  sizeBytes: Long!
+  durationMs: Long!
+  plays: Int
+  listeners: Int
+  lastPlayedAt: DateTime
 }
 
 type FfmpegStatus {

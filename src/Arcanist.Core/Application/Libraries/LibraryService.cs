@@ -35,13 +35,15 @@ public sealed class LibraryService(
     {
         var access = guard.Authenticated();
 
+        // In the order they were made: editing one never moves it.
         var libraries = await Visible(access)
             .AsNoTracking()
             .Include(l => l.Sources)
-            .OrderBy(l => l.Name)
+            .OrderBy(l => l.Number)
             .ToListAsync(cancellationToken);
 
-        var models = libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries), access, cloud)).ToList();
+        var servers = await SharingServersAsync(cancellationToken);
+        var models = libraries.Select(l => l.ToModel(access.Has(Permissions.ManageLibraries), access, cloud) with { SharedBy = servers.GetValueOrDefault(l.Id) }).ToList();
         if (includeVirtual)
             models.Insert(0, await AllAsync(libraries, language, cancellationToken));
         return models;
@@ -55,8 +57,13 @@ public sealed class LibraryService(
         var library = await Visible(access).AsNoTracking().Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == id, cancellationToken)
                       ?? throw new ArcanistException.NotFound();
 
-        return library.ToModel(access.Has(Permissions.ManageLibraries), access, cloud);
+        return library.ToModel(access.Has(Permissions.ManageLibraries), access, cloud)
+            with { SharedBy = (await SharingServersAsync(cancellationToken)).GetValueOrDefault(library.Id) };
     }
+
+    /// <summary>The name of the server that shares each library received through the P2P network.</summary>
+    private async Task<Dictionary<Guid, string>> SharingServersAsync(CancellationToken cancellationToken) =>
+        await db.P2PRemotes.AsNoTracking().ToDictionaryAsync(r => r.LibraryId, r => r.Name, cancellationToken);
 
     /// <summary>"All": every library of <paramref name="libraries"/> (those the caller can access) at once.</summary>
     private async Task<Library> AllAsync(IReadOnlyList<LibraryEntity> libraries, string? language, CancellationToken cancellationToken)

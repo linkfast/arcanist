@@ -118,13 +118,47 @@
         </div>
 
         <div hlmCardContent class="grid gap-4">
+          @if (summaries()[library.id]; as summary) {
+            <div
+              class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground"
+            >
+              <span>
+                {{
+                  'libraries.summary.holds'
+                    | t
+                      : {
+                          tracks: (summary.tracks | count),
+                          albums: (summary.albums | count),
+                          size: (summary.sizeBytes | bytes),
+                          duration: duration(summary.durationMs),
+                        }
+                }}
+                @if (summary.plays !== null && summary.plays !== undefined) {
+                  ·
+                  {{
+                    'libraries.summary.listened'
+                      | t: { plays: (summary.plays | count), listeners: summary.listeners ?? 0 }
+                  }}
+                }
+              </span>
+              @if (canSeeStats()) {
+                <a class="underline" routerLink="/stats" [queryParams]="{ library: library.id }">{{
+                  'libraries.summary.more' | t
+                }}</a>
+              }
+            </div>
+          }
           @if (library.sources) {
             <ul class="grid gap-1">
               @for (source of library.sources; track source.id) {
                 <li class="grid gap-1 rounded-md bg-muted px-3 py-1.5">
                   <div class="flex items-center justify-between gap-2">
                     @if (source.kind === 'PEER') {
-                      <span class="truncate text-xs">{{ 'libraries.sharedByPeer' | t }}</span>
+                      <span class="truncate text-xs">{{
+                        library.sharedBy
+                          ? ('libraries.sharedByServer' | t: { server: library.sharedBy })
+                          : ('libraries.sharedByPeer' | t)
+                      }}</span>
                     } @else if (source.kind === 'ULTIMATE_CLOUD') {
                       <span class="truncate text-xs">{{
                         'libraries.ultimateCloud.' + source.location | t

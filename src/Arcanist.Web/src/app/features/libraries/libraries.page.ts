@@ -1,6 +1,7 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideFolderInput,
@@ -35,6 +36,7 @@ import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   CloudSyncStateFieldsFragment as CloudSyncState,
   LibrariesQuery as LibrariesResult,
+  LibrarySummariesQuery as LibrarySummariesResult,
   LibrarySourceMoveFieldsFragment as SourceMove,
   ScanJobFieldsFragment,
 } from '../../graphql/generated/graphql';
@@ -45,6 +47,7 @@ import {
   CreateLibraryMutation,
   DeleteLibraryMutation,
   LibrariesQuery,
+  LibrarySummariesQuery,
   LibrarySourceMovesQuery,
   MoveLibrarySourceMutation,
   RemoveLibrarySourceMutation,
@@ -62,6 +65,7 @@ import { S3LibraryForm } from './s3-library';
 import { BytesPipe, CountPipe, DateTimePipe, RelativeTimePipe } from '../../shared/format';
 
 type Library = LibrariesResult['libraries'][number];
+type LibrarySummary = LibrarySummariesResult['librarySummaries'][number];
 type ScanJob = ScanJobFieldsFragment;
 
 type IntervalUnit = 'MINUTES' | 'HOURS' | 'DAYS';
@@ -97,6 +101,7 @@ function splitInterval(minutes: number | null | undefined): {
 @Component({
   selector: 'app-libraries-page',
   imports: [
+    RouterLink,
     FormsModule,
     NgIcon,
     BrnDialogContent,
@@ -511,9 +516,33 @@ export class LibrariesPage implements OnInit {
     );
   }
 
+  /** Each library at a glance (what it holds and, with VIEW_ALL_STATS, how it was listened to in 30 days). */
+  protected readonly summaries = signal<Record<string, LibrarySummary>>({});
+  protected readonly canSeeStats = computed(() => this.auth.can('VIEW_ALL_STATS'));
+
+  /** "3 h 20 min", or "12 min" under an hour. */
+  protected duration(ms: number): string {
+    const minutes = Math.round(ms / 60_000);
+    const hours = Math.floor(minutes / 60);
+    const count = new Intl.NumberFormat(this.i18n.language());
+    return hours
+      ? this.i18n.t('libraries.summary.hoursMinutes', {
+          hours: count.format(hours),
+          minutes: minutes % 60,
+        })
+      : this.i18n.t('libraries.summary.minutes', { minutes });
+  }
+
   private async load(): Promise<void> {
-    const result = await this.gql.query(LibrariesQuery);
+    const [result, summaries] = await Promise.all([
+      this.gql.query(LibrariesQuery),
+      this.gql.query(LibrarySummariesQuery).catch(() => null),
+    ]);
     this.libraries.set(result.libraries);
+    if (summaries)
+      this.summaries.set(
+        Object.fromEntries(summaries.librarySummaries.map((s) => [s.libraryId, s])),
+      );
   }
 
   private async run(action: () => Promise<unknown>): Promise<void> {

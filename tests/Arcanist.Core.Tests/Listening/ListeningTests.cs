@@ -249,6 +249,57 @@ public sealed class ListeningTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Statistics_can_be_of_one_library_and_each_library_has_a_summary()
+    {
+        // A second library with a song of its own.
+        var jazz = Directory.CreateTempSubdirectory("arcanist-stats-jazz-").FullName;
+        File.WriteAllBytes(Path.Combine(jazz, "swing.wav"), AudioFixtures.Music(bpm: 100, seconds: 70, chordSeed: 2));
+        AudioFixtures.Tag(Path.Combine(jazz, "swing.wav"), new FixtureTags("Swing", "Trio", "Smooth", "Trio", TrackNumber: 1));
+        var created = await _admin.PostAsJsonAsync("/rest/v1/libraries", new { name = "Jazz", sources = new[] { new { location = jazz } }, visibleToAll = true }, ArcanistFactory.Json, Cancel);
+        Assert.True(created.IsSuccessStatusCode, await created.Content.ReadAsStringAsync(Cancel));
+        var jazzId = (await created.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("id").GetGuid();
+        await _factory.WaitForScansAsync(_admin);
+        var swing = (await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/tracks?libraryId={jazzId}", ArcanistFactory.Json, Cancel)).GetProperty("items")[0]
+            .GetProperty("id").GetGuid();
+
+        await PlayAsync(_long, 40_000);
+        await PlayAsync(_long, 5_000, DateTime.UtcNow.AddMinutes(-10));
+        await PlayAsync(swing, 40_000);
+
+        var all = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/stats/server?period=all", ArcanistFactory.Json, Cancel);
+        Assert.Equal((2, 1, 1, 4), (all.GetProperty("listening").GetProperty("plays").GetInt32(), all.GetProperty("listening").GetProperty("skips").GetInt32(),
+            all.GetProperty("listening").GetProperty("listeners").GetInt32(), all.GetProperty("addedTracks").GetInt32()));
+
+        var one = await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/stats/server?period=all&libraryId={jazzId}", ArcanistFactory.Json, Cancel);
+        Assert.Equal((1, 0, 1), (one.GetProperty("listening").GetProperty("plays").GetInt32(), one.GetProperty("listening").GetProperty("skips").GetInt32(),
+            one.GetProperty("library").GetProperty("tracks").GetInt32()));
+        Assert.Equal(jazzId, one.GetProperty("listening").GetProperty("libraryId").GetGuid());
+        Assert.Equal("Swing", one.GetProperty("listening").GetProperty("topTracks")[0].GetProperty("track").GetProperty("title").GetString());
+        var mine = await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/stats/listening?period=all&libraryId={jazzId}", ArcanistFactory.Json, Cancel);
+        Assert.Equal((1, 1), (mine.GetProperty("plays").GetInt32(), mine.GetProperty("activeDays").GetInt32()));
+        Assert.Equal(HttpStatusCode.NotFound, (await _admin.GetAsync($"/rest/v1/stats/server?period=all&libraryId={Guid.NewGuid()}", Cancel)).StatusCode);
+
+        var summaries = (await _admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/stats/libraries", ArcanistFactory.Json, Cancel))!
+            .ToDictionary(s => s.GetProperty("libraryId").GetGuid());
+        Assert.Equal((1, 1, 1), (summaries[jazzId].GetProperty("tracks").GetInt32(), summaries[jazzId].GetProperty("plays").GetInt32(),
+            summaries[jazzId].GetProperty("listeners").GetInt32()));
+        Assert.True(summaries[jazzId].GetProperty("sizeBytes").GetInt64() > 0);
+        Assert.Equal((3, 1), summaries.Values.Where(s => s.GetProperty("libraryId").GetGuid() != jazzId)
+            .Select(s => (s.GetProperty("tracks").GetInt32(), s.GetProperty("plays").GetInt32())).Single());
+
+        // Without VIEW_ALL_STATS, what the libraries hold, not how they are listened to.
+        await _factory.CreateUserAsync("guest");
+        var guest = await _factory.CreateAuthenticatedClientAsync("guest");
+        var theirs = (await guest.GetFromJsonAsync<List<JsonElement>>("/rest/v1/stats/libraries", ArcanistFactory.Json, Cancel))!;
+        Assert.All(theirs, s => Assert.Equal(JsonValueKind.Null, s.GetProperty("plays").ValueKind));
+
+        // Libraries keep the order they were made in, whatever their names become.
+        await _admin.PutAsJsonAsync($"/rest/v1/libraries/{jazzId}", new { name = "Aaa Jazz", visibleToAll = true }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(["Music", "Aaa Jazz"], (await _admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))!
+            .Select(l => l.GetProperty("name").GetString()));
+    }
+
+    [Fact]
     public async Task Merging_tracks_keeps_what_users_did_with_both()
     {
         await RateAsync(_short, 2);

@@ -64,17 +64,22 @@ public static class ListeningEndpoints
             .WithName("PlayHistory")
             .WithSummary("The user's counted plays, newest first.");
 
-        rest.MapGet("/stats/listening", (string period, string? timeZone, Guid? userId, StatsService service, CancellationToken ct) =>
-                service.ListeningAsync(ParsePeriod(period), timeZone, userId, ct))
+        rest.MapGet("/stats/listening", (string period, string? timeZone, Guid? userId, Guid? libraryId, StatsService service, CancellationToken ct) =>
+                service.ListeningAsync(ParsePeriod(period), timeZone, userId, ct, libraryId))
             .WithTags("Statistics")
             .WithName("ListeningStats")
             .WithSummary("Listening over a `period` (WEEK, MONTH, YEAR, ALL): the user's own, or another user's with VIEW_ALL_STATS. timeZone is an IANA id (UTC by default) for days and months.");
 
-        rest.MapGet("/stats/server", (string period, string? timeZone, StatsService service, CancellationToken ct) =>
-                service.ServerAsync(ParsePeriod(period), timeZone, ct))
+        rest.MapGet("/stats/server", (string period, string? timeZone, Guid? libraryId, StatsService service, CancellationToken ct) =>
+                service.ServerAsync(ParsePeriod(period), timeZone, ct, libraryId))
             .WithTags("Statistics")
             .WithName("ServerStats")
-            .WithSummary("What the libraries hold and how the server is listened to over a `period` (WEEK, MONTH, YEAR, ALL), per user. Requires VIEW_ALL_STATS.");
+            .WithSummary("What the libraries hold and how the server is listened to over a `period` (WEEK, MONTH, YEAR, ALL), per user; with libraryId, of one library. Requires VIEW_ALL_STATS.");
+
+        rest.MapGet("/stats/libraries", (StatsService service, CancellationToken ct) => service.LibrarySummariesAsync(ct))
+            .WithTags("Statistics")
+            .WithName("LibrarySummaries")
+            .WithSummary("Each library the user sees at a glance: songs, albums, files, size and length, and with VIEW_ALL_STATS its plays and listeners of the last 30 days.");
 
         rest.MapPut("/settings/rating-mode", (SetRatingModeInput input, ListeningService service, CancellationToken ct) =>
                 service.SetRatingModeAsync(input.Mode, ct))

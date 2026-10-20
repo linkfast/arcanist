@@ -26,14 +26,19 @@ public sealed partial class Query
 
     [Name("listeningStats")]
     [Description("Listening over a period: the user's own, or another user's with VIEW_ALL_STATS. timeZone is an IANA id (UTC by default) for days and months.")]
-    public static Task<ListeningStats> ListeningStats(StatsPeriod period, string? timeZone, [Id] Guid? userId,
+    public static Task<ListeningStats> ListeningStats(StatsPeriod period, string? timeZone, [Id] Guid? userId, [Id] Guid? libraryId,
         [FromServices] StatsService stats, CancellationToken cancellationToken) =>
-        stats.ListeningAsync(period, timeZone, userId, cancellationToken);
+        stats.ListeningAsync(period, timeZone, userId, cancellationToken, libraryId);
 
     [Name("serverStats")]
-    [Description("What the libraries hold and how the server is listened to, per user. Requires VIEW_ALL_STATS.")]
-    public static Task<ServerStats> ServerStats(StatsPeriod period, string? timeZone, [FromServices] StatsService stats, CancellationToken cancellationToken) =>
-        stats.ServerAsync(period, timeZone, cancellationToken);
+    [Description("What the libraries hold and how the server is listened to, per user; with libraryId, of one library. Requires VIEW_ALL_STATS.")]
+    public static Task<ServerStats> ServerStats(StatsPeriod period, string? timeZone, [Id] Guid? libraryId, [FromServices] StatsService stats, CancellationToken cancellationToken) =>
+        stats.ServerAsync(period, timeZone, cancellationToken, libraryId);
+
+    [Name("librarySummaries")]
+    [Description("Each library the user sees at a glance: songs, albums, files, size and length, and with VIEW_ALL_STATS its plays and listeners of the last 30 days.")]
+    public static Task<IReadOnlyList<LibrarySummary>> LibrarySummaries([FromServices] StatsService stats, CancellationToken cancellationToken) =>
+        stats.LibrarySummariesAsync(cancellationToken);
 }
 
 public sealed partial class Mutation

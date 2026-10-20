@@ -66,6 +66,7 @@ export const LibrariesQuery = graphql(`
       lastScanAt
       disabled
       personal
+      sharedBy
       sources {
         id
         kind
@@ -835,8 +836,11 @@ export const StatsTrackFields = graphql(`
 `);
 
 export const ServerStatsQuery = graphql(`
-  query ServerStats($period: StatsPeriod!, $timeZone: String) {
-    serverStats(period: $period, timeZone: $timeZone) {
+  query ServerStats($period: StatsPeriod!, $timeZone: String, $libraryId: ID) {
+    serverStats(period: $period, timeZone: $timeZone, libraryId: $libraryId) {
+      addedTracks
+      remotePlays
+      remoteListenedMs
       library {
         artists
         albums
@@ -856,6 +860,15 @@ export const ServerStatsQuery = graphql(`
         plays
         listenedMs
         distinctTracks
+        skips
+        listeners
+        activeDays
+        playsByHour
+        playsByWeekday
+        topGenres {
+          genre
+          plays
+        }
         bucket
         timeline {
           start
@@ -898,6 +911,22 @@ export const ServerStatsQuery = graphql(`
         remote
         server
       }
+    }
+  }
+`);
+
+export const LibrarySummariesQuery = graphql(`
+  query LibrarySummaries {
+    librarySummaries {
+      libraryId
+      tracks
+      albums
+      files
+      sizeBytes
+      durationMs
+      plays
+      listeners
+      lastPlayedAt
     }
   }
 `);

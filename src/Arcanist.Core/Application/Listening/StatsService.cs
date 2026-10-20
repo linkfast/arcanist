@@ -16,9 +16,11 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
 
     /// <param name="userId">Another user's statistics (VIEW_ALL_STATS); the caller's own when null.</param>
     /// <param name="timeZone">IANA (or Windows) time zone id for days and months; UTC when null.</param>
-    public async Task<ListeningStats> ListeningAsync(StatsPeriod period, string? timeZone, Guid? userId, CancellationToken cancellationToken)
+    /// <param name="libraryId">Only plays of songs of that library (and, for the server, what it holds); "All" or null for every one.</param>
+    public async Task<ListeningStats> ListeningAsync(StatsPeriod period, string? timeZone, Guid? userId, CancellationToken cancellationToken, Guid? libraryId = null)
     {
         var access = guard.Authenticated();
+        var library = Library(access, libraryId);
         if (userId is { } other && other != access.UserId)
         {
             guard.Permission(Permissions.ViewAllStats);
@@ -26,16 +28,17 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
                 throw new ArcanistException.NotFound();
         }
 
-        return await ComputeAsync(access, period, TimeZone(timeZone), userId ?? access.UserId, cancellationToken);
+        return await ComputeAsync(access, period, TimeZone(timeZone), userId ?? access.UserId, library, cancellationToken);
     }
 
-    public async Task<ServerStats> ServerAsync(StatsPeriod period, string? timeZone, CancellationToken cancellationToken)
+    public async Task<ServerStats> ServerAsync(StatsPeriod period, string? timeZone, CancellationToken cancellationToken, Guid? libraryId = null)
     {
         var access = guard.Permission(Permissions.ViewAllStats);
+        var only = Library(access, libraryId);
         var zone = TimeZone(timeZone);
-        var listening = await ComputeAsync(access, period, zone, userId: null, cancellationToken);
+        var listening = await ComputeAsync(access, period, zone, userId: null, only, cancellationToken);
 
-        var present = db.MediaFiles.Where(f => f.MissingSince == null);
+        var present = db.MediaFiles.Where(f => f.MissingSince == null && (only == null || f.LibrarySource.LibraryId == only));
         var tracks = db.Tracks.Where(t => present.Any(f => f.TrackId == t.Id));
         var formats = await present
             .GroupBy(f => f.Format ?? "")
@@ -52,7 +55,7 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
             formats.OrderByDescending(f => f.Files).Select(f => new FormatTotals(f.Format, f.Files, f.Size)).ToList());
 
         var from = Start(period, zone);
-        var plays = db.PlayEvents.Where(p => from == null || p.PlayedAt >= from);
+        var plays = db.PlayEvents.Where(p => (from == null || p.PlayedAt >= from) && (only == null || db.MediaFiles.Any(f => f.TrackId == p.TrackId && f.LibrarySource.LibraryId == only)));
         var perUser = await plays.GroupBy(p => p.UserId)
             .Select(g => new
             {
@@ -67,7 +70,9 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
             .ToListAsync(cancellationToken);
 
         // Users of other servers that count here, by their name there.
-        var remote = await db.RemotePlayEvents.Where(p => from == null || p.PlayedAt >= from)
+        var remotePlays = db.RemotePlayEvents.Where(p => (from == null || p.PlayedAt >= from)
+                                                         && (only == null || db.MediaFiles.Any(f => f.TrackId == p.TrackId && f.LibrarySource.LibraryId == only)));
+        var remote = await remotePlays
             .GroupBy(p => new { p.PeerId, p.Peer.Name, p.RemoteUser })
             .Select(g => new UserListening(g.Key.PeerId, g.Key.RemoteUser, null, g.Count(p => p.Counted), g.Sum(p => (long)p.PlayedMs),
                 g.Where(p => p.Counted).Max(p => (DateTime?)p.PlayedAt), true, g.Key.Name))
@@ -81,17 +86,71 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
                     : new UserListening(u.Id, u.UserName, u.DisplayName, 0, 0, null))
                 .Concat(remote)
                 .OrderByDescending(u => u.ListenedMs)
-                .ToList());
+                .ToList(),
+            await tracks.CountAsync(t => from == null || t.AddedAt >= from, cancellationToken),
+            remote.Sum(r => r.Plays),
+            remote.Sum(r => r.ListenedMs));
+    }
+
+    /// <summary>Each library the caller sees, at a glance; plays and listeners only with VIEW_ALL_STATS.</summary>
+    public async Task<IReadOnlyList<LibrarySummary>> LibrarySummariesAsync(CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var visible = await Libraries.LibraryService.Visible(db, access).Select(l => l.Id).ToListAsync(cancellationToken);
+        var present = db.MediaFiles.AsNoTracking().Where(f => f.MissingSince == null && visible.Contains(f.LibrarySource.LibraryId));
+        var files = await present.GroupBy(f => f.LibrarySource.LibraryId)
+            .Select(g => new { LibraryId = g.Key, Files = g.Count(), Size = g.Sum(f => f.Size) })
+            .ToListAsync(cancellationToken);
+        var tracks = await present.Select(f => new { f.LibrarySource.LibraryId, f.TrackId, f.Track.AlbumId, f.Track.DurationMs }).Distinct()
+            .GroupBy(t => t.LibraryId)
+            .Select(g => new { LibraryId = g.Key, Tracks = g.Count(), Albums = g.Select(t => t.AlbumId).Distinct().Count(), Duration = g.Sum(t => (long)t.DurationMs) })
+            .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, (int Plays, int Listeners, DateTime? Last)>? listening = null;
+        if (access.Has(Permissions.ViewAllStats))
+        {
+            var from = time.GetUtcNow().UtcDateTime.AddDays(-30);
+            var rows = await db.PlayEvents.AsNoTracking().Where(p => p.Counted && p.PlayedAt >= from)
+                .Join(db.MediaFiles.Where(f => visible.Contains(f.LibrarySource.LibraryId)), p => p.TrackId, f => (Guid?)f.TrackId,
+                    (p, f) => new { f.LibrarySource.LibraryId, PlayId = p.Id, p.UserId, p.PlayedAt })
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            listening = rows.GroupBy(r => r.LibraryId).ToDictionary(g => g.Key,
+                g => (g.Select(r => r.PlayId).Distinct().Count(), g.Select(r => r.UserId).Distinct().Count(), (DateTime?)g.Max(r => r.PlayedAt)));
+        }
+
+        var byFiles = files.ToDictionary(f => f.LibraryId);
+        var byTracks = tracks.ToDictionary(t => t.LibraryId);
+        return visible.Select(id =>
+        {
+            var f = byFiles.GetValueOrDefault(id);
+            var t = byTracks.GetValueOrDefault(id);
+            var l = listening?.GetValueOrDefault(id);
+            return new LibrarySummary(id, t?.Tracks ?? 0, t?.Albums ?? 0, f?.Files ?? 0, f?.Size ?? 0, t?.Duration ?? 0,
+                listening is null ? null : l?.Plays ?? 0, listening is null ? null : l?.Listeners ?? 0, l?.Last);
+        }).ToList();
+    }
+
+    /// <summary>A library to limit statistics to: one the caller can use; "All" and null are every one.</summary>
+    private Guid? Library(UserAccess access, Guid? libraryId)
+    {
+        if (Libraries.VirtualLibraries.Filter(libraryId) is not { } library)
+            return null;
+        if (!access.CanAccessLibrary(library) || !db.Libraries.Any(l => l.Id == library))
+            throw new ArcanistException.NotFound();
+        return library;
     }
 
     /// <param name="userId">One user's plays, or everyone's when null.</param>
-    private async Task<ListeningStats> ComputeAsync(UserAccess access, StatsPeriod period, TimeZoneInfo zone, Guid? userId, CancellationToken cancellationToken)
+    private async Task<ListeningStats> ComputeAsync(
+        UserAccess access, StatsPeriod period, TimeZoneInfo zone, Guid? userId, Guid? library, CancellationToken cancellationToken)
     {
         var from = Start(period, zone);
-        var plays = db.PlayEvents.AsNoTracking().Where(p => (userId == null || p.UserId == userId) && (from == null || p.PlayedAt >= from));
+        var plays = db.PlayEvents.AsNoTracking().Where(p => (userId == null || p.UserId == userId) && (from == null || p.PlayedAt >= from)
+            && (library == null || db.MediaFiles.Any(f => f.TrackId == p.TrackId && f.LibrarySource.LibraryId == library)));
 
         // Only what the timeline needs is read; grouping by local day happens here, where time zones are known.
-        var rows = await plays.Select(p => new { p.PlayedAt, p.PlayedMs, p.Counted }).ToListAsync(cancellationToken);
+        var rows = await plays.Select(p => new { p.PlayedAt, p.PlayedMs, p.Counted, p.Skipped, p.UserId }).ToListAsync(cancellationToken);
         var bucket = period is StatsPeriod.Week or StatsPeriod.Month ? StatsBucket.Day : StatsBucket.Month;
         DateOnly BucketOf(DateTime utc)
         {
@@ -168,7 +227,11 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
             topAlbums.Where(a => albums.ContainsKey(a.Id)).Take(TopCount).Select(a => new AlbumPlays(albums[a.Id], a.Plays)).ToList(),
             topGenres.Select(g => new GenrePlays(g.Name, g.Plays)).ToList(),
             byHour,
-            byWeekday);
+            byWeekday,
+            rows.Count(r => r.Skipped),
+            rows.Where(r => r.Counted).Select(r => r.UserId).Distinct().Count(),
+            rows.Where(r => r.Counted).Select(r => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(r.PlayedAt, zone))).Distinct().Count(),
+            library);
     }
 
     /// <summary>Start of the period in UTC: the beginning of the local day 7 or 30 days back, or of the month a year back.</summary>

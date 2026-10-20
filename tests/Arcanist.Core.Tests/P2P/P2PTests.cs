@@ -268,6 +268,19 @@ public sealed class P2PTests : IAsyncDisposable
         Assert.Equal(1, cached.GetProperty("cacheFiles").GetInt32());
         Assert.Equal(original.Length, cached.GetProperty("cacheBytes").GetInt64());
 
+        // What a player is about to play (mStream's Auto-DJ, a playlist) is fetched ahead, before anyone asks for it.
+        Assert.Equal(0, (await (await receiver.Admin.DeleteAsync("/rest/v1/p2p/remote-libraries/cache", Cancel)).Content
+            .ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("cacheFiles").GetInt32());
+        await using (var db = receiver.Factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
+            await receiver.Factory.Services.GetRequiredService<PeerCache>().PrefetchTracksAsync(db, [Guid.Parse(trackId!)], 5, Cancel);
+        for (var tries = 0; cached.GetProperty("cacheFiles").GetInt32() == 0 && tries < 100; tries++)
+        {
+            await Task.Delay(200, Cancel);
+            cached = await receiver.Admin.GetFromJsonAsync<JsonElement>("/rest/v1/p2p/remote-libraries", ArcanistFactory.Json, Cancel);
+        }
+
+        Assert.Equal(1, cached.GetProperty("cacheFiles").GetInt32());
+
         // From then on it plays from here, converted here: the owner is not asked.
         async Task<int> StreamedAsync() => (await owner.Admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/p2p/activity", ArcanistFactory.Json, Cancel))!
             .Count(a => a.GetProperty("kind").GetString() == "STREAMED");

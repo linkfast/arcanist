@@ -7,6 +7,7 @@ using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
 using Arcanist.Core.Storage;
+using Microsoft.EntityFrameworkCore;
 
 namespace Arcanist.Core.P2P;
 
@@ -74,6 +75,44 @@ public sealed class PeerCache : BackgroundService
             return;
         if (_queued.TryAdd(target.ContentHash, 0) && !_queue.Writer.TryWrite(target))
             _queued.TryRemove(target.ContentHash, out _);
+    }
+
+    /// <summary>
+    /// Fetches ahead the songs a player is about to play (an Auto-DJ batch, a playlist just loaded) that are only in
+    /// a shared library, the first <paramref name="limit"/> of them: they then start at once and play without the
+    /// other server.
+    /// </summary>
+    public async Task PrefetchTracksAsync(ArcanistDbContext db, IReadOnlyList<Guid> trackIds, int limit, CancellationToken cancellationToken)
+    {
+        if (!_settings.Current.CacheEnabled || trackIds.Count == 0)
+            return;
+        var ids = trackIds.Distinct().ToList();
+        var files = await db.MediaFiles.AsNoTracking()
+            .Where(f => ids.Contains(f.TrackId) && f.MissingSince == null)
+            .Select(f => new
+            {
+                f.TrackId, f.LibrarySource.Kind, f.LibrarySource.Location, f.LibrarySource.Settings, f.RelativePath, f.Size, f.ModifiedAt,
+                f.ContentHash, f.BitRate, f.DurationMs, f.StartMs, f.EndMs, f.CueTrack,
+            })
+            .ToListAsync(cancellationToken);
+        var remotes = await db.P2PRemotes.AsNoTracking().Where(r => r.Status == P2PRemoteStatus.Active).ToListAsync(cancellationToken);
+        var rules = remotes.ToDictionary(r => r.Id.ToString(), r => r.Rules, StringComparer.OrdinalIgnoreCase);
+        var queued = 0;
+        foreach (var trackId in ids)
+        {
+            var copies = files.Where(f => f.TrackId == trackId).ToList();
+            // A song this server has itself plays from here anyway.
+            if (copies.Count == 0 || copies.Any(c => c.Kind != LibrarySourceKind.Peer))
+                continue;
+            var copy = copies.FirstOrDefault(c => c.StartMs is null && rules.TryGetValue(c.Location, out var r) && Allowed(r));
+            if (copy is null)
+                continue;
+            Prefetch(new StreamTarget(new StorageLocation(copy.Kind, copy.Location, copy.Settings), copy.RelativePath, "application/octet-stream",
+                Path.GetFileName(copy.RelativePath), copy.Size, copy.ModifiedAt, copy.ContentHash, copy.BitRate, copy.DurationMs,
+                copy.StartMs, copy.EndMs, copy.CueTrack), rules[copy.Location]);
+            if (++queued >= limit)
+                break;
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

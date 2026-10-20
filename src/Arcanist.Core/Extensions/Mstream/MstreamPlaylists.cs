@@ -41,6 +41,8 @@ internal sealed partial class MstreamExtension
             });
         }
 
+        // The first songs of other servers' libraries are fetched while it starts playing.
+        await call.Service<P2P.PeerCache>().PrefetchTracksAsync(library.Db, entries.Select(e => e.Track.Id).ToList(), 5, call.Cancellation);
         return MstreamCall.Json(loaded);
     }
 

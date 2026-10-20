@@ -173,6 +173,8 @@ internal sealed partial class MstreamExtension
             .ToList();
 
         var songs = await ResultsAsync(library, picked.Select(s => (s.TrackId, similarity.GetValueOrDefault(s.TrackId))).ToList(), (song, _) => song.Remove("similarity"));
+        // Songs of other servers' libraries are fetched while the current one plays: Auto-DJ never waits for the network.
+        await call.Service<P2P.PeerCache>().PrefetchTracksAsync(db, picked.Select(s => s.TrackId).ToList(), MaxAutoDjBatch, call.Cancellation);
         recent.AddRange(picked.Select(s => ShortId(s.TrackId)));
         var result = new JsonObject
         {

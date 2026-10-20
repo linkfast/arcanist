@@ -13151,6 +13151,15 @@
           }
         }
       },
+      "ExtensionPricing": {
+        "enum": [
+          "OPEN_SOURCE",
+          "FREE",
+          "PAID",
+          "FREEMIUM",
+          null
+        ]
+      },
       "ExtensionStatus": {
         "enum": [
           "NOT_LOADED",
@@ -15185,6 +15194,22 @@
           },
           "builtIn": {
             "type": "boolean"
+          },
+          "pricing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExtensionPricing"
+              }
+            ]
+          },
+          "pricingUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

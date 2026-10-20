@@ -120,6 +120,44 @@ public sealed class MarketplaceTests
     }
 
     [Fact]
+    public async Task The_catalog_says_whether_each_extension_is_open_source_free_paid_or_freemium()
+    {
+        var package = ExtensionTests.Package();
+        object Priced(string id, string? pricing, string? pricingUrl) => new
+        {
+            id, name = id, official = false, pricing, pricingUrl, releases = new[] { Release("1.0.0", package) },
+        };
+        _catalog.Index = new
+        {
+            format = 1,
+            extensions = new[]
+            {
+                Priced("open", "open-source", null),
+                Priced("gratis", "free", null),
+                Priced("pro", "paid", "https://shop.test/pro"),
+                // Only https links are shown.
+                Priced("plus", "freemium", "http://shop.test/plus"),
+                Priced("unknown", "cheap", null),
+                Priced("unsaid", null, null),
+            },
+        };
+        await using var factory = Create();
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+
+        var market = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/extensions/marketplace", ArcanistFactory.Json, Cancel);
+        var pricing = market.GetProperty("extensions").EnumerateArray().ToDictionary(e => e.GetProperty("id").GetString()!,
+            e => (Pricing: e.GetProperty("pricing").ValueKind == JsonValueKind.Null ? null : e.GetProperty("pricing").GetString(),
+                Url: e.GetProperty("pricingUrl").ValueKind == JsonValueKind.Null ? null : e.GetProperty("pricingUrl").GetString()));
+        Assert.Equal(("OPEN_SOURCE", (string?)null), pricing["open"]);
+        Assert.Equal(("FREE", (string?)null), pricing["gratis"]);
+        Assert.Equal(("PAID", "https://shop.test/pro"), pricing["pro"]);
+        Assert.Equal(("FREEMIUM", (string?)null), pricing["plus"]);
+        Assert.Equal(((string?)null, (string?)null), pricing["unknown"]);
+        Assert.Equal(((string?)null, (string?)null), pricing["unsaid"]);
+    }
+
+    [Fact]
     public async Task Packages_that_are_not_what_the_catalog_says_are_refused()
     {
         var package = ExtensionTests.Package();

@@ -1441,6 +1441,21 @@ export const en: Dictionary = {
       needs: 'Needs Arcanist {version}',
       none: 'No extensions match.',
       categories: 'Categories',
+      pricingFilter: 'Pricing',
+      anyPricing: 'Any',
+      prices: 'Prices',
+      pricing: {
+        OPEN_SOURCE: 'Open source',
+        FREE: 'Free',
+        PAID: 'Paid',
+        FREEMIUM: 'Freemium',
+      },
+      pricingHelp: {
+        OPEN_SOURCE: 'Free, with its source code published under an open source license.',
+        FREE: 'Free of charge, without its source code.',
+        PAID: 'Paid: bought from its author, in the extension itself or on their site.',
+        FREEMIUM: 'Free, with paid features bought from its author.',
+      },
       allCategories: 'All',
       create: {
         title: 'Make and publish your extension',

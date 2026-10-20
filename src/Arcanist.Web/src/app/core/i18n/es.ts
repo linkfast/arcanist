@@ -1458,6 +1458,21 @@ export const es: Dictionary = {
       needs: 'Necesita Arcanist {version}',
       none: 'No hay extensiones que coincidan.',
       categories: 'Categorías',
+      pricingFilter: 'Modelo',
+      anyPricing: 'Cualquiera',
+      prices: 'Precios',
+      pricing: {
+        OPEN_SOURCE: 'Open source',
+        FREE: 'Gratis',
+        PAID: 'De pago',
+        FREEMIUM: 'Freemium',
+      },
+      pricingHelp: {
+        OPEN_SOURCE: 'Gratis, con su código fuente publicado bajo una licencia libre.',
+        FREE: 'Gratis, sin su código fuente.',
+        PAID: 'De pago: se compra a su autor, en la propia extensión o en su web.',
+        FREEMIUM: 'Gratis, con funciones de pago que se compran a su autor.',
+      },
       allCategories: 'Todas',
       create: {
         title: 'Crea y publica tu extensión',

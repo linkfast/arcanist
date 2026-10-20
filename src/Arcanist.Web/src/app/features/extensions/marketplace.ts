@@ -33,6 +33,7 @@ import { BytesPipe } from '../../shared/format';
 
 type Marketplace = ExtensionMarketplaceQuery['extensionMarketplace'];
 type Entry = Marketplace['extensions'][number];
+type Pricing = NonNullable<Entry['pricing']>;
 
 /**
  * The extension catalog (github.com/linkfast/arcanist-extensions): what there is, what is installed here, and
@@ -107,6 +108,36 @@ type Entry = Marketplace['extensions'][number];
                 (ngModelChange)="query.set($event)"
               />
             </div>
+            @if (pricings().length > 1) {
+              <div
+                class="flex flex-wrap gap-1"
+                role="group"
+                [attr.aria-label]="'extensions.marketplace.pricingFilter' | t"
+              >
+                <button
+                  hlmBtn
+                  size="sm"
+                  type="button"
+                  [variant]="pricing() === null ? 'secondary' : 'ghost'"
+                  [attr.aria-pressed]="pricing() === null"
+                  (click)="pricing.set(null)"
+                >
+                  {{ 'extensions.marketplace.anyPricing' | t }}
+                </button>
+                @for (option of pricings(); track option) {
+                  <button
+                    hlmBtn
+                    size="sm"
+                    type="button"
+                    [variant]="pricing() === option ? 'secondary' : 'ghost'"
+                    [attr.aria-pressed]="pricing() === option"
+                    (click)="pricing.set(pricing() === option ? null : option)"
+                  >
+                    {{ 'extensions.marketplace.pricing.' + option | t }}
+                  </button>
+                }
+              </div>
+            }
             @if (categories().length > 1) {
               <div
                 class="flex flex-wrap gap-1"
@@ -169,6 +200,15 @@ type Entry = Marketplace['extensions'][number];
                             'extensions.marketplace.community' | t
                           }}</span>
                         }
+                        @if (entry.pricing) {
+                          <span
+                            hlmBadge
+                            variant="outline"
+                            [class]="pricingClass[entry.pricing]"
+                            [title]="'extensions.marketplace.pricingHelp.' + entry.pricing | t"
+                            >{{ 'extensions.marketplace.pricing.' + entry.pricing | t }}</span
+                          >
+                        }
                         @if (entry.author) {
                           <span class="truncate">{{ entry.author }}</span>
                         }
@@ -194,6 +234,16 @@ type Entry = Marketplace['extensions'][number];
                           target="_blank"
                           rel="noopener"
                           >{{ 'extensions.marketplace.homepage' | t }}</a
+                        >
+                      }
+                      @if (entry.pricingUrl) {
+                        ·
+                        <a
+                          class="underline"
+                          [href]="entry.pricingUrl"
+                          target="_blank"
+                          rel="noopener"
+                          >{{ 'extensions.marketplace.prices' | t }}</a
                         >
                       }
                     </p>
@@ -313,6 +363,21 @@ export class ExtensionMarketplace implements OnInit {
   protected readonly confirming = signal<Entry | null>(null);
   protected readonly query = signal('');
   protected readonly category = signal<string | null>(null);
+  protected readonly pricing = signal<Pricing | null>(null);
+
+  /** Colors of the pricing badges (with their dark variants). */
+  protected readonly pricingClass: Record<Pricing, string> = {
+    OPEN_SOURCE: 'border-emerald-600/40 text-emerald-700 dark:text-emerald-400',
+    FREE: 'border-sky-600/40 text-sky-700 dark:text-sky-400',
+    PAID: 'border-amber-600/40 text-amber-700 dark:text-amber-400',
+    FREEMIUM: 'border-violet-600/40 text-violet-700 dark:text-violet-400',
+  };
+
+  /** The pricing models in the catalog, in a fixed order. */
+  protected readonly pricings = computed(() => {
+    const present = new Set((this.marketplace()?.extensions ?? []).map((e) => e.pricing));
+    return (['OPEN_SOURCE', 'FREE', 'FREEMIUM', 'PAID'] as Pricing[]).filter((p) => present.has(p));
+  });
 
   /** How to write one, and how the catalog takes proposals (issues with forms). */
   protected readonly guideUrl =
@@ -337,8 +402,10 @@ export class ExtensionMarketplace implements OnInit {
   protected readonly shown = computed(() => {
     const words = this.query().trim().toLowerCase().split(/\s+/).filter(Boolean);
     const category = this.category();
+    const pricing = this.pricing();
     return (this.marketplace()?.extensions ?? []).filter((entry) => {
       if (category && !entry.categories.includes(category)) return false;
+      if (pricing && entry.pricing !== pricing) return false;
       const text = [entry.name, entry.description, entry.author, ...entry.categories]
         .join(' ')
         .toLowerCase();

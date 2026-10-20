@@ -1168,6 +1168,8 @@ export const ExtensionMarketplaceQuery = graphql(`
         installedVersion
         updateAvailable
         builtIn
+        pricing
+        pricingUrl
       }
     }
   }

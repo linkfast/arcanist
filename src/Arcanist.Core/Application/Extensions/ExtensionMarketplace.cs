@@ -21,6 +21,22 @@ public sealed class MarketplaceOptions
     public TimeSpan CacheFor { get; set; } = TimeSpan.FromHours(1);
 }
 
+/// <summary>How an extension of the catalog is offered. Part of the API contract.</summary>
+public enum ExtensionPricing
+{
+    /// <summary>Free, with its source published under an open source license.</summary>
+    OpenSource,
+
+    /// <summary>Free of charge, without its source.</summary>
+    Free,
+
+    /// <summary>Paid: bought from its maintainer (in the extension or on their site).</summary>
+    Paid,
+
+    /// <summary>Free, with paid features bought from its maintainer.</summary>
+    Freemium,
+}
+
 /// <summary>An extension of the catalog, in its newest version this server can run. Part of the API contract.</summary>
 /// <param name="IconUrl">Its icon, served by this server (a path), or null.</param>
 /// <param name="Official">Made by the Arcanist project (LinkFast); the others are from the community, reviewed when added.</param>
@@ -30,6 +46,9 @@ public sealed class MarketplaceOptions
 /// <param name="InstalledVersion">The version installed here, if any.</param>
 /// <param name="UpdateAvailable">Installed, and <see cref="Version"/> is newer.</param>
 /// <param name="BuiltIn">Already part of Arcanist: nothing to install.</param>
+/// <param name="Pricing">Open source, free, paid or freemium; null when the catalog does not say. Purchases are handled by
+/// each extension's maintainer, in the extension or where <see cref="PricingUrl"/> says.</param>
+/// <param name="PricingUrl">Where its maintainer shows its prices or sells it.</param>
 public sealed record MarketplaceExtension(
     string Id,
     string Name,
@@ -46,7 +65,9 @@ public sealed record MarketplaceExtension(
     bool Compatible,
     string? InstalledVersion,
     bool UpdateAvailable,
-    bool BuiltIn);
+    bool BuiltIn,
+    ExtensionPricing? Pricing = null,
+    string? PricingUrl = null);
 
 /// <summary>The extension catalog. Part of the API contract.</summary>
 /// <param name="Available">Whether the catalog could be read; when not, <see cref="ErrorCode"/> says why.</param>
@@ -165,8 +186,23 @@ public sealed record CatalogExtension(
     string? Icon,
     bool Official,
     List<string>? Categories,
-    List<CatalogRelease>? Releases)
+    List<CatalogRelease>? Releases,
+    string? Pricing = null,
+    string? PricingUrl = null)
 {
+    /// <summary><c>open-source</c>, <c>free</c>, <c>paid</c> or <c>freemium</c> in the file.</summary>
+    internal ExtensionPricing? PricingKind => Pricing?.ToLowerInvariant() switch
+    {
+        "open-source" => ExtensionPricing.OpenSource,
+        "free" => ExtensionPricing.Free,
+        "paid" => ExtensionPricing.Paid,
+        "freemium" => ExtensionPricing.Freemium,
+        _ => null,
+    };
+
+    internal string? SafePricingUrl =>
+        Uri.TryCreate(PricingUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" ? PricingUrl : null;
+
     internal bool IsValid =>
         PackageArchive.IsValidId(Id) && !string.IsNullOrWhiteSpace(Name)
         && Releases is { Count: > 0 } && Releases.All(r => r.IsValid);
@@ -225,7 +261,7 @@ public sealed class ExtensionMarketplaceService(
                     release.Version, release.Size, release.MinServerVersion, release.RunsOn(ArcanistVersion.Current),
                     current is { BuiltIn: false } ? current.Version : null,
                     current is { BuiltIn: false } && ArcanistVersion.Compare(release.Version, current.Version) > 0,
-                    current is { BuiltIn: true });
+                    current is { BuiltIn: true }, entry.PricingKind, entry.SafePricingUrl);
             })
             .OrderByDescending(e => e.Official).ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();

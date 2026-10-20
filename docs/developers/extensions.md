@@ -236,6 +236,8 @@ The panel's **Marketplace** (Extensions) lists the extensions of the catalog at
 click: the server downloads the release, checks it against the SHA-256 the catalog lists (and that it holds the
 extension the catalog names) and installs it as any other package, switched on, offering to restart. To be listed,
 publish the extension's `.zip` as a release of a public repository and open a pull request there with its entry; its
-README describes the format. `extensionMarketplace` / `GET /rest/v1/extensions/marketplace` and
+README describes the format. Each entry says how it is offered (`pricing`: open source, free, freemium or
+paid, with an optional `pricingUrl`), which the marketplace shows and filters by; purchases are handled by each
+extension's maintainer, in the extension or on their site. `extensionMarketplace` / `GET /rest/v1/extensions/marketplace` and
 `installMarketplaceExtension` / `POST /rest/v1/extensions/marketplace/install` are the API; another catalog can be
 used with `Arcanist:Marketplace:Url`.

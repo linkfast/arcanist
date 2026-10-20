@@ -1117,6 +1117,15 @@ type MarketplaceExtension {
   installedVersion: String
   updateAvailable: Boolean!
   builtIn: Boolean!
+  pricing: ExtensionPricing
+  pricingUrl: String
+}
+
+enum ExtensionPricing {
+  OPEN_SOURCE
+  FREE
+  PAID
+  FREEMIUM
 }
 
 type Frontend {

@@ -23,6 +23,9 @@ public sealed class ArcanistPaths
 
     public string Cache => Path.Combine(Root, "cache");
 
+    /// <summary>Versions of the music converted ahead of time (passive transcoding).</summary>
+    public string Transcodes => Path.Combine(Root, "transcodes");
+
     public string Frontends => Path.Combine(Root, "frontends");
 
     public string Extensions => Path.Combine(Root, "extensions");

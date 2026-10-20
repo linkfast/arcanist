@@ -1232,6 +1232,8 @@ export const es: Dictionary = {
       DATABASE: 'Base de datos',
       ARTWORK: 'Carátulas',
       THUMBNAILS: 'Miniaturas (se rehacen solas)',
+      TRANSCODES: 'Audio convertido (caché y versiones)',
+      REMOTE_CACHE: 'Música de otros servidores en caché',
       TEMPORARY: 'Archivos en tránsito',
       LOGS: 'Registros',
       TOOLS: 'Herramientas (ffmpeg…)',
@@ -1275,6 +1277,44 @@ export const es: Dictionary = {
       all: 'Ver las {count} tablas',
       fewer: 'Ver menos',
     },
+  },
+  transcoding: {
+    title: 'Conversión de audio',
+    description:
+      'Arcanist convierte las canciones al formato y la calidad que pide cada reproductor (por ejemplo, al escuchar fuera de casa). Puede guardar lo convertido para no repetir el trabajo.',
+    noFfmpeg:
+      'Sin ffmpeg no se convierte nada: descárgalo o indica dónde está en la tarjeta de ffmpeg.',
+    cache: {
+      title: 'Caché de conversiones',
+      enabled: 'Guardar las canciones convertidas',
+      help: 'Una canción convertida entera se guarda; la próxima vez se envía al instante y se puede adelantar dentro de ella. Las que menos se escuchan salen primero.',
+      size: 'Tamaño máximo',
+      age: 'Quitar las que no se escuchan en',
+      days: '{count} días',
+      usage: 'Ocupa {bytes} en {count} canciones.',
+      clear: 'Vaciar la caché',
+      cleared: 'Caché vaciada',
+    },
+    pregenerate: {
+      title: 'Versiones preparadas de antemano',
+      help: 'Convierte en segundo plano todas las canciones a los formatos que elijas, con prioridad baja y esperando mientras alguien escucha. Luego se sirven sin convertir nada.',
+      pros: 'A favor',
+      prosList:
+        'Empiezan al instante y se puede adelantar dentro de ellas · Escuchar no gasta CPU: ideal para un NAS o un equipo modesto · Varias personas a la vez sin cuellos de botella · Las bibliotecas en S3 no se descargan enteras para convertirlas',
+      cons: 'En contra',
+      consList:
+        'Ocupan espacio por cada formato (abajo verás cuánto) · La primera vez tarda (horas en bibliotecas grandes) y usa la CPU · Solo sirve si los reproductores piden exactamente ese formato y calidad · Las canciones nuevas se convierten tras cada escaneo',
+      formats: 'Formatos',
+      libraries: 'Bibliotecas',
+      allLibraries: 'Todas (locales y S3)',
+      onlyLossless:
+        'Solo de originales sin pérdida (FLAC, WAV…): los MP3 y similares ya suelen ser pequeños',
+      progress: '{done} de {total} · {bytes} de unos {estimated}',
+      working: 'Convirtiendo…',
+      none: 'Ninguno: se convierte al escuchar.',
+    },
+    save: 'Guardar',
+    saved: 'Ajustes de conversión guardados',
   },
   updates: {
     notice: {

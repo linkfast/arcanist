@@ -48,6 +48,7 @@ public static class FactoryReset
         DeleteFile(paths.SettingsFile);
         DeleteDirectory(paths.Keys);
         DeleteDirectory(paths.Cache);
+        DeleteDirectory(paths.Transcodes);
         if (request?.RemoveAddons == true)
         {
             DeleteDirectory(paths.Frontends);

@@ -1216,6 +1216,8 @@ export const en: Dictionary = {
       DATABASE: 'Database',
       ARTWORK: 'Covers',
       THUMBNAILS: 'Thumbnails (made again by themselves)',
+      TRANSCODES: 'Converted audio (cache and versions)',
+      REMOTE_CACHE: "Other servers' music in cache",
       TEMPORARY: 'Files in transit',
       LOGS: 'Logs',
       TOOLS: 'Tools (ffmpeg…)',
@@ -1259,6 +1261,44 @@ export const en: Dictionary = {
       all: 'Show all {count} tables',
       fewer: 'Show fewer',
     },
+  },
+  transcoding: {
+    title: 'Audio conversion',
+    description:
+      'Arcanist converts songs to the format and quality each player asks for (for example, when listening away from home). It can keep what it converted so the work is not repeated.',
+    noFfmpeg:
+      'Without ffmpeg nothing is converted: download it or say where it is in the ffmpeg card.',
+    cache: {
+      title: 'Conversion cache',
+      enabled: 'Keep converted songs',
+      help: 'A song converted whole is kept; the next time it is sent at once and can be sought in. The least played go first.',
+      size: 'Maximum size',
+      age: 'Remove the ones not played in',
+      days: '{count} days',
+      usage: 'It takes {bytes} in {count} songs.',
+      clear: 'Empty the cache',
+      cleared: 'Cache emptied',
+    },
+    pregenerate: {
+      title: 'Versions made ahead of time',
+      help: 'Converts every song to the formats you choose in the background, at low priority and waiting while anyone listens. Then they are served without converting anything.',
+      pros: 'For',
+      prosList:
+        'They start at once and can be sought in · Listening takes no CPU: ideal for a NAS or a modest machine · Several people at once without bottlenecks · S3 libraries are not downloaded whole to convert them',
+      cons: 'Against',
+      consList:
+        'They take space for each format (the estimate is below) · The first time takes long (hours for large libraries) and uses the CPU · They only help if players ask for exactly that format and quality · New songs are converted after each scan',
+      formats: 'Formats',
+      libraries: 'Libraries',
+      allLibraries: 'All (local and S3)',
+      onlyLossless:
+        'Only from lossless originals (FLAC, WAV…): MP3s and the like are usually small already',
+      progress: '{done} of {total} · {bytes} of about {estimated}',
+      working: 'Converting…',
+      none: 'None: songs are converted while listening.',
+    },
+    save: 'Save',
+    saved: 'Conversion settings saved',
   },
   updates: {
     notice: {
@@ -2438,7 +2478,8 @@ export const en: Dictionary = {
       'The downloaded package is not the one the catalog publishes (its SHA-256 does not match). It was not installed.',
     package_mismatch: 'The downloaded package holds a different extension than the catalog says.',
     update_check_failed: 'Could not check for a new version.',
-    library_virtual: 'It is a virtual library (All): nothing can be uploaded to it or changed in it.',
+    library_virtual:
+      'It is a virtual library (All): nothing can be uploaded to it or changed in it.',
     not_ffmpeg: 'That file is not a working ffmpeg.',
     ffmpeg_platform_unsupported:
       'There is no ffmpeg download for this system; install it with the package manager and enter its path.',

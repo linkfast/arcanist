@@ -61,6 +61,88 @@ public sealed class TranscodingTests : IAsyncLifetime
         }
     }
 
+    private Task<JsonElement> TranscodingAsync() => _admin.GetFromJsonAsync<JsonElement>("/rest/v1/transcoding", ArcanistFactory.Json, Cancel);
+
+    private Task<HttpResponseMessage> SetTranscodingAsync(bool cache, params object[] pregenerate) =>
+        _admin.PutAsJsonAsync("/rest/v1/transcoding/settings", new
+        {
+            cacheEnabled = cache, cacheMaxBytes = 1L << 30, cacheMaxAgeDays = 30, pregenerate, pregenerateLibraries = (Guid[]?)null,
+            pregenerateOnlyLossless = false,
+        }, ArcanistFactory.Json, Cancel);
+
+    /// <summary>The song converted to MP3 at 128 kbit/s, once its kept version (cached or made ahead) is served.</summary>
+    private async Task<HttpResponseMessage> KeptAsync()
+    {
+        for (var tries = 0; ; tries++)
+        {
+            var response = await _admin.GetAsync($"/rest/v1/stream/{_trackId}?format=mp3&maxBitRate=128", Cancel);
+            if (response.Headers.AcceptRanges.Contains("bytes") || tries == 100)
+                return response;
+            await response.Content.ReadAsByteArrayAsync(Cancel);
+            await Task.Delay(300, Cancel);
+        }
+    }
+
+    [Fact]
+    public async Task Whole_conversions_are_kept_and_played_again_with_ranges()
+    {
+        await StartAsync(TestFfmpeg.Require());
+
+        var live = await _admin.GetAsync($"/rest/v1/stream/{_trackId}?format=mp3&maxBitRate=128", Cancel);
+        Assert.Equal("none", live.Headers.AcceptRanges.Single());
+        var converted = await live.Content.ReadAsByteArrayAsync(Cancel);
+
+        // Played again: the same audio, now a file that can be sought in.
+        var kept = await KeptAsync();
+        Assert.Equal(("bytes", (long?)converted.Length), (kept.Headers.AcceptRanges.Single(), kept.Content.Headers.ContentLength));
+        Assert.Equal("15", kept.Headers.GetValues("X-Content-Duration").Single());
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/rest/v1/stream/{_trackId}?format=mp3&maxBitRate=128");
+        request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(100, 199);
+        var part = await _admin.SendAsync(request, Cancel);
+        Assert.Equal(HttpStatusCode.PartialContent, part.StatusCode);
+        Assert.Equal(converted[100..200], await part.Content.ReadAsByteArrayAsync(Cancel));
+        Assert.Equal(1, (await TranscodingAsync()).GetProperty("cacheFiles").GetInt32());
+
+        // Part of a song (a seek) is converted as before and not kept.
+        var seek = await _admin.GetAsync($"/rest/v1/stream/{_trackId}?format=mp3&maxBitRate=128&timeOffset=10", Cancel);
+        Assert.Equal("none", seek.Headers.AcceptRanges.Single());
+
+        // Switched off, the cache is emptied.
+        (await SetTranscodingAsync(cache: false)).EnsureSuccessStatusCode();
+        Assert.Equal(0, (await TranscodingAsync()).GetProperty("cacheFiles").GetInt32());
+        Assert.Equal("none", (await _admin.GetAsync($"/rest/v1/stream/{_trackId}?format=mp3&maxBitRate=128", Cancel)).Headers.AcceptRanges.Single());
+    }
+
+    [Fact]
+    public async Task Versions_made_ahead_of_time_are_played_first_and_go_when_not_wanted()
+    {
+        await StartAsync(TestFfmpeg.Require());
+
+        (await SetTranscodingAsync(cache: false, new { format = "MP3", bitRate = 128 })).EnsureSuccessStatusCode();
+        JsonElement progress = default;
+        for (var tries = 0; tries < 100; tries++)
+        {
+            progress = (await TranscodingAsync()).GetProperty("pregenerated");
+            if (progress.GetArrayLength() == 1 && progress[0].GetProperty("done").GetInt32() == 1)
+                break;
+            await Task.Delay(300, Cancel);
+        }
+
+        Assert.Equal((1, 1), (progress[0].GetProperty("done").GetInt32(), progress[0].GetProperty("total").GetInt32()));
+        Assert.True(progress[0].GetProperty("bytes").GetInt64() > 50_000);
+        Assert.Equal("bytes", (await KeptAsync()).Headers.AcceptRanges.Single());
+
+        // Not wanted any more: removed.
+        (await SetTranscodingAsync(cache: false)).EnsureSuccessStatusCode();
+        for (var tries = 0; tries < 100 && Directory.EnumerateFiles(Path.Combine(_factory.DataPath, "transcodes"), "*", SearchOption.AllDirectories).Any(); tries++)
+            await Task.Delay(100, Cancel);
+        Assert.Empty(Directory.EnumerateFiles(Path.Combine(_factory.DataPath, "transcodes"), "*", SearchOption.AllDirectories));
+
+        await _factory.CreateUserAsync("listener");
+        var listener = await _factory.CreateAuthenticatedClientAsync("listener");
+        Assert.Equal(HttpStatusCode.Forbidden, (await listener.GetAsync("/rest/v1/transcoding", Cancel)).StatusCode);
+    }
+
     [Fact]
     public async Task Seeks_with_a_time_offset()
     {

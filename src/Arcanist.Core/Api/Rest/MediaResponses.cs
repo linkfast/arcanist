@@ -58,6 +58,19 @@ public static class MediaResponses
                 ? TranscodeFormat.Flac
                 : TranscodeFormat.Mp3);
             var remaining = Math.Max(0, target.DurationMs / 1000.0 - offset);
+            var rate = profile.Clamp(maxBitRate ?? (segment ? 320 : null));
+
+            // A whole song converted before (ahead of time, or the last time it was played) is a file: sent with
+            // ranges, so players can seek in it. DLNA's raw PCM is never kept: it is as big as a WAV.
+            var kept = context.RequestServices.GetService<TranscodeStore>() is { } store && profile.Format is not null ? store : null;
+            if (kept is not null && offset == 0 && kept.Find(target.ContentHash, profile, rate) is { } file)
+            {
+                context.Response.Headers.CacheControl = "private, max-age=3600";
+                context.Response.Headers["X-Content-Duration"] = remaining.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+                return Results.File(file, profile.ContentType, lastModified: target.ModifiedAt,
+                    entityTag: new EntityTagHeaderValue($"\"{TranscodeStore.Key(target.ContentHash, profile, rate)}\""), enableRangeProcessing: true);
+            }
+
             if (HttpMethods.IsHead(context.Request.Method))
             {
                 context.Response.Headers.CacheControl = "private, no-store";
@@ -69,14 +82,18 @@ public static class MediaResponses
                 storage.TryGetLocalPath(target.Location, target.RelativePath),
                 () => storage.OpenReadAsync(target.Location, target.RelativePath, cancellationToken),
                 profile,
-                profile.Clamp(maxBitRate ?? (segment ? 320 : null)),
+                rate,
                 (target.StartMs ?? 0) / 1000.0 + offset,
                 cancellationToken,
                 segment ? remaining : null);
 
+            // Only a whole song is worth keeping: from an offset it is part of one.
+            var cache = kept is not null && offset == 0 && context.RequestServices.GetRequiredService<TranscodingSettings>().Current.CacheEnabled
+                ? kept.Cache
+                : null;
             return session is null
                 ? Problems.Create(StatusCodes.Status503ServiceUnavailable, Application.ErrorCodes.TranscodingUnavailable)
-                : new TranscodeResult(session, profile.ContentType, remaining);
+                : new TranscodeResult(session, profile.ContentType, remaining, cache, cache is null ? null : TranscodeStore.Key(target.ContentHash, profile, rate));
         }
 
         // Originals in Ultimate Cloud come from their signed URLs, Range included.

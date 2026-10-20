@@ -89,4 +89,7 @@ public static class SettingKeys
 
     /// <summary>The last check for a newer Arcanist and what it found.</summary>
     public const string UpdatesLastCheck = "updates.lastCheck";
+
+    /// <summary>How converted audio is kept: its cache and the versions made ahead of time.</summary>
+    public const string Transcoding = "transcoding.settings";
 }

@@ -282,6 +282,26 @@ public sealed class TranscodeSession(Process process, Task feeding, Task<string>
 
     public Stream Output => process.StandardOutput.BaseStream;
 
+    /// <summary>After reading <see cref="Output"/> to its end: whether ffmpeg converted everything without an error.</summary>
+    public async Task<bool> FinishedCleanlyAsync()
+    {
+        await process.WaitForExitAsync();
+        return process.ExitCode == 0;
+    }
+
+    /// <summary>Runs it below normal priority, for work nobody is waiting for.</summary>
+    public void Lower()
+    {
+        try
+        {
+            process.PriorityClass = ProcessPriorityClass.BelowNormal;
+        }
+        catch (Exception e) when (e is InvalidOperationException or System.ComponentModel.Win32Exception or PlatformNotSupportedException)
+        {
+            // Already finished, or the system does not let us: it just runs at normal priority.
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)

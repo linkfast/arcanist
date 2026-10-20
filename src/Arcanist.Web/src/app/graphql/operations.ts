@@ -1017,6 +1017,58 @@ export const InstallExtensionFromUrlMutation = graphql(`
   }
 `);
 
+export const TranscodingFields = graphql(`
+  fragment TranscodingFields on TranscodingStatus {
+    cacheBytes
+    cacheFiles
+    working
+    ffmpegAvailable
+    settings {
+      cacheEnabled
+      cacheMaxBytes
+      cacheMaxAgeDays
+      pregenerateLibraries
+      pregenerateOnlyLossless
+      pregenerate {
+        format
+        bitRate
+      }
+    }
+    pregenerated {
+      format
+      bitRate
+      done
+      total
+      bytes
+      estimatedBytes
+    }
+  }
+`);
+
+export const TranscodingQuery = graphql(`
+  query Transcoding {
+    transcoding {
+      ...TranscodingFields
+    }
+  }
+`);
+
+export const SetTranscodingSettingsMutation = graphql(`
+  mutation SetTranscodingSettings($input: SetTranscodingSettingsInput!) {
+    setTranscodingSettings(input: $input) {
+      ...TranscodingFields
+    }
+  }
+`);
+
+export const ClearTranscodeCacheMutation = graphql(`
+  mutation ClearTranscodeCache {
+    clearTranscodeCache {
+      ...TranscodingFields
+    }
+  }
+`);
+
 export const ServerUpdateFields = graphql(`
   fragment ServerUpdateFields on ServerUpdate {
     enabled

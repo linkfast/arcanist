@@ -7,6 +7,7 @@ import { OnlineServicesCard } from './online-services-card';
 import { PrivacyCard } from './privacy-card';
 import { RatingModeCard } from './rating-mode-card';
 import { UpdatesCard } from './updates-card';
+import { TranscodingCard } from './transcoding-card';
 
 /** Server-wide settings: ratings, online services and media tools. */
 @Component({
@@ -19,6 +20,7 @@ import { UpdatesCard } from './updates-card';
     OnlineServicesCard,
     RatingModeCard,
     UpdatesCard,
+    TranscodingCard,
   ],
   template: `
     <header class="mb-6">
@@ -33,6 +35,7 @@ import { UpdatesCard } from './updates-card';
         <app-online-services-card />
       }
       <app-ffmpeg-card />
+      <app-transcoding-card />
       @if (auth.isAdmin()) {
         <app-updates-card />
         <app-maintenance-card />

@@ -22,6 +22,20 @@ public static class FfmpegEndpoints
             .WithName("InstallFfmpeg")
             .WithSummary("Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Poll the status to follow it. Administrators only, with a recent password.");
 
+        var transcoding = rest.MapGroup("/transcoding").WithTags("Media tools");
+
+        transcoding.MapGet("", (TranscodingService service, CancellationToken ct) => service.StatusAsync(ct))
+            .WithName("Transcoding")
+            .WithSummary("The conversion cache and the versions of the music made ahead of time (passive transcoding), with their progress. Requires MANAGE_SETTINGS.");
+
+        transcoding.MapPut("/settings", (SetTranscodingSettingsInput input, TranscodingService service, CancellationToken ct) => service.SetAsync(input, ct))
+            .WithName("SetTranscodingSettings")
+            .WithSummary("The conversion cache (on or off, size, age) and the versions to make ahead of time, of which libraries. Versions nobody asks for any more are removed. Requires MANAGE_SETTINGS.");
+
+        transcoding.MapDelete("/cache", (TranscodingService service, CancellationToken ct) => service.ClearCacheAsync(ct))
+            .WithName("ClearTranscodeCache")
+            .WithSummary("Empties the conversion cache; the versions made ahead of time stay. Requires MANAGE_SETTINGS.");
+
         return rest;
     }
 }

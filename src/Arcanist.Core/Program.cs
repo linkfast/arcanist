@@ -108,6 +108,7 @@ builder.Services.AddScoped<S3LibraryService>();
 builder.Services.AddScoped<ScanService>();
 builder.Services.AddScoped<AnalysisService>();
 builder.Services.AddScoped<FfmpegService>();
+builder.Services.AddScoped<TranscodingService>();
 builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<TrackMatchService>();

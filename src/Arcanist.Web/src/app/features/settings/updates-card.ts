@@ -17,13 +17,7 @@ import { RelativeTimePipe } from '../../shared/format';
 /** Checking GitHub for newer versions of Arcanist: on or off, and when it last looked. Administrators only. */
 @Component({
   selector: 'app-updates-card',
-  imports: [
-    HlmCardImports,
-    HlmButtonImports,
-    HlmSwitchImports,
-    TranslatePipe,
-    RelativeTimePipe,
-  ],
+  imports: [HlmCardImports, HlmButtonImports, HlmSwitchImports, TranslatePipe, RelativeTimePipe],
   template: `
     <section hlmCard>
       <div hlmCardHeader>

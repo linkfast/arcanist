@@ -35,6 +35,12 @@ public enum StoragePartKind
     /// <summary>Extensions installed from the panel, and the data extensions keep.</summary>
     Extensions,
 
+    /// <summary>Converted audio: the conversion cache and the versions made ahead of time (they can be deleted; they are made again).</summary>
+    Transcodes,
+
+    /// <summary>Music of libraries shared by other servers, kept to play it again without asking for it.</summary>
+    RemoteCache,
+
     /// <summary>Settings, keys and the rest.</summary>
     Other,
 }
@@ -191,6 +197,8 @@ public sealed class StorageUsageService(
     {
         ["cache", "artwork", ..] => StoragePartKind.Artwork,
         ["cache", "thumbnails", ..] => StoragePartKind.Thumbnails,
+        ["cache", "transcodes", ..] or ["transcodes", ..] => StoragePartKind.Transcodes,
+        ["cache", "peers", ..] => StoragePartKind.RemoteCache,
         ["cache", _, ..] => StoragePartKind.Temporary,
         ["restore-pending", ..] => StoragePartKind.Temporary,
         ["logs", ..] => StoragePartKind.Logs,

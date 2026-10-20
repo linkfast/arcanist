@@ -100,6 +100,8 @@ type Query {
   serverStats(period: StatsPeriod!, timeZone: String): ServerStats!
   "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS."
   ffmpeg: FfmpegStatus!
+  "The conversion cache and the versions of the music made ahead of time (passive transcoding), with their progress. Requires MANAGE_SETTINGS."
+  transcoding: TranscodingStatus!
   "The latest imports from mStream, newest first. Administrators only."
   mstreamImports: [MstreamImportJob!]!
   "How the mStream extension behaves with the mStream apps: the star threshold, signing in with the user's password and the apps' own functions. Administrators only."
@@ -1346,6 +1348,46 @@ enum FfmpegDownloadState {
   FAILED
 }
 
+type TranscodingStatus {
+  settings: TranscodingConfig!
+  cacheBytes: Long!
+  cacheFiles: Int!
+  pregenerated: [PregenerateProgress!]!
+  working: Boolean!
+  ffmpegAvailable: Boolean!
+}
+
+type TranscodingConfig {
+  cacheEnabled: Boolean!
+  cacheMaxBytes: Long!
+  cacheMaxAgeDays: Int!
+  pregenerate: [TranscodeTarget!]!
+  pregenerateLibraries: [ID!]
+  pregenerateOnlyLossless: Boolean!
+  normalized: TranscodingConfig!
+}
+
+type TranscodeTarget {
+  format: TranscodeFormat!
+  bitRate: Int!
+}
+
+enum TranscodeFormat {
+  OPUS
+  MP3
+  AAC
+  FLAC
+}
+
+type PregenerateProgress {
+  format: TranscodeFormat!
+  bitRate: Int!
+  done: Int!
+  total: Int!
+  bytes: Long!
+  estimatedBytes: Long!
+}
+
 type MstreamImportJob {
   id: ID!
   kind: MstreamImportKind!
@@ -1496,13 +1538,6 @@ enum DuplicatePolicy {
   SKIP
   KEEP_BEST
   ADD_VERSION
-}
-
-enum TranscodeFormat {
-  OPUS
-  MP3
-  AAC
-  FLAC
 }
 
 enum DropFolderMode {
@@ -1877,6 +1912,8 @@ enum StoragePartKind {
   TOOLS
   PLAYERS
   EXTENSIONS
+  TRANSCODES
+  REMOTE_CACHE
   OTHER
 }
 
@@ -2318,6 +2355,10 @@ type Mutation {
   setRatingMode(mode: RatingMode!): RatingMode!
   "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password."
   setFfmpegPath(path: String): FfmpegStatus!
+  "The conversion cache (on or off, size, age) and the versions to make ahead of time, of which libraries. Versions nobody asks for any more are removed. Requires MANAGE_SETTINGS."
+  setTranscodingSettings(input: SetTranscodingSettingsInput!): TranscodingStatus!
+  "Empties the conversion cache; the versions made ahead of time stay. Requires MANAGE_SETTINGS."
+  clearTranscodeCache: TranscodingStatus!
   "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password."
   installFfmpeg: FfmpegStatus!
   "Reads an mStream installation on this server (its folder or configuration file) without changing it: its libraries, users and their data. Administrators only."
@@ -2715,6 +2756,20 @@ input RecordPlayInput {
   playedMs: Int!
   playedAt: DateTime
   client: String
+}
+
+input SetTranscodingSettingsInput {
+  cacheEnabled: Boolean!
+  cacheMaxBytes: Long!
+  cacheMaxAgeDays: Int!
+  pregenerate: [TranscodeTargetInput!]!
+  pregenerateLibraries: [ID!]
+  pregenerateOnlyLossless: Boolean!
+}
+
+input TranscodeTargetInput {
+  format: TranscodeFormat!
+  bitRate: Int!
 }
 
 type MstreamAnalysis {

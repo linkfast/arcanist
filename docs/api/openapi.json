@@ -3375,6 +3375,79 @@
         }
       }
     },
+    "/rest/v1/transcoding": {
+      "get": {
+        "tags": [
+          "Media tools"
+        ],
+        "summary": "The conversion cache and the versions of the music made ahead of time (passive transcoding), with their progress. Requires MANAGE_SETTINGS.",
+        "operationId": "Transcoding",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscodingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/transcoding/settings": {
+      "put": {
+        "tags": [
+          "Media tools"
+        ],
+        "summary": "The conversion cache (on or off, size, age) and the versions to make ahead of time, of which libraries. Versions nobody asks for any more are removed. Requires MANAGE_SETTINGS.",
+        "operationId": "SetTranscodingSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetTranscodingSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscodingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/transcoding/cache": {
+      "delete": {
+        "tags": [
+          "Media tools"
+        ],
+        "summary": "Empties the conversion cache; the versions made ahead of time stay. Requires MANAGE_SETTINGS.",
+        "operationId": "ClearTranscodeCache",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscodingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/duplicates": {
       "get": {
         "tags": [
@@ -16161,6 +16234,62 @@
           }
         }
       },
+      "PregenerateProgress": {
+        "required": [
+          "format",
+          "bitRate",
+          "done",
+          "total",
+          "bytes",
+          "estimatedBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/TranscodeFormat"
+          },
+          "bitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "done": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "estimatedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "PreviousSqliteAction": {
         "enum": [
           "KEEP",
@@ -17571,6 +17700,57 @@
           }
         }
       },
+      "SetTranscodingSettingsInput": {
+        "required": [
+          "cacheEnabled",
+          "cacheMaxBytes",
+          "cacheMaxAgeDays",
+          "pregenerate",
+          "pregenerateLibraries",
+          "pregenerateOnlyLossless"
+        ],
+        "type": "object",
+        "properties": {
+          "cacheEnabled": {
+            "type": "boolean"
+          },
+          "cacheMaxBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheMaxAgeDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pregenerate": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscodeTargetInput"
+            }
+          },
+          "pregenerateLibraries": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "pregenerateOnlyLossless": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetupAdmin": {
         "required": [
           "userName",
@@ -18546,6 +18726,8 @@
           "TOOLS",
           "PLAYERS",
           "EXTENSIONS",
+          "TRANSCODES",
+          "REMOTE_CACHE",
           "OTHER"
         ]
       },
@@ -19691,6 +19873,141 @@
           "AAC",
           "FLAC"
         ]
+      },
+      "TranscodeTarget": {
+        "required": [
+          "format",
+          "bitRate"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/TranscodeFormat"
+          },
+          "bitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "TranscodeTargetInput": {
+        "required": [
+          "format",
+          "bitRate"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "$ref": "#/components/schemas/TranscodeFormat"
+          },
+          "bitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "TranscodingConfig": {
+        "required": [
+          "cacheEnabled",
+          "cacheMaxBytes",
+          "cacheMaxAgeDays",
+          "pregenerate",
+          "pregenerateLibraries",
+          "pregenerateOnlyLossless"
+        ],
+        "type": "object",
+        "properties": {
+          "cacheEnabled": {
+            "type": "boolean"
+          },
+          "cacheMaxBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheMaxAgeDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pregenerate": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscodeTarget"
+            }
+          },
+          "pregenerateLibraries": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "pregenerateOnlyLossless": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TranscodingStatus": {
+        "required": [
+          "settings",
+          "cacheBytes",
+          "cacheFiles",
+          "pregenerated",
+          "working",
+          "ffmpegAvailable"
+        ],
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/TranscodingConfig"
+          },
+          "cacheBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheFiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pregenerated": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PregenerateProgress"
+            }
+          },
+          "working": {
+            "type": "boolean"
+          },
+          "ffmpegAvailable": {
+            "type": "boolean"
+          }
+        }
       },
       "UltimateCloudCollection": {
         "enum": [

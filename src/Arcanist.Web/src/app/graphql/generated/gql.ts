@@ -101,6 +101,10 @@ type Documents = {
     "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": typeof types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
+    "\n  fragment TranscodingFields on TranscodingStatus {\n    cacheBytes\n    cacheFiles\n    working\n    ffmpegAvailable\n    settings {\n      cacheEnabled\n      cacheMaxBytes\n      cacheMaxAgeDays\n      pregenerateLibraries\n      pregenerateOnlyLossless\n      pregenerate {\n        format\n        bitRate\n      }\n    }\n    pregenerated {\n      format\n      bitRate\n      done\n      total\n      bytes\n      estimatedBytes\n    }\n  }\n": typeof types.TranscodingFieldsFragmentDoc,
+    "\n  query Transcoding {\n    transcoding {\n      ...TranscodingFields\n    }\n  }\n": typeof types.TranscodingDocument,
+    "\n  mutation SetTranscodingSettings($input: SetTranscodingSettingsInput!) {\n    setTranscodingSettings(input: $input) {\n      ...TranscodingFields\n    }\n  }\n": typeof types.SetTranscodingSettingsDocument,
+    "\n  mutation ClearTranscodeCache {\n    clearTranscodeCache {\n      ...TranscodingFields\n    }\n  }\n": typeof types.ClearTranscodeCacheDocument,
     "\n  fragment ServerUpdateFields on ServerUpdate {\n    enabled\n    currentVersion\n    installKind\n    updateAvailable\n    checkedAt\n    errorCode\n    latest {\n      version\n      name\n      notes\n      url\n      publishedAt\n      prerelease\n    }\n  }\n": typeof types.ServerUpdateFieldsFragmentDoc,
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.CheckServerUpdateDocument,
@@ -314,6 +318,10 @@ const documents: Documents = {
     "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
+    "\n  fragment TranscodingFields on TranscodingStatus {\n    cacheBytes\n    cacheFiles\n    working\n    ffmpegAvailable\n    settings {\n      cacheEnabled\n      cacheMaxBytes\n      cacheMaxAgeDays\n      pregenerateLibraries\n      pregenerateOnlyLossless\n      pregenerate {\n        format\n        bitRate\n      }\n    }\n    pregenerated {\n      format\n      bitRate\n      done\n      total\n      bytes\n      estimatedBytes\n    }\n  }\n": types.TranscodingFieldsFragmentDoc,
+    "\n  query Transcoding {\n    transcoding {\n      ...TranscodingFields\n    }\n  }\n": types.TranscodingDocument,
+    "\n  mutation SetTranscodingSettings($input: SetTranscodingSettingsInput!) {\n    setTranscodingSettings(input: $input) {\n      ...TranscodingFields\n    }\n  }\n": types.SetTranscodingSettingsDocument,
+    "\n  mutation ClearTranscodeCache {\n    clearTranscodeCache {\n      ...TranscodingFields\n    }\n  }\n": types.ClearTranscodeCacheDocument,
     "\n  fragment ServerUpdateFields on ServerUpdate {\n    enabled\n    currentVersion\n    installKind\n    updateAvailable\n    checkedAt\n    errorCode\n    latest {\n      version\n      name\n      notes\n      url\n      publishedAt\n      prerelease\n    }\n  }\n": types.ServerUpdateFieldsFragmentDoc,
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.CheckServerUpdateDocument,
@@ -802,6 +810,22 @@ export function graphql(source: "\n  query Extensions {\n    extensions {\n     
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment TranscodingFields on TranscodingStatus {\n    cacheBytes\n    cacheFiles\n    working\n    ffmpegAvailable\n    settings {\n      cacheEnabled\n      cacheMaxBytes\n      cacheMaxAgeDays\n      pregenerateLibraries\n      pregenerateOnlyLossless\n      pregenerate {\n        format\n        bitRate\n      }\n    }\n    pregenerated {\n      format\n      bitRate\n      done\n      total\n      bytes\n      estimatedBytes\n    }\n  }\n"): (typeof documents)["\n  fragment TranscodingFields on TranscodingStatus {\n    cacheBytes\n    cacheFiles\n    working\n    ffmpegAvailable\n    settings {\n      cacheEnabled\n      cacheMaxBytes\n      cacheMaxAgeDays\n      pregenerateLibraries\n      pregenerateOnlyLossless\n      pregenerate {\n        format\n        bitRate\n      }\n    }\n    pregenerated {\n      format\n      bitRate\n      done\n      total\n      bytes\n      estimatedBytes\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Transcoding {\n    transcoding {\n      ...TranscodingFields\n    }\n  }\n"): (typeof documents)["\n  query Transcoding {\n    transcoding {\n      ...TranscodingFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetTranscodingSettings($input: SetTranscodingSettingsInput!) {\n    setTranscodingSettings(input: $input) {\n      ...TranscodingFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetTranscodingSettings($input: SetTranscodingSettingsInput!) {\n    setTranscodingSettings(input: $input) {\n      ...TranscodingFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ClearTranscodeCache {\n    clearTranscodeCache {\n      ...TranscodingFields\n    }\n  }\n"): (typeof documents)["\n  mutation ClearTranscodeCache {\n    clearTranscodeCache {\n      ...TranscodingFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

@@ -9,6 +9,10 @@ public static class MediaServiceCollectionExtensions
         services.AddSingleton<FfmpegDownloader>();
         services.Configure<TranscodingOptions>(configuration.GetSection(TranscodingOptions.Section));
         services.AddSingleton<Transcoder>();
+        services.AddSingleton<TranscodingSettings>();
+        services.AddSingleton<TranscodeStore>();
+        services.AddSingleton<PretranscodeWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<PretranscodeWorker>());
         services.AddHostedService<FfmpegWarmup>();
         services.AddHttpClient(FfmpegDownloader.HttpClientName, client =>
         {

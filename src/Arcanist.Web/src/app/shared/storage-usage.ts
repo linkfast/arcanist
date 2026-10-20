@@ -27,6 +27,8 @@ const PartColors: Record<StoragePartKind, string> = {
   TOOLS: 'bg-emerald-500',
   PLAYERS: 'bg-rose-500',
   EXTENSIONS: 'bg-teal-500',
+  TRANSCODES: 'bg-lime-500',
+  REMOTE_CACHE: 'bg-indigo-400',
   OTHER: 'bg-zinc-500',
 };
 

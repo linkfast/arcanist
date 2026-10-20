@@ -9225,7 +9225,7 @@
             "description": "The texts of a list."
           }
         },
-        "description": "A piece of a section. Build them with AdminBlock AdminBlock.Field(string key, string label, AdminFieldType type, object? value, string? help = null, IReadOnlyList\u0026lt;AdminOption\u0026gt;? options = null, string? placeholder = null, double? min = null, double? max = null, bool readOnly = false), AdminBlock AdminBlock.Status(string label, string text, AdminTone tone = AdminTone.Neutral, string? help = null), AdminBlock AdminBlock.Notice(string text, AdminTone tone = AdminTone.Neutral),\r\n            AdminBlock AdminBlock.Progress(string label, double percent, string? text = null) and AdminBlock AdminBlock.List(string label, IReadOnlyList\u0026lt;string\u0026gt; items)."
+        "description": "A piece of a section, built with its Field, Status, Notice, Progress and List methods."
       },
       "AdminBlockKind": {
         "enum": [

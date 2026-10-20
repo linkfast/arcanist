@@ -110,8 +110,7 @@ public enum AdminActionStyle
     Destructive,
 }
 
-/// <summary>A piece of a section. Build them with <see cref="Field"/>, <see cref="Status"/>, <see cref="Notice"/>,
-/// <see cref="Progress"/> and <see cref="List"/>.</summary>
+/// <summary>A piece of a section, built with its Field, Status, Notice, Progress and List methods.</summary>
 /// <param name="Kind">What it is.</param>
 /// <param name="Key">A field's key, the one its value is saved under.</param>
 /// <param name="Label">The label of a field, status, progress or list.</param>

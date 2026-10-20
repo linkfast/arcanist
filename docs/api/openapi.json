@@ -8505,7 +8505,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Albums with music the user can play, by title; optionally only those of an artist, or with music in a library.",
+        "summary": "Albums with music the user can play, by title (or \u0060sort\u0060: \u0060RECENTLY_ADDED\u0060 first, or \u0060RANDOM\u0060, the same order all day for the user and \u0060seed\u0060); optionally only those of an artist, or with music in a library.",
         "operationId": "Albums",
         "parameters": [
           {
@@ -8548,6 +8548,25 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
             }
           }
         ],

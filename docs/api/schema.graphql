@@ -34,8 +34,8 @@ type Query {
   "Performers and album artists with music the user can play, by name; optionally only those with music in a library. Pages of `first` items (default 50, at most 500) after the `after` cursor."
   artists(search: String, after: String, first: Int, libraryId: ID): ArtistPage!
   artist(id: ID!): Artist!
-  "Albums with music the user can play, by title; optionally only those of an artist, or with music in a library."
-  albums(search: String, artistId: ID, after: String, first: Int, libraryId: ID): AlbumPage!
+  "Albums with music the user can play, by title (or the most recently added first, or at random: the same order all day for the user and `seed`); optionally only those of an artist, or with music in a library."
+  albums(search: String, artistId: ID, after: String, first: Int, libraryId: ID, sort: AlbumSort, seed: Int): AlbumPage!
   album(id: ID!): Album!
   "Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album's tracks in disc and track order, without paging."
   tracks(search: String, albumId: ID, artistId: ID, after: String, first: Int, libraryId: ID): TrackPage!
@@ -644,6 +644,12 @@ type Album {
 type ArtistReference {
   id: ID!
   name: String!
+}
+
+enum AlbumSort {
+  TITLE
+  RECENTLY_ADDED
+  RANDOM
 }
 
 type TrackPage {

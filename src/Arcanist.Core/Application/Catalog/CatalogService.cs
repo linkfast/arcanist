@@ -19,7 +19,8 @@ public sealed class CatalogService(
     AccessGuard guard,
     StreamTokens streamTokens,
     Listening.RatingSettings ratings,
-    Core.Extensions.ExtensionHost extensions)
+    Core.Extensions.ExtensionHost extensions,
+    TimeProvider time)
 {
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 500;
@@ -47,7 +48,10 @@ public sealed class CatalogService(
 
     /// <param name="artistId">Albums by this album artist or with tracks performed by them.</param>
     /// <param name="libraryId">Only albums with music in this library (their track counts are those of the library).</param>
-    public async Task<AlbumPage> AlbumsAsync(string? search, Guid? artistId, string? after, int? first, CancellationToken cancellationToken, Guid? libraryId = null)
+    /// <param name="sort">By title (the default), the most recently added first, or at random (the same order all day for
+    /// the user and <paramref name="seed"/>).</param>
+    public async Task<AlbumPage> AlbumsAsync(string? search, Guid? artistId, string? after, int? first, CancellationToken cancellationToken, Guid? libraryId = null,
+        AlbumSort sort = AlbumSort.Title, int? seed = null)
     {
         var visible = VisibleTracks(guard.Authenticated(), libraryId);
         var albums = db.Albums.Where(a => visible.Any(t => t.AlbumId == a.Id));
@@ -61,8 +65,40 @@ public sealed class CatalogService(
 
         albums = Matching(albums, SearchKind.Albums, search);
 
-        var (page, next, total) = await Keyset.PageAsync(albums, a => a.NormalizedTitle, after, first, cancellationToken);
-        return new AlbumPage(await ToModelsAsync(page, visible, cancellationToken), next, total);
+        if (sort == AlbumSort.Title)
+        {
+            var (page, next, total) = await Keyset.PageAsync(albums, a => a.NormalizedTitle, after, first, cancellationToken);
+            return new AlbumPage(await ToModelsAsync(page, visible, cancellationToken), next, total);
+        }
+
+        // Other orders page by position: new albums may shift a page, which is fine for browsing.
+        var size = Math.Clamp(first ?? DefaultPageSize, 1, MaxPageSize);
+        var offset = after is null ? 0 : int.TryParse(Cursor.Decode(after).Key, out var o) && o >= 0 ? o : throw ArcanistException.Field("after", ErrorCodes.InvalidFormat);
+        var count = await albums.CountAsync(cancellationToken);
+        List<Guid> ids;
+        if (sort == AlbumSort.RecentlyAdded)
+        {
+            ids = await visible.Where(t => albums.Any(a => a.Id == t.AlbumId))
+                .GroupBy(t => t.AlbumId)
+                .Select(g => new { AlbumId = g.Key, AddedAt = g.Max(t => t.AddedAt) })
+                .OrderByDescending(g => g.AddedAt).ThenBy(g => g.AlbumId)
+                .Skip(offset).Take(size)
+                .Select(g => g.AlbumId)
+                .ToListAsync(cancellationToken);
+        }
+        else
+        {
+            var all = await albums.Select(a => a.Id).OrderBy(id => id).ToListAsync(cancellationToken);
+            var day = time.GetUtcNow().UtcDateTime.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"{guard.Authenticated().UserId:N}:{day}:albums:{seed}"));
+            new Random(BitConverter.ToInt32(hash)).Shuffle(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(all));
+            ids = all.Skip(offset).Take(size).ToList();
+        }
+
+        var found = await db.Albums.AsNoTracking().Where(a => ids.Contains(a.Id)).ToDictionaryAsync(a => a.Id, cancellationToken);
+        var ordered = ids.Where(found.ContainsKey).Select(id => found[id]).ToList();
+        var nextCursor = offset + ids.Count < count && ids.Count == size ? Cursor.Encode((offset + size).ToString(System.Globalization.CultureInfo.InvariantCulture), Guid.Empty) : null;
+        return new AlbumPage(await ToModelsAsync(ordered, visible, cancellationToken), nextCursor, count);
     }
 
     public async Task<Album> AlbumAsync(Guid id, CancellationToken cancellationToken)

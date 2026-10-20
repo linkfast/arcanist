@@ -1,3 +1,4 @@
+using Arcanist.Core.Application;
 using Arcanist.Core.Application.Catalog;
 
 namespace Arcanist.Core.Api.Rest;
@@ -16,10 +17,14 @@ public static class CatalogEndpoints
         catalog.MapGet("/artists/{id:guid}", (Guid id, CatalogService service, CancellationToken ct) => service.ArtistAsync(id, ct))
             .WithName("Artist");
 
-        catalog.MapGet("/albums", (string? search, Guid? artistId, string? after, int? first, Guid? libraryId, CatalogService service, CancellationToken ct) =>
-                service.AlbumsAsync(search, artistId, after, first, ct, libraryId))
+        catalog.MapGet("/albums", (string? search, Guid? artistId, string? after, int? first, Guid? libraryId, string? sort, int? seed, CatalogService service,
+                CancellationToken ct) =>
+                service.AlbumsAsync(search, artistId, after, first, ct, libraryId,
+                    sort is null ? AlbumSort.Title
+                    : Enum.TryParse<AlbumSort>(sort.Replace("_", ""), ignoreCase: true, out var parsed) ? parsed
+                    : throw ArcanistException.Field("sort", ErrorCodes.InvalidFormat), seed))
             .WithName("Albums")
-            .WithSummary("Albums with music the user can play, by title; optionally only those of an artist, or with music in a library.");
+            .WithSummary("Albums with music the user can play, by title (or `sort`: `RECENTLY_ADDED` first, or `RANDOM`, the same order all day for the user and `seed`); optionally only those of an artist, or with music in a library.");
 
         catalog.MapGet("/albums/{id:guid}", (Guid id, CatalogService service, CancellationToken ct) => service.AlbumAsync(id, ct))
             .WithName("Album");

@@ -82,6 +82,10 @@ query {
 
 `tracks(albumId: …)` returns the whole album in disc and track order without paging.
 
+`albums` come by title; `sort: RECENTLY_ADDED` lists those with music added most recently first, and `sort: RANDOM`
+at random, in the same order all day for the user (pass another `seed` for another order). Both still page with
+`after`.
+
 `libraries` lists the libraries the user can use. To show them apart, pass `libraryId` to `artists`, `albums` or
 `tracks` (an album's counts are then those of that library); `Track.libraryIds` says which of the user's libraries
 have a copy of a track. A library the user cannot use answers `not_found`.

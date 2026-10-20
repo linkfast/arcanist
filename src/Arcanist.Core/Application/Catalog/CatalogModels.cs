@@ -123,6 +123,17 @@ public sealed record Track(
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);
 
+/// <summary>How albums are listed.</summary>
+public enum AlbumSort
+{
+    /// <summary>By title.</summary>
+    Title,
+    /// <summary>Those with music added most recently first.</summary>
+    RecentlyAdded,
+    /// <summary>At random, the same order all day (for the same seed).</summary>
+    Random,
+}
+
 public sealed record AlbumPage(IReadOnlyList<Album> Items, string? NextCursor, int TotalCount);
 
 public sealed record TrackPage(IReadOnlyList<Track> Items, string? NextCursor, int TotalCount);

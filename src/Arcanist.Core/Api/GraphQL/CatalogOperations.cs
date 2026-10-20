@@ -16,9 +16,10 @@ public sealed partial class Query
         catalog.ArtistAsync(id, cancellationToken);
 
     [Name("albums")]
-    [Description("Albums with music the user can play, by title; optionally only those of an artist, or with music in a library.")]
-    public static Task<AlbumPage> Albums(string? search, [Id] Guid? artistId, string? after, int? first, [Id] Guid? libraryId, [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>
-        catalog.AlbumsAsync(search, artistId, after, first, cancellationToken, libraryId);
+    [Description("Albums with music the user can play, by title (or the most recently added first, or at random: the same order all day for the user and `seed`); optionally only those of an artist, or with music in a library.")]
+    public static Task<AlbumPage> Albums(string? search, [Id] Guid? artistId, string? after, int? first, [Id] Guid? libraryId, AlbumSort? sort, int? seed,
+        [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>
+        catalog.AlbumsAsync(search, artistId, after, first, cancellationToken, libraryId, sort ?? AlbumSort.Title, seed);
 
     [Name("album")]
     public static Task<Album> Album([Id] Guid id, [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>

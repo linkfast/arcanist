@@ -158,6 +158,44 @@ public sealed class CatalogTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Albums_come_newest_first_or_at_random_and_pages_cover_each_once()
+    {
+        AudioFixtures.WriteWav(Path.Combine(Shared, "Fresh", "1.wav"), 30, new FixtureTags("New", "Newcomer", "Fresh", TrackNumber: 1));
+        var library = (await _admin.GetFromJsonAsync<List<Library>>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))!.Single(l => l.Name == "Shared");
+        await _admin.PostAsJsonAsync($"/rest/v1/libraries/{library.Id}/scans", new StartScanInput(), Cancel);
+        await _factory.WaitForScansAsync(_admin);
+
+        var newest = await GetAsync<AlbumPage>(_admin, "/rest/v1/albums?sort=RECENTLY_ADDED&first=1");
+        Assert.Equal(("Fresh", 4), (newest.Items.Single().Title, newest.TotalCount));
+        var graphql = await _guest.GraphQLAsync("""{ albums(sort: RECENTLY_ADDED, first: 1) { items { title } } }""");
+        Assert.Equal("Fresh", graphql.GetProperty("data").GetProperty("albums").GetProperty("items")[0].GetProperty("title").GetString());
+
+        async Task<List<string>> AllAsync(string query)
+        {
+            var titles = new List<string>();
+            string? cursor = null;
+            do
+            {
+                var page = await GetAsync<AlbumPage>(_admin, $"/rest/v1/albums?{query}&first=1" + (cursor is null ? "" : "&after=" + Uri.EscapeDataString(cursor)));
+                titles.AddRange(page.Items.Select(a => a.Title));
+                cursor = page.NextCursor;
+            }
+            while (cursor is not null);
+            return titles;
+        }
+
+        var added = await AllAsync("sort=RECENTLY_ADDED");
+        Assert.Equal("Fresh", added[0]);
+        Assert.Equal(["Fresh", "Secret", "Singles", "Ágætis byrjun"], added.Order(StringComparer.Ordinal));
+        var random = await AllAsync("sort=RANDOM&seed=7");
+        Assert.Equal(added.Order(StringComparer.Ordinal), random.Order(StringComparer.Ordinal));
+        // The same all day.
+        Assert.Equal(random, await AllAsync("sort=RANDOM&seed=7"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await _admin.GetAsync("/rest/v1/albums?sort=sideways", Cancel)).StatusCode);
+    }
+
+    [Fact]
     public async Task Malformed_cursors_are_rejected()
     {
         var response = await _guest.GetAsync("/rest/v1/tracks?after=not-a-cursor", Cancel);

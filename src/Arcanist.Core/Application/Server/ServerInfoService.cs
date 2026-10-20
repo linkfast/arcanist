@@ -95,10 +95,7 @@ public sealed class ServerInfoService(
 {
     public const int ApiVersion = 1;
 
-    private static readonly string Version =
-        typeof(ServerInfoService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            .Split('+')[0]
-        ?? "0.0.0";
+    private static readonly string Version = Hosting.ArcanistVersion.Current;
 
     /// <summary>Available without authentication.</summary>
     public ServerInfo Get() => new(

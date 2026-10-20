@@ -32,6 +32,29 @@ public static class ExtensionEndpoints
             .WithMetadata(new RequestSizeLimitAttribute(PackageArchive.MaxArchiveBytes), new RequestFormLimitsAttribute { MultipartBodyLengthLimit = PackageArchive.MaxArchiveBytes })
             .Produces<Extension>();
 
+        extensions.MapGet("/marketplace", (string? language, bool? refresh, ExtensionMarketplaceService marketplace, CancellationToken ct) =>
+                marketplace.GetAsync(language, refresh ?? false, ct))
+            .WithName("ExtensionMarketplace")
+            .WithSummary("The extension catalog (github.com/linkfast/arcanist-extensions by default), named in `language`, with what is installed here. Read again after an hour, or now with `refresh`. Administrators only.");
+
+        // Without authentication, for <img>: only icons the catalog lists, which are public anyway.
+        extensions.MapGet("/marketplace/icons/{id}", async (string id, HttpContext context, MarketplaceCatalog catalog, CancellationToken ct) =>
+            {
+                if (await catalog.IconAsync(id, ct) is not { } icon)
+                    return Results.NotFound();
+                // An SVG shown on its own could run scripts: nothing may load or run in it.
+                context.Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+                context.Response.Headers.CacheControl = "public, max-age=3600";
+                return Results.Bytes(icon.Bytes, icon.ContentType);
+            })
+            .AllowAnonymous()
+            .ExcludeFromDescription();
+
+        extensions.MapPost("/marketplace/install", (InstallMarketplaceExtensionInput input, ExtensionMarketplaceService marketplace, CancellationToken ct) =>
+                marketplace.InstallAsync(input, ct))
+            .WithName("InstallMarketplaceExtension")
+            .WithSummary("Installs (or updates) an extension of the catalog, checked against the SHA-256 the catalog publishes, and switches it on unless `enable` is false; it runs after a restart. Administrators only, with a recent authentication.");
+
         extensions.MapPost("/from-url", (InstallFromUrlInput input, ExtensionService service, CancellationToken ct) =>
                 service.InstallFromUrlAsync(input.Url, ct))
             .WithName("InstallExtensionFromUrl")

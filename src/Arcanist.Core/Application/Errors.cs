@@ -63,6 +63,14 @@ public static class ErrorCodes
     public const string ApiVersionUnsupported = "api_version_unsupported";
     /// <summary>Downloading from the given URL failed.</summary>
     public const string DownloadFailed = "download_failed";
+    /// <summary>The extension catalog (the marketplace) could not be read.</summary>
+    public const string MarketplaceUnavailable = "marketplace_unavailable";
+    /// <summary>The extension needs a newer Arcanist than this one.</summary>
+    public const string MarketplaceIncompatible = "marketplace_incompatible";
+    /// <summary>The downloaded package is not the one the catalog describes (another SHA-256).</summary>
+    public const string PackageChecksumMismatch = "package_checksum_mismatch";
+    /// <summary>The downloaded package holds another extension than the catalog says.</summary>
+    public const string PackageMismatch = "package_mismatch";
     /// <summary>The extension failed to load, register its services or map its endpoints; see the server log.</summary>
     public const string ExtensionFailed = "extension_failed";
     /// <summary>An extension maps or claims routes outside /ext/&lt;id&gt; and the prefixes kept for compatibility layers.</summary>

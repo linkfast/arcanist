@@ -165,3 +165,14 @@ Assemblies are read into memory, so a package can be replaced while the server r
 extension on, installing or updating it takes effect after a restart (the panel offers **Restart now**,
 `restartServer`); switching it off applies at once. The panel
 shows whether an extension is running, failed (see the server log) or waits for a restart.
+
+## Publishing in the Marketplace
+
+The panel's **Marketplace** (Extensions) lists the extensions of the catalog at
+[github.com/linkfast/arcanist-extensions](https://github.com/linkfast/arcanist-extensions) and installs them with one
+click: the server downloads the release, checks it against the SHA-256 the catalog lists (and that it holds the
+extension the catalog names) and installs it as any other package, switched on, offering to restart. To be listed,
+publish the extension's `.zip` as a release of a public repository and open a pull request there with its entry; its
+README describes the format. `extensionMarketplace` / `GET /rest/v1/extensions/marketplace` and
+`installMarketplaceExtension` / `POST /rest/v1/extensions/marketplace/install` are the API; another catalog can be
+used with `Arcanist:Marketplace:Url`.

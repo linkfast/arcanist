@@ -4568,6 +4568,74 @@
         }
       }
     },
+    "/rest/v1/extensions/marketplace": {
+      "get": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "The extension catalog (github.com/linkfast/arcanist-extensions by default), named in \u0060language\u0060, with what is installed here. Read again after an hour, or now with \u0060refresh\u0060. Administrators only.",
+        "operationId": "ExtensionMarketplace",
+        "parameters": [
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionMarketplaceInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/extensions/marketplace/install": {
+      "post": {
+        "tags": [
+          "Extensions"
+        ],
+        "summary": "Installs (or updates) an extension of the catalog, checked against the SHA-256 the catalog publishes, and switches it on unless \u0060enable\u0060 is false; it runs after a restart. Administrators only, with a recent authentication.",
+        "operationId": "InstallMarketplaceExtension",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallMarketplaceExtensionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Extension"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/extensions/from-url": {
       "post": {
         "tags": [
@@ -11868,6 +11936,43 @@
           }
         }
       },
+      "ExtensionMarketplaceInfo": {
+        "required": [
+          "available",
+          "errorCode",
+          "fetchedAt",
+          "source",
+          "extensions"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fetchedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          },
+          "extensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketplaceExtension"
+            }
+          }
+        }
+      },
       "ExtensionStatus": {
         "enum": [
           "NOT_LOADED",
@@ -12810,6 +12915,21 @@
           }
         }
       },
+      "InstallMarketplaceExtensionInput": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "enable": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "JoinShareRequest": {
         "required": [
           "token",
@@ -13648,6 +13768,107 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "MarketplaceExtension": {
+        "required": [
+          "id",
+          "name",
+          "description",
+          "author",
+          "homepage",
+          "license",
+          "iconUrl",
+          "official",
+          "categories",
+          "version",
+          "size",
+          "minServerVersion",
+          "compatible",
+          "installedVersion",
+          "updateAvailable",
+          "builtIn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "author": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "homepage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "iconUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "official": {
+            "type": "boolean"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "minServerVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "compatible": {
+            "type": "boolean"
+          },
+          "installedVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "updateAvailable": {
+            "type": "boolean"
+          },
+          "builtIn": {
+            "type": "boolean"
           }
         }
       },

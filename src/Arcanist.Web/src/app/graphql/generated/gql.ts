@@ -101,6 +101,8 @@ type Documents = {
     "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": typeof types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
+    "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n      }\n    }\n  }\n": typeof types.ExtensionMarketplaceDocument,
+    "\n  mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {\n    installMarketplaceExtension(input: $input) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallMarketplaceExtensionDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.SetExtensionEnabledDocument,
     "\n  mutation RestartServer {\n    restartServer {\n      restartRequired\n    }\n  }\n": typeof types.RestartServerDocument,
     "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": typeof types.UninstallExtensionDocument,
@@ -308,6 +310,8 @@ const documents: Documents = {
     "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n  }\n": types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
+    "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n      }\n    }\n  }\n": types.ExtensionMarketplaceDocument,
+    "\n  mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {\n    installMarketplaceExtension(input: $input) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallMarketplaceExtensionDocument,
     "\n  mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {\n    setExtensionEnabled(id: $id, enabled: $enabled) {\n      ...ExtensionFields\n    }\n  }\n": types.SetExtensionEnabledDocument,
     "\n  mutation RestartServer {\n    restartServer {\n      restartRequired\n    }\n  }\n": types.RestartServerDocument,
     "\n  mutation UninstallExtension($id: String!) {\n    uninstallExtension(id: $id)\n  }\n": types.UninstallExtensionDocument,
@@ -790,6 +794,14 @@ export function graphql(source: "\n  query Extensions {\n    extensions {\n     
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n      }\n    }\n  }\n"): (typeof documents)["\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {\n    installMarketplaceExtension(input: $input) {\n      ...ExtensionFields\n    }\n  }\n"): (typeof documents)["\n  mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {\n    installMarketplaceExtension(input: $input) {\n      ...ExtensionFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

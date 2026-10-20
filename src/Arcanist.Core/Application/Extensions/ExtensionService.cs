@@ -77,13 +77,7 @@ public sealed class ExtensionService(
     public async Task<IReadOnlyList<ExtensionAppInfo>> AppsAsync(string? language, CancellationToken cancellationToken)
     {
         var access = guard.Authenticated();
-        var languages = new List<string>();
-        if (!string.IsNullOrWhiteSpace(language))
-            languages.Add(language.Trim());
-        if (http.HttpContext?.Request.Headers.AcceptLanguage.ToString() is { Length: > 0 } accept)
-            languages.AddRange(accept.Split(',').Select(part => part.Split(';')[0].Trim()).Where(tag => tag.Length > 0));
-        if (await settingsStore.GetAsync<string?>(SettingKeys.DefaultLanguage, null, cancellationToken) is { Length: > 0 } fallback)
-            languages.Add(fallback);
+        var languages = await LanguagesAsync(language, cancellationToken);
 
         return host.Extensions
             .Where(e => e.Status == ExtensionStatus.Running && host.IsEnabled(e.Manifest.Id))
@@ -98,8 +92,21 @@ public sealed class ExtensionService(
             .ToList();
     }
 
+    /// <summary>The languages to name things in: the one asked for, the request's (Accept-Language), then the server's default.</summary>
+    internal async Task<List<string>> LanguagesAsync(string? language, CancellationToken cancellationToken)
+    {
+        var languages = new List<string>();
+        if (!string.IsNullOrWhiteSpace(language))
+            languages.Add(language.Trim());
+        if (http.HttpContext?.Request.Headers.AcceptLanguage.ToString() is { Length: > 0 } accept)
+            languages.AddRange(accept.Split(',').Select(part => part.Split(';')[0].Trim()).Where(tag => tag.Length > 0));
+        if (await settingsStore.GetAsync<string?>(SettingKeys.DefaultLanguage, null, cancellationToken) is { Length: > 0 } fallback)
+            languages.Add(fallback);
+        return languages;
+    }
+
     /// <summary>The first of <paramref name="languages"/> the texts have, also by its base language (es-PE → es).</summary>
-    private static string? Localized(IReadOnlyDictionary<string, string>? texts, IEnumerable<string> languages)
+    internal static string? Localized(IReadOnlyDictionary<string, string>? texts, IEnumerable<string> languages)
     {
         if (texts is null || texts.Count == 0)
             return null;

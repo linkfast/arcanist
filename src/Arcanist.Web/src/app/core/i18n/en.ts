@@ -1306,10 +1306,42 @@ export const en: Dictionary = {
       routes: 'Routes',
       installed: 'Extension installed: switch it on and restart the server to use it.',
     },
+    marketplace: {
+      title: 'Marketplace',
+      description:
+        "Extensions from Arcanist's catalog, ready to install with one click. Official ones are made by the project; community ones are reviewed when added to the catalog.",
+      refresh: 'Refresh',
+      search: 'Search extensions',
+      official: 'Official',
+      community: 'Community',
+      homepage: 'More information',
+      install: 'Install',
+      update: 'Update',
+      installed: 'Installed',
+      needs: 'Needs Arcanist {version}',
+      none: 'No extensions match.',
+      communityTrust:
+        'This extension comes from the community, not from the Arcanist project. It runs inside the server with all its permissions: it can read and change any data and file the server can reach. Install it only if you trust its author.',
+    },
+    installedDialog: {
+      title: '“{name}” is installed',
+      enable:
+        'To use it, switch it on and restart the server. The restart takes a few seconds: anyone listening to music will notice a gap.',
+      restart:
+        'It will run once the server restarts. The restart takes a few seconds: anyone listening to music will notice a gap.',
+      enableAndRestart: 'Switch on and restart now',
+      later: 'Later',
+      ready: '“{name}” is installed and running.',
+    },
     install: {
       title: 'Install',
-      zip: 'Upload a .zip',
-      or: 'or',
+      zip: 'Choose a .zip file',
+      dropTitle: {
+        extension: "Upload an extension's .zip",
+        frontend: "Upload a web player's .zip",
+      },
+      dropHelp: 'Drop it here or choose it with the button. You can also install it from a URL.',
+      or: 'Or from a URL:',
       urlPlaceholder: 'https://… (URL of a .zip)',
       fromUrl: 'Install from URL',
       confirmTitle: 'Do you trust this package?',
@@ -2371,6 +2403,11 @@ export const en: Dictionary = {
     source_unavailable:
       'A folder was not available (disk or network drive disconnected?). Nothing was removed.',
     interrupted: 'Interrupted by a server restart.',
+    marketplace_unavailable: 'The extension catalog could not be read. Try again later.',
+    marketplace_incompatible: 'This extension needs a newer version of Arcanist.',
+    package_checksum_mismatch:
+      'The downloaded package is not the one the catalog publishes (its SHA-256 does not match). It was not installed.',
+    package_mismatch: 'The downloaded package holds a different extension than the catalog says.',
     not_ffmpeg: 'That file is not a working ffmpeg.',
     ffmpeg_platform_unsupported:
       'There is no ffmpeg download for this system; install it with the package manager and enter its path.',

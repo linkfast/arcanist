@@ -1323,10 +1323,42 @@ export const es: Dictionary = {
       routes: 'Rutas',
       installed: 'Extensión instalada: actívala y reinicia el servidor para usarla.',
     },
+    marketplace: {
+      title: 'Marketplace',
+      description:
+        'Extensiones del catálogo de Arcanist, listas para instalar con un clic. Las oficiales son del proyecto; las de la comunidad se revisan al añadirlas al catálogo.',
+      refresh: 'Actualizar',
+      search: 'Buscar extensiones',
+      official: 'Oficial',
+      community: 'Comunidad',
+      homepage: 'Más información',
+      install: 'Instalar',
+      update: 'Actualizar',
+      installed: 'Instalada',
+      needs: 'Necesita Arcanist {version}',
+      none: 'No hay extensiones que coincidan.',
+      communityTrust:
+        'Esta extensión es de la comunidad, no del proyecto Arcanist. Se ejecuta dentro del servidor con todos sus permisos: puede leer y cambiar cualquier dato y archivo al que el servidor tenga acceso. Instálala solo si confías en su autor.',
+    },
+    installedDialog: {
+      title: '«{name}» está instalada',
+      enable:
+        'Para usarla hay que activarla y reiniciar el servidor. El reinicio dura unos segundos: quien esté escuchando música notará un corte.',
+      restart:
+        'Funcionará cuando el servidor se reinicie. El reinicio dura unos segundos: quien esté escuchando música notará un corte.',
+      enableAndRestart: 'Activar y reiniciar ahora',
+      later: 'Más tarde',
+      ready: '«{name}» está instalada y en marcha.',
+    },
     install: {
       title: 'Instalar',
-      zip: 'Subir un .zip',
-      or: 'o',
+      zip: 'Elegir archivo .zip',
+      dropTitle: {
+        extension: 'Sube el .zip de una extensión',
+        frontend: 'Sube el .zip de un reproductor web',
+      },
+      dropHelp: 'Arrástralo aquí o elígelo con el botón. También puedes instalarlo desde una URL.',
+      or: 'O desde una URL:',
       urlPlaceholder: 'https://… (URL de un .zip)',
       fromUrl: 'Instalar desde URL',
       confirmTitle: '¿Confías en este paquete?',
@@ -2407,6 +2439,11 @@ export const es: Dictionary = {
     source_unavailable:
       'Alguna carpeta no estaba disponible (¿disco o unidad de red desconectados?). No se ha borrado nada.',
     interrupted: 'Se interrumpió al reiniciarse el servidor.',
+    marketplace_unavailable: 'No se pudo leer el catálogo de extensiones. Inténtalo más tarde.',
+    marketplace_incompatible: 'Esta extensión necesita una versión más reciente de Arcanist.',
+    package_checksum_mismatch:
+      'El paquete descargado no es el que publica el catálogo (su SHA-256 no coincide). No se ha instalado.',
+    package_mismatch: 'El paquete descargado contiene otra extensión distinta de la del catálogo.',
     not_ffmpeg: 'Ese archivo no es un ffmpeg que funcione.',
     ffmpeg_platform_unsupported:
       'No hay una descarga de ffmpeg para este sistema; instálalo con el gestor de paquetes e indica su ruta.',

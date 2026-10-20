@@ -1,6 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { NgTemplateOutlet } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -11,6 +10,8 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
+import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { firstValueFrom } from 'rxjs';
 import { ApiError } from '../../core/api/rest';
 import { CloudOffDialog } from '../../shared/cloud-off-dialog';
@@ -32,6 +33,8 @@ import {
   UninstallExtensionMutation,
   UninstallFrontendMutation,
 } from '../../graphql/operations';
+import { ExtensionMarketplace } from './marketplace';
+import { PackageDropzone } from './package-dropzone';
 
 type Kind = 'frontend' | 'extension';
 
@@ -51,8 +54,11 @@ interface PendingInstall {
   imports: [
     CloudOffDialog,
     FormsModule,
-    NgTemplateOutlet,
     BrnAlertDialogContent,
+    BrnDialogContent,
+    HlmDialogImports,
+    ExtensionMarketplace,
+    PackageDropzone,
     HlmAlertImports,
     HlmAlertDialogImports,
     HlmBadgeImports,
@@ -69,6 +75,110 @@ interface PendingInstall {
     </header>
 
     <div class="grid gap-6">
+      @if (restartNeeded() || restarting()) {
+        <div hlmAlert class="flex flex-wrap items-center justify-between gap-3">
+          <p hlmAlertDescription>
+            {{
+              (restarting() ? 'extensions.list.restartWaiting' : 'extensions.list.restartNeeded')
+                | t
+            }}
+          </p>
+          <button
+            hlmBtn
+            size="sm"
+            type="button"
+            [disabled]="busy() || restarting()"
+            (click)="restart()"
+          >
+            {{ 'extensions.list.restartNow' | t }}
+          </button>
+        </div>
+      }
+
+      <section hlmCard>
+        <div hlmCardHeader>
+          <h2 hlmCardTitle>{{ 'extensions.list.title' | t }}</h2>
+          <p hlmCardDescription>{{ 'extensions.list.description' | t }}</p>
+        </div>
+        <div hlmCardContent class="grid gap-4">
+          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+            @for (extension of extensions(); track extension.id) {
+              <li
+                class="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-md border p-3"
+              >
+                <div class="min-w-0 text-sm">
+                  <p class="font-medium">
+                    {{ extension.name }}
+                    <span class="text-muted-foreground">{{ extension.version }}</span>
+                    @if (extension.builtIn) {
+                      <span hlmBadge variant="secondary" class="ml-1">{{
+                        'extensions.builtIn' | t
+                      }}</span>
+                    }
+                    @if (extension.status === 'FAILED') {
+                      <span hlmBadge variant="destructive" class="ml-1">{{
+                        'extensions.list.failed' | t
+                      }}</span>
+                    }
+                    @if (extension.restartRequired) {
+                      <span hlmBadge variant="outline" class="ml-1">{{
+                        'extensions.list.restartRequired' | t
+                      }}</span>
+                    }
+                  </p>
+                  @if (extension.builtIn) {
+                    <p class="text-xs text-muted-foreground">
+                      {{ 'extensions.descriptions.' + extension.id | t }}
+                    </p>
+                  } @else if (extension.description) {
+                    <p class="text-xs text-muted-foreground">{{ extension.description }}</p>
+                  }
+                  <p class="text-xs text-muted-foreground">
+                    {{ 'extensions.list.routes' | t }}:
+                    {{ [extension.basePath].concat(extension.routes).join(', ') }}
+                  </p>
+                  @if (extension.errorCode) {
+                    <p class="text-xs text-destructive">{{ i18n.error(extension.errorCode) }}</p>
+                  }
+                </div>
+                <div class="flex items-center gap-3">
+                  <label class="flex items-center gap-2 text-sm">
+                    @for (version of [switchVersion()]; track version) {
+                      <hlm-switch
+                        [checked]="extension.enabled"
+                        [disabled]="busy()"
+                        (checkedChange)="setEnabled(extension, $event)"
+                      />
+                    }
+                    {{ 'extensions.list.enabled' | t }}
+                  </label>
+                  @if (!extension.builtIn) {
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      [disabled]="busy()"
+                      (click)="uninstallExtension(extension)"
+                    >
+                      {{ 'extensions.uninstall' | t }}
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+          <app-package-dropzone
+            kind="extension"
+            [busy]="busy()"
+            (file)="pending.set({ kind: 'extension', file: $event, url: null })"
+            (urlChosen)="pending.set({ kind: 'extension', file: null, url: $event })"
+          />
+        </div>
+      </section>
+
+      <app-extension-marketplace [busy]="busy()" (installed)="afterInstall($event)" />
+
       <section hlmCard>
         <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'extensions.players.title' | t }}</h2>
@@ -139,150 +249,15 @@ interface PendingInstall {
               <li class="text-sm text-muted-foreground">{{ 'extensions.players.none' | t }}</li>
             }
           </ul>
-          <ng-container
-            [ngTemplateOutlet]="installer"
-            [ngTemplateOutletContext]="{ kind: 'frontend' }"
-          />
-        </div>
-      </section>
-
-      <section hlmCard>
-        <div hlmCardHeader>
-          <h2 hlmCardTitle>{{ 'extensions.list.title' | t }}</h2>
-          <p hlmCardDescription>{{ 'extensions.list.description' | t }}</p>
-        </div>
-        <div hlmCardContent class="grid gap-4">
-          @if (restartNeeded() || restarting()) {
-            <div hlmAlert class="flex flex-wrap items-center justify-between gap-3">
-              <p hlmAlertDescription>
-                {{
-                  (restarting()
-                    ? 'extensions.list.restartWaiting'
-                    : 'extensions.list.restartNeeded'
-                  ) | t
-                }}
-              </p>
-              <button
-                hlmBtn
-                size="sm"
-                type="button"
-                [disabled]="busy() || restarting()"
-                (click)="restart()"
-              >
-                {{ 'extensions.list.restartNow' | t }}
-              </button>
-            </div>
-          }
-          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
-            @for (extension of extensions(); track extension.id) {
-              <li
-                class="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-md border p-3"
-              >
-                <div class="min-w-0 text-sm">
-                  <p class="font-medium">
-                    {{ extension.name }}
-                    <span class="text-muted-foreground">{{ extension.version }}</span>
-                    @if (extension.builtIn) {
-                      <span hlmBadge variant="secondary" class="ml-1">{{
-                        'extensions.builtIn' | t
-                      }}</span>
-                    }
-                    @if (extension.status === 'FAILED') {
-                      <span hlmBadge variant="destructive" class="ml-1">{{
-                        'extensions.list.failed' | t
-                      }}</span>
-                    }
-                    @if (extension.restartRequired) {
-                      <span hlmBadge variant="outline" class="ml-1">{{
-                        'extensions.list.restartRequired' | t
-                      }}</span>
-                    }
-                  </p>
-                  @if (extension.builtIn) {
-                    <p class="text-xs text-muted-foreground">
-                      {{ 'extensions.descriptions.' + extension.id | t }}
-                    </p>
-                  } @else if (extension.description) {
-                    <p class="text-xs text-muted-foreground">{{ extension.description }}</p>
-                  }
-                  <p class="text-xs text-muted-foreground">
-                    {{ 'extensions.list.routes' | t }}:
-                    {{ [extension.basePath].concat(extension.routes).join(', ') }}
-                  </p>
-                  @if (extension.errorCode) {
-                    <p class="text-xs text-destructive">{{ i18n.error(extension.errorCode) }}</p>
-                  }
-                </div>
-                <div class="flex items-center gap-3">
-                  <label class="flex items-center gap-2 text-sm">
-                    @for (version of [switchVersion()]; track version) {
-                      <hlm-switch
-                        [checked]="extension.enabled"
-                        [disabled]="busy()"
-                        (checkedChange)="setEnabled(extension, $event)"
-                      />
-                    }
-                    {{ 'extensions.list.enabled' | t }}
-                  </label>
-                  @if (!extension.builtIn) {
-                    <button
-                      hlmBtn
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      [disabled]="busy()"
-                      (click)="uninstallExtension(extension)"
-                    >
-                      {{ 'extensions.uninstall' | t }}
-                    </button>
-                  }
-                </div>
-              </li>
-            }
-          </ul>
-          <ng-container
-            [ngTemplateOutlet]="installer"
-            [ngTemplateOutletContext]="{ kind: 'extension' }"
+          <app-package-dropzone
+            kind="frontend"
+            [busy]="busy()"
+            (file)="pending.set({ kind: 'frontend', file: $event, url: null })"
+            (urlChosen)="pending.set({ kind: 'frontend', file: null, url: $event })"
           />
         </div>
       </section>
     </div>
-
-    <ng-template #installer let-kind="kind">
-      <div class="grid gap-2 rounded-md border border-dashed p-3">
-        <p class="text-sm font-medium">{{ 'extensions.install.title' | t }}</p>
-        <div class="flex flex-wrap items-center gap-2">
-          <label hlmBtn variant="outline" size="sm" class="cursor-pointer">
-            {{ 'extensions.install.zip' | t }}
-            <input
-              type="file"
-              accept=".zip,application/zip"
-              class="sr-only"
-              [disabled]="busy()"
-              (change)="pickFile(kind, $event)"
-            />
-          </label>
-          <span class="text-xs text-muted-foreground">{{ 'extensions.install.or' | t }}</span>
-          <input
-            hlmInput
-            class="min-w-48 flex-1"
-            type="url"
-            [placeholder]="'extensions.install.urlPlaceholder' | t"
-            [ngModel]="urls[kind]"
-            (ngModelChange)="urls[kind] = $event"
-          />
-          <button
-            hlmBtn
-            size="sm"
-            type="button"
-            [disabled]="busy() || !urls[kind].trim()"
-            (click)="pending.set({ kind, file: null, url: urls[kind].trim() })"
-          >
-            {{ 'extensions.install.fromUrl' | t }}
-          </button>
-        </div>
-      </div>
-    </ng-template>
 
     <app-cloud-off-dialog
       [open]="confirmingCloudOff() !== null"
@@ -312,6 +287,37 @@ interface PendingInstall {
         </hlm-alert-dialog-footer>
       </hlm-alert-dialog-content>
     </hlm-alert-dialog>
+
+    <hlm-dialog [state]="justInstalled() ? 'open' : 'closed'" (closed)="justInstalled.set(null)">
+      <hlm-dialog-content class="sm:max-w-md" *brnDialogContent="let ctx">
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>
+            {{ 'extensions.installedDialog.title' | t: { name: justInstalled()?.name ?? '' } }}
+          </h3>
+          <p hlmDialogDescription>
+            {{
+              (justInstalled()?.enabled
+                ? 'extensions.installedDialog.restart'
+                : 'extensions.installedDialog.enable'
+              ) | t
+            }}
+          </p>
+        </hlm-dialog-header>
+        <hlm-dialog-footer>
+          <button hlmBtn variant="outline" type="button" (click)="justInstalled.set(null)">
+            {{ 'extensions.installedDialog.later' | t }}
+          </button>
+          <button hlmBtn type="button" [disabled]="busy()" (click)="restartAfterInstall()">
+            {{
+              (justInstalled()?.enabled
+                ? 'extensions.list.restartNow'
+                : 'extensions.installedDialog.enableAndRestart'
+              ) | t
+            }}
+          </button>
+        </hlm-dialog-footer>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class ExtensionsPage implements OnInit {
@@ -328,8 +334,6 @@ export class ExtensionsPage implements OnInit {
     this.extensions().some((e) => e.restartRequired),
   );
   protected readonly pending = signal<PendingInstall | null>(null);
-  /** URLs typed in each installer, by kind. */
-  protected readonly urls: Record<string, string> = { frontend: '', extension: '' };
 
   async ngOnInit(): Promise<void> {
     await this.reload();
@@ -342,7 +346,11 @@ export class ExtensionsPage implements OnInit {
     ]);
     this.frontends.set(frontends.frontends);
     this.extensions.set(extensions.extensions);
+    // What is installed changed: so did the catalog's buttons.
+    await this.marketplace()?.load(false);
   }
+
+  private readonly marketplace = viewChild(ExtensionMarketplace);
 
   protected pickFile(kind: Kind, event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -355,27 +363,60 @@ export class ExtensionsPage implements OnInit {
     const pending = this.pending();
     this.pending.set(null);
     if (!pending) return;
+    let installed: Extension | null = null;
     await this.run(async () => {
       if (pending.file) {
         const form = new FormData();
         form.append('file', pending.file);
         const path = pending.kind === 'frontend' ? '/rest/v1/frontends' : '/rest/v1/extensions';
-        await firstValueFrom(this.http.post(path, form));
+        const result = await firstValueFrom(this.http.post<Extension>(path, form));
+        if (pending.kind === 'extension') installed = result;
       } else if (pending.kind === 'frontend') {
         await this.gql.mutate(InstallFrontendFromUrlMutation, { url: pending.url! });
       } else {
-        await this.gql.mutate(InstallExtensionFromUrlMutation, { url: pending.url! });
+        installed = (await this.gql.mutate(InstallExtensionFromUrlMutation, { url: pending.url! }))
+          .installExtensionFromUrl;
       }
 
-      this.urls[pending.kind] = '';
-      toast.success(
-        this.i18n.t(
-          pending.kind === 'frontend'
-            ? 'extensions.players.installed'
-            : 'extensions.list.installed',
-        ),
-      );
+      if (pending.kind === 'frontend') toast.success(this.i18n.t('extensions.players.installed'));
     });
+    if (installed) this.afterInstall(installed);
+  }
+
+  /** An installed extension that needs switching on or a restart to run: offer both now. */
+  protected readonly justInstalled = signal<Extension | null>(null);
+
+  protected afterInstall(extension: Extension): void {
+    void this.reload();
+    if (extension.enabled && !extension.restartRequired) {
+      toast.success(this.i18n.t('extensions.installedDialog.ready', { name: extension.name }));
+      return;
+    }
+    this.justInstalled.set(extension);
+  }
+
+  protected async restartAfterInstall(): Promise<void> {
+    const extension = this.justInstalled();
+    this.justInstalled.set(null);
+    if (!extension) return;
+    if (!extension.enabled) {
+      try {
+        const result = await this.gql.mutate(SetExtensionEnabledMutation, {
+          id: extension.id,
+          enabled: true,
+        });
+        if (!result.setExtensionEnabled.restartRequired) {
+          await this.reload();
+          return;
+        }
+      } catch (error) {
+        const apiError = ApiError.from(error);
+        toast.error(this.i18n.error(Object.values(apiError.fields)[0]?.[0] ?? apiError.code));
+        await this.reload();
+        return;
+      }
+    }
+    await this.restart();
   }
 
   protected makeDefault(frontend: Frontend): Promise<void> {

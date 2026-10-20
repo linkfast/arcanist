@@ -27,14 +27,14 @@ public sealed class ExtensionTests
         new { id = "tools", name = "Tools", path = "/ext/hello/tools", adminOnly = true },
     ];
 
-    private static string Manifest(string id = "hello", string[]? routes = null, object[]? apps = null, object? adminPage = null) =>
+    internal static string Manifest(string id = "hello", string[]? routes = null, object[]? apps = null, object? adminPage = null) =>
         JsonSerializer.Serialize(new
         {
             id, name = "Hello", version = "1.0.0", license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes, apps = apps ?? Apps,
             adminPage = adminPage ?? new { path = $"/ext/{id}/admin", icon = $"/ext/{id}/icon.svg" },
         });
 
-    private static byte[] Package(string? manifest = null)
+    internal static byte[] Package(string? manifest = null)
     {
         using var buffer = new MemoryStream();
         using (var zip = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))

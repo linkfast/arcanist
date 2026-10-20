@@ -1017,6 +1017,43 @@ export const InstallExtensionFromUrlMutation = graphql(`
   }
 `);
 
+export const ExtensionMarketplaceQuery = graphql(`
+  query ExtensionMarketplace($language: String, $refresh: Boolean) {
+    extensionMarketplace(language: $language, refresh: $refresh) {
+      available
+      errorCode
+      fetchedAt
+      source
+      extensions {
+        id
+        name
+        description
+        author
+        homepage
+        license
+        iconUrl
+        official
+        categories
+        version
+        size
+        minServerVersion
+        compatible
+        installedVersion
+        updateAvailable
+        builtIn
+      }
+    }
+  }
+`);
+
+export const InstallMarketplaceExtensionMutation = graphql(`
+  mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {
+    installMarketplaceExtension(input: $input) {
+      ...ExtensionFields
+    }
+  }
+`);
+
 export const SetExtensionEnabledMutation = graphql(`
   mutation SetExtensionEnabled($id: String!, $enabled: Boolean!) {
     setExtensionEnabled(id: $id, enabled: $enabled) {

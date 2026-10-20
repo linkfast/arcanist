@@ -83,6 +83,7 @@ public static class ErrorCodes
     public const string RouteConflict = "route_conflict";
     /// <summary>The setting comes from the environment (variables, appsettings, command line): the panel cannot change it.</summary>
     public const string SetByEnvironment = "set_by_environment";
+    public const string ExtensionManaged = "extension_managed";
     /// <summary>The limit of items of that kind was reached (e.g. 50 app passwords per user).</summary>
     public const string TooMany = "too_many";
     /// <summary>A playlist holds at most 10,000 tracks.</summary>

@@ -1413,6 +1413,9 @@ export const en: Dictionary = {
         'They add APIs and features to the server, such as support for Subsonic and mStream apps. Apps connect with an app password.',
       enabled: 'On',
       failed: 'Failed',
+      managed: 'Managed',
+      managedHelp:
+        'Installed by the server’s configuration: always on, and it cannot be uninstalled here. Installing a newer version updates it.',
       restartRequired: 'Restart needed',
       restartRequiredHelp: 'The change applies when the server restarts.',
       restartNeeded: 'Some installed or switched on extensions will run once the server restarts.',
@@ -2673,6 +2676,8 @@ export const en: Dictionary = {
     extension_failed: 'The extension could not be loaded; check the server log.',
     route_not_allowed: 'The extension uses routes that are not its own.',
     route_conflict: 'Another enabled extension already uses those routes.',
+    extension_managed:
+      'Installed by the server’s configuration: it cannot be switched off or uninstalled here.',
     set_by_environment:
       'That setting comes from the environment (variables or configuration files) and cannot be changed from the panel.',
     too_many: 'You reached the maximum allowed.',

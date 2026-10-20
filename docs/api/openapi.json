@@ -13036,6 +13036,10 @@
               "null",
               "string"
             ]
+          },
+          "managed": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

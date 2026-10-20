@@ -27,10 +27,11 @@ public sealed class ExtensionTests
         new { id = "tools", name = "Tools", path = "/ext/hello/tools", adminOnly = true },
     ];
 
-    internal static string Manifest(string id = "hello", string[]? routes = null, object[]? apps = null, object? adminPage = null) =>
+    internal static string Manifest(string id = "hello", string[]? routes = null, object[]? apps = null, object? adminPage = null,
+        string version = "1.0.0") =>
         JsonSerializer.Serialize(new
         {
-            id, name = "Hello", version = "1.0.0", license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes, apps = apps ?? Apps,
+            id, name = "Hello", version, license = "AGPL-3.0-or-later", assembly = "Arcanist.TestExtension.dll", routes, apps = apps ?? Apps,
             adminPage = adminPage ?? new { icon = $"/ext/{id}/icon.svg" },
         });
 
@@ -61,6 +62,81 @@ public sealed class ExtensionTests
         File.Copy(Assembly, Path.Combine(folder, "Arcanist.TestExtension.dll"));
         await factory.CompleteSetupAsync();
         return factory;
+    }
+
+    [Fact]
+    public async Task A_managed_extension_installs_from_the_configuration_and_stays_on_but_can_be_updated()
+    {
+        var package = Path.Combine(Path.GetTempPath(), $"managed-{Guid.NewGuid():N}.zip");
+        await File.WriteAllBytesAsync(package, Package(), Cancel);
+        var sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(await File.ReadAllBytesAsync(package, Cancel)));
+        try
+        {
+            await using var factory = new ArcanistFactory(new Dictionary<string, string?>
+            {
+                ["Arcanist:ManagedExtensions:0:Id"] = "hello",
+                ["Arcanist:ManagedExtensions:0:Package"] = package,
+                ["Arcanist:ManagedExtensions:0:Sha256"] = sha256,
+                ["Arcanist:ManagedExtensions:0:Version"] = "1.0.0",
+            });
+            // An older copy is there already: the configured version replaces it at startup.
+            var folder = Path.Combine(factory.DataPath, "extensions", "hello");
+            Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "arcanist-extension.json"), Manifest(version: "0.9.0"));
+            File.Copy(Assembly, Path.Combine(folder, "Arcanist.TestExtension.dll"));
+            await factory.CompleteSetupAsync();
+
+            // On without anyone switching it on.
+            Assert.Equal("hello from hello", await factory.CreateClient().GetStringAsync("/ext/hello/hello", Cancel));
+            var admin = await factory.CreateAuthenticatedClientAsync();
+            var listed = Assert.Single(await admin.GetFromJsonAsync<List<JsonElement>>("/rest/v1/extensions", ArcanistFactory.Json, Cancel) ?? [],
+                e => e.GetProperty("id").GetString() == "hello");
+            Assert.Equal(("1.0.0", true, true, "RUNNING"), (listed.GetProperty("version").GetString(), listed.GetProperty("managed").GetBoolean(),
+                listed.GetProperty("enabled").GetBoolean(), listed.GetProperty("status").GetString()));
+
+            // Never switched off or uninstalled.
+            var off = await admin.PutAsJsonAsync("/rest/v1/extensions/hello/enabled", new { enabled = false }, ArcanistFactory.Json, Cancel);
+            Assert.Equal(HttpStatusCode.Conflict, off.StatusCode);
+            Assert.Equal("extension_managed", (await off.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("code").GetString());
+            Assert.Equal(HttpStatusCode.Conflict, (await admin.DeleteAsync("/rest/v1/extensions/hello", Cancel)).StatusCode);
+            Assert.True(File.Exists(Path.Combine(folder, "arcanist-extension.json")));
+
+            // A newer version installs over it (and runs after a restart); the configured one does not undo it.
+            var form = new MultipartFormDataContent { { new ByteArrayContent(Package(Manifest(version: "1.1.0"))), "file", "hello.zip" } };
+            var updated = await admin.PostAsync("/rest/v1/extensions", form, Cancel);
+            Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+            var body = await updated.Content.ReadFromJsonAsync<JsonElement>(Cancel);
+            Assert.Equal(("1.1.0", true, true), (body.GetProperty("version").GetString(), body.GetProperty("managed").GetBoolean(),
+                body.GetProperty("restartRequired").GetBoolean()));
+        }
+        finally
+        {
+            File.Delete(package);
+        }
+    }
+
+    [Fact]
+    public async Task A_managed_extension_with_the_wrong_checksum_is_not_installed()
+    {
+        var package = Path.Combine(Path.GetTempPath(), $"managed-{Guid.NewGuid():N}.zip");
+        await File.WriteAllBytesAsync(package, Package(), Cancel);
+        try
+        {
+            await using var factory = new ArcanistFactory(new Dictionary<string, string?>
+            {
+                ["Arcanist:ManagedExtensions:0:Id"] = "hello",
+                ["Arcanist:ManagedExtensions:0:Package"] = package,
+                ["Arcanist:ManagedExtensions:0:Sha256"] = new string('0', 64),
+            });
+            await factory.CompleteSetupAsync();
+
+            Assert.False(Directory.Exists(Path.Combine(factory.DataPath, "extensions", "hello")));
+            Assert.Equal(HttpStatusCode.NotFound, (await factory.CreateClient().GetAsync("/ext/hello/hello", Cancel)).StatusCode);
+        }
+        finally
+        {
+            File.Delete(package);
+        }
     }
 
     [Fact]

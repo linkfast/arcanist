@@ -154,6 +154,15 @@ interface PendingInstall {
                             'extensions.list.failed' | t
                           }}</span>
                         }
+                        @if (extension.managed) {
+                          <span
+                            hlmBadge
+                            variant="secondary"
+                            class="ml-1"
+                            [title]="'extensions.list.managedHelp' | t"
+                            >{{ 'extensions.list.managed' | t }}</span
+                          >
+                        }
                         @if (extension.restartRequired) {
                           <span hlmBadge variant="outline" class="ml-1">{{
                             'extensions.list.restartRequired' | t
@@ -178,17 +187,19 @@ interface PendingInstall {
                       }
                     </div>
                     <div class="flex items-center gap-3">
-                      <label class="flex items-center gap-2 text-sm">
-                        @for (version of [switchVersion()]; track version) {
-                          <hlm-switch
-                            [checked]="extension.enabled"
-                            [disabled]="busy()"
-                            (checkedChange)="setEnabled(extension, $event)"
-                          />
-                        }
-                        {{ 'extensions.list.enabled' | t }}
-                      </label>
-                      @if (!extension.builtIn) {
+                      @if (!extension.managed) {
+                        <label class="flex items-center gap-2 text-sm">
+                          @for (version of [switchVersion()]; track version) {
+                            <hlm-switch
+                              [checked]="extension.enabled"
+                              [disabled]="busy()"
+                              (checkedChange)="setEnabled(extension, $event)"
+                            />
+                          }
+                          {{ 'extensions.list.enabled' | t }}
+                        </label>
+                      }
+                      @if (!extension.builtIn && !extension.managed) {
                         <button
                           hlmBtn
                           variant="outline"

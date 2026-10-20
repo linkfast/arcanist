@@ -1029,6 +1029,7 @@ export const ExtensionFields = graphql(`
     basePath
     adminUrl
     iconUrl
+    managed
   }
 `);
 

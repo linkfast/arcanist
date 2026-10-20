@@ -208,6 +208,27 @@ extension on, installing or updating it takes effect after a restart (the panel 
 `restartServer`); switching it off applies at once. The panel
 shows whether an extension is running, failed (see the server log) or waits for a restart.
 
+## Managed extensions
+
+A deployment can install extensions through the server's configuration instead of the panel: private ones, for a
+managed service, that its administrators must not remove. Each is an entry of `Arcanist:ManagedExtensions`, usually
+given as environment variables:
+
+```sh
+Arcanist__ManagedExtensions__0__Id=my-extension
+Arcanist__ManagedExtensions__0__Package=https://example.com/my-extension-1.2.0.zip   # or a path on the machine
+Arcanist__ManagedExtensions__0__Sha256=<the .zip's SHA-256>
+Arcanist__ManagedExtensions__0__Version=1.2.0   # optional: the oldest version to run
+```
+
+At startup, before extensions load, the server installs each one that is missing, or older than `Version`, from its
+package (only if the SHA-256 matches; a failure is logged and the server starts anyway). A managed extension is always
+on: switching it off or uninstalling it answers `extension_managed` (409), and the panel shows it as **Managed**
+without those controls. Installing a newer version of it (from a file, a URL or the marketplace) updates it as usual;
+the configured package only replaces a version older than `Version`. Its own settings, such as credentials, come from
+its configuration section (`ExtensionContext.Configuration`, `Arcanist:Extensions:<id>:…`), environment variables
+included. `Extension.managed` says which ones are.
+
 ## Publishing in the Marketplace
 
 The panel's **Marketplace** (Extensions) lists the extensions of the catalog at

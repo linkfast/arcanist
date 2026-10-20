@@ -84,7 +84,13 @@ public sealed class ExtensionHost
     public ExtensionRegistration? Find(string id) => _extensions.FirstOrDefault(e => e.Manifest.Id == id);
 
     /// <summary>Whether the extension is enabled in the current configuration (it may need a restart to apply).</summary>
-    public bool IsEnabled(string id) => _configuration.GetValue<bool?>(EnabledKey(id)) ?? Find(id)?.EnabledByDefault ?? false;
+    public bool IsEnabled(string id) =>
+        _managed.Contains(id) || (_configuration.GetValue<bool?>(EnabledKey(id)) ?? Find(id)?.EnabledByDefault ?? false);
+
+    /// <summary>Installed through the configuration (<see cref="ManagedExtensions"/>): always on, never uninstalled.</summary>
+    public bool IsManaged(string id) => _managed.Contains(id);
+
+    private HashSet<string> _managed = [];
 
     /// <summary>Raised when an administrator switches an extension on or off, with its id.</summary>
     public event Action<string>? EnabledChanged;
@@ -100,7 +106,7 @@ public sealed class ExtensionHost
     internal static ExtensionHost Load(IServiceCollection services, ArcanistPaths paths, IConfiguration configuration,
         IEnumerable<IBuiltInExtension> builtIn, ILogger logger)
     {
-        var host = new ExtensionHost(paths, configuration);
+        var host = new ExtensionHost(paths, configuration) { _managed = ManagedExtensions.Ids(configuration) };
         foreach (var extension in builtIn)
         {
             host._extensions.Add(new ExtensionRegistration(extension.Manifest, builtIn: true, root: null)
@@ -320,6 +326,8 @@ public static class ExtensionHostingExtensions
     public static WebApplicationBuilder AddExtensions(this WebApplicationBuilder builder, ArcanistPaths paths)
     {
         using var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
+        ManagedExtensions.Ensure(paths, builder.Configuration, BuiltInExtensions.All.Select(e => e.Manifest.Id),
+            loggerFactory.CreateLogger(typeof(ManagedExtensions)));
         ExtensionHost.Load(builder.Services, paths, builder.Configuration, BuiltInExtensions.All, loggerFactory.CreateLogger<ExtensionHost>());
         return builder;
     }

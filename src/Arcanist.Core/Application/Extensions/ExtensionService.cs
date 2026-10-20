@@ -15,6 +15,8 @@ namespace Arcanist.Core.Application.Extensions;
 /// <param name="Routes">Prefixes it claims besides its own /ext/&lt;id&gt;.</param>
 /// <param name="AdminUrl">Its settings page in the admin panel (which draws it, see <c>IExtensionAdminPage</c>), shown under Extensions while it runs; null when it has none.</param>
 /// <param name="IconUrl">Its icon (of its settings page, or of its first app); null when it has none.</param>
+/// <param name="Managed">Installed by the server's configuration: always on, it cannot be switched off or uninstalled
+/// (installing a newer version updates it).</param>
 public sealed record Extension(
     string Id,
     string Name,
@@ -31,7 +33,8 @@ public sealed record Extension(
     IReadOnlyList<string> Routes,
     string BasePath,
     string? AdminUrl = null,
-    string? IconUrl = null);
+    string? IconUrl = null,
+    bool Managed = false);
 
 /// <summary>
 /// A page of a running extension that the user may open from a player (in a window or a tab of its own). Part of the
@@ -184,6 +187,8 @@ public sealed class ExtensionService(
     {
         RequireSensitive();
         var extension = Current().SingleOrDefault(e => e.Manifest.Id == id) ?? throw new ArcanistException.NotFound();
+        if (host.IsManaged(id))
+            throw new ArcanistException.Conflict(ErrorCodes.ExtensionManaged);
         if (settings.IsSetOutsideSettingsFile(ExtensionHost.EnabledKey(id)))
             throw new ArcanistException.Conflict(ErrorCodes.SetByEnvironment);
         if (enabled && id == Core.Extensions.UltimateCloud.UltimateCloudExtension.Id
@@ -211,6 +216,8 @@ public sealed class ExtensionService(
         try
         {
             var extension = Current().SingleOrDefault(e => e.Manifest.Id == id && !e.BuiltIn) ?? throw new ArcanistException.NotFound();
+            if (host.IsManaged(id))
+                throw new ArcanistException.Conflict(ErrorCodes.ExtensionManaged);
             await settings.SetAsync(new Dictionary<string, object?> { [ExtensionHost.EnabledKey(id)] = false }, cancellationToken);
             Directory.Delete(extension.Root!, recursive: true);
         }
@@ -246,7 +253,7 @@ public sealed class ExtensionService(
         return new Extension(manifest.Id, manifest.Name, manifest.Version, manifest.Description, manifest.Author, manifest.License,
             manifest.Homepage, registration.BuiltIn, enabled, registration.Status, registration.ErrorCode, restart,
             manifest.Routes ?? [], $"/ext/{manifest.Id}", manifest.AdminPage is null ? null : $"/admin/extensions/{manifest.Id}",
-            manifest.AdminPage?.Icon ?? manifest.Apps?.FirstOrDefault(a => a.Icon is not null)?.Icon);
+            manifest.AdminPage?.Icon ?? manifest.Apps?.FirstOrDefault(a => a.Icon is not null)?.Icon, host.IsManaged(manifest.Id));
     }
 
     private void RequireSensitive()

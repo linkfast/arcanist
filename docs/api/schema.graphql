@@ -1072,6 +1072,7 @@ type Extension {
   basePath: String!
   adminUrl: String
   iconUrl: String
+  managed: Boolean!
 }
 
 enum ExtensionStatus {

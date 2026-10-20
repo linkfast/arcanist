@@ -1429,6 +1429,9 @@ export const es: Dictionary = {
         'Añaden APIs y funciones al servidor, como la compatibilidad con apps de Subsonic y de mStream. Las apps se conectan con una contraseña de aplicación.',
       enabled: 'Activada',
       failed: 'Con errores',
+      managed: 'Gestionada',
+      managedHelp:
+        'La instaló la configuración del servidor: siempre está activa y no se puede desinstalar desde aquí. Sí se puede actualizar instalando una versión más nueva.',
       restartRequired: 'Requiere reiniciar',
       restartRequiredHelp: 'El cambio se aplicará al reiniciar el servidor.',
       restartNeeded:
@@ -2710,6 +2713,8 @@ export const es: Dictionary = {
     extension_failed: 'La extensión no se pudo cargar; revisa el registro del servidor.',
     route_not_allowed: 'La extensión usa rutas que no le corresponden.',
     route_conflict: 'Otra extensión activa ya usa esas rutas.',
+    extension_managed:
+      'La instaló la configuración del servidor: no se puede desactivar ni desinstalar desde aquí.',
     set_by_environment:
       'Ese ajuste viene del entorno (variables o archivos de configuración) y no se puede cambiar desde el panel.',
     too_many: 'Has llegado al máximo permitido.',

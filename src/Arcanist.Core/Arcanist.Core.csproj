@@ -67,8 +67,8 @@
   -->
   <ItemGroup>
     <!-- github.com/linkfast/arcanist-webamp: its README says how to release a new version. -->
-    <BundledPlayer Include="webamp" Version="0.3.0-alpha.1" Sha256="0f2b06170742c060116856af21efbd168093269582fed295ae42796336ad6b70"
-                   Url="https://github.com/linkfast/arcanist-webamp/releases/download/arcanist-webamp-v0.3.0-alpha.1/arcanist-webamp-0.3.0-alpha.1.zip" />
+    <BundledPlayer Include="webamp" Version="0.4.0-alpha.1" Sha256="44e4e821c3a05ca812e3a64e63da88f79f628ff8fe12960cc2f814c4c32292e5"
+                   Url="https://github.com/linkfast/arcanist-webamp/releases/download/arcanist-webamp-v0.4.0-alpha.1/arcanist-webamp-0.4.0-alpha.1.zip" />
   </ItemGroup>
 
   <PropertyGroup>

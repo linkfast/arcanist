@@ -55,33 +55,12 @@ param(
     [string]$WebampPath = ''
 )
 
-$ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+. (Join-Path $root 'packaging/build-steps.ps1')
 $started = Get-Date
+Assert-Docker
 
-function Step([string]$text) {
-    Write-Host ''
-    Write-Host "==> $text" -ForegroundColor Cyan
-}
-
-function Invoke-Docker {
-    & docker @args
-    if ($LASTEXITCODE -ne 0) { throw "docker $($args -join ' ') failed (exit code $LASTEXITCODE)." }
-}
-
-# Docker, running, with Linux containers.
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    throw 'Docker is needed: install Docker Desktop (https://www.docker.com/products/docker-desktop/) and start it.'
-}
-$os = & docker info --format '{{.OSType}}' 2>$null
-if ($LASTEXITCODE -ne 0) { throw 'Docker is not running: start Docker Desktop and try again.' }
-if ($os -ne 'linux') { throw 'Docker uses Windows containers: switch Docker Desktop to Linux containers.' }
-
-if (-not $Version) {
-    $props = Get-Content (Join-Path $root 'Directory.Build.props') -Raw
-    if ($props -notmatch '<Version>([^<]+)</Version>') { throw 'No <Version> in Directory.Build.props.' }
-    $Version = $Matches[1]
-}
+if (-not $Version) { $Version = Get-ArcanistVersion $root }
 $arches = if ($Arch -eq 'all') { @('x64', 'arm64') } else { @($Arch) }
 $spkArch = @{ x64 = 'x64'; arm64 = 'aarch64' }
 # Package versions have no pre-release suffix.
@@ -97,73 +76,20 @@ if ($Revision -le 0) {
 }
 
 Write-Host "Arcanist $Version for Synology ($($arches -join ', ')), package revision $Revision" -ForegroundColor Green
-$mount = "${root}:/src"
 
-# 1. Native libraries.
-if (-not $SkipNative) {
-    Step 'Native libraries (Rust)'
-    Invoke-Docker build --quiet -t arcanist-native-builder -f (Join-Path $root 'packaging/native/builder.Dockerfile') (Join-Path $root 'packaging/native') | Out-Null
-    foreach ($a in $arches) {
-        Invoke-Docker run --rm -v $mount -w /src `
-            -v arcanist-cargo-registry:/usr/local/cargo/registry `
-            -v "arcanist-native-target:/target" -e CARGO_TARGET_DIR=/target `
-            arcanist-native-builder sh packaging/native/build.sh "linux-$a"
-    }
-}
-foreach ($a in $arches) {
-    foreach ($lib in 'libarcanist_audio.so', 'libarcanist_p2p.so', 'libarcanist_player.so') {
-        if (-not (Test-Path (Join-Path $root "artifacts/native/linux-$a/$lib"))) { throw "Missing artifacts/native/linux-$a/${lib}: build without -SkipNative." }
-    }
-}
-
-# 2. The admin panel. Its node_modules and Angular's cache stay in volumes: the checkout's are Windows' own.
-if (-not $SkipPanel) {
-    Step 'Admin panel (Node 24)'
-    Invoke-Docker run --rm -v $mount -w /src/src/Arcanist.Web `
-        -v arcanist-web-node-modules:/src/src/Arcanist.Web/node_modules `
-        -v arcanist-web-angular-cache:/src/src/Arcanist.Web/.angular `
-        -v arcanist-npm-cache:/root/.npm `
-        node:24.15.0-bookworm sh -c 'npm ci --no-audit --no-fund && npm run build'
-}
-if (-not (Test-Path (Join-Path $root 'src/Arcanist.Web/dist/arcanist-web/browser/index.html'))) {
-    throw 'The admin panel is not built: build without -SkipPanel.'
-}
-
-# Webamp from a local checkout: its zip, unpacked where the server's build takes bundled players from (one folder
-# per player id).
+# 1-3. Native libraries, admin panel and the server for systems with .NET (what the package runs with
+# SynoCommunity's dotnet10-runtime), with Webamp from a local checkout when asked.
+Build-Native $root $arches -Skip:$SkipNative
+Build-Panel $root -Skip:$SkipPanel
 $bundled = ''
 if ($LocalWebamp) {
     if ($SkipServer) { throw '-LocalWebamp needs the server built (leave out -SkipServer).' }
-    if (-not $WebampPath) { $WebampPath = Join-Path $root '../ArcanistWebPlayers/webamp' }
-    $packScript = Join-Path $WebampPath 'packages/arcanist-webamp/scripts/pack.ps1'
-    if (-not (Test-Path $packScript)) { throw "No Webamp checkout at $WebampPath (or no scripts/pack.ps1 in it): pass -WebampPath." }
-    Step "Webamp ($((Resolve-Path $WebampPath).Path))"
-    & $packScript
-    $webampVersion = (Get-Content (Join-Path $WebampPath 'packages/arcanist-webamp/package.json') -Raw | ConvertFrom-Json).version
-    $zip = Join-Path $WebampPath "packages/arcanist-webamp/release/arcanist-webamp-$webampVersion.zip"
-    $players = Join-Path $root 'artifacts/players-local'
-    Remove-Item -Recurse -Force $players -ErrorAction SilentlyContinue
-    Expand-Archive $zip -DestinationPath (Join-Path $players 'webamp')
-    $bundled = '/src/artifacts/players-local'
+    $bundled = Build-LocalWebamp $root $WebampPath
 }
-
-# 3. The server for systems with .NET (what the package runs with SynoCommunity's dotnet10-runtime).
-if (-not $SkipServer) {
-    Step 'Server (.NET 10)'
-    Invoke-Docker run --rm -v $mount -w /src `
-        -v arcanist-dotnet-build:/build -v arcanist-nuget:/root/.nuget/packages `
-        -e "ARCHES=$($arches -join ' ')" -e FLAVORS=dotnet -e ARTIFACTS_PATH=/build -e DOTNET_CLI_TELEMETRY_OPTOUT=1 `
-        -e "BUNDLED_PLAYERS_DIRECTORY=$bundled" `
-        mcr.microsoft.com/dotnet/sdk:10.0 sh packaging/linux/pack.sh $Version --skip-panel
-}
-foreach ($a in $arches) {
-    if (-not (Test-Path (Join-Path $root "artifacts/linux/arcanist-$Version-linux-$a-dotnet.tar.gz"))) {
-        throw "Missing artifacts/linux/arcanist-$Version-linux-$a-dotnet.tar.gz: build without -SkipServer."
-    }
-}
+Build-Server $root $Version $arches @('dotnet') $bundled -Skip:$SkipServer
 
 # 4. The package, with spksrc.
-Step 'Synology package (spksrc)'
+Write-Step 'Synology package (spksrc)'
 $spksrc = Join-Path $root 'artifacts/spksrc'
 if (-not (Test-Path (Join-Path $spksrc '.git'))) {
     # Without line ending conversion: spksrc's checksum files would not be read.

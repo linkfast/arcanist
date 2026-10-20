@@ -8,6 +8,12 @@
 #
 # Then open http://<host>:8484/ and follow the setup wizard; it asks for the setup code printed in
 # `docker logs <container>`. Add /music (or its subfolders) as a library.
+#
+# The web players it bundles are the releases pinned in Arcanist.Core.csproj. Others (a local build of Webamp, one
+# folder per player id) replace them with --build-context players=<folder> (packaging/docker/build.ps1 -LocalWebamp).
+
+# Players to bundle instead of the pinned releases: empty unless the build gives a "players" context.
+FROM scratch AS players
 
 # The panel and the server are built once, on the build machine's platform; only the final stage is per target.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS panel
@@ -47,8 +53,10 @@ RUN echo "linux-$([ "$TARGETARCH" = amd64 ] && echo x64 || echo "$TARGETARCH")" 
 COPY src/Arcanist.Extensibility/ src/Arcanist.Extensibility/
 COPY src/Arcanist.Core/ src/Arcanist.Core/
 COPY --from=native /src/artifacts/native/ artifacts/native/
-RUN dotnet publish src/Arcanist.Core/Arcanist.Core.csproj -c Release -o /app --no-restore \
-    -r "$(cat /rid)" --self-contained false -p:UseAppHost=false -p:SkipNativeBuild=true ${VERSION:+-p:Version=$VERSION}
+COPY --from=players / /players/
+RUN players="$([ -n "$(ls -A /players)" ] && echo -p:BundledPlayersDirectory=/players)"; \
+    dotnet publish src/Arcanist.Core/Arcanist.Core.csproj -c Release -o /app --no-restore \
+    -r "$(cat /rid)" --self-contained false -p:UseAppHost=false -p:SkipNativeBuild=true ${VERSION:+-p:Version=$VERSION} $players
 RUN mkdir /data
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

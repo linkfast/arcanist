@@ -12,7 +12,7 @@ name: arcanist
 
 services:
   arcanist:
-    image: ghcr.io/linkfast/arcanist:${ARCANIST_TAG:-preview}
+    image: ${ARCANIST_IMAGE:-ghcr.io/linkfast/arcanist}:${ARCANIST_TAG:-preview}
     container_name: arcanist
     restart: unless-stopped
     depends_on:

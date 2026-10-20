@@ -8,6 +8,7 @@ using Arcanist.Core.Application.Libraries;
 using Arcanist.Core.Application.WishList;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Scanning;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.Api;
 
@@ -56,6 +57,11 @@ public sealed class WishListTests : IAsyncLifetime
         var token = (await _factory.LoginAsync()).AccessToken;
         using var socket = await ConnectAsync(token);
         await SendAsync(socket, new { id = "1", type = "subscribe", payload = new { query = "subscription { wishObtained { wishId title trackId } }" } });
+        // The notice is not kept for later: the subscription must be listening before the song arrives.
+        var signals = _factory.Services.GetRequiredService<WishListSignals>();
+        for (var i = 0; i < 300 && signals.Listeners == 0; i++)
+            await Task.Delay(100, Cancel);
+        Assert.Equal(1, signals.Listeners);
 
         // The file arrives (copied in, as an import or an upload would leave it) and the library is scanned.
         var file = AudioFixtures.WriteWav(Path.Combine(_incoming, "heroes.wav"), 2, new FixtureTags("Heroes", "David Bowie", "\"Heroes\"", TrackNumber: 3));

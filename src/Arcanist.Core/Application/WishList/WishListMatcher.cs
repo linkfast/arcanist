@@ -15,6 +15,9 @@ public sealed class WishListSignals
 {
     private event Action<Guid, WishObtained>? Obtained;
 
+    /// <summary>How many subscriptions are listening (tests wait for theirs).</summary>
+    internal int Listeners => Obtained?.GetInvocationList().Length ?? 0;
+
     internal void OnObtained(Guid userId, WishObtained wish) => Obtained?.Invoke(userId, wish);
 
     internal IObservable<WishObtained> Of(Guid userId) => new Feed(this, userId);

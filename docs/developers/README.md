@@ -138,7 +138,10 @@ without ffmpeg). Add parameters to a stream URL:
 | `timeOffset=93.5` | Start that many seconds in. |
 
 Converted audio is streamed as it is produced: there is no `Content-Length` or range support, so players seek by
-requesting the URL again with `timeOffset`. `X-Content-Duration` gives the remaining duration in seconds. Without
+requesting the URL again with `timeOffset`. `X-Content-Duration` gives the remaining duration in seconds. A song the
+server converted before (its conversion cache, or the versions it makes ahead of time) comes as a file instead: with
+`Content-Length`, `Accept-Ranges: bytes` and ranges, like an original; check `Accept-Ranges` rather than assuming
+either. Without
 ffmpeg, or when too many conversions are running, the answer is `503` with code `transcoding_unavailable`: fall back
 to the original.
 

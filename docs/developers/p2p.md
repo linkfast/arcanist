@@ -113,3 +113,10 @@ When a server accepts a share, its library "… library" is described by the ser
 it on demand (`GET /rest/v1/peer/stream`), under the rules the owner set. When the owner allows downloads, the receiving server's administrator can also copy
 the files into one of its own libraries. These endpoints, tagged "Peer" in the
 OpenAPI document, only answer servers through the P2P network; apps never use them.
+
+The receiving server also asks for the owner's analyses of the shared audio (`POST /rest/v1/peer/analyses`: loudness,
+tempo, key, fingerprints and waveform, by content hash), so they work there without hearing the songs. When the owner
+allows it (rule `allowCache`, on by default), it keeps each song it plays whole in a cache and plays it from there,
+converted on its own side if need be; it never offers it as a download. When the owner counts the receiving server's
+plays (rule `countPlays`), that server sends them (`POST /rest/v1/peer/plays`, with each user's name there, unless its
+administrator keeps them home), and the owner's statistics list those users as remote ones.

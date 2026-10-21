@@ -3085,6 +3085,7 @@ type S3ConnectionTest {
 input CreateS3LibraryInput {
   name: String!
   connection: S3ConnectionInput!
+  encryptionKey: String
 }
 
 input SetServerUpdateSettingsInput {

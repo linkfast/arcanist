@@ -11860,6 +11860,12 @@
           },
           "connection": {
             "$ref": "#/components/schemas/S3ConnectionInput"
+          },
+          "encryptionKey": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

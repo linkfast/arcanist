@@ -140,6 +140,7 @@ export type CreateLibraryInput = {
 
 export type CreateS3LibraryInput = {
   connection: S3ConnectionInput;
+  encryptionKey?: string | null | undefined;
   name: string;
 };
 

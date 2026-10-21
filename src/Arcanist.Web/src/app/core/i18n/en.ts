@@ -1607,6 +1607,15 @@ export const en: Dictionary = {
     region: 'Region',
     accessKeyId: 'Access key',
     secretAccessKey: 'Secret key',
+    encrypt: 'Encrypt with a key of your own',
+    encryptHelp:
+      'Arcanist encrypts the music and its names before uploading them: the S3 service cannot read anything. For a new library in an empty bucket or folder.',
+    key: 'Encryption key',
+    newKey: 'Make another',
+    keyWarning:
+      'Keep it somewhere safe (a password manager). Without it nobody can read this library, not even you: if it is lost, the music is lost. With it you can decrypt it on any other Arcanist server.',
+    keySaved: 'I have saved the key',
+    keyCopied: 'Key copied',
     pathStyle: 'Bucket in the path',
     pathStyleHelp: 'For MinIO and most compatible services. Turn it off for AWS.',
     notes:

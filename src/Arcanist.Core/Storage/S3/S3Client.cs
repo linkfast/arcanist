@@ -12,7 +12,8 @@ namespace Arcanist.Core.Storage.S3;
 /// services) rather than in the host name (<c>bucket.endpoint/key</c>, AWS).</param>
 internal sealed record S3Connection(Uri Endpoint, string Region, string Bucket, string AccessKeyId, string SecretAccessKey, bool PathStyle);
 
-internal sealed record S3Object(string Key, long Size, DateTime LastModified);
+/// <param name="Metadata">The object's <c>x-amz-meta-*</c> headers (from HEAD), by lowercase name.</param>
+internal sealed record S3Object(string Key, long Size, DateTime LastModified, IReadOnlyDictionary<string, string>? Metadata = null);
 
 /// <param name="Prefixes">With a delimiter: the "folders" directly under the prefix.</param>
 internal sealed record S3ListPage(IReadOnlyList<S3Object> Objects, string? ContinuationToken, IReadOnlyList<string>? Prefixes = null);
@@ -81,7 +82,10 @@ internal sealed class S3Client(HttpClient http, S3Connection connection, TimePro
         if (response.StatusCode == HttpStatusCode.NotFound)
             return null;
         await EnsureAsync(response, cancellationToken);
-        return new S3Object(key, response.Content.Headers.ContentLength ?? 0, response.Content.Headers.LastModified?.UtcDateTime ?? DateTime.UnixEpoch);
+        var metadata = response.Headers.Where(h => h.Key.StartsWith("x-amz-meta-", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(h => h.Key.ToLowerInvariant(), h => string.Join(',', h.Value));
+        return new S3Object(key, response.Content.Headers.ContentLength ?? 0, response.Content.Headers.LastModified?.UtcDateTime ?? DateTime.UnixEpoch,
+            metadata);
     }
 
     /// <summary>An object's bytes from <paramref name="from"/> to <paramref name="to"/> (inclusive; null for the end). The caller disposes the response.</summary>
@@ -99,12 +103,18 @@ internal sealed class S3Client(HttpClient http, S3Connection connection, TimePro
         return response;
     }
 
-    public async Task PutAsync(string key, Stream content, long length, string contentType, CancellationToken cancellationToken)
+    /// <param name="metadata">Stored with the object as <c>x-amz-meta-*</c> headers (names given in full, in lowercase).</param>
+    public async Task PutAsync(string key, Stream content, long length, string contentType, CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string>? metadata = null)
     {
         var body = new StreamContent(content);
         body.Headers.ContentLength = length;
         body.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-        using var response = await SendAsync(HttpMethod.Put, key, null, body, null, cancellationToken);
+        using var response = await SendAsync(HttpMethod.Put, key, null, body, request =>
+        {
+            foreach (var (name, value) in metadata ?? new Dictionary<string, string>())
+                request.Headers.Add(name, value);
+        }, cancellationToken);
         await EnsureAsync(response, cancellationToken);
     }
 

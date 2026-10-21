@@ -14,7 +14,16 @@ namespace Arcanist.Core.Storage.S3;
 /// The settings of an S3 source (<see cref="LibrarySource.Settings"/>), as JSON. The secret key is protected with
 /// the server's Data Protection keys and never leaves it.
 /// </summary>
-internal sealed record S3SourceSettings(string Endpoint, string Region, string AccessKeyId, string ProtectedSecret, bool PathStyle);
+/// <param name="ProtectedEncryptionKey">With it, the library is encrypted on this side (<see cref="S3Encryption"/>) with
+/// the owner's key, protected like the secret; null for a plain one.</param>
+internal sealed record S3SourceSettings(string Endpoint, string Region, string AccessKeyId, string ProtectedSecret, bool PathStyle,
+    string? ProtectedEncryptionKey = null);
+
+/// <summary>An open S3 source: its client, its prefix and, when it is encrypted, its keys.</summary>
+internal sealed record S3Source(S3Client Client, string Prefix, S3Encryption? Encryption)
+{
+    public void Deconstruct(out S3Client client, out string prefix) => (client, prefix) = (Client, Prefix);
+}
 
 /// <summary>
 /// Libraries in an S3 bucket (any S3-compatible service), under a prefix: the location is <c>s3://bucket/prefix</c>.
@@ -63,7 +72,7 @@ internal sealed class S3Storage(
     public string Protect(string secret) => Protector.Protect(secret);
 
     /// <summary>A client for the source; null without the Cloud plan or with unreadable settings.</summary>
-    internal (S3Client Client, string Prefix)? Open(StorageLocation location)
+    internal S3Source? Open(StorageLocation location)
     {
         if (!capabilities.IsEnabled(Capability.ThirdPartyStorage) || location.Settings is null)
             return null;
@@ -71,8 +80,11 @@ internal sealed class S3Storage(
         {
             var settings = JsonSerializer.Deserialize<S3SourceSettings>(location.Settings, JsonSerializerOptions.Web)!;
             var (bucket, prefix) = Split(location.Location);
-            return (Client(new S3Connection(new Uri(settings.Endpoint), settings.Region, bucket, settings.AccessKeyId,
-                Protector.Unprotect(settings.ProtectedSecret), settings.PathStyle)), prefix);
+            var encryption = settings.ProtectedEncryptionKey is { } key
+                ? new S3Encryption(S3Encryption.ParseKey(Protector.Unprotect(key)) ?? throw new CryptographicException("Not a 256-bit key."))
+                : null;
+            return new S3Source(Client(new S3Connection(new Uri(settings.Endpoint), settings.Region, bucket, settings.AccessKeyId,
+                Protector.Unprotect(settings.ProtectedSecret), settings.PathStyle)), prefix, encryption);
         }
         catch (Exception e) when (e is JsonException or CryptographicException or UriFormatException or ArgumentException)
         {
@@ -83,14 +95,21 @@ internal sealed class S3Storage(
 
     internal S3Client Client(S3Connection connection) => new(clients.CreateClient(HttpClientName), connection, time);
 
-    private (S3Client Client, string Prefix) Required(StorageLocation location) =>
+    private S3Source Required(StorageLocation location) =>
         Open(location) ?? throw new IOException("The S3 source is not available.");
 
-    private static string Key(string prefix, string relativePath)
+    /// <summary>S3 keys are at most 1024 bytes; encrypted names are longer than plain ones.</summary>
+    private const int MaxKeyBytes = 1024;
+
+    private static string Key(S3Source source, string relativePath)
     {
         if (string.IsNullOrEmpty(relativePath) || relativePath.StartsWith('/') || relativePath.Split('/').Any(s => s is "" or "." or ".."))
             throw new FileNotFoundException("The path is outside the location.", relativePath);
-        return prefix.Length == 0 ? relativePath : $"{prefix}/{relativePath}";
+        var name = source.Encryption?.EncryptPath(relativePath) ?? relativePath;
+        var key = source.Prefix.Length == 0 ? name : $"{source.Prefix}/{name}";
+        if (System.Text.Encoding.UTF8.GetByteCount(key) > MaxKeyBytes)
+            throw new IOException($"The path is too long for this library: {relativePath}");
+        return key;
     }
 
     public async Task<StorageProbe> ProbeAsync(StorageLocation location, CancellationToken cancellationToken)
@@ -116,7 +135,8 @@ internal sealed class S3Storage(
 
     public async IAsyncEnumerable<StorageEntry> EnumerateAsync(StorageLocation location, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var (client, prefix) = Required(location);
+        var source = Required(location);
+        var (client, prefix) = source;
         var listed = prefix.Length == 0 ? "" : prefix + "/";
         string? token = null;
         do
@@ -125,10 +145,19 @@ internal sealed class S3Storage(
             foreach (var item in page.Objects)
             {
                 var relative = item.Key[listed.Length..];
+                var size = item.Size;
+                if (source.Encryption is { } encryption)
+                {
+                    // Objects that are not this library's (another key, a test of writing) are left alone.
+                    if (relative.EndsWith('/') || encryption.DecryptPath(relative) is not { } plain || S3Encryption.PlainLength(size) is not { } plainSize)
+                        continue;
+                    (relative, size) = (plain, plainSize);
+                }
+
                 // Folder markers, hidden files (Arcanist's trash and partial uploads among them) and NAS folders.
                 if (relative.Length == 0 || relative.EndsWith('/') || relative.Split('/').Any(s => s.StartsWith('.') || IgnoredFolders.Contains(s)))
                     continue;
-                yield return new StorageEntry(relative, item.Size, item.LastModified);
+                yield return new StorageEntry(relative, size, item.LastModified);
             }
 
             token = page.ContinuationToken;
@@ -139,10 +168,16 @@ internal sealed class S3Storage(
     {
         if (Open(location) is not { } opened)
             throw new FileNotFoundException("The S3 source is not available.", relativePath);
-        var (client, prefix) = opened;
-        var key = Key(prefix, relativePath);
+        var client = opened.Client;
+        var key = Key(opened, relativePath);
         var head = await client.HeadAsync(key, cancellationToken) ?? throw new FileNotFoundException("No such object.", relativePath);
-        return new S3ReadStream(client, key, head.Size);
+        if (opened.Encryption is not { } encryption)
+            return new S3ReadStream(client, key, head.Size);
+
+        var fileKey = encryption.OpenFile(head.Metadata?.GetValueOrDefault(S3Encryption.MetadataHeader))
+                      ?? throw new IOException($"{relativePath} is not encrypted with this library's key.");
+        var plainLength = S3Encryption.PlainLength(head.Size) ?? throw new IOException($"{relativePath} is not a complete encrypted file.");
+        return new S3DecryptingStream(new S3ReadStream(client, key, head.Size), fileKey, plainLength);
     }
 
     public string? TryGetLocalPath(StorageLocation location, string relativePath) => null;
@@ -158,8 +193,10 @@ internal sealed class S3Storage(
     {
         if (Open(location) is not { } opened)
             return false;
-        var (client, prefix) = opened;
-        var key = Key(prefix, $".arcanist-write-test-{Guid.NewGuid():N}");
+        var client = opened.Client;
+        // Plain even in an encrypted library: listing skips what it cannot decrypt.
+        var test = $".arcanist-write-test-{Guid.NewGuid():N}";
+        var key = opened.Prefix.Length == 0 ? test : $"{opened.Prefix}/{test}";
         try
         {
             await client.PutAsync(key, new MemoryStream([]), 0, "application/octet-stream", cancellationToken);
@@ -174,33 +211,61 @@ internal sealed class S3Storage(
 
     public async Task<bool> ExistsAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken)
     {
-        var (client, prefix) = Required(location);
-        var key = Key(prefix, relativePath);
-        // A "folder" exists when objects are under it.
+        var source = Required(location);
+        var client = source.Client;
+        var key = Key(source, relativePath);
+        // A "folder" exists when objects are under it (encrypted names keep the folders, so this works for both).
         return await client.HeadAsync(key, cancellationToken) is not null
                || (await client.ListAsync(key + "/", null, 1, cancellationToken)).Objects.Count > 0;
     }
 
     public async Task MoveAsync(StorageLocation location, string from, string to, CancellationToken cancellationToken)
     {
-        var (client, prefix) = Required(location);
+        var opened = Required(location);
+        var client = opened.Client;
         if (await ExistsAsync(location, to, cancellationToken))
             throw new StorageConflictException(to);
-        var source = Key(prefix, from);
+        var source = Key(opened, from);
         if (await client.HeadAsync(source, cancellationToken) is null)
             throw new FileNotFoundException("No such object.", from);
-        await client.CopyAsync(source, Key(prefix, to), cancellationToken);
+        // An encrypted file does not depend on its name: the copy (with its metadata) stays readable.
+        await client.CopyAsync(source, Key(opened, to), cancellationToken);
         await client.DeleteAsync(source, cancellationToken);
     }
 
     /// <summary>Uploads a local file (an upload only shows once complete) and removes the local file, as a move would.</summary>
     public async Task ImportAsync(StorageLocation location, string relativePath, string localPath, CancellationToken cancellationToken)
     {
-        var (client, prefix) = Required(location);
+        var source = Required(location);
         if (await ExistsAsync(location, relativePath, cancellationToken))
             throw new StorageConflictException(relativePath);
-        await using (var file = File.OpenRead(localPath))
-            await client.PutAsync(Key(prefix, relativePath), file, file.Length, ContentType(relativePath), cancellationToken);
+        var key = Key(source, relativePath);
+        if (source.Encryption is not { } encryption)
+        {
+            await using (var file = File.OpenRead(localPath))
+                await source.Client.PutAsync(key, file, file.Length, ContentType(relativePath), cancellationToken);
+        }
+        else
+        {
+            // Encrypted to a temporary file first: S3 wants the length, and the upload can be retried from it.
+            var (fileKey, metadata) = encryption.NewFile();
+            var sealedPath = localPath + ".arcanist-sealed";
+            try
+            {
+                await using (var plain = File.OpenRead(localPath))
+                await using (var sealedFile = File.Create(sealedPath))
+                    await S3Encryption.EncryptAsync(fileKey, plain, plain.Length, sealedFile, cancellationToken);
+                await using var upload = File.OpenRead(sealedPath);
+                // Its type would tell what it is: every encrypted object is just bytes.
+                await source.Client.PutAsync(key, upload, upload.Length, "application/octet-stream", cancellationToken,
+                    new Dictionary<string, string> { [S3Encryption.MetadataHeader] = metadata });
+            }
+            finally
+            {
+                File.Delete(sealedPath);
+            }
+        }
+
         File.Delete(localPath);
     }
 
@@ -221,15 +286,16 @@ internal sealed class S3Storage(
     {
         if (Open(location) is not { } opened)
             return;
-        var (client, prefix) = opened;
-        var trash = Key(prefix, ILibraryStorage.TrashFolder) + "/";
+        var client = opened.Client;
+        var trash = Key(opened, ILibraryStorage.TrashFolder) + "/";
         string? token = null;
         do
         {
             var page = await client.ListAsync(trash, token, 1000, cancellationToken);
             foreach (var item in page.Objects)
             {
-                var day = item.Key[trash.Length..].Split('/')[0];
+                var folder = item.Key[trash.Length..].Split('/')[0];
+                var day = opened.Encryption is { } encryption ? encryption.DecryptPath(folder) ?? "" : folder;
                 if (DateTime.TryParseExact(day, "yyyy-MM-dd", CultureInfo.InvariantCulture,
                         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date) && date.AddDays(1) <= before)
                     await client.DeleteAsync(item.Key, cancellationToken);

@@ -36,7 +36,10 @@ public sealed record S3ConnectionInput(
 /// <param name="Truncated">There are more objects than were looked at.</param>
 public sealed record S3ConnectionTest(bool Success, string? ErrorCode, int AudioFiles, bool Truncated);
 
-public sealed record CreateS3LibraryInput(string Name, S3ConnectionInput Connection);
+/// <param name="EncryptionKey">Encrypts the library on this server with this key (256 bits, in base64), which its
+/// owner keeps: the S3 service sees neither the music nor its names. Without it, the files are stored as they are.
+/// Lost, the library cannot be read any more.</param>
+public sealed record CreateS3LibraryInput(string Name, S3ConnectionInput Connection, string? EncryptionKey = null);
 
 /// <summary>
 /// Libraries in S3 buckets (Cloud plan). Administrators only: the server signs in to the bucket with the keys given,
@@ -72,6 +75,8 @@ public sealed partial class S3LibraryService(
         else if ((await db.Libraries.Select(l => l.Name).ToListAsync(cancellationToken)).Any(n => TextNormalizer.Normalize(n) == TextNormalizer.Normalize(name)))
             errors.Add("name", ErrorCodes.Duplicate);
         var target = Validate(input.Connection, errors, "connection.");
+        if (input.EncryptionKey is { Length: > 0 } && S3Encryption.ParseKey(input.EncryptionKey) is null)
+            errors.Add("encryptionKey", ErrorCodes.InvalidFormat);
         errors.ThrowIfAny();
         var connection = target.Connection;
 
@@ -92,7 +97,7 @@ public sealed partial class S3LibraryService(
             Library = library,
             Kind = LibrarySourceKind.S3,
             Location = Storage.NormalizeLocation($"{S3Storage.Scheme}{connection.Bucket}/{prefix}"),
-            Settings = SettingsJson(Storage, connection),
+            Settings = SettingsJson(Storage, connection, input.EncryptionKey is { Length: > 0 } key ? key.Trim() : null),
         });
         db.Libraries.Add(library);
         await db.SaveChangesAsync(cancellationToken);
@@ -102,10 +107,11 @@ public sealed partial class S3LibraryService(
     }
 
     /// <summary>A connection's settings as libraries (and backup destinations) keep them: the secret protected.</summary>
-    internal static string SettingsJson(S3Storage storage, S3Connection connection) =>
+    /// <param name="encryptionKey">The owner's key of an encrypted library (protected like the secret), or null.</param>
+    internal static string SettingsJson(S3Storage storage, S3Connection connection, string? encryptionKey = null) =>
         JsonSerializer.Serialize(new S3SourceSettings(
             connection.Endpoint.ToString().TrimEnd('/'), connection.Region, connection.AccessKeyId, storage.Protect(connection.SecretAccessKey),
-            connection.PathStyle), JsonSerializerOptions.Web);
+            connection.PathStyle, encryptionKey is null ? null : storage.Protect(encryptionKey)), JsonSerializerOptions.Web);
 
     private void RequirePlan()
     {

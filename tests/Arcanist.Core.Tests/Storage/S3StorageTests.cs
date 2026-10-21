@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Storage.S3;
@@ -199,6 +200,62 @@ public sealed class S3StorageTests(S3Container s3) : IClassFixture<S3Container>,
         Assert.Contains("Music/Sigur Rós/Ágætis byrjun/01 Svefn.wav", keys);
         Assert.DoesNotContain("Music/incoming/a.wav", keys);
     }
+
+    [Fact]
+    public async Task An_encrypted_library_keeps_names_and_music_unreadable_in_the_bucket()
+    {
+        Assert.SkipUnless(s3.IsAvailable, $"The S3 server (Docker) is not available: {s3.UnavailableReason}");
+        await Client().CreateBucketAsync(Cancel);
+        await StartAsync();
+        var key = S3EncryptionKey();
+
+        var invalid = await _admin.GraphQLAsync("mutation($i: CreateS3LibraryInput!) { createS3Library(input: $i) { id } }",
+            new { i = new { name = "Bad", connection = Connection(), encryptionKey = "short" } });
+        Assert.Equal("validation_failed", invalid.ErrorCode());
+
+        var created = (await _admin.GraphQLAsync("mutation($i: CreateS3LibraryInput!) { createS3Library(input: $i) { id } }",
+            new { i = new { name = "Vault", connection = Connection(), encryptionKey = key } })).GetProperty("data").GetProperty("createS3Library");
+        var libraryId = created.GetProperty("id").GetString();
+        await _factory.WaitForScansAsync(_admin);
+
+        // Music comes in as uploads (or a drop folder, or organizing): encrypted on the way.
+        var song = AudioFixtures.WriteWav(Path.Combine(_staging, "secret.wav"), 7,
+            new FixtureTags("Secret Song", "Hidden Band", "Private Album", "Hidden Band", TrackNumber: 1));
+        using (var upload = new ByteArrayContent(await File.ReadAllBytesAsync(song, Cancel)))
+        {
+            var response = await _admin.PostAsync($"/rest/v1/libraries/{libraryId}/uploads?fileName=secret.wav", upload, Cancel);
+            Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync(Cancel));
+        }
+
+        // Uploads are scanned a little later, after the batch: now, here.
+        await _admin.PostAsJsonAsync($"/rest/v1/libraries/{libraryId}/scans", new { full = false }, Cancel);
+        await _factory.WaitForScansAsync(_admin);
+        var track = (await _admin.GraphQLAsync("query { tracks(first: 10) { items { id title } } }"))
+            .GetProperty("data").GetProperty("tracks").GetProperty("items")[0];
+        Assert.Equal("Secret Song", track.GetProperty("title").GetString());
+
+        // Played (a range) decrypted on the server.
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/rest/v1/stream/{track.GetProperty("id").GetString()}");
+        // Across a 64 KiB block when the file is that long.
+        var length = new FileInfo(song).Length;
+        var start = length > S3Encryption.BlockSize + 600 ? S3Encryption.BlockSize - 500 : length / 2;
+        request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(start, start + 999);
+        var streamed = await _admin.SendAsync(request, Cancel);
+        Assert.Equal(HttpStatusCode.PartialContent, streamed.StatusCode);
+        Assert.Equal(File.ReadAllBytes(song)[(int)start..(int)Math.Min(length, start + 1000)], await streamed.Content.ReadAsByteArrayAsync(Cancel));
+
+        // In the bucket: neither the names nor the audio.
+        var objects = (await Client().ListAsync("Music/", null, 100, Cancel)).Objects;
+        var stored = Assert.Single(objects);
+        foreach (var word in new[] { "Hidden", "Band", "Private", "Secret", ".wav" })
+            Assert.DoesNotContain(word, stored.Key);
+        using var raw = await Client().GetAsync(stored.Key, 0, null, Cancel);
+        var bytes = await raw.Content.ReadAsByteArrayAsync(Cancel);
+        Assert.DoesNotContain("RIFF", System.Text.Encoding.ASCII.GetString(bytes[..64]));
+        Assert.DoesNotContain("Secret Song", System.Text.Encoding.UTF8.GetString(bytes));
+    }
+
+    private static string S3EncryptionKey() => S3Encryption.NewKey();
 
     [Fact]
     public async Task Buckets_need_the_Cloud_plan()

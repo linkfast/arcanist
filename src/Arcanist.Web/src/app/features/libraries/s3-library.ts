@@ -115,6 +115,43 @@ import { CreateS3LibraryMutation, TestS3ConnectionMutation } from '../../graphql
       </label>
       <p class="text-xs text-muted-foreground">{{ 's3.notes' | t }}</p>
 
+      <label class="flex items-start gap-3 text-sm">
+        <hlm-switch name="encrypt" [(ngModel)]="encrypt" (ngModelChange)="encryptionChanged()" />
+        <span>
+          {{ 's3.encrypt' | t }}
+          <span class="block text-xs text-muted-foreground">{{ 's3.encryptHelp' | t }}</span>
+        </span>
+      </label>
+      @if (encrypt) {
+        <div class="grid gap-2 rounded-md border p-3">
+          <hlm-field>
+            <label hlmFieldLabel for="s3-key">{{ 's3.key' | t }}</label>
+            <div class="flex gap-2">
+              <input
+                hlmInput
+                id="s3-key"
+                name="encryptionKey"
+                class="min-w-0 flex-1 font-mono text-xs"
+                autocomplete="off"
+                spellcheck="false"
+                [(ngModel)]="encryptionKey"
+              />
+              <button hlmBtn variant="outline" size="sm" type="button" (click)="newKey()">
+                {{ 's3.newKey' | t }}
+              </button>
+              <button hlmBtn variant="outline" size="sm" type="button" (click)="copyKey()">
+                {{ 'common.copy' | t }}
+              </button>
+            </div>
+          </hlm-field>
+          <p class="text-xs text-amber-700 dark:text-amber-400">{{ 's3.keyWarning' | t }}</p>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="keySaved" [(ngModel)]="keySaved" />
+            {{ 's3.keySaved' | t }}
+          </label>
+        </div>
+      }
+
       <div class="flex flex-wrap items-center gap-3">
         <button
           hlmBtn
@@ -145,7 +182,13 @@ import { CreateS3LibraryMutation, TestS3ConnectionMutation } from '../../graphql
         <button
           hlmBtn
           type="submit"
-          [disabled]="busy() || !ready() || !name.trim() || !tested()?.success"
+          [disabled]="
+            busy() ||
+            !ready() ||
+            !name.trim() ||
+            !tested()?.success ||
+            (encrypt && (!keySaved || !validKey()))
+          "
         >
           @if (busy()) {
             <hlm-spinner class="size-4" />
@@ -171,6 +214,9 @@ export class S3LibraryForm {
   protected accessKeyId = '';
   protected secretAccessKey = '';
   protected pathStyle = true;
+  protected encrypt = false;
+  protected encryptionKey = '';
+  protected keySaved = false;
   protected readonly busy = signal(false);
   protected readonly tested = signal<{
     success: boolean;
@@ -209,10 +255,43 @@ export class S3LibraryForm {
     });
   }
 
+  protected encryptionChanged(): void {
+    if (this.encrypt && !this.encryptionKey) this.newKey();
+  }
+
+  /** A new 256-bit key, made here: the server sees it only when the library is created. */
+  protected newKey(): void {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    this.encryptionKey = btoa(String.fromCharCode(...bytes));
+    this.keySaved = false;
+  }
+
+  protected validKey(): boolean {
+    try {
+      const text = this.encryptionKey.trim().replace(/-/g, '+').replace(/_/g, '/');
+      return atob(text.padEnd(text.length + ((4 - (text.length % 4)) % 4), '=')).length === 32;
+    } catch {
+      return false;
+    }
+  }
+
+  protected async copyKey(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.encryptionKey);
+      toast.success(this.i18n.t('s3.keyCopied'));
+    } catch {
+      // Without the clipboard (an insecure page), the key is in the field to copy by hand.
+    }
+  }
+
   protected async create(): Promise<void> {
     await this.run(async () => {
       await this.gql.mutate(CreateS3LibraryMutation, {
-        input: { name: this.name.trim(), connection: this.connection() },
+        input: {
+          name: this.name.trim(),
+          connection: this.connection(),
+          encryptionKey: this.encrypt ? this.encryptionKey.trim() : null,
+        },
       });
       toast.success(this.i18n.t('s3.created'));
       this.created.emit();

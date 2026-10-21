@@ -14240,6 +14240,12 @@
               "null",
               "string"
             ]
+          },
+          "managedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

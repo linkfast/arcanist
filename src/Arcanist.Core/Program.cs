@@ -104,6 +104,7 @@ builder.Services.AddSingleton<LibraryRules>();
 builder.Services.AddScoped<LibraryService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.LibraryMoves>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.CloudLibraries>();
+builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.ManagedLibraries>();
 builder.Services.AddScoped<S3LibraryService>();
 builder.Services.AddScoped<ScanService>();
 builder.Services.AddScoped<AnalysisService>();

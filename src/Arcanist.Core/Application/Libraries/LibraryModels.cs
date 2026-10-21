@@ -34,7 +34,8 @@ public sealed record Library(
     bool Disabled = false,
     bool Personal = false,
     bool Virtual = false,
-    string? SharedBy = null);
+    string? SharedBy = null,
+    string? ManagedBy = null);
 
 public sealed record LibrarySource(Guid Id, LibrarySourceKind Kind, string Location);
 
@@ -83,9 +84,10 @@ internal static class LibraryMapping
         includeSources ? library.ToOrganization() : null,
         access is not null && access.Has(Permissions.Upload)
                             && library.Sources.Any(s => s.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3)
-                            && cloud?.IsDisabled(library.Sources.Select(s => s.Kind)) != true,
-        cloud?.IsDisabled(library.Sources.Select(s => s.Kind)) == true,
-        library.OwnerUserId is not null);
+                            && cloud?.IsDisabled(library.Sources.Select(s => s.Kind), library.ManagedBy is not null) != true,
+        cloud?.IsDisabled(library.Sources.Select(s => s.Kind), library.ManagedBy is not null) == true,
+        library.OwnerUserId is not null,
+        ManagedBy: library.ManagedBy);
 
     public static LibraryOrganization ToOrganization(this LibraryEntity library) => new(
         string.IsNullOrEmpty(library.OrganizeTemplate) ? PathTemplate.Default : library.OrganizeTemplate,

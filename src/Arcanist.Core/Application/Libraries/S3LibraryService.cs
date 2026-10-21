@@ -108,10 +108,11 @@ public sealed partial class S3LibraryService(
 
     /// <summary>A connection's settings as libraries (and backup destinations) keep them: the secret protected.</summary>
     /// <param name="encryptionKey">The owner's key of an encrypted library (protected like the secret), or null.</param>
-    internal static string SettingsJson(S3Storage storage, S3Connection connection, string? encryptionKey = null) =>
+    /// <param name="managed">Kept by a managed extension: works without Ultimate Cloud's plan.</param>
+    internal static string SettingsJson(S3Storage storage, S3Connection connection, string? encryptionKey = null, bool managed = false) =>
         JsonSerializer.Serialize(new S3SourceSettings(
             connection.Endpoint.ToString().TrimEnd('/'), connection.Region, connection.AccessKeyId, storage.Protect(connection.SecretAccessKey),
-            connection.PathStyle, encryptionKey is null ? null : storage.Protect(encryptionKey)), JsonSerializerOptions.Web);
+            connection.PathStyle, encryptionKey is null ? null : storage.Protect(encryptionKey.Trim()), managed), JsonSerializerOptions.Web);
 
     private void RequirePlan()
     {

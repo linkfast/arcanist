@@ -676,6 +676,9 @@ export const es: Dictionary = {
       'Algunos formatos (como Opus o WMA) se analizarán cuando ffmpeg esté disponible.',
   },
   libraries: {
+    managed: 'Gestionada',
+    managedHelp:
+      'La mantiene una extensión gestionada del servidor (por ejemplo, el almacenamiento de un servicio alojado): se usa como cualquier otra, pero no se puede eliminar ni cambiar su ubicación.',
     personal: 'Personal',
     personalHelp:
       'Tu música de Ultimate Cloud: solo la ves tú y desaparece al desvincular tu cuenta.',
@@ -2758,6 +2761,8 @@ export const es: Dictionary = {
       'El servidor no puede reproducir audio: falta su reproductor nativo o, en Linux, ALSA.',
     cloud_disabled: 'Ultimate Cloud está desactivado.',
     last_source: 'Una biblioteca local conserva su carpeta: muévela en lugar de quitarla.',
+    library_managed:
+      'Esta biblioteca la mantiene una extensión gestionada: no se puede eliminar ni cambiar su ubicación.',
     library_disabled: 'Esta biblioteca necesita Ultimate Cloud, que está desactivado.',
     storage_conflict: 'En la carpeta nueva ya hay un archivo distinto con el mismo nombre.',
     cleanup_incomplete:

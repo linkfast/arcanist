@@ -9,7 +9,8 @@ namespace Arcanist.Core.Application.Libraries;
 /// <summary>
 /// Libraries whose music lives in Ultimate Cloud or in S3 (a feature of Ultimate Cloud's plan) depend on the Ultimate
 /// Cloud extension: while it is off they are disabled, hidden from listening and only deleting them works
-/// (<see cref="ErrorCodes.LibraryDisabled"/>).
+/// (<see cref="ErrorCodes.LibraryDisabled"/>). Libraries of a managed extension (<see cref="Data.Entities.Library.ManagedBy"/>)
+/// do not depend on it.
 /// </summary>
 public sealed class CloudLibraries(ExtensionHost extensions)
 {
@@ -17,12 +18,12 @@ public sealed class CloudLibraries(ExtensionHost extensions)
 
     public static bool DependsOnCloud(LibrarySourceKind kind) => kind is LibrarySourceKind.UltimateCloud or LibrarySourceKind.S3;
 
-    public bool IsDisabled(IEnumerable<LibrarySourceKind> kinds) => !Enabled && kinds.Any(DependsOnCloud);
+    public bool IsDisabled(IEnumerable<LibrarySourceKind> kinds, bool managed = false) => !managed && !Enabled && kinds.Any(DependsOnCloud);
 
     /// <summary>Refuses to work on a library that is disabled now.</summary>
     public async Task EnsureEnabledAsync(ArcanistDbContext db, Guid libraryId, CancellationToken cancellationToken)
     {
-        if (!Enabled && await db.LibrarySources.AnyAsync(s => s.LibraryId == libraryId
+        if (!Enabled && await db.LibrarySources.AnyAsync(s => s.LibraryId == libraryId && s.Library.ManagedBy == null
                                                               && (s.Kind == LibrarySourceKind.UltimateCloud || s.Kind == LibrarySourceKind.S3), cancellationToken))
             throw new ArcanistException.Conflict(ErrorCodes.LibraryDisabled);
     }

@@ -1158,6 +1158,7 @@ type Library {
   personal: Boolean!
   virtual: Boolean!
   sharedBy: String
+  managedBy: String
 }
 
 type LibrarySource {

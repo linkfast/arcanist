@@ -157,7 +157,7 @@ public sealed class OrganizationService(
         var access = guard.Permission(Permissions.ManageLibraries);
         var library = await LibraryService.Visible(db, access).Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == libraryId, cancellationToken)
                       ?? throw new ArcanistException.NotFound();
-        if (cloud.IsDisabled(library.Sources.Select(s => s.Kind)))
+        if (cloud.IsDisabled(library.Sources.Select(s => s.Kind), library.ManagedBy is not null))
             throw new ArcanistException.Conflict(ErrorCodes.LibraryDisabled);
         return library;
     }

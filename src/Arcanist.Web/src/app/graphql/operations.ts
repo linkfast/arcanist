@@ -67,6 +67,7 @@ export const LibrariesQuery = graphql(`
       disabled
       personal
       sharedBy
+      managedBy
       sources {
         id
         kind

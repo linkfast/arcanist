@@ -204,7 +204,8 @@ public sealed class CatalogService(
                                              && (f.LibrarySource.Library.OwnerUserId == null || f.LibrarySource.Library.OwnerUserId == access.UserId));
         // Libraries in Ultimate Cloud or S3 are disabled while its extension is off: their tracks are not shown.
         if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id))
-            files = files.Where(f => f.LibrarySource.Kind != LibrarySourceKind.UltimateCloud && f.LibrarySource.Kind != LibrarySourceKind.S3);
+            files = files.Where(f => f.LibrarySource.Library.ManagedBy != null
+                                     || (f.LibrarySource.Kind != LibrarySourceKind.UltimateCloud && f.LibrarySource.Kind != LibrarySourceKind.S3));
         if (access.IsAdmin)
             return files;
 

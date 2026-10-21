@@ -665,6 +665,9 @@ export const en: Dictionary = {
       'Some formats (such as Opus or WMA) will be analyzed once ffmpeg is available.',
   },
   libraries: {
+    managed: 'Managed',
+    managedHelp:
+      "A managed extension of the server keeps it (for example, a hosted service's storage): it works like any other, but it cannot be deleted nor its place changed.",
     personal: 'Personal',
     personalHelp:
       'Your Ultimate Cloud music: only you see it, and it goes when you unlink your account.',
@@ -2721,6 +2724,8 @@ export const en: Dictionary = {
       'The server cannot play audio: its native player is missing or, on Linux, ALSA.',
     cloud_disabled: 'Ultimate Cloud is switched off.',
     last_source: 'A local library keeps its folder: move it instead.',
+    library_managed:
+      'A managed extension keeps this library: it cannot be deleted nor its place changed.',
     library_disabled: 'This library needs Ultimate Cloud, which is switched off.',
     storage_conflict: 'A different file with the same name is already in the new folder.',
     cleanup_incomplete: 'Moved, but some files of the old folder could not be deleted.',

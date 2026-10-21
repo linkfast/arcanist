@@ -916,6 +916,14 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<DateTime?>("LastScanAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ManagedBy")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ManagedKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -946,6 +954,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsUnique();
 
                     b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("ManagedBy", "ManagedKey")
+                        .IsUnique();
 
                     b.ToTable("Libraries");
                 });

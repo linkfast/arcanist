@@ -921,6 +921,14 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<DateTime?>("LastScanAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ManagedBy")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ManagedKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -951,6 +959,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsUnique();
 
                     b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("ManagedBy", "ManagedKey")
+                        .IsUnique();
 
                     b.ToTable("Libraries");
                 });

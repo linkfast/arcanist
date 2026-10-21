@@ -229,6 +229,25 @@ the configured package only replaces a version older than `Version`. Its own set
 its configuration section (`ExtensionContext.Configuration`, `Arcanist:Extensions:<id>:…`), environment variables
 included. `Extension.managed` says which ones are.
 
+### Managed libraries
+
+A managed extension whose service keeps the music (a hosted storage) makes its libraries with the core's
+`ManagedLibraries` (from DI):
+
+```csharp
+var id = await managed.EnsureS3Async("my-extension", "main", "My music",
+    new S3ConnectionInput(endpoint, region, bucket, prefix, accessKeyId, secret, PathStyle: true),
+    encryptionKey, // the customer's 256-bit key in base64, or null; see docs/storage-encryption.md
+    cancellationToken);
+```
+
+The first call creates the library (visible to everyone, scanned every day) and scans it; later calls with the same
+extension and key return the same id and update its name, credentials and key (rotated credentials are always the
+newest), scanning again only if its place changed. Call it at startup and whenever the service's configuration changes.
+These libraries work without Ultimate Cloud (neither its extension nor its plan), are used like any other (uploads,
+organizing, drop folders), and administrators cannot delete them or change their sources (`library_managed`, 409).
+`Library.managedBy` says which extension keeps one; the panel marks it **Managed**.
+
 ## Publishing in the Marketplace
 
 The panel's **Marketplace** (Extensions) lists the extensions of the catalog at

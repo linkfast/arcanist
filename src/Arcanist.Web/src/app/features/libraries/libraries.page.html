@@ -68,6 +68,11 @@
                 'libraries.personal' | t
               }}</span>
             }
+            @if (library.managedBy) {
+              <span hlmBadge variant="outline" [title]="'libraries.managedHelp' | t">{{
+                'libraries.managed' | t
+              }}</span>
+            }
           </h2>
           @if (library.disabled) {
             <p hlmCardDescription>{{ 'libraries.disabledHelp' | t }}</p>
@@ -103,16 +108,19 @@
                   <ng-icon name="lucidePencil" />
                 </button>
               }
-              <button
-                hlmBtn
-                variant="ghost"
-                size="icon"
-                type="button"
-                [attr.aria-label]="'common.delete' | t"
-                (click)="deleting.set(library)"
-              >
-                <ng-icon name="lucideTrash2" />
-              </button>
+              <!-- A managed extension keeps its libraries: they are not deleted from here. -->
+              @if (!library.managedBy) {
+                <button
+                  hlmBtn
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  [attr.aria-label]="'common.delete' | t"
+                  (click)="deleting.set(library)"
+                >
+                  <ng-icon name="lucideTrash2" />
+                </button>
+              }
             </div>
           }
         </div>

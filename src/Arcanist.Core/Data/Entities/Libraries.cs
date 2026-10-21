@@ -45,6 +45,15 @@ public sealed class Library : Entity
 
     public User? Owner { get; set; }
 
+    /// <summary>
+    /// The managed extension that made and keeps this library (its id), such as a hosted service's storage: an
+    /// administrator uses it but cannot delete it or change its sources. Null for the others.
+    /// </summary>
+    public string? ManagedBy { get; set; }
+
+    /// <summary>The extension's own name for the library, unique among its libraries.</summary>
+    public string? ManagedKey { get; set; }
+
     public List<LibrarySource> Sources { get; } = [];
 
     public List<LibraryAccess> Access { get; } = [];

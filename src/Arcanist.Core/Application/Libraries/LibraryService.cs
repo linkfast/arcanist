@@ -157,6 +157,8 @@ public sealed class LibraryService(
         var actor = guard.Permission(Permissions.ManageLibraries);
         guard.RecentAuthentication();
         var library = await FindManageableAsync(actor, id, cancellationToken);
+        if (library.ManagedBy is not null)
+            throw new ArcanistException.Conflict(ErrorCodes.LibraryManaged);
         await RemoveAsync(db, scans, library, cancellationToken);
         accessCache.InvalidateAll();
     }
@@ -182,6 +184,8 @@ public sealed class LibraryService(
     {
         var actor = guard.Permission(Permissions.ManageLibraries);
         var library = await FindManageableAsync(actor, libraryId, cancellationToken);
+        if (library.ManagedBy is not null)
+            throw new ArcanistException.Conflict(ErrorCodes.LibraryManaged);
         // Libraries shared by another server or kept in Ultimate Cloud show only that: folders are not added to them.
         if (library.Sources.Any(s => s.Kind != LibrarySourceKind.Local))
             throw ArcanistException.Field("location", ErrorCodes.ReadOnly);
@@ -208,7 +212,8 @@ public sealed class LibraryService(
         var actor = guard.Permission(Permissions.ManageLibraries);
         var source = await db.LibrarySources.SingleOrDefaultAsync(s => s.Id == sourceId, cancellationToken)
                      ?? throw new ArcanistException.NotFound();
-        await FindManageableAsync(actor, source.LibraryId, cancellationToken);
+        if ((await FindManageableAsync(actor, source.LibraryId, cancellationToken)).ManagedBy is not null)
+            throw new ArcanistException.Conflict(ErrorCodes.LibraryManaged);
         if (source.Kind == LibrarySourceKind.Local
             && !await db.LibrarySources.AnyAsync(s => s.LibraryId == source.LibraryId && s.Id != source.Id, cancellationToken))
             throw new ArcanistException.Conflict(ErrorCodes.LastSource);

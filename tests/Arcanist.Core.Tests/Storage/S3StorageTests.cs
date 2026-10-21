@@ -7,6 +7,7 @@ using Arcanist.Core.Tests.Cloud;
 using Arcanist.Core.Tests.Scanning;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.Storage;
 
@@ -256,6 +257,46 @@ public sealed class S3StorageTests(S3Container s3) : IClassFixture<S3Container>,
     }
 
     private static string S3EncryptionKey() => S3Encryption.NewKey();
+
+    [Fact]
+    public async Task A_managed_extensions_library_works_without_the_Cloud_plan_and_cannot_be_deleted()
+    {
+        Assert.SkipUnless(s3.IsAvailable, $"The S3 server (Docker) is not available: {s3.UnavailableReason}");
+        await Client().CreateBucketAsync(Cancel);
+        await StartAsync(plan: "Standard");
+        var managed = _factory.Services.GetRequiredService<Core.Application.Libraries.ManagedLibraries>();
+        var connection = new Core.Application.Libraries.S3ConnectionInput(s3.Endpoint, "us-east-1", _bucket, "Tenant", S3Container.User,
+            S3Container.Password, PathStyle: true);
+        var key = S3Encryption.NewKey();
+
+        var id = await managed.EnsureS3Async("cloud-storage", "main", "My music", connection, key, Cancel);
+        await _factory.WaitForScansAsync(_admin);
+
+        var library = (await _admin.GraphQLAsync("query($id: ID!) { library(id: $id) { name managedBy disabled canUpload } }", new { id }))
+            .GetProperty("data").GetProperty("library");
+        Assert.Equal(("My music", "cloud-storage", false, true), (library.GetProperty("name").GetString(), library.GetProperty("managedBy").GetString(),
+            library.GetProperty("disabled").GetBoolean(), library.GetProperty("canUpload").GetBoolean()));
+
+        // Without the Cloud plan, its bucket still works (encrypted on the way).
+        var song = AudioFixtures.WriteWav(Path.Combine(_staging, "m.wav"), 9, new FixtureTags("Managed Song", "Band", "Hosted", "Band", TrackNumber: 1));
+        using (var upload = new ByteArrayContent(await File.ReadAllBytesAsync(song, Cancel)))
+            Assert.True((await _admin.PostAsync($"/rest/v1/libraries/{id}/uploads?fileName=m.wav", upload, Cancel)).IsSuccessStatusCode);
+        await _admin.PostAsJsonAsync($"/rest/v1/libraries/{id}/scans", new { full = false }, Cancel);
+        await _factory.WaitForScansAsync(_admin);
+        Assert.Equal("Managed Song", (await _admin.GraphQLAsync("query { tracks(first: 5) { items { title } } }"))
+            .GetProperty("data").GetProperty("tracks").GetProperty("items")[0].GetProperty("title").GetString());
+        Assert.DoesNotContain("Managed", Assert.Single((await Client().ListAsync("Tenant/", null, 10, Cancel)).Objects).Key);
+
+        // Administrators cannot delete it.
+        var delete = await _admin.DeleteAsync($"/rest/v1/libraries/{id}", Cancel);
+        Assert.Equal(HttpStatusCode.Conflict, delete.StatusCode);
+        Assert.Equal("library_managed", (await delete.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("code").GetString());
+
+        // Called again (new credentials, another name): the same library.
+        Assert.Equal(id, await managed.EnsureS3Async("cloud-storage", "main", "Music", connection, key, Cancel));
+        Assert.Equal("Music", (await _admin.GraphQLAsync("query($id: ID!) { library(id: $id) { name } }", new { id }))
+            .GetProperty("data").GetProperty("library").GetProperty("name").GetString());
+    }
 
     [Fact]
     public async Task Buckets_need_the_Cloud_plan()

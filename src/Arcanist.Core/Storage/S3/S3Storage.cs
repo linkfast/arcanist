@@ -16,8 +16,9 @@ namespace Arcanist.Core.Storage.S3;
 /// </summary>
 /// <param name="ProtectedEncryptionKey">With it, the library is encrypted on this side (<see cref="S3Encryption"/>) with
 /// the owner's key, protected like the secret; null for a plain one.</param>
+/// <param name="Managed">Kept by a managed extension (a hosted service's storage): it works without Ultimate Cloud's plan.</param>
 internal sealed record S3SourceSettings(string Endpoint, string Region, string AccessKeyId, string ProtectedSecret, bool PathStyle,
-    string? ProtectedEncryptionKey = null);
+    string? ProtectedEncryptionKey = null, bool Managed = false);
 
 /// <summary>An open S3 source: its client, its prefix and, when it is encrypted, its keys.</summary>
 internal sealed record S3Source(S3Client Client, string Prefix, S3Encryption? Encryption)
@@ -74,11 +75,13 @@ internal sealed class S3Storage(
     /// <summary>A client for the source; null without the Cloud plan or with unreadable settings.</summary>
     internal S3Source? Open(StorageLocation location)
     {
-        if (!capabilities.IsEnabled(Capability.ThirdPartyStorage) || location.Settings is null)
+        if (location.Settings is null)
             return null;
         try
         {
             var settings = JsonSerializer.Deserialize<S3SourceSettings>(location.Settings, JsonSerializerOptions.Web)!;
+            if (!settings.Managed && !capabilities.IsEnabled(Capability.ThirdPartyStorage))
+                return null;
             var (bucket, prefix) = Split(location.Location);
             var encryption = settings.ProtectedEncryptionKey is { } key
                 ? new S3Encryption(S3Encryption.ParseKey(Protector.Unprotect(key)) ?? throw new CryptographicException("Not a 256-bit key."))

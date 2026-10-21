@@ -48,6 +48,14 @@ The object's metadata `x-amz-meta-arcanist-enc` is `1.<base64url(nonce prefix)>.
 16-byte tag. Changing the owner's key only rewrites this metadata (an S3 copy onto itself), never the audio. Every
 object is stored as `application/octet-stream`.
 
+## The key marker
+
+The object `<prefix>/.arcanist-key` (not encrypted; its name does not decrypt, so it is never part of the library)
+holds `1.` followed by the base64url of 16 bytes derived from the key with HKDF-SHA256 (no salt, info
+`arcanist-s3-key-check-v1`). It says which key encrypted the prefix without revealing it. Arcanist writes it the first
+time it uses a key there, and refuses another key (`s3_wrong_key` when creating the library; the source is
+unavailable, and nothing is marked missing, when scanning), so one prefix never mixes two keys.
+
 ## What it protects
 
 The data at rest, and in the hands of whoever stores it: the S3 service, and anyone reading the bucket. The Arcanist

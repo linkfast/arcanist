@@ -32,6 +32,7 @@ internal sealed class S3Encryption
     private readonly byte[] _nameMac;
     private readonly byte[] _nameCipher;
     private readonly byte[] _keyWrap;
+    private readonly byte[] _check;
 
     public S3Encryption(byte[] ownerKey)
     {
@@ -40,7 +41,14 @@ internal sealed class S3Encryption
         _nameMac = HKDF.DeriveKey(HashAlgorithmName.SHA256, ownerKey, 32, info: "arcanist-s3-names-mac-v1"u8.ToArray());
         _nameCipher = HKDF.DeriveKey(HashAlgorithmName.SHA256, ownerKey, 32, info: "arcanist-s3-names-cipher-v1"u8.ToArray());
         _keyWrap = HKDF.DeriveKey(HashAlgorithmName.SHA256, ownerKey, 32, info: "arcanist-s3-key-wrap-v1"u8.ToArray());
+        _check = HKDF.DeriveKey(HashAlgorithmName.SHA256, ownerKey, 16, info: "arcanist-s3-key-check-v1"u8.ToArray());
     }
+
+    /// <summary>
+    /// What the location's key marker holds for this key: says whether a location was encrypted with it, and nothing
+    /// about the key itself.
+    /// </summary>
+    public string KeyCheck => Version + "." + Base64Url(_check);
 
     /// <summary>A new owner's key, as the text people keep (base64).</summary>
     public static string NewKey() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));

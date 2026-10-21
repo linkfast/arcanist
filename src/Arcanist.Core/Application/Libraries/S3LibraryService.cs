@@ -83,6 +83,8 @@ public sealed partial class S3LibraryService(
         var test = await TestAsync(target, cancellationToken);
         if (!test.Success)
             throw new ArcanistException.Conflict(test.ErrorCode!);
+        if (input.EncryptionKey is { Length: > 0 } ownerKey)
+            await RequireKeyAsync(Storage, connection, target.Prefix, ownerKey, cancellationToken);
 
         var library = new LibraryEntity
         {
@@ -113,6 +115,17 @@ public sealed partial class S3LibraryService(
         JsonSerializer.Serialize(new S3SourceSettings(
             connection.Endpoint.ToString().TrimEnd('/'), connection.Region, connection.AccessKeyId, storage.Protect(connection.SecretAccessKey),
             connection.PathStyle, encryptionKey is null ? null : storage.Protect(encryptionKey.Trim()), managed), JsonSerializerOptions.Web);
+
+    /// <summary>
+    /// Refuses an owner's key other than the one that encrypted what the prefix holds (<c>s3_wrong_key</c>); marks
+    /// the prefix with it when it has none.
+    /// </summary>
+    internal static async Task RequireKeyAsync(S3Storage storage, S3Connection connection, string prefix, string ownerKey, CancellationToken cancellationToken)
+    {
+        var encryption = new S3Encryption(S3Encryption.ParseKey(ownerKey)!);
+        if (!await S3Storage.KeyMatchesAsync(storage.Client(connection), prefix, encryption, cancellationToken))
+            throw new ArcanistException.Conflict(ErrorCodes.S3WrongKey);
+    }
 
     private void RequirePlan()
     {

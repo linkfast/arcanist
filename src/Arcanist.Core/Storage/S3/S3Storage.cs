@@ -115,6 +115,36 @@ internal sealed class S3Storage(
         return key;
     }
 
+    /// <summary>The object under an encrypted location's prefix that says which key encrypts it.</summary>
+    internal const string KeyMarker = ".arcanist-key";
+
+    /// <summary>
+    /// Whether <paramref name="encryption"/> is the key of the location at <paramref name="prefix"/>: its marker says
+    /// so, or there is none yet and it is written now (when the credentials can). False means another key encrypted
+    /// what is there: using this one would hide that music and mix two keys under one prefix.
+    /// </summary>
+    internal static async Task<bool> KeyMatchesAsync(S3Client client, string prefix, S3Encryption encryption, CancellationToken cancellationToken)
+    {
+        var key = prefix.Length == 0 ? KeyMarker : $"{prefix}/{KeyMarker}";
+        if (await client.HeadAsync(key, cancellationToken) is not null)
+        {
+            using var response = await client.GetAsync(key, 0, null, cancellationToken);
+            return (await response.Content.ReadAsStringAsync(cancellationToken)).Trim() == encryption.KeyCheck;
+        }
+
+        try
+        {
+            var text = System.Text.Encoding.UTF8.GetBytes(encryption.KeyCheck + "\n");
+            await client.PutAsync(key, new MemoryStream(text), text.Length, "text/plain", cancellationToken);
+        }
+        catch (S3Exception e) when (e.Status is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)
+        {
+            // Read-only credentials: the next writable session marks it.
+        }
+
+        return true;
+    }
+
     public async Task<StorageProbe> ProbeAsync(StorageLocation location, CancellationToken cancellationToken)
     {
         if (Open(location) is not { } opened)
@@ -123,6 +153,12 @@ internal sealed class S3Storage(
         try
         {
             await client.ListAsync(prefix.Length == 0 ? "" : prefix + "/", null, 1, cancellationToken);
+            if (opened.Encryption is { } encryption && !await KeyMatchesAsync(client, prefix, encryption, cancellationToken))
+            {
+                logger.LogWarning("The S3 source {Location} is encrypted with another key: it is left unavailable", location.Location);
+                return new StorageProbe(StorageProblem.AccessDenied);
+            }
+
             return StorageProbe.Available;
         }
         catch (S3Exception e) when (e.Status is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized)

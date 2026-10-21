@@ -27,6 +27,8 @@ public sealed class ManagedLibraries(
     /// Makes sure the extension's library <paramref name="key"/> exists in an S3 bucket, encrypted with
     /// <paramref name="encryptionKey"/> when given (see docs/storage-encryption.md): creates it the first time, and
     /// otherwise updates its name, credentials and key. The first time, and when its place changes, it is scanned.
+    /// A key other than the one that encrypted what the prefix holds is refused (<c>s3_wrong_key</c>), and S3
+    /// failures (unreachable, denied) reach the caller as they are.
     /// </summary>
     /// <returns>The library's id, which never changes.</returns>
     public async Task<Guid> EnsureS3Async(string extensionId, string key, string name, S3ConnectionInput connection, string? encryptionKey,
@@ -43,6 +45,8 @@ public sealed class ManagedLibraries(
         var storage = (S3Storage)storages.For(LibrarySourceKind.S3);
         var location = storage.NormalizeLocation($"{S3Storage.Scheme}{s3.Bucket}/{prefix}");
         var settings = S3LibraryService.SettingsJson(storage, s3, encryptionKey, managed: true);
+        if (encryptionKey is not null)
+            await S3LibraryService.RequireKeyAsync(storage, s3, prefix, encryptionKey, cancellationToken);
 
         await using var db = databases.CreateDbContext();
         var library = await db.Libraries.Include(l => l.Sources)

@@ -245,15 +245,23 @@ public sealed class S3StorageTests(S3Container s3) : IClassFixture<S3Container>,
         Assert.Equal(HttpStatusCode.PartialContent, streamed.StatusCode);
         Assert.Equal(File.ReadAllBytes(song)[(int)start..(int)Math.Min(length, start + 1000)], await streamed.Content.ReadAsByteArrayAsync(Cancel));
 
-        // In the bucket: neither the names nor the audio.
+        // In the bucket: neither the names nor the audio; only the key's marker, which says nothing of it.
         var objects = (await Client().ListAsync("Music/", null, 100, Cancel)).Objects;
-        var stored = Assert.Single(objects);
+        Assert.Contains(objects, o => o.Key == "Music/" + S3Storage.KeyMarker);
+        var stored = Assert.Single(objects, o => o.Key != "Music/" + S3Storage.KeyMarker);
         foreach (var word in new[] { "Hidden", "Band", "Private", "Secret", ".wav" })
             Assert.DoesNotContain(word, stored.Key);
         using var raw = await Client().GetAsync(stored.Key, 0, null, Cancel);
         var bytes = await raw.Content.ReadAsByteArrayAsync(Cancel);
         Assert.DoesNotContain("RIFF", System.Text.Encoding.ASCII.GetString(bytes[..64]));
         Assert.DoesNotContain("Secret Song", System.Text.Encoding.UTF8.GetString(bytes));
+        using (var marker = await Client().GetAsync("Music/" + S3Storage.KeyMarker, 0, null, Cancel))
+            Assert.DoesNotContain(key.TrimEnd('='), await marker.Content.ReadAsStringAsync(Cancel));
+
+        // Another key for the same prefix would hide that music and mix two keys: refused.
+        var other = await _admin.GraphQLAsync("mutation($i: CreateS3LibraryInput!) { createS3Library(input: $i) { id } }",
+            new { i = new { name = "Vault 2", connection = Connection(), encryptionKey = S3EncryptionKey() } });
+        Assert.Equal("s3_wrong_key", other.ErrorCode());
     }
 
     private static string S3EncryptionKey() => S3Encryption.NewKey();
@@ -285,7 +293,11 @@ public sealed class S3StorageTests(S3Container s3) : IClassFixture<S3Container>,
         await _factory.WaitForScansAsync(_admin);
         Assert.Equal("Managed Song", (await _admin.GraphQLAsync("query { tracks(first: 5) { items { title } } }"))
             .GetProperty("data").GetProperty("tracks").GetProperty("items")[0].GetProperty("title").GetString());
-        Assert.DoesNotContain("Managed", Assert.Single((await Client().ListAsync("Tenant/", null, 10, Cancel)).Objects).Key);
+        Assert.DoesNotContain("Managed", Assert.Single((await Client().ListAsync("Tenant/", null, 10, Cancel)).Objects,
+            o => o.Key != "Tenant/" + S3Storage.KeyMarker).Key);
+        var wrongKey = await Assert.ThrowsAsync<Core.Application.ArcanistException.Conflict>(() =>
+            managed.EnsureS3Async("cloud-storage", "main", "My music", connection, S3Encryption.NewKey(), Cancel));
+        Assert.Equal("s3_wrong_key", wrongKey.Code);
 
         // Administrators cannot delete it.
         var delete = await _admin.DeleteAsync($"/rest/v1/libraries/{id}", Cancel);

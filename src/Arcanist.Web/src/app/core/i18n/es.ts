@@ -2763,6 +2763,7 @@ export const es: Dictionary = {
     last_source: 'Una biblioteca local conserva su carpeta: muévela en lugar de quitarla.',
     library_managed:
       'Esta biblioteca la mantiene una extensión gestionada: no se puede eliminar ni cambiar su ubicación.',
+    s3_wrong_key: 'Lo que hay en ese bucket está cifrado con otra clave. Usa la clave con la que se creó.',
     library_disabled: 'Esta biblioteca necesita Ultimate Cloud, que está desactivado.',
     storage_conflict: 'En la carpeta nueva ya hay un archivo distinto con el mismo nombre.',
     cleanup_incomplete:

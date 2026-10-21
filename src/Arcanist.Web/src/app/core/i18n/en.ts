@@ -2726,6 +2726,7 @@ export const en: Dictionary = {
     last_source: 'A local library keeps its folder: move it instead.',
     library_managed:
       'A managed extension keeps this library: it cannot be deleted nor its place changed.',
+    s3_wrong_key: 'What that bucket holds is encrypted with another key. Use the key it was created with.',
     library_disabled: 'This library needs Ultimate Cloud, which is switched off.',
     storage_conflict: 'A different file with the same name is already in the new folder.',
     cleanup_incomplete: 'Moved, but some files of the old folder could not be deleted.',

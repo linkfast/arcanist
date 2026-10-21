@@ -813,8 +813,11 @@ export const en: Dictionary = {
     adminAccess: 'All',
     disableAccount: 'Disable the account',
     accessHelp:
-      'Choose which restricted libraries each user can listen to. Libraries visible to everyone are not listed.',
+      'What each user may do in each library: listen to it, or listen and upload music to it (uploading also needs the "Upload music" permission). Anyone listens to those visible to all.',
     noRestrictedLibraries: 'Every library is visible to all users.',
+    noLibraries: 'There are no libraries yet.',
+    visibleToAll: 'Visible to all',
+    access: { none: 'No access', listen: 'Listen', upload: 'Listen and upload' },
     resetPassword: 'Reset password',
     resetPasswordFor: 'New password for {name}',
     resetPasswordHelp: 'All their open sessions will be signed out.',
@@ -2791,6 +2794,7 @@ export const en: Dictionary = {
       'A managed extension keeps this library: it cannot be deleted nor its place changed.',
     s3_wrong_key:
       'What that bucket holds is encrypted with another key. Use the key it was created with.',
+    library_read_only: 'You can only listen to this library: you cannot upload music to it.',
     library_disabled: 'This library needs Ultimate Cloud, which is switched off.',
     storage_conflict: 'A different file with the same name is already in the new folder.',
     cleanup_incomplete: 'Moved, but some files of the old folder could not be deleted.',

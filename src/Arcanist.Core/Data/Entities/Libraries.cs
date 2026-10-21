@@ -108,6 +108,12 @@ public sealed class LibraryAccess
     public Guid LibraryId { get; init; }
 
     public Library Library { get; init; } = null!;
+
+    /// <summary>
+    /// The user listens to the library but adds nothing to it (no uploads, also from extensions), even with the
+    /// UPLOAD permission. On a library visible to all, a row with it only takes that away.
+    /// </summary>
+    public bool ReadOnly { get; set; }
 }
 
 public enum ScanKind

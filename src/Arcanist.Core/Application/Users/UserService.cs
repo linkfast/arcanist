@@ -30,9 +30,9 @@ public sealed class UserService(
 
         var users = await db.Users.AsNoTracking().OrderBy(u => u.NormalizedUserName).ToListAsync(cancellationToken);
         var grants = await db.LibraryAccess.AsNoTracking().ToListAsync(cancellationToken);
-        var byUser = grants.ToLookup(g => g.UserId, g => g.LibraryId);
+        var byUser = grants.ToLookup(g => g.UserId);
 
-        return users.Select(u => u.ToAccount(byUser[u.Id].Order().ToList())).ToList();
+        return users.Select(u => u.ToAccount(byUser[u.Id])).ToList();
     }
 
     public async Task<UserAccount> GetAsync(Guid id, CancellationToken cancellationToken)
@@ -53,7 +53,7 @@ public sealed class UserService(
 
         var permissions = PermissionMapping.ToFlags(input.Permissions);
         EnsureCanGrant(actor, input.Role, permissions);
-        var libraryIds = await ValidateLibrariesAsync(actor, input.LibraryIds ?? [], cancellationToken);
+        var (libraryIds, readOnly) = await ValidateGrantsAsync(actor, input.LibraryIds ?? [], input.ReadOnlyLibraryIds, cancellationToken);
 
         var normalized = TextNormalizer.Normalize(input.UserName);
         if (await db.Users.AnyAsync(u => u.NormalizedUserName == normalized, cancellationToken))
@@ -70,12 +70,12 @@ public sealed class UserService(
             CreatedAt = Now(),
         };
         user.PasswordHash = passwordHasher.HashPassword(user, input.Password);
-        user.LibraryAccess.AddRange(libraryIds.Select(id => new LibraryAccess { UserId = user.Id, LibraryId = id }));
+        user.LibraryAccess.AddRange(Grants(user.Id, libraryIds, readOnly));
 
         db.Users.Add(user);
         await db.SaveChangesAsync(cancellationToken);
 
-        return user.ToAccount(libraryIds);
+        return user.ToAccount(user.LibraryAccess);
     }
 
     public async Task<UserAccount> UpdateAsync(Guid id, UpdateUserInput input, CancellationToken cancellationToken)
@@ -115,14 +115,15 @@ public sealed class UserService(
         guard.RecentAuthentication();
 
         var user = await FindManageableAsync(actor, id, cancellationToken);
-        var libraryIds = await ValidateLibrariesAsync(actor, input.LibraryIds, cancellationToken);
+        var (libraryIds, readOnly) = await ValidateGrantsAsync(actor, input.LibraryIds, input.ReadOnlyLibraryIds, cancellationToken);
 
         await db.LibraryAccess.Where(a => a.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
-        db.LibraryAccess.AddRange(libraryIds.Select(libraryId => new LibraryAccess { UserId = user.Id, LibraryId = libraryId }));
+        var grants = Grants(user.Id, libraryIds, readOnly);
+        db.LibraryAccess.AddRange(grants);
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateUser(user.Id);
 
-        return user.ToAccount(libraryIds);
+        return user.ToAccount(grants);
     }
 
     /// <summary>Sets a new password and signs the user out everywhere.</summary>
@@ -216,8 +217,8 @@ public sealed class UserService(
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, cancellationToken)
                    ?? throw new ArcanistException.NotFound();
 
-        var libraryIds = await db.LibraryAccess.Where(a => a.UserId == id).Select(a => a.LibraryId).ToListAsync(cancellationToken);
-        return user.ToAccount(libraryIds.Order().ToList());
+        var grants = await db.LibraryAccess.Where(a => a.UserId == id).ToListAsync(cancellationToken);
+        return user.ToAccount(grants);
     }
 
     /// <summary>Loads a user the actor is allowed to change. Only administrators can change administrators.</summary>
@@ -241,7 +242,23 @@ public sealed class UserService(
             throw new ArcanistException.Forbidden();
     }
 
-    private async Task<IReadOnlyList<Guid>> ValidateLibrariesAsync(UserAccess actor, IReadOnlyList<Guid> requested, CancellationToken cancellationToken)
+    /// <summary>
+    /// The libraries given and those only listened to (given too, or visible to all), checked: a row each, the
+    /// read-only ones marked.
+    /// </summary>
+    private async Task<(IReadOnlyList<Guid> LibraryIds, IReadOnlySet<Guid> ReadOnly)> ValidateGrantsAsync(UserAccess actor,
+        IReadOnlyList<Guid> libraryIds, IReadOnlyList<Guid>? readOnlyLibraryIds, CancellationToken cancellationToken)
+    {
+        var given = await ValidateLibrariesAsync(actor, libraryIds, cancellationToken);
+        var readOnly = await ValidateLibrariesAsync(actor, readOnlyLibraryIds ?? [], cancellationToken, "readOnlyLibraryIds");
+        return (given.Union(readOnly).Order().ToList(), readOnly.ToHashSet());
+    }
+
+    private static List<LibraryAccess> Grants(Guid userId, IReadOnlyList<Guid> libraryIds, IReadOnlySet<Guid> readOnly) =>
+        libraryIds.Select(id => new LibraryAccess { UserId = userId, LibraryId = id, ReadOnly = readOnly.Contains(id) }).ToList();
+
+    private async Task<IReadOnlyList<Guid>> ValidateLibrariesAsync(UserAccess actor, IReadOnlyList<Guid> requested, CancellationToken cancellationToken,
+        string field = "libraryIds")
     {
         var ids = requested.Distinct().ToList();
         var existing = await db.Libraries.Where(l => ids.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
@@ -250,9 +267,9 @@ public sealed class UserService(
         for (var i = 0; i < requested.Count; i++)
         {
             if (!existing.Contains(requested[i]))
-                errors.Add($"libraryIds[{i}]", ErrorCodes.NotFound);
+                errors.Add($"{field}[{i}]", ErrorCodes.NotFound);
             else if (!actor.CanAccessLibrary(requested[i]))
-                errors.Add($"libraryIds[{i}]", ErrorCodes.AccessDenied);
+                errors.Add($"{field}[{i}]", ErrorCodes.AccessDenied);
         }
 
         errors.ThrowIfAny();

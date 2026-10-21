@@ -178,6 +178,38 @@ public sealed class AppLibraryApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_user_who_only_listens_to_a_library_uploads_nothing_to_it()
+    {
+        var file = Path.Combine(_outside, "listen.wav");
+        AudioFixtures.WriteWav(file, 4, new FixtureTags("Listened", "Someone", "Heard", "Someone", TrackNumber: 1));
+        HttpContent Body() => new ByteArrayContent(File.ReadAllBytes(file)) { Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") } };
+        var user = await _factory.CreateUserAsync("family", permissions: Permissions.Upload);
+        var client = await _factory.CreateAuthenticatedClientAsync("family");
+
+        // Rock (visible to all) only to listen to; Jazz as before.
+        var set = await _admin.PutAsJsonAsync($"/rest/v1/users/{user.Id}/libraries",
+            new { libraryIds = Array.Empty<Guid>(), readOnlyLibraryIds = new[] { _rockId } }, ArcanistFactory.Json, Cancel);
+        var account = await set.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        Assert.Equal([_rockId], account.GetProperty("readOnlyLibraryIds").EnumerateArray().Select(l => l.GetGuid()));
+
+        var libraries = (await client.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel)).EnumerateArray()
+            .ToDictionary(l => l.GetProperty("id").GetGuid(), l => l.GetProperty("canUpload").GetBoolean());
+        Assert.Equal((false, true), (libraries[_rockId], libraries[_jazzId]));
+        Assert.Single((await client.GetFromJsonAsync<JsonElement>($"/rest/v1/tracks?libraryId={_rockId}", ArcanistFactory.Json, Cancel)).GetProperty("items").EnumerateArray());
+
+        var refused = await client.PostAsync($"/rest/v1/libraries/{_rockId}/uploads?fileName=listen.wav", Body(), Cancel);
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        Assert.Equal("library_read_only", (await refused.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("code").GetString());
+        Assert.False(File.Exists(Path.Combine(_rock, "Someone", "Heard", "01 Listened.wav")));
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsync($"/rest/v1/libraries/{_jazzId}/uploads?fileName=listen.wav", Body(), Cancel)).StatusCode);
+
+        // Given back: uploads again.
+        await _admin.PutAsJsonAsync($"/rest/v1/users/{user.Id}/libraries", new { libraryIds = Array.Empty<Guid>() }, ArcanistFactory.Json, Cancel);
+        Assert.True((await client.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel)).EnumerateArray()
+            .Single(l => l.GetProperty("id").GetGuid() == _rockId).GetProperty("canUpload").GetBoolean());
+    }
+
+    [Fact]
     public async Task Imported_ratings_fill_gaps_and_play_counts_keep_the_highest()
     {
         var tracks = await TracksAsync();

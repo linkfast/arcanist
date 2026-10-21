@@ -16,7 +16,8 @@ public sealed record UserAccess(
     string SecurityStamp,
     bool IsDisabled,
     IReadOnlySet<Guid> LibraryIds,
-    IReadOnlySet<Guid>? OthersPersonalLibraryIds = null)
+    IReadOnlySet<Guid>? OthersPersonalLibraryIds = null,
+    IReadOnlySet<Guid>? ReadOnlyLibraryIds = null)
 {
     public bool IsAdmin => Role == UserRole.Admin;
 
@@ -25,6 +26,16 @@ public sealed record UserAccess(
     /// <summary>Administrators reach every library but other users' personal ones (their own Ultimate Cloud).</summary>
     public bool CanAccessLibrary(Guid libraryId) =>
         IsAdmin ? OthersPersonalLibraryIds?.Contains(libraryId) != true : LibraryIds.Contains(libraryId);
+
+    /// <summary>
+    /// May add music to the library (uploads, also through extensions): the UPLOAD permission, access to it, and
+    /// not being only a listener there. Administrators always may.
+    /// </summary>
+    public bool CanUploadTo(Guid libraryId) =>
+        !IsDisabled && Has(Permissions.Upload) && CanAccessLibrary(libraryId) && (IsAdmin || ReadOnlyLibraryIds?.Contains(libraryId) != true);
+
+    /// <summary>Listens to the library but adds nothing to it.</summary>
+    public bool IsReadOnlyIn(Guid libraryId) => !IsAdmin && ReadOnlyLibraryIds?.Contains(libraryId) == true;
 }
 
 /// <summary>
@@ -58,8 +69,9 @@ public sealed class UserAccessCache(
             var othersPersonal = user.Role == UserRole.Admin
                 ? (await db.Libraries.Where(l => l.OwnerUserId != null && l.OwnerUserId != userId).Select(l => l.Id).ToListAsync(cancellationToken)).ToHashSet()
                 : null;
+            var readOnly = await db.LibraryAccess.Where(a => a.UserId == userId && a.ReadOnly).Select(a => a.LibraryId).ToListAsync(cancellationToken);
             return new UserAccess(user.Id, user.UserName, user.DisplayName, user.Role, user.Permissions,
-                user.SecurityStamp, user.IsDisabled, libraryIds.ToHashSet(), othersPersonal);
+                user.SecurityStamp, user.IsDisabled, libraryIds.ToHashSet(), othersPersonal, readOnly.ToHashSet());
         });
 
     public async Task<bool> IsSessionActiveAsync(Guid sessionId, CancellationToken cancellationToken) =>

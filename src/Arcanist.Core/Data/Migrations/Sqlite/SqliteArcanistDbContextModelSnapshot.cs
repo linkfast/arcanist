@@ -969,6 +969,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("LibraryId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("ReadOnly")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("UserId", "LibraryId");
 
                     b.HasIndex("LibraryId");

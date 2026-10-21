@@ -38,6 +38,9 @@ import { RelativeTimePipe } from '../../shared/format';
 type User = UserFieldsFragment;
 type Library = UsersResult['libraries'][number];
 
+/** What a user may do in a library: nothing, listen, or listen and add music (uploads). */
+type Level = 'none' | 'listen' | 'upload';
+
 const allPermissions: Permission[] = [
   'MANAGE_LIBRARIES',
   'MANAGE_USERS',
@@ -106,6 +109,17 @@ export class UsersPage implements OnInit {
   protected readonly restrictedLibraries = computed(() =>
     this.libraries().filter((l) => !l.visibleToAll),
   );
+  /** Every library but users' personal ones: each user listens to it, adds to it, or (if restricted) neither. */
+  protected readonly accessLibraries = computed(() => this.libraries().filter((l) => !l.personal));
+
+  protected level(user: User, library: Library): Level {
+    if (user.readOnlyLibraryIds.includes(library.id)) return 'listen';
+    return library.visibleToAll || user.libraryIds.includes(library.id) ? 'upload' : 'none';
+  }
+
+  protected levels(library: Library): Level[] {
+    return library.visibleToAll ? ['listen', 'upload'] : ['none', 'listen', 'upload'];
+  }
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -213,14 +227,31 @@ export class UsersPage implements OnInit {
     }
   }
 
-  protected async setAccess(user: User, libraryId: string, granted: boolean): Promise<void> {
-    const libraryIds = granted
-      ? [...user.libraryIds, libraryId]
-      : user.libraryIds.filter((id) => id !== libraryId);
+  /** Gives a user nothing, listening, or listening and uploading in a library; the rest stays as it is. */
+  protected async setAccess(user: User, library: Library, level: Level): Promise<void> {
+    const readOnly = user.readOnlyLibraryIds.filter((id) => id !== library.id);
+    const given = user.libraryIds.filter(
+      (id) => id !== library.id && !user.readOnlyLibraryIds.includes(id),
+    );
+    if (level === 'listen') readOnly.push(library.id);
+    if (level === 'upload' && !library.visibleToAll) given.push(library.id);
     await this.run(async () => {
-      await this.gql.mutate(SetUserLibrariesMutation, { id: user.id, input: { libraryIds } });
+      const result = await this.gql.mutate(SetUserLibrariesMutation, {
+        id: user.id,
+        input: { libraryIds: given, readOnlyLibraryIds: readOnly },
+      });
+      const account = result.setUserLibraries;
       this.users.update(
-        (users) => users?.map((u) => (u.id === user.id ? { ...u, libraryIds } : u)) ?? null,
+        (users) =>
+          users?.map((u) =>
+            u.id === user.id
+              ? {
+                  ...u,
+                  libraryIds: account.libraryIds,
+                  readOnlyLibraryIds: account.readOnlyLibraryIds,
+                }
+              : u,
+          ) ?? null,
       );
     });
   }

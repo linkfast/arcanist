@@ -12148,6 +12148,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "readOnlyLibraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -20202,6 +20212,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "readOnlyLibraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -22742,7 +22762,8 @@
           "isDisabled",
           "createdAt",
           "lastLoginAt",
-          "libraryIds"
+          "libraryIds",
+          "readOnlyLibraryIds"
         ],
         "type": "object",
         "properties": {
@@ -22783,6 +22804,13 @@
             "format": "date-time"
           },
           "libraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "readOnlyLibraryIds": {
             "type": "array",
             "items": {
               "type": "string",

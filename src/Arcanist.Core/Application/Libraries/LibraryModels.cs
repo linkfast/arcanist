@@ -82,7 +82,7 @@ internal static class LibraryMapping
         library.LastScanAt,
         includeSources ? library.Sources.OrderBy(s => s.Location).Select(ToModel).ToList() : null,
         includeSources ? library.ToOrganization() : null,
-        access is not null && access.Has(Permissions.Upload)
+        access is not null && access.CanUploadTo(library.Id)
                             && library.Sources.Any(s => s.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3)
                             && cloud?.IsDisabled(library.Sources.Select(s => s.Kind), library.ManagedBy is not null) != true,
         cloud?.IsDisabled(library.Sources.Select(s => s.Kind), library.ManagedBy is not null) == true,

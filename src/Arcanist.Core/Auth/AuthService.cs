@@ -209,8 +209,7 @@ public sealed class AuthService(
 
     private async Task<AuthResult> IssueAsync(User user, UserSession session, string? refreshToken, CancellationToken cancellationToken)
     {
-        var libraryIds = await db.LibraryAccess.Where(a => a.UserId == user.Id).Select(a => a.LibraryId).ToListAsync(cancellationToken);
-        var account = user.ToAccount(libraryIds.Order().ToList());
+        var account = user.ToAccount(await db.LibraryAccess.Where(a => a.UserId == user.Id).ToListAsync(cancellationToken));
         return new AuthResult.Success(new IssuedTokens(tokens.CreateAccessToken(user, session), refreshToken, session.ExpiresAt, account));
     }
 

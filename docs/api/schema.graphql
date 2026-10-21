@@ -2348,6 +2348,7 @@ type UserAccount {
   createdAt: DateTime!
   lastLoginAt: DateTime
   libraryIds: [ID!]!
+  readOnlyLibraryIds: [ID!]!
 }
 
 enum UserRole {
@@ -3228,6 +3229,7 @@ input CreateUserInput {
   role: UserRole!
   permissions: [Permission!]
   libraryIds: [ID!]
+  readOnlyLibraryIds: [ID!]
 }
 
 input UpdateUserInput {
@@ -3239,6 +3241,7 @@ input UpdateUserInput {
 
 input SetUserLibrariesInput {
   libraryIds: [ID!]!
+  readOnlyLibraryIds: [ID!]
 }
 
 input ResetUserPasswordInput {

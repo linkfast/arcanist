@@ -220,6 +220,7 @@ export const UserFields = graphql(`
     createdAt
     lastLoginAt
     libraryIds
+    readOnlyLibraryIds
   }
 `);
 
@@ -232,6 +233,7 @@ export const UsersQuery = graphql(`
       id
       name
       visibleToAll
+      personal
     }
   }
 `);
@@ -256,6 +258,8 @@ export const SetUserLibrariesMutation = graphql(`
   mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {
     setUserLibraries(id: $id, input: $input) {
       id
+      libraryIds
+      readOnlyLibraryIds
     }
   }
 `);

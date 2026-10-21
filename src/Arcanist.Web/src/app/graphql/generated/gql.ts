@@ -32,11 +32,11 @@ type Documents = {
     "\n  mutation StartScan($libraryId: ID!, $full: Boolean!) {\n    startScan(libraryId: $libraryId, full: $full) {\n      ...ScanJobFields\n    }\n  }\n": typeof types.StartScanDocument,
     "\n  mutation CancelScan($id: ID!) {\n    cancelScan(id: $id)\n  }\n": typeof types.CancelScanDocument,
     "\n  subscription ScanJobUpdated {\n    scanJobUpdated {\n      ...ScanJobFields\n    }\n  }\n": typeof types.ScanJobUpdatedDocument,
-    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n  }\n": typeof types.UserFieldsFragmentDoc,
-    "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n    }\n  }\n": typeof types.UsersDocument,
+    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n": typeof types.UserFieldsFragmentDoc,
+    "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n": typeof types.UsersDocument,
     "\n  mutation CreateUser($input: CreateUserInput!) {\n    createUser(input: $input) {\n      id\n    }\n  }\n": typeof types.CreateUserDocument,
     "\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\n    updateUser(id: $id, input: $input) {\n      id\n    }\n  }\n": typeof types.UpdateUserDocument,
-    "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n    }\n  }\n": typeof types.SetUserLibrariesDocument,
+    "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n      libraryIds\n      readOnlyLibraryIds\n    }\n  }\n": typeof types.SetUserLibrariesDocument,
     "\n  mutation ResetUserPassword($id: ID!, $input: ResetUserPasswordInput!) {\n    resetUserPassword(id: $id, input: $input)\n  }\n": typeof types.ResetUserPasswordDocument,
     "\n  mutation DeleteUser($id: ID!) {\n    deleteUser(id: $id)\n  }\n": typeof types.DeleteUserDocument,
     "\n  query MySessions {\n    mySessions {\n      id\n      deviceName\n      userAgent\n      ipAddress\n      createdAt\n      lastSeenAt\n      expiresAt\n      isCurrent\n    }\n  }\n": typeof types.MySessionsDocument,
@@ -268,11 +268,11 @@ const documents: Documents = {
     "\n  mutation StartScan($libraryId: ID!, $full: Boolean!) {\n    startScan(libraryId: $libraryId, full: $full) {\n      ...ScanJobFields\n    }\n  }\n": types.StartScanDocument,
     "\n  mutation CancelScan($id: ID!) {\n    cancelScan(id: $id)\n  }\n": types.CancelScanDocument,
     "\n  subscription ScanJobUpdated {\n    scanJobUpdated {\n      ...ScanJobFields\n    }\n  }\n": types.ScanJobUpdatedDocument,
-    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n  }\n": types.UserFieldsFragmentDoc,
-    "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n    }\n  }\n": types.UsersDocument,
+    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n": types.UserFieldsFragmentDoc,
+    "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n": types.UsersDocument,
     "\n  mutation CreateUser($input: CreateUserInput!) {\n    createUser(input: $input) {\n      id\n    }\n  }\n": types.CreateUserDocument,
     "\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\n    updateUser(id: $id, input: $input) {\n      id\n    }\n  }\n": types.UpdateUserDocument,
-    "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n    }\n  }\n": types.SetUserLibrariesDocument,
+    "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n      libraryIds\n      readOnlyLibraryIds\n    }\n  }\n": types.SetUserLibrariesDocument,
     "\n  mutation ResetUserPassword($id: ID!, $input: ResetUserPasswordInput!) {\n    resetUserPassword(id: $id, input: $input)\n  }\n": types.ResetUserPasswordDocument,
     "\n  mutation DeleteUser($id: ID!) {\n    deleteUser(id: $id)\n  }\n": types.DeleteUserDocument,
     "\n  query MySessions {\n    mySessions {\n      id\n      deviceName\n      userAgent\n      ipAddress\n      createdAt\n      lastSeenAt\n      expiresAt\n      isCurrent\n    }\n  }\n": types.MySessionsDocument,
@@ -575,11 +575,11 @@ export function graphql(source: "\n  subscription ScanJobUpdated {\n    scanJobU
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n  }\n"): (typeof documents)["\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n  }\n"];
+export function graphql(source: "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n"): (typeof documents)["\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n    }\n  }\n"): (typeof documents)["\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n    }\n  }\n"];
+export function graphql(source: "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n"): (typeof documents)["\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -591,7 +591,7 @@ export function graphql(source: "\n  mutation UpdateUser($id: ID!, $input: Updat
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n    }\n  }\n"];
+export function graphql(source: "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n      libraryIds\n      readOnlyLibraryIds\n    }\n  }\n"): (typeof documents)["\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n      libraryIds\n      readOnlyLibraryIds\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

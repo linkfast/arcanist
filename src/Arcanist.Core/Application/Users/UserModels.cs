@@ -22,7 +22,9 @@ public enum Permission
     PlayOnServer,
 }
 
-/// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed.</param>
+/// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed,
+/// unless the user is only a listener there.</param>
+/// <param name="ReadOnlyLibraryIds">Of those, the ones the user listens to but adds nothing to (no uploads).</param>
 public sealed record UserAccount(
     Guid Id,
     string UserName,
@@ -32,7 +34,8 @@ public sealed record UserAccount(
     bool IsDisabled,
     DateTime CreatedAt,
     DateTime? LastLoginAt,
-    IReadOnlyList<Guid> LibraryIds);
+    IReadOnlyList<Guid> LibraryIds,
+    IReadOnlyList<Guid> ReadOnlyLibraryIds);
 
 /// <summary>A signed-in device of the current user.</summary>
 public sealed record Session(
@@ -51,7 +54,8 @@ public sealed record CreateUserInput(
     string? DisplayName,
     UserRole Role,
     IReadOnlyList<Permission>? Permissions,
-    IReadOnlyList<Guid>? LibraryIds);
+    IReadOnlyList<Guid>? LibraryIds,
+    IReadOnlyList<Guid>? ReadOnlyLibraryIds = null);
 
 /// <summary>Replaces the editable fields of a user.</summary>
 public sealed record UpdateUserInput(
@@ -60,7 +64,10 @@ public sealed record UpdateUserInput(
     IReadOnlyList<Permission>? Permissions,
     bool IsDisabled);
 
-public sealed record SetUserLibrariesInput(IReadOnlyList<Guid> LibraryIds);
+/// <param name="LibraryIds">The libraries the user is given (beyond those visible to all).</param>
+/// <param name="ReadOnlyLibraryIds">Libraries the user only listens to, adding nothing (no uploads): given ones, or
+/// ones visible to all. Null keeps nobody read only.</param>
+public sealed record SetUserLibrariesInput(IReadOnlyList<Guid> LibraryIds, IReadOnlyList<Guid>? ReadOnlyLibraryIds = null);
 
 public sealed record ResetUserPasswordInput(string NewPassword);
 
@@ -87,7 +94,14 @@ public static class PermissionMapping
         _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null),
     };
 
-    public static UserAccount ToAccount(this User user, IReadOnlyList<Guid> libraryIds) => new(
+    public static UserAccount ToAccount(this User user, IReadOnlyList<Guid> libraryIds, IReadOnlyList<Guid>? readOnlyLibraryIds = null) => new(
         user.Id, user.UserName, user.DisplayName, user.Role, ToList(user.Permissions),
-        user.IsDisabled, user.CreatedAt, user.LastLoginAt, libraryIds);
+        user.IsDisabled, user.CreatedAt, user.LastLoginAt, libraryIds, readOnlyLibraryIds ?? []);
+
+    /// <summary>The account with its grants as stored: every row is a library, and some are read only.</summary>
+    public static UserAccount ToAccount(this User user, IEnumerable<LibraryAccess> grants)
+    {
+        var list = grants.ToList();
+        return user.ToAccount(list.Select(g => g.LibraryId).Order().ToList(), list.Where(g => g.ReadOnly).Select(g => g.LibraryId).Order().ToList());
+    }
 }

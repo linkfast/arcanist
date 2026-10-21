@@ -974,6 +974,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid>("LibraryId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("ReadOnly")
+                        .HasColumnType("boolean");
+
                     b.HasKey("UserId", "LibraryId");
 
                     b.HasIndex("LibraryId");

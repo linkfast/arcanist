@@ -825,8 +825,11 @@ export const es: Dictionary = {
     adminAccess: 'Todas',
     disableAccount: 'Desactivar la cuenta',
     accessHelp:
-      'Marca qué bibliotecas restringidas puede escuchar cada usuario. Las bibliotecas visibles para todos no aparecen aquí.',
+      'Qué puede hacer cada usuario en cada biblioteca: escucharla, o escucharla y subirle música (subir necesita además el permiso «Subir música»). Las visibles para todos las escucha cualquiera.',
     noRestrictedLibraries: 'Todas las bibliotecas son visibles para todos los usuarios.',
+    noLibraries: 'Todavía no hay bibliotecas.',
+    visibleToAll: 'Visible para todos',
+    access: { none: 'Sin acceso', listen: 'Escuchar', upload: 'Escuchar y subir' },
     resetPassword: 'Restablecer contraseña',
     resetPasswordFor: 'Nueva contraseña para {name}',
     resetPasswordHelp: 'Se cerrarán todas sus sesiones abiertas.',
@@ -2830,6 +2833,7 @@ export const es: Dictionary = {
       'Esta biblioteca la mantiene una extensión gestionada: no se puede eliminar ni cambiar su ubicación.',
     s3_wrong_key:
       'Lo que hay en ese bucket está cifrado con otra clave. Usa la clave con la que se creó.',
+    library_read_only: 'En esta biblioteca solo puedes escuchar: no puedes subirle música.',
     library_disabled: 'Esta biblioteca necesita Ultimate Cloud, que está desactivado.',
     storage_conflict: 'En la carpeta nueva ya hay un archivo distinto con el mismo nombre.',
     cleanup_incomplete:

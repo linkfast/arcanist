@@ -363,8 +363,9 @@ An app that keeps its own library (Ultimate Desktop, for one) can use the server
   comes back with `pending: true`: ask again later.
 - **Uploading:** `POST /rest/v1/libraries/{id}/uploads?fileName=…` with the file as the body
   (`application/octet-stream`, up to 2 GB) adds it to a library the user can use. It needs the `UPLOAD` permission and
-  a library folder the server can write to (`read_only` otherwise); `Library.canUpload` says beforehand whether both
-  hold. The file is placed with the library's folder
+  a library folder the server can write to (`read_only` otherwise), and the user must not be only a listener of that
+  library (`403 library_read_only`: administrators can give someone a library to listen to but not to add to);
+  `Library.canUpload` says beforehand whether all of that holds. The file is placed with the library's folder
   template and never overwrites anything: `201` with `status: IMPORTED`, its `contentHash` and `path`, or `200` with
   `status: DUPLICATE` when the library already has that audio (with its `trackId` once catalogued). The library is
   scanned shortly after the last upload of a batch; then `matchTracks` finds the new tracks by `contentHash`.

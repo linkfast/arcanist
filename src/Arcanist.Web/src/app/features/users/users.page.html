@@ -118,9 +118,9 @@
 
     <div hlmTabsContent="access">
       <p class="mb-3 text-sm text-muted-foreground">{{ 'users.accessHelp' | t }}</p>
-      @if (restrictedLibraries().length === 0) {
+      @if (accessLibraries().length === 0) {
         <p class="rounded-lg border p-6 text-sm text-muted-foreground">
-          {{ 'users.noRestrictedLibraries' | t }}
+          {{ 'users.noLibraries' | t }}
         </p>
       } @else {
         <div hlmTableContainer class="rounded-lg border">
@@ -128,8 +128,15 @@
             <thead hlmTHead>
               <tr hlmTr>
                 <th hlmTh>{{ 'common.userName' | t }}</th>
-                @for (library of restrictedLibraries(); track library.id) {
-                  <th hlmTh class="text-center">{{ library.name }}</th>
+                @for (library of accessLibraries(); track library.id) {
+                  <th hlmTh class="text-center">
+                    {{ library.name }}
+                    @if (library.visibleToAll) {
+                      <span class="block text-xs font-normal text-muted-foreground">{{
+                        'users.visibleToAll' | t
+                      }}</span>
+                    }
+                  </th>
                 }
               </tr>
             </thead>
@@ -137,20 +144,27 @@
               @for (user of users(); track user.id) {
                 <tr hlmTr>
                   <td hlmTd class="font-medium">{{ user.userName }}</td>
-                  @for (library of restrictedLibraries(); track library.id) {
+                  @for (library of accessLibraries(); track library.id) {
                     <td hlmTd class="text-center">
                       @if (user.role === 'ADMIN') {
                         <span class="text-xs text-muted-foreground">{{
                           'users.adminAccess' | t
                         }}</span>
                       } @else {
-                        <hlm-checkbox
-                          class="inline-flex"
-                          [checked]="user.libraryIds.includes(library.id)"
+                        <select
+                          hlmNativeSelect
+                          class="h-8 text-xs"
+                          [value]="level(user, library)"
                           [disabled]="busy() || !canEdit(user)"
                           [attr.aria-label]="user.userName + ' · ' + library.name"
-                          (checkedChange)="setAccess(user, library.id, $event)"
-                        />
+                          (change)="setAccess(user, library, $any($event.target).value)"
+                        >
+                          @for (option of levels(library); track option) {
+                            <option [value]="option" [selected]="option === level(user, library)">
+                              {{ 'users.access.' + option | t }}
+                            </option>
+                          }
+                        </select>
                       }
                     </td>
                   }

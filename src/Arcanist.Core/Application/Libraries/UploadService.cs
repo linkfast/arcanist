@@ -59,7 +59,8 @@ public sealed class UploadService(
     /// <summary>
     /// A file into a library on behalf of a user, as if they had uploaded it (for extensions, also from background
     /// work: get the user with <c>UserAccessCache.GetUserAsync</c>). It needs the UPLOAD permission and access to the library, goes
-    /// where the library's template says without overwriting anything, and shows in the user's history of uploads
+    /// where the library's template says without overwriting anything (not into a library where the user only listens:
+    /// <c>library_read_only</c>), and shows in the user's history of uploads
     /// with <paramref name="source"/> (the extension's id).
     /// </summary>
     public async Task<UploadResult> UploadAsync(UserAccess access, Guid libraryId, string fileName, Stream body, string? source,
@@ -71,6 +72,8 @@ public sealed class UploadService(
             throw new ArcanistException.Conflict(ErrorCodes.LibraryVirtual);
         if (!access.CanAccessLibrary(libraryId))
             throw new ArcanistException.NotFound();
+        if (!access.CanUploadTo(libraryId))
+            throw new ArcanistException.Forbidden(ErrorCodes.LibraryReadOnly);
         if (source is { Length: > 64 })
             throw ArcanistException.Field("source", ErrorCodes.InvalidFormat);
 

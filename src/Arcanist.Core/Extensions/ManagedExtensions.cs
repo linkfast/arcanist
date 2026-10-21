@@ -19,7 +19,7 @@ namespace Arcanist.Core.Extensions;
 /// The oldest version to run: an installed one older than this is replaced from <paramref name="Package"/> at
 /// startup. Without it, the package is installed only when the extension is missing.
 /// </param>
-public sealed record ManagedExtension(string? Id, string? Package, string? Sha256, string? Version);
+public sealed record ManagedExtension(string? Id = null, string? Package = null, string? Sha256 = null, string? Version = null);
 
 internal static class ManagedExtensions
 {

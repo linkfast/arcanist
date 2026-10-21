@@ -6,6 +6,7 @@ using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Scanning;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.Hosting;
@@ -113,6 +114,20 @@ public sealed class ExtensionTests
         {
             File.Delete(package);
         }
+    }
+
+    [Fact]
+    public void A_managed_extension_needs_no_version()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Arcanist:ManagedExtensions:0:Id"] = "hello",
+            ["Arcanist:ManagedExtensions:0:Package"] = "/packages/hello.zip",
+            ["Arcanist:ManagedExtensions:0:Sha256"] = new string('a', 64),
+        }).Build();
+
+        Assert.Equal(new Core.Extensions.ManagedExtension("hello", "/packages/hello.zip", new string('a', 64), null),
+            Assert.Single(Core.Extensions.ManagedExtensions.Read(configuration)));
     }
 
     [Fact]

@@ -545,48 +545,10 @@
           }
 
           @case ('privacy') {
-            <div class="grid gap-2">
-              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                <hlm-checkbox
-                  class="mt-0.5"
-                  [checked]="noTelemetry"
-                  (checkedChange)="setNoTelemetry($event)"
-                />
-                <span class="grid gap-0.5">
-                  <span class="font-medium">{{ 'setup.privacy.noTelemetry' | t }}</span>
-                  <span class="text-muted-foreground">{{
-                    'setup.privacy.noTelemetryHelp' | t
-                  }}</span>
-                </span>
-              </label>
-              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                <hlm-checkbox
-                  class="mt-0.5"
-                  [checked]="externalServices === 'NONE'"
-                  (checkedChange)="setExternal('NONE', $event)"
-                />
-                <span class="grid gap-0.5">
-                  <span class="font-medium">{{ 'setup.privacy.noExternal' | t }}</span>
-                  <span class="text-muted-foreground">{{
-                    'setup.privacy.noExternalHelp' | t
-                  }}</span>
-                </span>
-              </label>
-              <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                <hlm-checkbox
-                  class="mt-0.5"
-                  [checked]="externalServices === 'ULTIMATE_CLOUD_ONLY'"
-                  (checkedChange)="setExternal('ULTIMATE_CLOUD_ONLY', $event)"
-                />
-                <span class="grid gap-0.5">
-                  <span class="font-medium">{{ 'setup.privacy.cloudOnly' | t }}</span>
-                  <span class="text-muted-foreground">{{ 'setup.privacy.cloudOnlyHelp' | t }}</span>
-                </span>
-              </label>
-              <p class="text-xs text-muted-foreground">
-                {{ 'setup.privacy.streamingUnaffected' | t }}
-              </p>
-            </div>
+            <app-privacy-level
+              [value]="{ noTelemetry: noTelemetry, externalServices: externalServices }"
+              (changed)="setPrivacy($event)"
+            />
             <p class="text-sm">{{ 'setup.privacy.explanation' | t }}</p>
             <hlm-radio-group
               class="grid gap-3"

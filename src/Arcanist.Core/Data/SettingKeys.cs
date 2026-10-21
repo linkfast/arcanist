@@ -93,6 +93,9 @@ public static class SettingKeys
     /// <summary>How converted audio is kept: its cache and the versions made ahead of time.</summary>
     public const string Transcoding = "transcoding.settings";
 
+    /// <summary>The quality each kind of Ultimate client gets by default (<c>StreamingDefaults</c>).</summary>
+    public const string StreamingDefaults = "transcoding.clients";
+
     /// <summary>How libraries shared by other servers are played here: their cache and where they are converted.</summary>
     public const string RemoteLibraries = "p2p.remoteLibraries";
 

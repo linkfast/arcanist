@@ -80,6 +80,8 @@ type Query {
   extensionMarketplace(language: String, refresh: Boolean): ExtensionMarketplaceInfo!
   "Installed web players; the default one is served at /. Administrators only."
   frontends: [Frontend!]!
+  "The web players of the catalog (github.com/linkfast/arcanist-extensions by default: Ultimate Web Player and those anyone publishes), named in `language`, with what is installed here. Read again after an hour, or now with `refresh`. Administrators only."
+  playerMarketplace(language: String, refresh: Boolean): PlayerMarketplaceInfo!
   "Libraries the signed-in user can access. With `includeVirtual`, first \"All\" (`virtual`), every one of them at once, named in `language` (or the request's Accept-Language)."
   libraries(includeVirtual: Boolean, language: String): [Library!]!
   "A library by id. Libraries the user cannot access are reported as not found."
@@ -104,6 +106,8 @@ type Query {
   ffmpeg: FfmpegStatus!
   "The conversion cache and the versions of the music made ahead of time (passive transcoding), with their progress. Requires MANAGE_SETTINGS."
   transcoding: TranscodingStatus!
+  "The quality each kind of Ultimate client (desktop, web, mobile) plays by default. The stream applies it to requests with `client` and no quality of their own; clients show it as their default."
+  streamingDefaults: StreamingDefaults!
   "The latest imports from mStream, newest first. Administrators only."
   mstreamImports: [MstreamImportJob!]!
   "How the mStream extension behaves with the mStream apps: the star threshold, signing in with the user's password and the apps' own functions. Administrators only."
@@ -1143,6 +1147,36 @@ type Frontend {
   installedAt: DateTime!
 }
 
+type PlayerMarketplaceInfo {
+  available: Boolean!
+  errorCode: String
+  fetchedAt: DateTime
+  source: String!
+  players: [MarketplacePlayer!]!
+}
+
+type MarketplacePlayer {
+  id: String!
+  name: String!
+  description: String
+  author: String
+  homepage: String
+  license: String
+  iconUrl: String
+  official: Boolean!
+  categories: [String!]!
+  version: String!
+  size: Long
+  minServerVersion: String
+  compatible: Boolean!
+  installedVersion: String
+  updateAvailable: Boolean!
+  builtIn: Boolean!
+  isDefault: Boolean!
+  pricing: ExtensionPricing
+  pricingUrl: String
+}
+
 type Library {
   id: ID!
   name: String!
@@ -1433,6 +1467,26 @@ type PregenerateProgress {
   total: Int!
   bytes: Long!
   estimatedBytes: Long!
+}
+
+type StreamingDefaults {
+  desktop: ClientStreamingQuality!
+  web: ClientStreamingQuality!
+  mobile: ClientStreamingQuality!
+  for(client: StreamingClient!): ClientStreamingQuality!
+  normalized: StreamingDefaults!
+}
+
+type ClientStreamingQuality {
+  format: TranscodeFormat
+  maxBitRate: Int
+  normalized: ClientStreamingQuality!
+}
+
+enum StreamingClient {
+  DESKTOP
+  WEB
+  MOBILE
 }
 
 type MstreamImportJob {
@@ -2281,6 +2335,7 @@ enum ApiFeature {
   EXTENSION_APPS
   VIRTUAL_LIBRARIES
   WISH_LIST
+  STREAMING_DEFAULTS
 }
 
 type UserAccount {
@@ -2428,6 +2483,8 @@ type Mutation {
   setExtensionEnabled(id: String!, enabled: Boolean!): Extension!
   "Removes an installed extension (it stops at once and is gone after a restart). Administrators only, with a recent authentication."
   uninstallExtension(id: String!): Boolean!
+  "Installs (or updates) a web player of the catalog, checked against the SHA-256 the catalog publishes, and serves it at / when `makeDefault`. It runs with its users' sessions. Administrators only, with a recent authentication."
+  installMarketplacePlayer(input: InstallMarketplacePlayerInput!): Frontend!
   "Downloads a web player's .zip and installs it (or updates it). It runs with the user's session: install only what you trust. Administrators only, with a recent authentication. To upload a .zip, use POST /rest/v1/frontends."
   installFrontendFromUrl(url: String!): Frontend!
   "Serves this web player at /. Administrators only, with a recent authentication."
@@ -2466,6 +2523,8 @@ type Mutation {
   setFfmpegPath(path: String): FfmpegStatus!
   "The conversion cache (on or off, size, age) and the versions to make ahead of time, of which libraries. Versions nobody asks for any more are removed. Requires MANAGE_SETTINGS."
   setTranscodingSettings(input: SetTranscodingSettingsInput!): TranscodingStatus!
+  "Sets the quality each kind of Ultimate client plays by default: the original (no format; with maxBitRate, MP3 only above it) or a format and bit rate. Requires MANAGE_SETTINGS."
+  setStreamingDefaults(input: SetStreamingDefaultsInput!): StreamingDefaults!
   "Empties the conversion cache; the versions made ahead of time stay. Requires MANAGE_SETTINGS."
   clearTranscodeCache: TranscodingStatus!
   "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password."
@@ -2804,6 +2863,11 @@ input InstallMarketplaceExtensionInput {
   enable: Boolean!
 }
 
+input InstallMarketplacePlayerInput {
+  id: String!
+  makeDefault: Boolean!
+}
+
 input CreateLibraryInput {
   name: String!
   visibleToAll: Boolean!
@@ -2895,6 +2959,17 @@ input SetTranscodingSettingsInput {
 input TranscodeTargetInput {
   format: TranscodeFormat!
   bitRate: Int!
+}
+
+input SetStreamingDefaultsInput {
+  desktop: ClientStreamingQualityInput!
+  web: ClientStreamingQualityInput!
+  mobile: ClientStreamingQualityInput!
+}
+
+input ClientStreamingQualityInput {
+  format: TranscodeFormat
+  maxBitRate: Int
 }
 
 type MstreamAnalysis {

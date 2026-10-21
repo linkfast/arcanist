@@ -1,12 +1,12 @@
 import { Component, OnInit, computed, inject, output, signal } from '@angular/core';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmCardImports } from '@spartan-ng/helm/card';
-import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError, ExternalServicesMode } from '../../core/api/rest';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
+import { PrivacyLevel } from '../../shared/privacy-level';
 import {
   PrivacyQuery,
   SetAnonymousStatisticsMutation,
@@ -25,7 +25,7 @@ interface State {
  */
 @Component({
   selector: 'app-privacy-card',
-  imports: [HlmCardImports, HlmCheckboxImports, HlmSwitchImports, TranslatePipe],
+  imports: [HlmCardImports, HlmSwitchImports, PrivacyLevel, TranslatePipe],
   template: `
     <section hlmCard>
       <div hlmCardHeader>
@@ -34,49 +34,11 @@ interface State {
       </div>
       @if (state(); as s) {
         <div hlmCardContent class="grid gap-3">
-          <label class="flex items-start gap-3 text-sm">
-            <hlm-checkbox
-              class="mt-0.5"
-              [checked]="s.noTelemetry"
-              [disabled]="busy()"
-              (checkedChange)="save({ noTelemetry: $event })"
-            />
-            <span class="grid gap-0.5">
-              <span class="font-medium">{{ 'setup.privacy.noTelemetry' | t }}</span>
-              <span class="text-xs text-muted-foreground">{{
-                'setup.privacy.noTelemetryHelp' | t
-              }}</span>
-            </span>
-          </label>
-          <label class="flex items-start gap-3 text-sm">
-            <hlm-checkbox
-              class="mt-0.5"
-              [checked]="s.externalServices === 'NONE'"
-              [disabled]="busy()"
-              (checkedChange)="external('NONE', $event)"
-            />
-            <span class="grid gap-0.5">
-              <span class="font-medium">{{ 'setup.privacy.noExternal' | t }}</span>
-              <span class="text-xs text-muted-foreground">{{
-                'setup.privacy.noExternalHelp' | t
-              }}</span>
-            </span>
-          </label>
-          <label class="flex items-start gap-3 text-sm">
-            <hlm-checkbox
-              class="mt-0.5"
-              [checked]="s.externalServices === 'ULTIMATE_CLOUD_ONLY'"
-              [disabled]="busy()"
-              (checkedChange)="external('ULTIMATE_CLOUD_ONLY', $event)"
-            />
-            <span class="grid gap-0.5">
-              <span class="font-medium">{{ 'setup.privacy.cloudOnly' | t }}</span>
-              <span class="text-xs text-muted-foreground">{{
-                'setup.privacy.cloudOnlyHelp' | t
-              }}</span>
-            </span>
-          </label>
-          <p class="text-xs text-muted-foreground">{{ 'setup.privacy.streamingUnaffected' | t }}</p>
+          <app-privacy-level
+            [value]="{ noTelemetry: s.noTelemetry, externalServices: s.externalServices }"
+            [disabled]="busy()"
+            (changed)="save($event)"
+          />
 
           @if (cloudOn()) {
             <div class="grid gap-1 border-t pt-3">
@@ -115,12 +77,6 @@ export class PrivacyCard implements OnInit {
   private async load(): Promise<void> {
     const result = await this.gql.query(PrivacyQuery);
     this.state.set({ ...result.privacy, anonymous: result.anonymousStatistics });
-  }
-
-  /** One of the two "no outside services" choices, or neither. */
-  protected async external(mode: Exclude<ExternalServicesMode, 'ALL'>, on: boolean): Promise<void> {
-    const current = this.state()!.externalServices;
-    await this.save({ externalServices: on ? mode : current === mode ? 'ALL' : current });
   }
 
   protected async save(change: Partial<Omit<State, 'anonymous'>>): Promise<void> {

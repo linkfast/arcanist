@@ -111,6 +111,7 @@ export const en: Dictionary = {
     dark: 'Dark',
   },
   nav: {
+    transcoding: 'Transcoding',
     extensionsToggle: 'Show or hide the extensions',
     ai: 'AI',
     backups: 'Backups',
@@ -143,6 +144,24 @@ export const en: Dictionary = {
     title: 'Confirm your password',
     description: 'This is a sensitive action. Enter your password again to continue.',
     confirm: 'Confirm',
+  },
+  privacyLevel: {
+    label: 'Privacy level',
+    open: {
+      title: 'Everything on',
+      help: 'Online services, Ultimate Cloud and anonymous statistics of what is played.',
+    },
+    private: {
+      title: 'No telemetry',
+      help: 'No statistics of what is played leave the server. Online services and Ultimate Cloud still work.',
+    },
+    closed: {
+      title: 'Nothing leaves the server',
+      help: 'No telemetry, no online services and no Ultimate Cloud.',
+    },
+    custom: 'Custom: a combination of the options below.',
+    showDetails: 'Fine-tune',
+    hideDetails: 'Hide the details',
   },
   setup: {
     ultimate: {
@@ -1311,6 +1330,23 @@ export const en: Dictionary = {
     },
   },
   transcoding: {
+    page: {
+      title: 'Transcoding',
+      subtitle:
+        'Converting audio: ffmpeg, the quality Ultimate apps get, the conversions kept, and where music from other servers is converted.',
+    },
+    clients: {
+      title: 'Quality of the Ultimate apps',
+      description:
+        'What each Ultimate app plays when its user picks no other quality. Converting saves data and space on devices; the original sounds exactly as the file.',
+      desktop: { name: 'Ultimate Desktop', help: 'On a computer, usually on your network.' },
+      web: { name: 'Ultimate Web Player', help: 'In a browser, also away from home.' },
+      mobile: { name: 'Mobile apps', help: 'On phones and tablets, often on mobile data.' },
+      original: 'Original (not converted)',
+      flac: 'FLAC (lossless)',
+      note: 'Each user can pick another quality in their app. Converting needs ffmpeg.',
+      saved: 'Quality saved',
+    },
     title: 'Audio conversion',
     description:
       'Arcanist converts songs to the format and quality each player asks for (for example, when listening away from home). It can keep what it converted so the work is not repeated.',
@@ -1402,6 +1438,7 @@ export const en: Dictionary = {
     builtIn: 'Built in',
     uninstall: 'Uninstall',
     players: {
+      browse: 'Browse more players in the Marketplace',
       title: 'Web players',
       description:
         'The default one is served at the root of the server; all of them are also at /players/<id>/.',
@@ -1430,11 +1467,47 @@ export const en: Dictionary = {
       installed: 'Extension installed: switch it on and restart the server to use it.',
     },
     marketplace: {
-      title: 'Marketplace',
-      description:
-        "Extensions from Arcanist's catalog, ready to install with one click. Official ones are made by the project; community ones are reviewed when added to the catalog.",
+      kind: 'What to browse',
+      kinds: { extensions: 'Extensions', players: 'Web players' },
+      extensions: {
+        title: 'Extension marketplace',
+        description:
+          "Extensions from Arcanist's catalog, ready to install with one click. Official ones are made by the project; community ones are reviewed when added to the catalog.",
+        search: 'Search extensions',
+        none: 'No extensions match.',
+        createTitle: 'Make and publish your extension',
+        createDescription:
+          'Anyone can make an extension for Arcanist and offer it in this marketplace.',
+        write: 'Write it with the Arcanist SDK (C#), following the developer guide.',
+        release:
+          'Publish its .zip as a release of a public GitHub repository, with its source code.',
+        propose:
+          'Propose it to the catalog with an issue ("Add an extension"): an automation checks the package and the team reviews it before listing it.',
+        manage:
+          'Then you publish new versions, change its entry or withdraw it yourself, with issues too.',
+        proposeButton: 'Propose an extension',
+      },
+      players: {
+        title: 'Web player marketplace',
+        description:
+          "Web players to listen from a browser: Ultimate Web Player and those the community publishes. One is served at the server's address, and all of them at /players/<id>/.",
+        search: 'Search players',
+        none: 'No players match.',
+        createTitle: 'Make and publish your web player',
+        createDescription:
+          'Anyone can make a web player for Arcanist (with the GraphQL or REST API) and offer it in this marketplace.',
+        write:
+          'Build it with the web technology you like, following the player guide (manifest, routes and API).',
+        release:
+          'Publish its .zip as a release of a public GitHub repository (with its source, if it is open source).',
+        propose:
+          'Propose it to the catalog with an issue ("Add a web player"): an automation checks the package and the team reviews it before listing it.',
+        manage:
+          'Then you publish new versions, change its entry or withdraw it yourself, with issues too.',
+        proposeButton: 'Propose a player',
+      },
+      playerInstalled: '{name} installed. You can make it the default in Players.',
       refresh: 'Refresh',
-      search: 'Search extensions',
       official: 'Official',
       community: 'Community',
       homepage: 'More information',
@@ -1442,7 +1515,6 @@ export const en: Dictionary = {
       update: 'Update',
       installed: 'Installed',
       needs: 'Needs Arcanist {version}',
-      none: 'No extensions match.',
       categories: 'Categories',
       pricingFilter: 'Pricing',
       anyPricing: 'Any',
@@ -1461,18 +1533,8 @@ export const en: Dictionary = {
       },
       allCategories: 'All',
       create: {
-        title: 'Make and publish your extension',
-        description: 'Anyone can make an extension for Arcanist and offer it in this marketplace.',
-        write: 'Write it with the Arcanist SDK (C#), following the developer guide.',
-        release:
-          'Publish its .zip as a release of a public GitHub repository, with its source code.',
-        propose:
-          'Propose it to the catalog with an issue ("Add an extension"): an automation checks the package and the team reviews it before listing it.',
-        manage:
-          'Then you publish new versions, change its entry or withdraw it yourself, with issues too.',
         guide: 'Developer guide',
         howToPublish: 'How publishing works',
-        proposeButton: 'Propose an extension',
       },
       communityTrust:
         'This extension comes from the community, not from the Arcanist project. It runs inside the server with all its permissions: it can read and change any data and file the server can reach. Install it only if you trust its author.',
@@ -1868,6 +1930,7 @@ export const en: Dictionary = {
     },
   },
   remoteLibraries: {
+    transcodingMoved: 'Where this music is converted is chosen in',
     title: "Playing other servers' music",
     description: 'How music other Arcanist servers share is played here.',
     cache: 'Keep what is played in a cache',
@@ -2726,7 +2789,8 @@ export const en: Dictionary = {
     last_source: 'A local library keeps its folder: move it instead.',
     library_managed:
       'A managed extension keeps this library: it cannot be deleted nor its place changed.',
-    s3_wrong_key: 'What that bucket holds is encrypted with another key. Use the key it was created with.',
+    s3_wrong_key:
+      'What that bucket holds is encrypted with another key. Use the key it was created with.',
     library_disabled: 'This library needs Ultimate Cloud, which is switched off.',
     storage_conflict: 'A different file with the same name is already in the new folder.',
     cleanup_incomplete: 'Moved, but some files of the old folder could not be deleted.',

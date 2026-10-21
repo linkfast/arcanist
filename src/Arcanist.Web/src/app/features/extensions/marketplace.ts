@@ -5,6 +5,7 @@ import {
   lucideBadgeCheck,
   lucideBookOpen,
   lucideExternalLink,
+  lucideMonitorPlay,
   lucidePuzzle,
   lucideRefreshCw,
   lucideSearch,
@@ -28,16 +29,31 @@ import type {
 import {
   ExtensionMarketplaceQuery as MarketplaceQuery,
   InstallMarketplaceExtensionMutation,
+  InstallMarketplacePlayerMutation,
+  PlayerMarketplaceQuery,
 } from '../../graphql/operations';
 import { BytesPipe } from '../../shared/format';
 
-type Marketplace = ExtensionMarketplaceQuery['extensionMarketplace'];
-type Entry = Marketplace['extensions'][number];
+type Entry = ExtensionMarketplaceQuery['extensionMarketplace']['extensions'][number] & {
+  /** A web player served at /. */
+  isDefault?: boolean;
+};
 type Pricing = NonNullable<Entry['pricing']>;
 
+/** What either catalog (extensions or web players) says, the same way. */
+interface Marketplace {
+  available: boolean;
+  errorCode?: string | null;
+  extensions: Entry[];
+}
+
+/** Extensions, or web players (Ultimate Web Player and those anyone publishes). */
+export type MarketplaceKind = 'extensions' | 'players';
+
 /**
- * The extension catalog (github.com/linkfast/arcanist-extensions): what there is, what is installed here, and
- * installing or updating with one click. Community extensions ask for confirmation first, as any package.
+ * The catalog (github.com/linkfast/arcanist-extensions) of extensions or of web players: what there is, what is
+ * installed here, and installing or updating with one click. Community entries ask for confirmation first, as any
+ * package.
  */
 @Component({
   selector: 'app-extension-marketplace',
@@ -60,6 +76,7 @@ type Pricing = NonNullable<Entry['pricing']>;
       lucideBadgeCheck,
       lucideBookOpen,
       lucideExternalLink,
+      lucideMonitorPlay,
       lucidePuzzle,
       lucideRefreshCw,
       lucideSearch,
@@ -68,8 +85,8 @@ type Pricing = NonNullable<Entry['pricing']>;
   template: `
     <section hlmCard>
       <div hlmCardHeader>
-        <h2 hlmCardTitle>{{ 'extensions.marketplace.title' | t }}</h2>
-        <p hlmCardDescription>{{ 'extensions.marketplace.description' | t }}</p>
+        <h2 hlmCardTitle>{{ 'extensions.marketplace.' + kind() + '.title' | t }}</h2>
+        <p hlmCardDescription>{{ 'extensions.marketplace.' + kind() + '.description' | t }}</p>
         <div hlmCardAction>
           <button
             hlmBtn
@@ -102,8 +119,8 @@ type Pricing = NonNullable<Entry['pricing']>;
                 hlmInput
                 class="w-full pl-8"
                 type="search"
-                [attr.aria-label]="'extensions.marketplace.search' | t"
-                [placeholder]="'extensions.marketplace.search' | t"
+                [attr.aria-label]="'extensions.marketplace.' + kind() + '.search' | t"
+                [placeholder]="'extensions.marketplace.' + kind() + '.search' | t"
                 [ngModel]="query()"
                 (ngModelChange)="query.set($event)"
               />
@@ -183,7 +200,10 @@ type Pricing = NonNullable<Entry['pricing']>;
                       <span
                         class="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
                       >
-                        <ng-icon name="lucidePuzzle" size="20" />
+                        <ng-icon
+                          [name]="kind() === 'players' ? 'lucideMonitorPlay' : 'lucidePuzzle'"
+                          size="20"
+                        />
                       </span>
                     }
                     <div class="min-w-0">
@@ -208,6 +228,9 @@ type Pricing = NonNullable<Entry['pricing']>;
                             [title]="'extensions.marketplace.pricingHelp.' + entry.pricing | t"
                             >{{ 'extensions.marketplace.pricing.' + entry.pricing | t }}</span
                           >
+                        }
+                        @if (entry.isDefault) {
+                          <span hlmBadge>{{ 'extensions.players.default' | t }}</span>
                         }
                         @if (entry.author) {
                           <span class="truncate">{{ entry.author }}</span>
@@ -281,7 +304,7 @@ type Pricing = NonNullable<Entry['pricing']>;
                 </li>
               } @empty {
                 <li class="text-sm text-muted-foreground">
-                  {{ 'extensions.marketplace.none' | t }}
+                  {{ 'extensions.marketplace.' + kind() + '.none' | t }}
                 </li>
               }
             </ul>
@@ -296,19 +319,28 @@ type Pricing = NonNullable<Entry['pricing']>;
       <div hlmCardHeader>
         <h2 hlmCardTitle class="flex items-center gap-2">
           <ng-icon name="lucideBookOpen" />
-          {{ 'extensions.marketplace.create.title' | t }}
+          {{ 'extensions.marketplace.' + kind() + '.createTitle' | t }}
         </h2>
-        <p hlmCardDescription>{{ 'extensions.marketplace.create.description' | t }}</p>
+        <p hlmCardDescription>
+          {{ 'extensions.marketplace.' + kind() + '.createDescription' | t }}
+        </p>
       </div>
       <div hlmCardContent class="grid gap-3 text-sm">
         <ol class="grid list-decimal gap-1.5 pl-5 text-muted-foreground">
-          <li>{{ 'extensions.marketplace.create.write' | t }}</li>
-          <li>{{ 'extensions.marketplace.create.release' | t }}</li>
-          <li>{{ 'extensions.marketplace.create.propose' | t }}</li>
-          <li>{{ 'extensions.marketplace.create.manage' | t }}</li>
+          <li>{{ 'extensions.marketplace.' + kind() + '.write' | t }}</li>
+          <li>{{ 'extensions.marketplace.' + kind() + '.release' | t }}</li>
+          <li>{{ 'extensions.marketplace.' + kind() + '.propose' | t }}</li>
+          <li>{{ 'extensions.marketplace.' + kind() + '.manage' | t }}</li>
         </ol>
         <div class="flex flex-wrap gap-2">
-          <a hlmBtn variant="outline" size="sm" [href]="guideUrl" target="_blank" rel="noopener">
+          <a
+            hlmBtn
+            variant="outline"
+            size="sm"
+            [href]="kind() === 'players' ? playerGuideUrl : guideUrl"
+            target="_blank"
+            rel="noopener"
+          >
             {{ 'extensions.marketplace.create.guide' | t }}
             <ng-icon name="lucideExternalLink" class="ml-1.5" />
           </a>
@@ -317,7 +349,7 @@ type Pricing = NonNullable<Entry['pricing']>;
             <ng-icon name="lucideExternalLink" class="ml-1.5" />
           </a>
           <a hlmBtn size="sm" [href]="proposeUrl" target="_blank" rel="noopener">
-            {{ 'extensions.marketplace.create.proposeButton' | t }}
+            {{ 'extensions.marketplace.' + kind() + '.proposeButton' | t }}
             <ng-icon name="lucideExternalLink" class="ml-1.5" />
           </a>
         </div>
@@ -328,7 +360,14 @@ type Pricing = NonNullable<Entry['pricing']>;
       <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
         <hlm-alert-dialog-header>
           <h3 hlmAlertDialogTitle>{{ 'extensions.install.confirmTitle' | t }}</h3>
-          <p hlmAlertDialogDescription>{{ 'extensions.marketplace.communityTrust' | t }}</p>
+          <p hlmAlertDialogDescription>
+            {{
+              (kind() === 'players'
+                ? 'extensions.install.playerTrust'
+                : 'extensions.marketplace.communityTrust'
+              ) | t
+            }}
+          </p>
           <p class="text-sm font-medium">
             {{ confirming()?.name }}
             @if (confirming()?.author; as author) {
@@ -354,8 +393,12 @@ export class ExtensionMarketplace implements OnInit {
 
   /** The page is busy with another change. */
   readonly busy = input(false);
+  /** Which catalog it shows. */
+  readonly kind = input<MarketplaceKind>('extensions');
   /** An extension was installed (or updated) from the catalog. */
   readonly installed = output<Extension>();
+  /** A web player was installed (or updated) from the catalog. */
+  readonly installedPlayer = output<void>();
 
   protected readonly marketplace = signal<Marketplace | null>(null);
   protected readonly loading = signal(false);
@@ -382,6 +425,8 @@ export class ExtensionMarketplace implements OnInit {
   /** How to write one, and how the catalog takes proposals (issues with forms). */
   protected readonly guideUrl =
     'https://github.com/linkfast/arcanist/blob/main/docs/developers/extensions.md';
+  protected readonly playerGuideUrl =
+    'https://github.com/linkfast/arcanist/blob/main/docs/developers/frontends.md';
   protected readonly publishUrl =
     'https://github.com/linkfast/arcanist-extensions#proposing-and-managing-extensions';
   protected readonly proposeUrl =
@@ -421,11 +466,18 @@ export class ExtensionMarketplace implements OnInit {
   async load(refresh: boolean): Promise<void> {
     this.loading.set(true);
     try {
-      const result = await this.gql.query(MarketplaceQuery, {
-        language: this.i18n.language(),
-        refresh,
-      });
-      this.marketplace.set(result.extensionMarketplace);
+      const variables = { language: this.i18n.language(), refresh };
+      if (this.kind() === 'players') {
+        const { playerMarketplace: market } = await this.gql.query(
+          PlayerMarketplaceQuery,
+          variables,
+        );
+        this.marketplace.set({ ...market, extensions: market.players });
+      } else {
+        this.marketplace.set(
+          (await this.gql.query(MarketplaceQuery, variables)).extensionMarketplace,
+        );
+      }
     } catch (error) {
       toast.error(this.i18n.error(ApiError.from(error).code));
     } finally {
@@ -452,6 +504,15 @@ export class ExtensionMarketplace implements OnInit {
   private async install(entry: Entry): Promise<void> {
     this.installing.set(entry.id);
     try {
+      if (this.kind() === 'players') {
+        await this.gql.mutate(InstallMarketplacePlayerMutation, {
+          input: { id: entry.id, makeDefault: false },
+        });
+        toast.success(this.i18n.t('extensions.marketplace.playerInstalled', { name: entry.name }));
+        this.installedPlayer.emit();
+        await this.load(false);
+        return;
+      }
       const result = await this.gql.mutate(InstallMarketplaceExtensionMutation, {
         input: { id: entry.id, enable: true },
       });

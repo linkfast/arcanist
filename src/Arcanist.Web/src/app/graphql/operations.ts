@@ -1176,6 +1176,49 @@ export const ExtensionMarketplaceQuery = graphql(`
   }
 `);
 
+export const PlayerMarketplaceQuery = graphql(`
+  query PlayerMarketplace($language: String, $refresh: Boolean) {
+    playerMarketplace(language: $language, refresh: $refresh) {
+      available
+      errorCode
+      fetchedAt
+      source
+      players {
+        id
+        name
+        description
+        author
+        homepage
+        license
+        iconUrl
+        official
+        categories
+        version
+        size
+        minServerVersion
+        compatible
+        installedVersion
+        updateAvailable
+        builtIn
+        isDefault
+        pricing
+        pricingUrl
+      }
+    }
+  }
+`);
+
+export const InstallMarketplacePlayerMutation = graphql(`
+  mutation InstallMarketplacePlayer($input: InstallMarketplacePlayerInput!) {
+    installMarketplacePlayer(input: $input) {
+      id
+      name
+      version
+      isDefault
+    }
+  }
+`);
+
 export const InstallMarketplaceExtensionMutation = graphql(`
   mutation InstallMarketplaceExtension($input: InstallMarketplaceExtensionInput!) {
     installMarketplaceExtension(input: $input) {
@@ -1710,6 +1753,39 @@ export const RenameReceivedShareMutation = graphql(`
   mutation RenameReceivedShare($input: RenameReceivedShareInput!) {
     renameReceivedShare(input: $input) {
       ...ReceivedShareFields
+    }
+  }
+`);
+
+export const StreamingDefaultsFields = graphql(`
+  fragment StreamingDefaultsFields on StreamingDefaults {
+    desktop {
+      format
+      maxBitRate
+    }
+    web {
+      format
+      maxBitRate
+    }
+    mobile {
+      format
+      maxBitRate
+    }
+  }
+`);
+
+export const StreamingDefaultsQuery = graphql(`
+  query StreamingDefaults {
+    streamingDefaults {
+      ...StreamingDefaultsFields
+    }
+  }
+`);
+
+export const SetStreamingDefaultsMutation = graphql(`
+  mutation SetStreamingDefaults($input: SetStreamingDefaultsInput!) {
+    setStreamingDefaults(input: $input) {
+      ...StreamingDefaultsFields
     }
   }
 `);

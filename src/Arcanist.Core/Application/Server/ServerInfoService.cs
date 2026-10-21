@@ -92,6 +92,12 @@ public enum ApiFeature
     /// <c>markWishesSeen</c> and the <c>wishObtained</c> subscription; <c>albums(sort:)</c> too.
     /// </summary>
     WishList,
+
+    /// <summary>
+    /// <c>streamingDefaults</c>: the quality each kind of Ultimate client plays by default, and <c>client</c> on the
+    /// stream to apply it.
+    /// </summary>
+    StreamingDefaults,
 }
 
 public sealed class ServerInfoService(

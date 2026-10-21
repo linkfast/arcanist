@@ -1,3 +1,4 @@
+import { PrivacyChoice, PrivacyLevel } from '../../shared/privacy-level';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -130,6 +131,7 @@ const PROGRESS_MS = 1500;
     SetupUltimateStep,
     SetupRestoreDialog,
     SetupRestoring,
+    PrivacyLevel,
     DlnaImportForm,
     HlmAlertImports,
     HlmBadgeImports,
@@ -233,20 +235,17 @@ export class SetupPage implements OnInit {
   protected noTelemetry = false;
   protected externalServices: ExternalServicesMode = 'ALL';
 
-  /** One of the two "no outside services" options, or neither. */
-  protected setExternal(mode: Exclude<ExternalServicesMode, 'ALL'>, on: boolean): void {
-    this.externalServices = on
-      ? mode
-      : this.externalServices === mode
-        ? 'ALL'
-        : this.externalServices;
+  /**
+   * A privacy level (or a combination in between): without outside services the online services go off, and back
+   * on (as the wizard starts) when they are allowed again; without telemetry, no anonymous statistics.
+   */
+  protected setPrivacy(choice: PrivacyChoice): void {
+    const wasAllowed = this.externalServices === 'ALL';
+    this.noTelemetry = choice.noTelemetry;
+    this.externalServices = choice.externalServices;
     if (this.externalServices !== 'ALL')
       for (const key of this.onlineServiceKeys) this.onlineServices[key] = false;
-    if (this.statisticsForced()) this.shareStatistics = 'no';
-  }
-
-  protected setNoTelemetry(on: boolean): void {
-    this.noTelemetry = on;
+    else if (!wasAllowed) for (const key of this.onlineServiceKeys) this.onlineServices[key] = true;
     if (this.statisticsForced()) this.shareStatistics = 'no';
   }
 
@@ -361,12 +360,12 @@ export class SetupPage implements OnInit {
             .analyzeMstreamFolder;
   protected ffmpegPath = '';
   protected ratingMode: RatingMode = 'STAR';
-  /** Off until the user turns each on: they contact other servers. */
+  /** On unless the user turns them off (or the privacy level does): each says what it sends. */
   protected readonly onlineServices: OnlineServicesChoice = {
-    musicBrainz: false,
-    acoustId: false,
-    coverArtArchive: false,
-    lyrics: false,
+    musicBrainz: true,
+    acoustId: true,
+    coverArtArchive: true,
+    lyrics: true,
   };
   protected readonly onlineServiceKeys = [
     'musicBrainz',

@@ -2190,7 +2190,7 @@
         "tags": [
           "Media"
         ],
-        "summary": "Audio of a track. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD. Without \u0060format\u0060, \u0060maxBitRate\u0060 or \u0060timeOffset\u0060 the original is sent with HTTP range support. \u0060format\u0060 (see serverInfo.transcodingFormats) converts it, at \u0060maxBitRate\u0060 kbit/s if given; \u0060maxBitRate\u0060 alone converts to MP3 only when the original exceeds it. Converted audio has no range support: seek by requesting again with \u0060timeOffset\u0060 in seconds. 503 transcoding_unavailable without ffmpeg.",
+        "summary": "Audio of a track. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD. Without \u0060format\u0060, \u0060maxBitRate\u0060 or \u0060timeOffset\u0060 the original is sent with HTTP range support. \u0060format\u0060 (see serverInfo.transcodingFormats) converts it, at \u0060maxBitRate\u0060 kbit/s if given; \u0060maxBitRate\u0060 alone converts to MP3 only when the original exceeds it. Converted audio has no range support: seek by requesting again with \u0060timeOffset\u0060 in seconds. \u0060client\u0060 (DESKTOP, WEB or MOBILE: an Ultimate client) applies that client\u0027s default quality (streamingDefaults) when the request asks for none. 503 transcoding_unavailable without ffmpeg.",
         "operationId": "Stream",
         "parameters": [
           {
@@ -2246,6 +2246,13 @@
                 "string"
               ],
               "format": "double"
+            }
+          },
+          {
+            "name": "client",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -2336,7 +2343,7 @@
         "tags": [
           "Media"
         ],
-        "summary": "Audio of a track. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD. Without \u0060format\u0060, \u0060maxBitRate\u0060 or \u0060timeOffset\u0060 the original is sent with HTTP range support. \u0060format\u0060 (see serverInfo.transcodingFormats) converts it, at \u0060maxBitRate\u0060 kbit/s if given; \u0060maxBitRate\u0060 alone converts to MP3 only when the original exceeds it. Converted audio has no range support: seek by requesting again with \u0060timeOffset\u0060 in seconds. 503 transcoding_unavailable without ffmpeg.",
+        "summary": "Audio of a track. Authenticate with a Bearer token or the \u0060st\u0060 parameter of a track\u0027s streamUrl. \u0060fileId\u0060 picks a specific copy; \u0060download=true\u0060 sends the original as an attachment and requires DOWNLOAD. Without \u0060format\u0060, \u0060maxBitRate\u0060 or \u0060timeOffset\u0060 the original is sent with HTTP range support. \u0060format\u0060 (see serverInfo.transcodingFormats) converts it, at \u0060maxBitRate\u0060 kbit/s if given; \u0060maxBitRate\u0060 alone converts to MP3 only when the original exceeds it. Converted audio has no range support: seek by requesting again with \u0060timeOffset\u0060 in seconds. \u0060client\u0060 (DESKTOP, WEB or MOBILE: an Ultimate client) applies that client\u0027s default quality (streamingDefaults) when the request asks for none. 503 transcoding_unavailable without ffmpeg.",
         "operationId": "Stream",
         "parameters": [
           {
@@ -2392,6 +2399,13 @@
                 "string"
               ],
               "format": "double"
+            }
+          },
+          {
+            "name": "client",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -3481,6 +3495,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TranscodingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/streaming-defaults": {
+      "get": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "The quality each kind of Ultimate client (desktop, web, mobile) plays by default. The stream applies it to requests with \u0060client\u0060 and no quality of their own; clients show it as their default.",
+        "operationId": "StreamingDefaults",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamingDefaults"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Sets the quality each kind of Ultimate client plays by default: the original (no format; with maxBitRate, MP3 only above it) or a format and bit rate. Requires MANAGE_SETTINGS.",
+        "operationId": "SetStreamingDefaults",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetStreamingDefaultsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamingDefaults"
                 }
               }
             }
@@ -4726,6 +4790,74 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InstallFromUrlInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Frontend"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/frontends/marketplace": {
+      "get": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "The web players of the catalog (github.com/linkfast/arcanist-extensions by default: Ultimate Web Player and those anyone publishes), named in \u0060language\u0060, with what is installed here. Read again after an hour, or now with \u0060refresh\u0060. Administrators only.",
+        "operationId": "PlayerMarketplace",
+        "parameters": [
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerMarketplaceInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/frontends/marketplace/install": {
+      "post": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "Installs (or updates) a web player of the catalog, checked against the SHA-256 the catalog publishes, and serves it at / when \u0060makeDefault\u0060. It runs with its users\u0027 sessions. Administrators only, with a recent authentication.",
+        "operationId": "InstallMarketplacePlayer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallMarketplacePlayerInput"
               }
             }
           },
@@ -10174,7 +10306,8 @@
           "TRACK_STATS",
           "EXTENSION_APPS",
           "VIRTUAL_LIBRARIES",
-          "WISH_LIST"
+          "WISH_LIST",
+          "STREAMING_DEFAULTS"
         ]
       },
       "AppPassword": {
@@ -11308,6 +11441,62 @@
           },
           "newPassword": {
             "type": "string"
+          }
+        }
+      },
+      "ClientStreamingQuality": {
+        "required": [
+          "format",
+          "maxBitRate"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TranscodeFormat"
+              }
+            ]
+          },
+          "maxBitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ClientStreamingQualityInput": {
+        "required": [
+          "format",
+          "maxBitRate"
+        ],
+        "type": "object",
+        "properties": {
+          "format": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TranscodeFormat"
+              }
+            ]
+          },
+          "maxBitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -14132,6 +14321,21 @@
           }
         }
       },
+      "InstallMarketplacePlayerInput": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "makeDefault": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "JoinShareRequest": {
         "required": [
           "token",
@@ -15205,6 +15409,127 @@
             "type": "boolean"
           },
           "builtIn": {
+            "type": "boolean"
+          },
+          "pricing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExtensionPricing"
+              }
+            ]
+          },
+          "pricingUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MarketplacePlayer": {
+        "required": [
+          "id",
+          "name",
+          "description",
+          "author",
+          "homepage",
+          "license",
+          "iconUrl",
+          "official",
+          "categories",
+          "version",
+          "size",
+          "minServerVersion",
+          "compatible",
+          "installedVersion",
+          "updateAvailable",
+          "builtIn",
+          "isDefault"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "author": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "homepage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "iconUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "official": {
+            "type": "boolean"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "minServerVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "compatible": {
+            "type": "boolean"
+          },
+          "installedVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "updateAvailable": {
+            "type": "boolean"
+          },
+          "builtIn": {
+            "type": "boolean"
+          },
+          "isDefault": {
             "type": "boolean"
           },
           "pricing": {
@@ -17394,6 +17719,43 @@
           }
         }
       },
+      "PlayerMarketplaceInfo": {
+        "required": [
+          "available",
+          "errorCode",
+          "fetchedAt",
+          "source",
+          "players"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fetchedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          },
+          "players": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MarketplacePlayer"
+            }
+          }
+        }
+      },
       "PlayHistoryItem": {
         "required": [
           "id",
@@ -19291,6 +19653,25 @@
           }
         }
       },
+      "SetStreamingDefaultsInput": {
+        "required": [
+          "desktop",
+          "web",
+          "mobile"
+        ],
+        "type": "object",
+        "properties": {
+          "desktop": {
+            "$ref": "#/components/schemas/ClientStreamingQualityInput"
+          },
+          "web": {
+            "$ref": "#/components/schemas/ClientStreamingQualityInput"
+          },
+          "mobile": {
+            "$ref": "#/components/schemas/ClientStreamingQualityInput"
+          }
+        }
+      },
       "SetTranscodingSettingsInput": {
         "required": [
           "cacheEnabled",
@@ -20508,6 +20889,25 @@
       "Stream": {
         "type": "string",
         "format": "binary"
+      },
+      "StreamingDefaults": {
+        "required": [
+          "desktop",
+          "web",
+          "mobile"
+        ],
+        "type": "object",
+        "properties": {
+          "desktop": {
+            "$ref": "#/components/schemas/ClientStreamingQuality"
+          },
+          "web": {
+            "$ref": "#/components/schemas/ClientStreamingQuality"
+          },
+          "mobile": {
+            "$ref": "#/components/schemas/ClientStreamingQuality"
+          }
+        }
       },
       "TokenResponse": {
         "required": [

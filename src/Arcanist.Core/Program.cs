@@ -110,6 +110,7 @@ builder.Services.AddScoped<ScanService>();
 builder.Services.AddScoped<AnalysisService>();
 builder.Services.AddScoped<FfmpegService>();
 builder.Services.AddScoped<TranscodingService>();
+builder.Services.AddScoped<StreamingDefaultsService>();
 builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<TrackMatchService>();
@@ -141,6 +142,7 @@ builder.Services.AddScoped<ExtensionService>();
 builder.Services.Configure<MarketplaceOptions>(builder.Configuration.GetSection(MarketplaceOptions.Section));
 builder.Services.AddSingleton<MarketplaceCatalog>();
 builder.Services.AddScoped<ExtensionMarketplaceService>();
+builder.Services.AddScoped<PlayerMarketplaceService>();
 builder.Services.AddScoped<ExtensionAdminPages>();
 builder.Services.Configure<UpdateOptions>(builder.Configuration.GetSection(UpdateOptions.Section));
 builder.Services.AddHttpClient(UpdateChecker.HttpClientName, client =>

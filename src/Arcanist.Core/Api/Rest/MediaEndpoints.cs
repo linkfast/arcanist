@@ -23,7 +23,9 @@ public static class MediaEndpoints
                          "Without `format`, `maxBitRate` or `timeOffset` the original is sent with HTTP range support. `format` " +
                          "(see serverInfo.transcodingFormats) converts it, at `maxBitRate` kbit/s if given; `maxBitRate` alone " +
                          "converts to MP3 only when the original exceeds it. Converted audio has no range support: seek by " +
-                         "requesting again with `timeOffset` in seconds. 503 transcoding_unavailable without ffmpeg.")
+                         "requesting again with `timeOffset` in seconds. `client` (DESKTOP, WEB or MOBILE: an Ultimate client) " +
+                         "applies that client's default quality (streamingDefaults) when the request asks for none. " +
+                         "503 transcoding_unavailable without ffmpeg.")
             .Produces(StatusCodes.Status200OK, typeof(Stream), "audio/mpeg", AudioTypes)
             .Produces(StatusCodes.Status206PartialContent, typeof(Stream), "audio/mpeg", AudioTypes);
 
@@ -44,10 +46,24 @@ public static class MediaEndpoints
         string? format,
         int? maxBitRate,
         double? timeOffset,
+        string? client,
         HttpContext context,
         CancellationToken cancellationToken)
     {
         await AuthenticateStreamTokenAsync(context, cancellationToken);
+
+        // An Ultimate client without a quality of its own: the one the server sets for its kind.
+        if (!string.IsNullOrEmpty(client))
+        {
+            if (!Enum.TryParse<StreamingClient>(client, ignoreCase: true, out var kind) || !Enum.IsDefined(kind))
+                throw Application.ArcanistException.Field("client", Application.ErrorCodes.InvalidFormat);
+            if (string.IsNullOrEmpty(format) && maxBitRate is null && download != true)
+            {
+                var quality = (await context.RequestServices.GetRequiredService<StreamingDefaultsSettings>().GetAsync(cancellationToken)).For(kind);
+                format = quality.Format?.ToString();
+                maxBitRate = quality.MaxBitRate;
+            }
+        }
 
         // Parsed here rather than bound: query binding of enums is case-sensitive, and the API spells them MP3, OPUS…
         TranscodeFormat? requested = null;

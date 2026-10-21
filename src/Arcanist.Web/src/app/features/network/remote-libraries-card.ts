@@ -4,7 +4,7 @@ import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
-import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
+import { RouterLink } from '@angular/router';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
 import { Gql } from '../../core/graphql/gql.service';
@@ -23,9 +23,8 @@ import { BytesPipe, CountPipe } from '../../shared/format';
 const GB = 1_000_000_000;
 const Sizes = [1, 2, 5, 10, 20, 50, 100, 200].map((gb) => gb * GB);
 const Ages = [7, 30, 60, 180, 365];
-const Modes: RemoteTranscoding[] = ['AUTO', 'HERE', 'OWNER'];
 
-/** How music other servers share is played here: its cache, and where it is converted. */
+/** How music other servers share is played here: its cache (where it is converted is chosen in Transcoding). */
 @Component({
   selector: 'app-remote-libraries-card',
   imports: [
@@ -33,7 +32,7 @@ const Modes: RemoteTranscoding[] = ['AUTO', 'HERE', 'OWNER'];
     HlmButtonImports,
     HlmCardImports,
     HlmNativeSelectImports,
-    HlmRadioGroupImports,
+    RouterLink,
     HlmSwitchImports,
     TranslatePipe,
     BytesPipe,
@@ -95,20 +94,10 @@ const Modes: RemoteTranscoding[] = ['AUTO', 'HERE', 'OWNER'];
             }
           </div>
 
-          <fieldset class="grid gap-2">
-            <legend class="mb-1 font-medium">{{ 'remoteLibraries.transcoding' | t }}</legend>
-            <p class="text-xs text-muted-foreground">{{ 'remoteLibraries.transcodingHelp' | t }}</p>
-            <hlm-radio-group class="grid gap-2" name="remote-transcoding" [(ngModel)]="transcoding">
-              @for (mode of modes; track mode) {
-                <label class="flex items-start gap-2">
-                  <hlm-radio [value]="mode" class="mt-0.5"
-                    ><hlm-radio-indicator indicator
-                  /></hlm-radio>
-                  {{ 'remoteLibraries.modes.' + mode | t }}
-                </label>
-              }
-            </hlm-radio-group>
-          </fieldset>
+          <p class="text-xs text-muted-foreground">
+            {{ 'remoteLibraries.transcodingMoved' | t }}
+            <a class="underline" routerLink="/transcoding">{{ 'nav.transcoding' | t }}</a>
+          </p>
 
           <div>
             <button hlmBtn type="button" [disabled]="busy()" (click)="save()">
@@ -126,13 +115,13 @@ export class RemoteLibrariesCard implements OnInit {
 
   protected readonly sizes = Sizes;
   protected readonly ages = Ages;
-  protected readonly modes = Modes;
   protected readonly settings = signal<Settings | null>(null);
   protected readonly busy = signal(false);
 
   protected cacheEnabled = true;
   protected cacheMaxBytes = 10 * GB;
   protected cacheMaxAgeDays = 60;
+  /** Kept as it is: it is chosen in Transcoding. */
   protected transcoding: RemoteTranscoding = 'AUTO';
 
   async ngOnInit(): Promise<void> {

@@ -114,6 +114,7 @@ export const es: Dictionary = {
     dark: 'Oscuro',
   },
   nav: {
+    transcoding: 'Transcodificación',
     extensionsToggle: 'Mostrar u ocultar las extensiones',
     ai: 'AI',
     backups: 'Copias de seguridad',
@@ -147,6 +148,24 @@ export const es: Dictionary = {
     title: 'Confirma tu contraseña',
     description: 'Esta acción es sensible. Vuelve a escribir tu contraseña para continuar.',
     confirm: 'Confirmar',
+  },
+  privacyLevel: {
+    label: 'Nivel de privacidad',
+    open: {
+      title: 'Todo activado',
+      help: 'Servicios en línea, Ultimate Cloud y estadísticas anónimas de lo que se escucha.',
+    },
+    private: {
+      title: 'Sin telemetría',
+      help: 'No sale ninguna estadística de lo que se escucha. Los servicios en línea y Ultimate Cloud siguen funcionando.',
+    },
+    closed: {
+      title: 'Nada sale del servidor',
+      help: 'Sin telemetría, sin servicios en línea y sin Ultimate Cloud.',
+    },
+    custom: 'Personalizada: una combinación de las opciones de abajo.',
+    showDetails: 'Ajustar en detalle',
+    hideDetails: 'Ocultar el detalle',
   },
   setup: {
     ultimate: {
@@ -1327,6 +1346,26 @@ export const es: Dictionary = {
     },
   },
   transcoding: {
+    page: {
+      title: 'Transcodificación',
+      subtitle:
+        'Convertir audio: ffmpeg, la calidad que reciben las apps de Ultimate, las conversiones guardadas y dónde se convierte la música de otros servidores.',
+    },
+    clients: {
+      title: 'Calidad de las apps de Ultimate',
+      description:
+        'Lo que reproduce cada app de Ultimate cuando el usuario no elige otra calidad. Convertir ahorra datos y espacio en los dispositivos; el original suena exactamente igual que el archivo.',
+      desktop: { name: 'Ultimate Desktop', help: 'En el ordenador, normalmente en tu red.' },
+      web: { name: 'Ultimate Web Player', help: 'En el navegador, también desde fuera de casa.' },
+      mobile: {
+        name: 'Apps móviles',
+        help: 'En teléfonos y tabletas, a menudo con datos móviles.',
+      },
+      original: 'Original (sin convertir)',
+      flac: 'FLAC (sin pérdida)',
+      note: 'Cada usuario puede elegir otra calidad en su app. Convertir necesita ffmpeg.',
+      saved: 'Calidad guardada',
+    },
     title: 'Conversión de audio',
     description:
       'Arcanist convierte las canciones al formato y la calidad que pide cada reproductor (por ejemplo, al escuchar fuera de casa). Puede guardar lo convertido para no repetir el trabajo.',
@@ -1418,6 +1457,7 @@ export const es: Dictionary = {
     builtIn: 'Integrado',
     uninstall: 'Desinstalar',
     players: {
+      browse: 'Ver más reproductores en el Marketplace',
       title: 'Reproductores web',
       description:
         'El predeterminado se sirve en la raíz del servidor; todos están además en /players/<id>/.',
@@ -1447,11 +1487,47 @@ export const es: Dictionary = {
       installed: 'Extensión instalada: actívala y reinicia el servidor para usarla.',
     },
     marketplace: {
-      title: 'Marketplace',
-      description:
-        'Extensiones del catálogo de Arcanist, listas para instalar con un clic. Las oficiales son del proyecto; las de la comunidad se revisan al añadirlas al catálogo.',
+      kind: 'Qué buscar',
+      kinds: { extensions: 'Extensiones', players: 'Reproductores web' },
+      extensions: {
+        title: 'Marketplace de extensiones',
+        description:
+          'Extensiones del catálogo de Arcanist, listas para instalar con un clic. Las oficiales son del proyecto; las de la comunidad se revisan al añadirlas al catálogo.',
+        search: 'Buscar extensiones',
+        none: 'No hay extensiones que coincidan.',
+        createTitle: 'Crea y publica tu extensión',
+        createDescription:
+          'Cualquiera puede hacer una extensión para Arcanist y ofrecerla en este marketplace.',
+        write: 'Escríbela con el SDK de Arcanist (C#), siguiendo la guía para desarrolladores.',
+        release:
+          'Publica su .zip como release de un repositorio público de GitHub, con su código fuente.',
+        propose:
+          'Propónla en el catálogo con un issue («Add an extension»): una automatización comprueba el paquete y el equipo la revisa antes de listarla.',
+        manage:
+          'Después publicas versiones nuevas, cambias su ficha o la retiras tú mismo, también con issues.',
+        proposeButton: 'Proponer una extensión',
+      },
+      players: {
+        title: 'Marketplace de reproductores web',
+        description:
+          'Reproductores web para escuchar desde el navegador: Ultimate Web Player y los que publique la comunidad. Uno se sirve en la dirección del servidor y todos en /players/<id>/.',
+        search: 'Buscar reproductores',
+        none: 'No hay reproductores que coincidan.',
+        createTitle: 'Crea y publica tu reproductor web',
+        createDescription:
+          'Cualquiera puede hacer un reproductor web para Arcanist (con la API GraphQL o REST) y ofrecerlo en este marketplace.',
+        write:
+          'Hazlo con la tecnología web que prefieras, siguiendo la guía de reproductores (manifiesto, rutas y API).',
+        release:
+          'Publica su .zip como release de un repositorio público de GitHub (con su código, si es open source).',
+        propose:
+          'Propónlo en el catálogo con un issue («Add a web player»): una automatización comprueba el paquete y el equipo lo revisa antes de listarlo.',
+        manage:
+          'Después publicas versiones nuevas, cambias su ficha o lo retiras tú mismo, también con issues.',
+        proposeButton: 'Proponer un reproductor',
+      },
+      playerInstalled: '{name} instalado. Puedes hacerlo el predeterminado en Reproductores.',
       refresh: 'Actualizar',
-      search: 'Buscar extensiones',
       official: 'Oficial',
       community: 'Comunidad',
       homepage: 'Más información',
@@ -1459,7 +1535,6 @@ export const es: Dictionary = {
       update: 'Actualizar',
       installed: 'Instalada',
       needs: 'Necesita Arcanist {version}',
-      none: 'No hay extensiones que coincidan.',
       categories: 'Categorías',
       pricingFilter: 'Modelo',
       anyPricing: 'Cualquiera',
@@ -1478,19 +1553,8 @@ export const es: Dictionary = {
       },
       allCategories: 'Todas',
       create: {
-        title: 'Crea y publica tu extensión',
-        description:
-          'Cualquiera puede hacer una extensión para Arcanist y ofrecerla en este marketplace.',
-        write: 'Escríbela con el SDK de Arcanist (C#), siguiendo la guía para desarrolladores.',
-        release:
-          'Publica su .zip como release de un repositorio público de GitHub, con su código fuente.',
-        propose:
-          'Propónla en el catálogo con un issue («Add an extension»): una automatización comprueba el paquete y el equipo la revisa antes de listarla.',
-        manage:
-          'Después publicas versiones nuevas, cambias su ficha o la retiras tú mismo, también con issues.',
         guide: 'Guía para desarrolladores',
         howToPublish: 'Cómo se publica',
-        proposeButton: 'Proponer una extensión',
       },
       communityTrust:
         'Esta extensión es de la comunidad, no del proyecto Arcanist. Se ejecuta dentro del servidor con todos sus permisos: puede leer y cambiar cualquier dato y archivo al que el servidor tenga acceso. Instálala solo si confías en su autor.',
@@ -1893,6 +1957,7 @@ export const es: Dictionary = {
     },
   },
   remoteLibraries: {
+    transcodingMoved: 'Dónde se convierte esta música se elige en',
     title: 'Escuchar música de otros servidores',
     description: 'Cómo se escucha aquí la música que comparten otros servidores Arcanist.',
     cache: 'Guardar en caché lo que se escucha',
@@ -2763,7 +2828,8 @@ export const es: Dictionary = {
     last_source: 'Una biblioteca local conserva su carpeta: muévela en lugar de quitarla.',
     library_managed:
       'Esta biblioteca la mantiene una extensión gestionada: no se puede eliminar ni cambiar su ubicación.',
-    s3_wrong_key: 'Lo que hay en ese bucket está cifrado con otra clave. Usa la clave con la que se creó.',
+    s3_wrong_key:
+      'Lo que hay en ese bucket está cifrado con otra clave. Usa la clave con la que se creó.',
     library_disabled: 'Esta biblioteca necesita Ultimate Cloud, que está desactivado.',
     storage_conflict: 'En la carpeta nueva ya hay un archivo distinto con el mismo nombre.',
     cleanup_incomplete:

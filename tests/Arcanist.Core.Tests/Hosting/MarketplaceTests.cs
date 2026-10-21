@@ -201,6 +201,61 @@ public sealed class MarketplaceTests
         Assert.Equal(0, _catalog.IndexReads);
     }
 
+    /// <summary>A web player's package: its manifest and its page.</summary>
+    private static byte[] PlayerPackage(string id)
+    {
+        using var buffer = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using (var writer = new StreamWriter(zip.CreateEntry(FrontendCatalog.ManifestFile).Open()))
+                writer.Write($$"""{"id":"{{id}}","name":"Ultimate Web Player","version":"1.0.0"}""");
+            using (var writer = new StreamWriter(zip.CreateEntry("index.html").Open()))
+                writer.Write("<!doctype html><title>Ultimate</title><div id=\"ultimate\"></div>");
+        }
+
+        return buffer.ToArray();
+    }
+
+    [Fact]
+    public async Task Web_players_are_in_the_catalog_too_and_install_with_one_click()
+    {
+        var package = PlayerPackage("ultimate");
+        _catalog.Index = new
+        {
+            format = 1,
+            extensions = Array.Empty<object>(),
+            players = new object[]
+            {
+                new
+                {
+                    id = "ultimate", name = "Ultimate Web Player", official = true, pricing = "free", icon = "https://catalog.test/ultimate.svg",
+                    releases = new[] { Release("1.0.0", package) },
+                },
+                // Someone else's, whose package is another player: refused.
+                new { id = "fancy", name = "Fancy", official = false, pricing = "open-source", releases = new[] { Release("2.0.0", PlayerPackage("other")) } },
+            },
+        };
+        await using var factory = Create();
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+
+        var marketplace = await admin.GetFromJsonAsync<PlayerMarketplaceInfo>("/rest/v1/frontends/marketplace", ArcanistFactory.Json, Cancel);
+        Assert.Equal(["ultimate", "fancy"], marketplace!.Players.Select(p => p.Id));
+        var ultimate = marketplace.Players[0];
+        Assert.Equal((ExtensionPricing.Free, (string?)null, false), (ultimate.Pricing, ultimate.InstalledVersion, ultimate.IsDefault));
+        _catalog.Files["https://catalog.test/ultimate.svg"] = "<svg xmlns='http://www.w3.org/2000/svg'/>"u8.ToArray();
+        Assert.Equal(HttpStatusCode.OK, (await factory.CreateClient().GetAsync(ultimate.IconUrl, Cancel)).StatusCode);
+
+        var installed = await admin.PostAsJsonAsync("/rest/v1/frontends/marketplace/install", new InstallMarketplacePlayerInput("ultimate", MakeDefault: true), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.OK, installed.StatusCode);
+        Assert.Contains("id=\"ultimate\"", await factory.CreateClient().GetStringAsync("/", Cancel));
+        marketplace = await admin.GetFromJsonAsync<PlayerMarketplaceInfo>("/rest/v1/frontends/marketplace", ArcanistFactory.Json, Cancel);
+        Assert.Equal(("1.0.0", true), (marketplace!.Players[0].InstalledVersion, marketplace.Players[0].IsDefault));
+
+        var other = await admin.PostAsJsonAsync("/rest/v1/frontends/marketplace/install", new InstallMarketplacePlayerInput("fancy"), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.Conflict, other.StatusCode);
+    }
+
     [Theory]
     [InlineData("1.0.0", "1.0.1", -1)]
     [InlineData("0.2.0", "0.10.0", -1)]

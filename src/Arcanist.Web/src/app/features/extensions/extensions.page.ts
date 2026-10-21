@@ -34,7 +34,7 @@ import {
   UninstallExtensionMutation,
   UninstallFrontendMutation,
 } from '../../graphql/operations';
-import { ExtensionMarketplace } from './marketplace';
+import { ExtensionMarketplace, MarketplaceKind } from './marketplace';
 import { PackageDropzone } from './package-dropzone';
 
 type Kind = 'frontend' | 'extension';
@@ -225,7 +225,32 @@ interface PendingInstall {
           </section>
         }
         @case ('marketplace') {
-          <app-extension-marketplace [busy]="busy()" (installed)="afterInstall($event)" />
+          <div
+            class="flex flex-wrap gap-1"
+            role="group"
+            [attr.aria-label]="'extensions.marketplace.kind' | t"
+          >
+            @for (option of marketKinds; track option) {
+              <button
+                hlmBtn
+                size="sm"
+                type="button"
+                [variant]="marketKind() === option ? 'secondary' : 'ghost'"
+                [attr.aria-pressed]="marketKind() === option"
+                (click)="marketKind.set(option)"
+              >
+                {{ 'extensions.marketplace.kinds.' + option | t }}
+              </button>
+            }
+          </div>
+          @for (kind of [marketKind()]; track kind) {
+            <app-extension-marketplace
+              [kind]="kind"
+              [busy]="busy()"
+              (installed)="afterInstall($event)"
+              (installedPlayer)="reloadPlayers()"
+            />
+          }
         }
         @case ('players') {
           <section hlmCard>
@@ -302,6 +327,11 @@ interface PendingInstall {
                   <li class="text-sm text-muted-foreground">{{ 'extensions.players.none' | t }}</li>
                 }
               </ul>
+              <p class="text-sm">
+                <button type="button" class="underline" (click)="browsePlayers()">
+                  {{ 'extensions.players.browse' | t }}
+                </button>
+              </p>
               <app-package-dropzone
                 kind="frontend"
                 [busy]="busy()"
@@ -404,6 +434,18 @@ export class ExtensionsPage implements OnInit {
   private readonly http = inject(HttpClient);
 
   protected readonly frontends = signal<Frontend[]>([]);
+  protected readonly marketKinds: MarketplaceKind[] = ['extensions', 'players'];
+  protected readonly marketKind = signal<MarketplaceKind>('extensions');
+
+  /** The catalog's web players, from the Players tab. */
+  protected browsePlayers(): void {
+    this.marketKind.set('players');
+    this.choose('marketplace');
+  }
+
+  protected async reloadPlayers(): Promise<void> {
+    await this.reload();
+  }
   protected readonly extensions = signal<Extension[]>([]);
   protected readonly busy = signal(false);
   protected readonly restarting = signal(false);

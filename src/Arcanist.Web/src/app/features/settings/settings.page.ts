@@ -1,26 +1,22 @@
 import { Component, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { TranslatePipe } from '../../core/i18n/i18n';
-import { FfmpegCard } from './ffmpeg-card';
 import { MaintenanceCard } from './maintenance-card';
 import { OnlineServicesCard } from './online-services-card';
 import { PrivacyCard } from './privacy-card';
 import { RatingModeCard } from './rating-mode-card';
 import { UpdatesCard } from './updates-card';
-import { TranscodingCard } from './transcoding-card';
 
-/** Server-wide settings: ratings, online services and media tools. */
+/** Server-wide settings: ratings, privacy, online services, updates and maintenance (conversion has its own page). */
 @Component({
   selector: 'app-settings-page',
   imports: [
     TranslatePipe,
-    FfmpegCard,
     PrivacyCard,
     MaintenanceCard,
     OnlineServicesCard,
     RatingModeCard,
     UpdatesCard,
-    TranscodingCard,
   ],
   template: `
     <header class="mb-6">
@@ -34,8 +30,6 @@ import { TranscodingCard } from './transcoding-card';
       @for (version of [privacyVersion()]; track version) {
         <app-online-services-card />
       }
-      <app-ffmpeg-card />
-      <app-transcoding-card />
       @if (auth.isAdmin()) {
         <app-updates-card />
         <app-maintenance-card />

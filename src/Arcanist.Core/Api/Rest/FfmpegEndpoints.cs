@@ -36,6 +36,16 @@ public static class FfmpegEndpoints
             .WithName("ClearTranscodeCache")
             .WithSummary("Empties the conversion cache; the versions made ahead of time stay. Requires MANAGE_SETTINGS.");
 
+        var defaults = rest.MapGroup("/streaming-defaults").WithTags("Media");
+
+        defaults.MapGet("", (StreamingDefaultsService service, CancellationToken ct) => service.GetAsync(ct))
+            .WithName("StreamingDefaults")
+            .WithSummary("The quality each kind of Ultimate client (desktop, web, mobile) plays by default. The stream applies it to requests with `client` and no quality of their own; clients show it as their default.");
+
+        defaults.MapPut("", (SetStreamingDefaultsInput input, StreamingDefaultsService service, CancellationToken ct) => service.SetAsync(input, ct))
+            .WithName("SetStreamingDefaults")
+            .WithSummary("Sets the quality each kind of Ultimate client plays by default: the original (no format; with maxBitRate, MP3 only above it) or a format and bit rate. Requires MANAGE_SETTINGS.");
+
         return rest;
     }
 }

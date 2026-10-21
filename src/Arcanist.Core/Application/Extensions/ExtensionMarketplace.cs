@@ -14,7 +14,7 @@ public sealed class MarketplaceOptions
 {
     public const string Section = "Arcanist:Marketplace";
 
-    /// <summary>The catalog: an index.json in the format of github.com/linkfast/arcanist-extensions.</summary>
+    /// <summary>The catalog of extensions and web players: an index.json in the format of github.com/linkfast/arcanist-extensions.</summary>
     public string Url { get; set; } = "https://raw.githubusercontent.com/linkfast/arcanist-extensions/main/index.json";
 
     /// <summary>How long a catalog read is reused before reading it again.</summary>
@@ -79,6 +79,47 @@ public sealed record ExtensionMarketplaceInfo(
     string Source,
     IReadOnlyList<MarketplaceExtension> Extensions);
 
+/// <summary>A web player of the catalog, in its newest version this server can run. Part of the API contract.</summary>
+/// <param name="IconUrl">Its icon, served by this server (a path), or null.</param>
+/// <param name="Official">Made by LinkFast (Ultimate Web Player among them); the others are from the community, reviewed when added.</param>
+/// <param name="Version">The version that would be installed: the newest this server can run, or else the newest.</param>
+/// <param name="InstalledVersion">The version installed here, if any.</param>
+/// <param name="BuiltIn">Comes with this server (it is updated with it): nothing to install.</param>
+/// <param name="IsDefault">Installed and served at <c>/</c>.</param>
+/// <param name="Pricing">Open source, free, paid or freemium; null when the catalog does not say.</param>
+public sealed record MarketplacePlayer(
+    string Id,
+    string Name,
+    string? Description,
+    string? Author,
+    string? Homepage,
+    string? License,
+    string? IconUrl,
+    bool Official,
+    IReadOnlyList<string> Categories,
+    string Version,
+    long? Size,
+    string? MinServerVersion,
+    bool Compatible,
+    string? InstalledVersion,
+    bool UpdateAvailable,
+    bool BuiltIn,
+    bool IsDefault,
+    ExtensionPricing? Pricing = null,
+    string? PricingUrl = null);
+
+/// <summary>The web players of the catalog. Part of the API contract.</summary>
+/// <param name="Available">Whether the catalog could be read; when not, <see cref="ErrorCode"/> says why.</param>
+public sealed record PlayerMarketplaceInfo(
+    bool Available,
+    string? ErrorCode,
+    DateTime? FetchedAt,
+    string Source,
+    IReadOnlyList<MarketplacePlayer> Players);
+
+/// <param name="MakeDefault">Serves it at <c>/</c> as well.</param>
+public sealed record InstallMarketplacePlayerInput(string Id, bool MakeDefault = false);
+
 /// <param name="Enable">Switches it on as well (it runs after a restart). True by default: installing from the catalog is one click.</param>
 public sealed record InstallMarketplaceExtensionInput(string Id, bool Enable = true);
 
@@ -116,7 +157,11 @@ public sealed class MarketplaceCatalog(IHttpClientFactory clients, IOptionsMonit
             if (file is not { Format: 1 })
                 throw new ArcanistException.Unavailable(ErrorCodes.MarketplaceUnavailable);
             // Entries that do not hold together are left out, not the whole catalog.
-            file = file with { Extensions = (file.Extensions ?? []).Where(e => e.IsValid).ToList() };
+            file = file with
+            {
+                Extensions = (file.Extensions ?? []).Where(e => e.IsValid).ToList(),
+                Players = (file.Players ?? []).Where(e => e.IsValid).ToList(),
+            };
             _cached = (file, now, Url);
             _icons.Clear();
             return (file, now);
@@ -132,14 +177,16 @@ public sealed class MarketplaceCatalog(IHttpClientFactory clients, IOptionsMonit
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (byte[] Bytes, string ContentType)?> _icons = new();
 
     /// <summary>
-    /// An extension's icon, read from where the catalog says (a URL, or a path next to the index) and kept until
-    /// the catalog is read again: players never reach the catalog's host, and its SVGs get the right type.
+    /// The icon of an extension (or of a web player, with <paramref name="player"/>), read from where the catalog
+    /// says (a URL, or a path next to the index) and kept until the catalog is read again: players never reach the
+    /// catalog's host, and its SVGs get the right type.
     /// </summary>
-    public async Task<(byte[] Bytes, string ContentType)?> IconAsync(string id, CancellationToken cancellationToken)
+    public async Task<(byte[] Bytes, string ContentType)?> IconAsync(string id, CancellationToken cancellationToken, bool player = false)
     {
-        if (_icons.TryGetValue(id, out var cached))
+        var cacheKey = (player ? "player:" : "") + id;
+        if (_icons.TryGetValue(cacheKey, out var cached))
             return cached;
-        if (_cached?.File.Extensions?.SingleOrDefault(e => e.Id == id)?.Icon is not { } icon
+        if ((player ? _cached?.File.Players : _cached?.File.Extensions)?.SingleOrDefault(e => e.Id == id)?.Icon is not { } icon
             || !Uri.TryCreate(new Uri(Url), icon, out var uri) || uri.Scheme is not ("https" or "http"))
             return null;
 
@@ -166,13 +213,14 @@ public sealed class MarketplaceCatalog(IHttpClientFactory clients, IOptionsMonit
             logger.LogDebug("The icon of {Id} could not be read: {Error}", id, e.Message);
         }
 
-        _icons[id] = found;
+        _icons[cacheKey] = found;
         return found;
     }
 }
 
 /// <summary>The catalog's file. Format 1 is documented in github.com/linkfast/arcanist-extensions.</summary>
-public sealed record CatalogFile(int Format, List<CatalogExtension>? Extensions);
+/// <param name="Players">Web players, described like extensions (their packages hold arcanist-frontend.json).</param>
+public sealed record CatalogFile(int Format, List<CatalogExtension>? Extensions, List<CatalogExtension>? Players = null);
 
 public sealed record CatalogExtension(
     string Id,
@@ -309,18 +357,21 @@ public sealed class ExtensionMarketplaceService(
     }
 
     /// <summary>The newest release this server can run, or else the newest (shown as incompatible).</summary>
-    private static CatalogRelease Pick(CatalogExtension entry)
+    internal static CatalogRelease Pick(CatalogExtension entry)
     {
         var releases = entry.Releases!.OrderByDescending(r => r.Version, Comparer<string>.Create(ArcanistVersion.Compare)).ToList();
         return releases.FirstOrDefault(r => r.RunsOn(ArcanistVersion.Current)) ?? releases[0];
     }
 
-    private static string? ManifestId(Stream archive)
+    private static string? ManifestId(Stream archive) => ManifestId(archive, Core.Extensions.ExtensionHost.ManifestFile);
+
+    /// <summary>The id in a package's manifest (<paramref name="file"/> at its root); null without one.</summary>
+    internal static string? ManifestId(Stream archive, string file)
     {
         try
         {
             using var zip = new ZipArchive(archive, ZipArchiveMode.Read, leaveOpen: true);
-            var manifest = zip.GetEntry(Core.Extensions.ExtensionHost.ManifestFile);
+            var manifest = zip.GetEntry(file);
             if (manifest is null)
                 return null;
             using var stream = manifest.Open();
@@ -330,5 +381,88 @@ public sealed class ExtensionMarketplaceService(
         {
             return null;
         }
+    }
+}
+
+/// <summary>
+/// The web players of the catalog (the official Ultimate Web Player and those anyone publishes), installed with one
+/// click: checked against the SHA-256 the catalog publishes and installed as any other player, with full trust (a
+/// player runs with its users' sessions). Administrators only.
+/// </summary>
+public sealed class PlayerMarketplaceService(
+    AccessGuard guard,
+    MarketplaceCatalog catalog,
+    Frontends.FrontendService frontends,
+    Core.Hosting.FrontendCatalog installed,
+    ExtensionService extensions,
+    Server.PrivacySettings privacy,
+    IHttpClientFactory clients)
+{
+    public async Task<PlayerMarketplaceInfo> GetAsync(string? language, bool refresh, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        if ((await privacy.GetAsync(cancellationToken)).ExternalServices == Server.ExternalServices.None)
+            return new PlayerMarketplaceInfo(false, ErrorCodes.ExternalServicesDisabled, null, catalog.Url, []);
+
+        CatalogFile file;
+        DateTime at;
+        try
+        {
+            (file, at) = await catalog.GetAsync(refresh ? TimeSpan.Zero : null, cancellationToken);
+        }
+        catch (ArcanistException e)
+        {
+            return new PlayerMarketplaceInfo(false, e.Code, null, catalog.Url, []);
+        }
+
+        var languages = await extensions.LanguagesAsync(language, cancellationToken);
+        var here = installed.List().ToDictionary(f => f.Manifest.Id);
+        var current = (await installed.DefaultAsync(cancellationToken))?.Manifest.Id;
+        var entries = (file.Players ?? []).Select(entry =>
+            {
+                var release = ExtensionMarketplaceService.Pick(entry);
+                var player = here.GetValueOrDefault(entry.Id);
+                return new MarketplacePlayer(entry.Id,
+                    ExtensionService.Localized(entry.Names, languages) ?? entry.Name,
+                    ExtensionService.Localized(entry.Descriptions, languages) ?? entry.Description,
+                    entry.Author, entry.Homepage, entry.License,
+                    entry.Icon is null ? null : $"/rest/v1/frontends/marketplace/icons/{entry.Id}", entry.Official, entry.Categories ?? [],
+                    release.Version, release.Size, release.MinServerVersion, release.RunsOn(ArcanistVersion.Current),
+                    player is { BuiltIn: false } ? player.Manifest.Version : null,
+                    player is { BuiltIn: false } && ArcanistVersion.Compare(release.Version, player.Manifest.Version) > 0,
+                    player is { BuiltIn: true }, player is not null && current == entry.Id, entry.PricingKind, entry.SafePricingUrl);
+            })
+            .OrderByDescending(e => e.Official).ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        return new PlayerMarketplaceInfo(true, null, at, catalog.Url, entries);
+    }
+
+    /// <summary>Installs (or updates) a web player of the catalog and, when asked, serves it at <c>/</c>.</summary>
+    public async Task<Frontends.Frontend> InstallAsync(InstallMarketplacePlayerInput input, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        if ((await privacy.GetAsync(cancellationToken)).ExternalServices == Server.ExternalServices.None)
+            throw new ArcanistException.Conflict(ErrorCodes.ExternalServicesDisabled);
+
+        var (file, _) = await catalog.GetAsync(TimeSpan.FromMinutes(5), cancellationToken);
+        var entry = (file.Players ?? []).SingleOrDefault(e => e.Id == input.Id) ?? throw new ArcanistException.NotFound();
+        if (installed.Find(entry.Id) is { BuiltIn: true })
+            throw ArcanistException.Field("id", ErrorCodes.Duplicate);
+        var release = ExtensionMarketplaceService.Pick(entry);
+        if (!release.RunsOn(ArcanistVersion.Current))
+            throw new ArcanistException.Conflict(ErrorCodes.MarketplaceIncompatible);
+
+        await using var archive = await PackageArchive.DownloadAsync(clients.CreateClient(Frontends.FrontendService.HttpClientName), release.Url, cancellationToken);
+        var hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(archive, cancellationToken));
+        if (!string.Equals(hash, release.Sha256, StringComparison.OrdinalIgnoreCase))
+            throw new ArcanistException.Conflict(ErrorCodes.PackageChecksumMismatch);
+        archive.Position = 0;
+        if (ExtensionMarketplaceService.ManifestId(archive, Core.Hosting.FrontendCatalog.ManifestFile) != entry.Id)
+            throw new ArcanistException.Conflict(ErrorCodes.PackageMismatch);
+        archive.Position = 0;
+
+        var player = await frontends.InstallAsync(archive, cancellationToken);
+        return input.MakeDefault ? await frontends.SetDefaultAsync(player.Id, cancellationToken) : player;
     }
 }

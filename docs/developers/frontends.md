@@ -45,6 +45,15 @@ it is served (replacing the one in the file, or adding one), so:
 Client-side routes fall back to the entry page. Files whose name contains a content hash (for example
 `main-3F2A1B9C.js`) are sent as immutable; others are revalidated.
 
+## Publishing it in the Marketplace
+
+Administrators install web players from the **Marketplace** (Extensions → Marketplace → Web players) with one
+click, as extensions. Its catalog is [github.com/linkfast/arcanist-extensions](https://github.com/linkfast/arcanist-extensions),
+which lists web players in `players`: publish your player's `.zip` as a release of a public GitHub repository and
+propose it with the **Add a web player** issue form; an automation checks the package (its `arcanist-frontend.json`)
+and opens a pull request. Say how it is offered (open source, free, freemium or paid). Ultimate Web Player, LinkFast's
+player, is listed there as well (free, official).
+
 ## Trust
 
 A player runs on the same origin as the admin panel and the APIs: it acts with the session of whoever opens it. The

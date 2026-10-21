@@ -70,6 +70,12 @@ export const routes: Routes = [
           import('./features/settings/settings.page').then((m) => m.SettingsPage),
       },
       {
+        path: 'transcoding',
+        canActivate: [permissionGuard('MANAGE_SETTINGS')],
+        loadComponent: () =>
+          import('./features/transcoding/transcoding.page').then((m) => m.TranscodingPage),
+      },
+      {
         path: 'extensions',
         canActivate: [adminGuard],
         loadComponent: () =>

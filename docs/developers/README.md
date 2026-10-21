@@ -140,6 +140,7 @@ without ffmpeg). Add parameters to a stream URL:
 | `format=opus\|mp3\|aac\|flac` | Convert to that format (Opus in Ogg, MP3, AAC in ADTS, lossless FLAC). |
 | `maxBitRate=128` | Bit rate in kbit/s (clamped to the format's range). Alone, it converts to MP3 only if the original exceeds it. |
 | `timeOffset=93.5` | Start that many seconds in. |
+| `client=desktop\|web\|mobile` | An Ultimate client: without `format`, `maxBitRate` or `download`, the quality the server sets for that kind of client (below). |
 
 Converted audio is streamed as it is produced: there is no `Content-Length` or range support, so players seek by
 requesting the URL again with `timeOffset`. `X-Content-Duration` gives the remaining duration in seconds. A song the
@@ -148,6 +149,12 @@ server converted before (its conversion cache, or the versions it makes ahead of
 either. Without
 ffmpeg, or when too many conversions are running, the answer is `503` with code `transcoding_unavailable`: fall back
 to the original.
+
+**Default quality of the Ultimate clients** (`ApiFeature.STREAMING_DEFAULTS`): `streamingDefaults` /
+`GET /rest/v1/streaming-defaults` (any signed-in user) gives, for `desktop`, `web` and `mobile`, the `format` (null:
+the original) and `maxBitRate` the administrator chose in the panel's Transcoding page. Ultimate clients show it as
+their default quality and send `client=` on their streams so the server applies it; a quality the user picks in the
+app is sent as `format`/`maxBitRate` and wins.
 
 Tracks of albums stored as one file with a cue sheet are parts of that file, so they are always sent converted (as
 FLAC when the file is lossless, otherwise as MP3, unless `format` says otherwise) and need ffmpeg on the server.

@@ -5,6 +5,7 @@ import { filter, map } from 'rxjs';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArchive,
+  lucideAudioWaveform,
   lucideBrainCircuit,
   lucideCast,
   lucideChartColumn,
@@ -51,6 +52,7 @@ import { UpdateNotice } from './update-notice';
   providers: [
     provideIcons({
       lucideArchive,
+      lucideAudioWaveform,
       lucideCast,
       lucideChartColumn,
       lucideGift,
@@ -307,6 +309,12 @@ export class Shell {
         path: '/settings',
         label: 'nav.settings',
         icon: 'lucideSettings',
+        visible: this.auth.can('MANAGE_SETTINGS'),
+      },
+      {
+        path: '/transcoding',
+        label: 'nav.transcoding',
+        icon: 'lucideAudioWaveform',
         visible: this.auth.can('MANAGE_SETTINGS'),
       },
       {

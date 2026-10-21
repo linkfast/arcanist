@@ -1,4 +1,5 @@
 using Arcanist.Core.Application;
+using Arcanist.Core.Application.Extensions;
 using Arcanist.Core.Application.Frontends;
 using Arcanist.Core.Packages;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,29 @@ public static class FrontendEndpoints
                 service.InstallFromUrlAsync(input.Url, ct))
             .WithName("InstallFrontendFromUrl")
             .WithSummary("Downloads a web player's .zip and installs it (or updates it). It runs with the user's session: install only what you trust. Administrators only, with a recent authentication.");
+
+        frontends.MapGet("/marketplace", (string? language, bool? refresh, PlayerMarketplaceService marketplace, CancellationToken ct) =>
+                marketplace.GetAsync(language, refresh ?? false, ct))
+            .WithName("PlayerMarketplace")
+            .WithSummary("The web players of the catalog (github.com/linkfast/arcanist-extensions by default: Ultimate Web Player and those anyone publishes), named in `language`, with what is installed here. Read again after an hour, or now with `refresh`. Administrators only.");
+
+        // Without authentication, for <img>: only icons the catalog lists, which are public anyway.
+        frontends.MapGet("/marketplace/icons/{id}", async (string id, HttpContext context, MarketplaceCatalog catalog, CancellationToken ct) =>
+            {
+                if (await catalog.IconAsync(id, ct, player: true) is not { } icon)
+                    return Results.NotFound();
+                // An SVG shown on its own could run scripts: nothing may load or run in it.
+                context.Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+                context.Response.Headers.CacheControl = "public, max-age=3600";
+                return Results.Bytes(icon.Bytes, icon.ContentType);
+            })
+            .AllowAnonymous()
+            .ExcludeFromDescription();
+
+        frontends.MapPost("/marketplace/install", (InstallMarketplacePlayerInput input, PlayerMarketplaceService marketplace, CancellationToken ct) =>
+                marketplace.InstallAsync(input, ct))
+            .WithName("InstallMarketplacePlayer")
+            .WithSummary("Installs (or updates) a web player of the catalog, checked against the SHA-256 the catalog publishes, and serves it at / when `makeDefault`. It runs with its users' sessions. Administrators only, with a recent authentication.");
 
         frontends.MapPut("/default/{id}", (string id, FrontendService service, CancellationToken ct) => service.SetDefaultAsync(id, ct))
             .WithName("SetDefaultFrontend")

@@ -27,6 +27,38 @@ public sealed record SetTranscodingSettingsInput(
     IReadOnlyList<Guid>? PregenerateLibraries,
     bool PregenerateOnlyLossless);
 
+public sealed record ClientStreamingQualityInput(TranscodeFormat? Format, int? MaxBitRate);
+
+public sealed record SetStreamingDefaultsInput(ClientStreamingQualityInput Desktop, ClientStreamingQualityInput Web, ClientStreamingQualityInput Mobile);
+
+/// <summary>The quality each kind of Ultimate client gets by default: any user reads it (their apps do), managers change it.</summary>
+public sealed class StreamingDefaultsService(AccessGuard guard, StreamingDefaultsSettings settings)
+{
+    public Task<StreamingDefaults> GetAsync(CancellationToken cancellationToken)
+    {
+        guard.Authenticated();
+        return settings.GetAsync(cancellationToken);
+    }
+
+    public Task<StreamingDefaults> SetAsync(SetStreamingDefaultsInput input, CancellationToken cancellationToken)
+    {
+        guard.Permission(Permissions.ManageSettings);
+        var errors = new ValidationErrors();
+        foreach (var (field, quality) in new[] { ("desktop", input.Desktop), ("web", input.Web), ("mobile", input.Mobile) })
+        {
+            if (quality is null)
+                errors.Add(field, ErrorCodes.Required);
+            else if (quality.MaxBitRate is < 32 or > 320)
+                errors.Add(field + ".maxBitRate", ErrorCodes.InvalidFormat);
+        }
+
+        errors.ThrowIfAny();
+        return settings.SetAsync(new StreamingDefaults(Quality(input.Desktop), Quality(input.Web), Quality(input.Mobile)), cancellationToken);
+    }
+
+    private static ClientStreamingQuality Quality(ClientStreamingQualityInput input) => new(input.Format, input.MaxBitRate);
+}
+
 /// <summary>How converted audio is kept. Requires MANAGE_SETTINGS.</summary>
 public sealed class TranscodingService(
     AccessGuard guard,

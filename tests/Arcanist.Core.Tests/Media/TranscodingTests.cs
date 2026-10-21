@@ -61,6 +61,34 @@ public sealed class TranscodingTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task Each_Ultimate_client_gets_the_quality_the_server_sets_for_it()
+    {
+        await StartAsync(TestFfmpeg.Require());
+
+        var defaults = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/streaming-defaults", ArcanistFactory.Json, Cancel);
+        Assert.Equal(JsonValueKind.Null, defaults.GetProperty("desktop").GetProperty("format").ValueKind);
+        Assert.Equal(("OPUS", 128), (defaults.GetProperty("mobile").GetProperty("format").GetString(), defaults.GetProperty("mobile").GetProperty("maxBitRate").GetInt32()));
+
+        var invalid = await _admin.PutAsJsonAsync("/rest/v1/streaming-defaults",
+            new { desktop = new { format = (string?)null }, web = new { format = "MP3", maxBitRate = 1000 }, mobile = new { format = "OPUS" } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        var set = await _admin.PutAsJsonAsync("/rest/v1/streaming-defaults",
+            new { desktop = new { format = (string?)null }, web = new { format = "MP3", maxBitRate = 96 }, mobile = new { format = "FLAC", maxBitRate = 128 } }, ArcanistFactory.Json, Cancel);
+        var saved = await set.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        // Lossless has no bit rate.
+        Assert.Equal(JsonValueKind.Null, saved.GetProperty("mobile").GetProperty("maxBitRate").ValueKind);
+
+        // The web client converted, the desktop one the original (with ranges), and a quality of its own wins.
+        var web = await _admin.GetAsync($"/rest/v1/stream/{_trackId}?client=web", Cancel);
+        Assert.Equal("audio/mpeg", web.Content.Headers.ContentType?.MediaType);
+        var desktop = await _admin.GetAsync($"/rest/v1/stream/{_trackId}?client=DESKTOP", Cancel);
+        Assert.Contains("bytes", desktop.Headers.AcceptRanges);
+        var own = await _admin.GetAsync($"/rest/v1/stream/{_trackId}?client=web&format=opus", Cancel);
+        Assert.Equal("audio/ogg", own.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(HttpStatusCode.BadRequest, (await _admin.GetAsync($"/rest/v1/stream/{_trackId}?client=fridge", Cancel)).StatusCode);
+    }
+
     private Task<JsonElement> TranscodingAsync() => _admin.GetFromJsonAsync<JsonElement>("/rest/v1/transcoding", ArcanistFactory.Json, Cancel);
 
     private Task<HttpResponseMessage> SetTranscodingAsync(bool cache, params object[] pregenerate) =>

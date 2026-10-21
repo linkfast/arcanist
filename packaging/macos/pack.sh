@@ -45,7 +45,8 @@ for library in libarcanist_audio.dylib libarcanist_p2p.dylib; do
 done
 cp -R "$panel" "$app/server/wwwroot/admin"
 
-dotnet publish src/Arcanist.Tray -f net10.0 -c Release -r "$rid" --self-contained -p:Version="$version" -o "$app"
+# One file: Contents/MacOS may only hold code, and .NET's assemblies are not (native libraries stay beside it).
+dotnet publish src/Arcanist.Tray -f net10.0 -c Release -r "$rid" --self-contained -p:Version="$version"     -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=false -o "$app"
 find "$app" -name '*.pdb' -delete
 
 # The icon, from the tray's 256 px PNG (macOS scales it up for the largest sizes).
@@ -79,12 +80,19 @@ mkdir -p "$bundle"
 ditto -x -k "$out/releases/Arcanist-$channel-Portable.zip" "$bundle"
 rm "$out/releases/Arcanist-$channel-Portable.zip"
 [ -d "$bundle/Arcanist.app" ] || { echo "Velopack's portable zip has no Arcanist.app" >&2; exit 1; }
-# Ad hoc, with no certificate: every file in Contents/MacOS (codesign wants all of it signed: .NET's assemblies live
-# there too, and get their signature in an extended attribute, which the .dmg, the .zip and the .pkg keep; the server's
-# files, outside the folders --deep reaches; Rust's x86_64 libraries, which the linker leaves unsigned), then the
-# bundle, so Gatekeeper can ask instead of calling it damaged.
+# The server, with its assemblies, settings and web files, goes to Resources: Contents/MacOS may only hold code
+# (the app finds it in either place).
+mv "$bundle/Arcanist.app/Contents/MacOS/server" "$bundle/Arcanist.app/Contents/Resources/server"
+echo "Not code in Contents/MacOS (should be nothing):"
 find "$bundle/Arcanist.app/Contents/MacOS" -type f | while IFS= read -r file; do
-    codesign --force --sign - "$file"
+    case "$(file -b "$file")" in *Mach-O*) ;; *) echo "  $file" ;; esac
+done
+
+# Ad hoc, with no certificate: every binary (the server's included, outside the folders --deep reaches, and Rust's
+# x86_64 libraries, which the linker leaves unsigned), then the bundle, so Gatekeeper can ask instead of calling it
+# damaged.
+find "$bundle/Arcanist.app/Contents" -type f | while IFS= read -r file; do
+    case "$(file -b "$file")" in *Mach-O*) codesign --force --sign - "$file" ;; esac
 done
 codesign --force --sign - "$bundle/Arcanist.app"
 codesign --verify --deep "$bundle/Arcanist.app"

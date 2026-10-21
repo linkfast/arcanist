@@ -42,10 +42,20 @@ internal sealed record Installation(string ServerDirectory, string DataDirectory
     public static Installation Detect() => new(
         Environment.GetEnvironmentVariable("ARCANIST_SERVER_DIR") is { Length: > 0 } server
             ? Path.GetFullPath(server)
-            : Path.Combine(AppContext.BaseDirectory, "server"),
+            : BundledServer(),
         Environment.GetEnvironmentVariable("ARCANIST_DATA_DIR") is { Length: > 0 } data
             ? Path.GetFullPath(data)
             : DefaultDataDirectory());
+
+    /// <summary>
+    /// <c>server</c> next to the executable; in Arcanist.app, <c>Contents/Resources/server</c> (Contents/MacOS may only
+    /// hold code), or next to it where an update put it back.
+    /// </summary>
+    private static string BundledServer()
+    {
+        var resources = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Resources", "server"));
+        return OperatingSystem.IsMacOS() && Directory.Exists(resources) ? resources : Path.Combine(AppContext.BaseDirectory, "server");
+    }
 
     private static string DefaultDataDirectory() => OperatingSystem.IsMacOS()
         ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Application Support", "Arcanist")

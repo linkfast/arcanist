@@ -354,7 +354,7 @@ public sealed class P2PService(
         var actor = guard.Admin();
         guard.RecentAuthentication();
         var invitation = P2PLinks.Parse(link);
-        if (invitation is not { Kind: P2PPeerKind.Server, Backup: false })
+        if (invitation is not { Kind: P2PPeerKind.Server, Backup: false, Migrate: false })
             throw ArcanistException.Field("link", ErrorCodes.InvitationInvalid);
 
         var config = await Settings.GetAsync(cancellationToken);
@@ -782,7 +782,8 @@ public sealed class P2PService(
 
 /// <summary>What an invitation link holds.</summary>
 /// <param name="Backup">An invitation to keep the joining server's backups (<c>kind=backup</c>).</param>
-public sealed record P2PInvitationData(P2PPeerKind Kind, NodeTicket Ticket, string Token, string Name, bool Backup = false);
+/// <param name="Migrate">A migration code of that server (kind=migrate): its token is the code.</param>
+public sealed record P2PInvitationData(P2PPeerKind Kind, NodeTicket Ticket, string Token, string Name, bool Backup = false, bool Migrate = false);
 
 /// <summary>
 /// Invitation links: <c>arcanist://p2p?kind=device|share|backup&amp;node=…&amp;token=…&amp;name=…</c>, with the node's ticket
@@ -792,9 +793,9 @@ public static class P2PLinks
 {
     private const string Prefix = "arcanist://p2p?";
 
-    public static string Build(P2PPeerKind kind, NodeTicket ticket, string token, string name, bool backup = false) =>
+    public static string Build(P2PPeerKind kind, NodeTicket ticket, string token, string name, bool backup = false, bool migrate = false) =>
         Prefix + string.Join('&',
-            "kind=" + (kind == P2PPeerKind.Device ? "device" : backup ? "backup" : "share"),
+            "kind=" + (kind == P2PPeerKind.Device ? "device" : migrate ? "migrate" : backup ? "backup" : "share"),
             "node=" + P2PService.Base64Url(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(ticket, NativeP2P.Json))),
             "token=" + Uri.EscapeDataString(token),
             "name=" + Uri.EscapeDataString(name));
@@ -818,7 +819,7 @@ public static class P2PLinks
             if (ticket is not { Id.Length: 64 })
                 return null;
             return new P2PInvitationData(kind == "device" ? P2PPeerKind.Device : P2PPeerKind.Server, ticket, token, values.GetValueOrDefault("name") ?? "",
-                Backup: kind == "backup");
+                Backup: kind == "backup", Migrate: kind == "migrate");
         }
         catch (Exception e) when (e is FormatException or JsonException)
         {

@@ -71,7 +71,7 @@ type Snapshot = SetupStoredBackup['snapshots'][number];
       </hlm-dialog-header>
 
       <hlm-radio-group
-        class="grid gap-2 sm:grid-cols-2"
+        class="grid gap-2 sm:grid-cols-3"
         name="kind"
         [ngModel]="kind"
         (ngModelChange)="setKind($event)"
@@ -84,9 +84,24 @@ type Snapshot = SetupStoredBackup['snapshots'][number];
           <hlm-radio value="S3" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
           <span class="font-medium">{{ 'backups.destinations.kinds.S3' | t }}</span>
         </label>
+        <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+          <hlm-radio value="ARCANIST" class="mt-0.5"><hlm-radio-indicator indicator /></hlm-radio>
+          <span class="font-medium">{{ 'setup.restore.arcanist' | t }}</span>
+        </label>
       </hlm-radio-group>
 
-      @if (kind === 'FOLDER') {
+      @if (kind === 'ARCANIST') {
+        <div class="grid gap-3 rounded-lg border p-3 text-sm">
+          <p>{{ 'setup.restore.arcanistHelp' | t }}</p>
+          <ul class="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+            <li>{{ 'setup.restore.arcanistCode' | t }}</li>
+            <li>{{ 'setup.restore.arcanistAccount' | t }}</li>
+          </ul>
+          <button hlmBtn type="button" class="justify-self-start" (click)="migrate.emit()">
+            {{ 'setup.restore.arcanistGo' | t }}
+          </button>
+        </div>
+      } @else if (kind === 'FOLDER') {
         <hlm-field>
           <label hlmFieldLabel for="restore-path">{{ 'setup.restore.folder' | t }}</label>
           <div class="flex gap-2">
@@ -108,20 +123,22 @@ type Snapshot = SetupStoredBackup['snapshots'][number];
         <app-s3-connection fieldId="restore-s3" [value]="s3" (valueChange)="s3 = $event; reset()" />
       }
 
-      <div>
-        <button
-          hlmBtn
-          variant="outline"
-          type="button"
-          [disabled]="busy() || !sourceReady()"
-          (click)="browse()"
-        >
-          @if (busy() && backups() === null) {
-            <hlm-spinner class="size-4" />
-          }
-          {{ 'setup.restore.search' | t }}
-        </button>
-      </div>
+      @if (kind !== 'ARCANIST') {
+        <div>
+          <button
+            hlmBtn
+            variant="outline"
+            type="button"
+            [disabled]="busy() || !sourceReady()"
+            (click)="browse()"
+          >
+            @if (busy() && backups() === null) {
+              <hlm-spinner class="size-4" />
+            }
+            {{ 'setup.restore.search' | t }}
+          </button>
+        </div>
+      }
 
       @if (backups(); as list) {
         @if (list.length === 0) {
@@ -247,8 +264,10 @@ export class SetupRestoreDialog {
   readonly createDirectory = input<DirectoryCreator | null>(null);
   readonly started = output<void>();
   readonly cancelled = output<void>();
+  /** Bring another Arcanist over instead (the wizard goes on, and its dialog opens at the import step). */
+  readonly migrate = output<void>();
 
-  protected kind: 'FOLDER' | 'S3' = 'FOLDER';
+  protected kind: 'FOLDER' | 'S3' | 'ARCANIST' = 'FOLDER';
   protected path = '';
   protected s3: S3ConnectionDraft = emptyS3Connection();
   protected password = '';

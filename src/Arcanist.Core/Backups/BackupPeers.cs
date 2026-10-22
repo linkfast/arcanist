@@ -30,7 +30,7 @@ internal sealed class BackupPeers(
     public async Task<BackupDestination> JoinAsync(string name, string? invitation, CancellationToken cancellationToken)
     {
         var data = P2PLinks.Parse(invitation);
-        if (data is not { Kind: P2PPeerKind.Server, Backup: true })
+        if (data is not { Kind: P2PPeerKind.Server, Backup: true, Migrate: false })
             throw ArcanistException.Field("invitation", ErrorCodes.InvitationInvalid);
         var config = await services.GetRequiredService<P2PSettings>().GetAsync(cancellationToken);
         if (!config.Enabled || !services.GetRequiredService<P2PNode>().IsRunning)

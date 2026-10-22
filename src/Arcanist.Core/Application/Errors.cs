@@ -106,6 +106,12 @@ public static class ErrorCodes
     public const string ExternalServicesDisabled = "external_services_disabled";
     /// <summary>The link could not be read as a song (the page did not say its title and artist, or did not answer).</summary>
     public const string WishLinkUnreadable = "wish_link_unreadable";
+    /// <summary>The other Arcanist did not accept the migration code (wrong, expired or revoked).</summary>
+    public const string MigrationCodeInvalid = "migration_code_invalid";
+    /// <summary>The other Arcanist could not be reached (address, network, or its P2P node).</summary>
+    public const string MigrationSourceUnreachable = "migration_source_unreachable";
+    /// <summary>That server is not an Arcanist that can be migrated from (or speaks an export format this one does not know).</summary>
+    public const string MigrationSourceUnsupported = "migration_source_unsupported";
     /// <summary>The link is to an album, a playlist, an artist…: a wish is one song.</summary>
     public const string WishLinkNotASong = "wish_link_not_a_song";
 

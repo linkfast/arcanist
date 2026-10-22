@@ -194,6 +194,15 @@ export const es: Dictionary = {
     },
     restore: {
       offerTitle: '¿Vienes de una copia de seguridad?',
+      arcanist: 'Otro servidor Arcanist',
+      arcanistHelp:
+        'Trae otro Arcanist que sigue funcionando (su base de datos, su música, sus usuarios y sus ajustes) sin necesidad de una copia de seguridad.',
+      arcanistCode:
+        'Necesitas un código de migración del otro servidor: Importación → «Migrar este servidor a otro».',
+      arcanistAccount:
+        'Antes eliges la base de datos y creas tu cuenta; después se abre la migración para elegir qué traer.',
+      arcanistGo: 'Continuar con la migración',
+      migrateNext: 'Crea la base de datos y tu cuenta: luego eliges qué traer del otro Arcanist.',
       offer:
         'Si tienes una copia de un servidor Arcanist con su base de datos, puedes restaurarlo entero en lugar de configurarlo desde cero.',
       open: 'Restaurar desde una copia de seguridad',
@@ -307,6 +316,15 @@ export const es: Dictionary = {
         'Las extensiones y los reproductores se ejecutan con plena confianza: instala solo lo que conozcas. Las extensiones instaladas funcionan tras reiniciar el servidor.',
     },
     stepOf: 'Paso {current} de {total}',
+    jump: 'Ir a un paso',
+    draft: {
+      passwordAgain:
+        'Por seguridad, las contraseñas no se guardan al recargar: escribe de nuevo la de tu cuenta.',
+      connectionAgain:
+        'Por seguridad, la conexión a PostgreSQL no se guarda al recargar: escríbela de nuevo.',
+      usersAgain:
+        'Por seguridad, las contraseñas no se guardan al recargar: escribe de nuevo las de los usuarios.',
+    },
     finish: 'Terminar la configuración',
     steps: {
       ultimate: {
@@ -405,6 +423,29 @@ export const es: Dictionary = {
     },
     import: {
       dlna: 'Un servidor DLNA/UPnP',
+      kinds: {
+        arcanist: {
+          name: 'Otro Arcanist',
+          help: 'Sus bibliotecas, usuarios, datos, ajustes y extensiones, por la red o con su enlace P2P.',
+        },
+        mstream: {
+          name: 'mStream',
+          help: 'Bibliotecas, usuarios con sus contraseñas, playlists, valoraciones y reproducciones.',
+        },
+        dlna: {
+          name: 'Un servidor DLNA',
+          help: 'La música de otro servidor de tu red (MinimServer, Serviio, un NAS…). Solo archivos.',
+        },
+      },
+      chosen: 'Elegido',
+      clear: 'No importar',
+      use: 'Usar esta importación',
+      blocks:
+        'La importación empieza al terminar el asistente; este muestra su progreso y no abre el panel hasta que acabe (aunque recargues la página).',
+      continuesAgain:
+        'La importación empieza al terminar y sigue en segundo plano: verás su progreso en Importación.',
+      dlnaSummary: '{server}: {folders}',
+      arcanistSummary: '{server}: {libraries} biblioteca(s) y {users} usuario(s)',
       dlnaHelp:
         'Copia la música de otro servidor de tu red (MinimServer, Serviio, un NAS…). Solo archivos: no trae usuarios.',
       dlnaPick: 'Elegir servidor y carpetas',
@@ -428,6 +469,8 @@ export const es: Dictionary = {
         'Se quedan como están; para cambiarlas o quitarlas, ve a Bibliotecas. Aquí puedes añadir otras.',
       add: 'Añadir una biblioteca',
       fromMstream: 'De mStream: {vpath}',
+      fromDlna: 'De {server} (DLNA)',
+      fromArcanist: 'De {server}',
       namePlaceholder: 'Música, Audiolibros…',
       nameRequired: 'Pon un nombre a cada biblioteca con carpetas.',
       another: 'Otra biblioteca',
@@ -518,10 +561,12 @@ export const es: Dictionary = {
         'Al terminar verás cómo Arcanist lee tu música y, si importas, cómo llegan los datos.',
     },
     progress: {
-      migrationWait: 'Espera a que termine la migración de mStream.',
+      migrationWait: 'Espera a que termine la importación.',
       extrasFailed: 'Esto no se pudo aplicar; puedes hacerlo desde el panel:',
       libraries: 'Bibliotecas',
       mstream: 'Importación desde mStream',
+      arcanist: 'Migración desde otro Arcanist',
+      dlna: 'Copia desde un servidor DLNA',
       created: '{libraries} biblioteca(s) y {users} usuario(s) creados.',
       brought:
         '{playlists} playlists, {ratings} valoraciones y {plays} canciones reproducidas · {unmatched} sin encontrar.',
@@ -1047,6 +1092,7 @@ export const es: Dictionary = {
       help: 'Trae bibliotecas, usuarios, playlists, valoraciones y reproducciones de otro servidor de música. El otro servidor no se modifica.',
       mstream: 'Desde mStream',
       dlna: 'Desde un servidor DLNA',
+      arcanist: 'Desde otro Arcanist',
       clear: 'Limpiar historial',
       clearTitle: '¿Limpiar el historial de importaciones?',
       clearHelp:
@@ -2461,6 +2507,127 @@ export const es: Dictionary = {
       'Escanéalo con la app en el dispositivo. Después inicia sesión en la app como siempre.',
     serverHelp: 'Envía este enlace al administrador del otro servidor.',
   },
+  arcanistImport: {
+    title: 'Migrar desde otro Arcanist',
+    subtitle:
+      'Trae otro servidor Arcanist a este: sus bibliotecas y su música, sus usuarios y sus datos, sus ajustes, extensiones y reproductores. El otro servidor no se modifica y leerlo nunca cuenta como reproducciones.',
+    how: {
+      found: 'Buscar en la red',
+      address: 'Por su dirección',
+      link: 'Con su enlace P2P',
+    },
+    servers: {
+      title: 'Servidores Arcanist',
+      search: 'Buscar de nuevo',
+      searching: 'Buscando en la red…',
+      none: 'No se encontró ninguno. Escribe su dirección o usa su enlace P2P.',
+      paired: 'Emparejado por la red P2P',
+    },
+    address: 'Dirección del otro servidor',
+    addressHelp: 'Por ejemplo 192.168.1.20:8484 o https://musica.ejemplo.com.',
+    link: 'Enlace de migración P2P',
+    linkHelp:
+      'Lleva el código dentro y llega sin abrir puertos. Al usarlo se enciende la red P2P de este servidor.',
+    code: 'Código de migración',
+    codeHelp:
+      'Créalo en el otro servidor: Importación → «Migrar este servidor a otro». Vale 24 horas.',
+    read: 'Leer el servidor',
+    change: 'Cambiar',
+    libraries: {
+      title: 'Bibliotecas',
+      help: 'Elige las que vienen y a qué biblioteca de este servidor va cada una. Varias pueden ir a la misma.',
+      helpSetup:
+        'Elige las que vienen y la carpeta de este servidor donde se copia cada una. Las que compartan carpeta serán una sola biblioteca.',
+      same: 'Todas al mismo destino',
+      sameHelp: 'Todas las bibliotecas elegidas van aquí:',
+      files: '{count} archivos',
+      new: 'Una biblioteca nueva',
+      name: 'Nombre de la biblioteca',
+      folder: 'Carpeta de este servidor',
+      none: 'El otro servidor no tiene bibliotecas que se puedan traer.',
+      copyNote:
+        'Los archivos se copian tal cual, con sus carpetas. Nunca se sobrescribe nada: lo que ya está se salta.',
+    },
+    users: {
+      title: 'Usuarios',
+      help: 'Los que ya existen aquí (por nombre) no cambian: solo reciben sus datos.',
+      all: 'Todos',
+      none: 'Ninguno',
+      isAdmin: 'Eres tú',
+      exists: 'Ya existe',
+      disabled: 'Desactivado',
+      noPassword: 'Sin contraseña',
+      secondFactor: 'Segundo factor',
+      empty: 'El otro servidor no tiene usuarios.',
+    },
+    options: {
+      title: 'Qué más viene',
+      copyPasswords: 'Copiar las contraseñas',
+      copyPasswordsHelp:
+        'Los usuarios nuevos entran con la misma contraseña. Nunca se copian contraseñas de aplicación, sesiones, dispositivos ni segundos factores: quien tenía uno lo empareja de nuevo al entrar.',
+      permissions: 'Permisos y acceso a bibliotecas',
+      permissionsHelp:
+        'Cada usuario nuevo conserva su rol, sus permisos y sus bibliotecas. Sin esto, son usuarios que pueden descargar y ven las bibliotecas visibles para todos.',
+      userData: 'Datos de los usuarios',
+      userDataHelp:
+        'Valoraciones, reproducciones e historial, playlists y listas de deseos. Traerlos dos veces no cuenta nada dos veces.',
+      settings: 'Ajustes del servidor',
+      settingsHelp:
+        'Valoraciones, privacidad, servicios en línea, idioma, DLNA, mStream, transcodificación, IA… No los de esta máquina (base de datos, carpetas, P2P, Ultimate Cloud).',
+      extensions: 'Extensiones y reproductores',
+      extensionsHelp:
+        'Las integradas quedan encendidas o apagadas como allí; las demás se instalan (del marketplace si las tiene) y su reproductor predeterminado también lo será aquí.',
+      installed: 'Ya está aquí',
+      available: 'Se instalará',
+      unavailable: 'No se puede traer',
+    },
+    start: 'Empezar la migración',
+    startedToast: 'La migración empezó: sigue en segundo plano.',
+    status: {
+      QUEUED: 'En cola',
+      PREPARING: 'Ajustes y extensiones',
+      COPYING: 'Copiando música',
+      WAITING: 'Escaneando',
+      APPLYING: 'Trayendo los datos',
+      COMPLETED: 'Terminada',
+      FAILED: 'Falló',
+      CANCELLED: 'Cancelada',
+    },
+    job: {
+      into: 'En {libraries}',
+      prepared:
+        '{created} usuario(s) creados y {mapped} existentes · {libraries} biblioteca(s) nuevas · {extensions} extensión(es) y {players} reproductor(es) instalados',
+      settings: 'ajustes aplicados',
+      files:
+        '{copied} copiados, {present} ya estaban y {failed} fallaron de {total} archivos · {size} de {totalSize}',
+      waiting: 'Esperando a que se escaneen las bibliotecas para traer los datos de los usuarios…',
+      brought:
+        '{ratings} valoraciones, {plays} reproducciones, {playlists} playlists y {wishes} deseos · {unmatched} referencias sin encontrar.',
+      failures: '{count} archivos no se pudieron copiar',
+      cancel: 'Detener',
+      retry: 'Continuar',
+    },
+    codes: {
+      title: 'Migrar este servidor a otro',
+      help: 'Crea un código para que otro Arcanist (un servidor nuevo, por ejemplo) se traiga este: usuarios, bibliotecas y música, datos, ajustes y extensiones. Leer este servidor así no cuenta reproducciones ni cambia nada aquí.',
+      create: 'Crear un código de migración',
+      active: 'Activo',
+      revoked: 'Revocado',
+      expired: 'Caducado',
+      made: 'Creado {when}',
+      until: 'válido hasta {when}',
+      used: 'usado {when} por {by}',
+      revoke: 'Revocar',
+      createdTitle: 'Código de migración',
+      createdHelp:
+        'Escríbelo en el otro servidor (Importación → Desde otro Arcanist, o en su asistente inicial). Solo se muestra ahora. Quien lo tenga puede leer todo este servidor, contraseñas incluidas: compártelo solo con quien vaya a hacer la migración.',
+      addresses: 'Direcciones de este servidor en tu red',
+      link: 'Enlace P2P (sin abrir puertos)',
+      linkHelp: 'Lleva el código dentro: pégalo en el otro servidor y no hace falta nada más.',
+      noLink: 'Con la red P2P encendida también tendrías un enlace para migrar sin abrir puertos.',
+      validUntil: 'Vale hasta {when}.',
+    },
+  },
   dlnaImport: {
     choose: 'Usar esta selección',
     title: 'Copiar desde un servidor DLNA',
@@ -2938,6 +3105,11 @@ export const es: Dictionary = {
     },
   },
   errors: {
+    migration_code_invalid: 'El código de migración no es válido, caducó o fue revocado.',
+    migration_source_unreachable:
+      'No se pudo llegar al otro servidor. Comprueba su dirección y que esté encendido.',
+    migration_source_unsupported:
+      'Ese servidor no es un Arcanist que se pueda migrar (o es de una versión que esta no entiende). Actualiza ambos.',
     wish_link_unreadable:
       'No se pudo leer la canción de ese enlace. Prueba con otro o escríbela a mano.',
     wish_link_not_a_song: 'Ese enlace no es de una canción (es un álbum, una lista o un artista).',

@@ -9,7 +9,7 @@ export class HlmDialogFooter {
   constructor() {
     classes(
       () =>
-        'bg-popover sticky bottom-0 z-10 -mx-4 -mb-4 rounded-b-xl border-t p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
+        'bg-popover sticky -bottom-4 z-10 -mx-4 -mb-4 rounded-b-xl border-t p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
     );
   }
 }

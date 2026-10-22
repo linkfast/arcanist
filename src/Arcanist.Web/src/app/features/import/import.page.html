@@ -5,7 +5,8 @@
 
 <div class="grid gap-6">
   @if (auth.isAdmin()) {
-    <section hlmCard>
+    <app-arcanist-migration (started)="arcanistStarted($event)" />
+    <section hlmCard class="order-first">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'import.migrate.title' | t }}</h2>
         <p hlmCardDescription>{{ 'import.migrate.help' | t }}</p>
@@ -19,6 +20,10 @@
           <button hlmBtn variant="outline" type="button" class="gap-2" (click)="openDlna()">
             <ng-icon name="lucideServer" />
             {{ 'import.migrate.dlna' | t }}
+          </button>
+          <button hlmBtn variant="outline" type="button" class="gap-2" (click)="openArcanist()">
+            <ng-icon name="lucideArrowRightLeft" />
+            {{ 'import.migrate.arcanist' | t }}
           </button>
           @if (hasFinishedImports()) {
             <button
@@ -34,6 +39,15 @@
             </button>
           }
         </div>
+        @if (arcanistImports().length > 0) {
+          <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
+            @for (job of arcanistImports(); track job.id) {
+              <li>
+                <app-arcanist-import-job [job]="job" (changed)="arcanistChanged(job.id, $event)" />
+              </li>
+            }
+          </ul>
+        }
         @if (dlnaImports().length > 0) {
           <ul class="grid grid-cols-[minmax(0,1fr)] gap-2">
             @for (job of dlnaImports(); track job.id) {

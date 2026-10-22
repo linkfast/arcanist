@@ -14,10 +14,13 @@ import {
   SetupStoredBackup,
 } from '../api/rest';
 import type {
+  ArcanistServersQuery,
+  ArcanistSourceAnalysisFieldsFragment,
   BrowseDlnaMediaServerQuery,
   DlnaMediaServersQuery,
   MstreamAnalysisFieldsFragment,
 } from '../../graphql/generated/graphql';
+import type { ArcanistSourceInput } from '../../shared/arcanist-import';
 import type { MstreamSourceInput } from '../../shared/mstream-import';
 import { Host } from '../server/host';
 
@@ -117,6 +120,28 @@ export class SetupService {
       this.http.post<MstreamAnalysisFieldsFragment>('/rest/v1/setup/mstream/analyze', source, {
         headers: this.headers(),
       }),
+    );
+  }
+
+  /** Arcanist servers on the local networks, to bring one over. */
+  arcanistServers(): Promise<ArcanistServersQuery['arcanistServers']> {
+    return this.call(
+      this.http.get<ArcanistServersQuery['arcanistServers']>('/rest/v1/setup/arcanist/servers', {
+        headers: this.headers(),
+      }),
+    );
+  }
+
+  /** What another Arcanist holds, read with its migration code or P2P link. */
+  analyzeArcanist(source: ArcanistSourceInput): Promise<ArcanistSourceAnalysisFieldsFragment> {
+    return this.call(
+      this.http.post<ArcanistSourceAnalysisFieldsFragment>(
+        '/rest/v1/setup/arcanist/analyze',
+        source,
+        {
+          headers: this.headers(),
+        },
+      ),
     );
   }
 

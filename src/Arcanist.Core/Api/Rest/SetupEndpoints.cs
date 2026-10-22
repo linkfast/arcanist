@@ -84,6 +84,16 @@ public static class SetupEndpoints
             .WithName("BrowseSetupDlnaServer")
             .WithSummary("A folder of a media server; 0 is the root.");
 
+        guarded.MapGet("/arcanist/servers", (SetupService service, CancellationToken cancellationToken) =>
+                service.FindArcanistServersAsync(cancellationToken))
+            .WithName("SearchSetupArcanistServers")
+            .WithSummary("Looks for other Arcanist servers on the local networks, to bring one over.");
+
+        guarded.MapPost("/arcanist/analyze", (Application.ServerMigration.ArcanistSourceInput input, SetupService service, CancellationToken cancellationToken) =>
+                service.AnalyzeArcanistAsync(input, cancellationToken))
+            .WithName("AnalyzeSetupArcanist")
+            .WithSummary("What another Arcanist holds, read with its migration code (or its P2P migration link), to choose what to bring.");
+
         guarded.MapPost("/restore/browse", (SetupRestoreSource source, ServerRestore restore, CancellationToken cancellationToken) =>
                 restore.BrowseAsync(source, cancellationToken))
             .WithName("BrowseSetupRestore")

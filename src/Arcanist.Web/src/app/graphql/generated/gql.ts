@@ -255,6 +255,19 @@ type Documents = {
     "\n  fragment OpenSourceModeFields on OpenSourceMode {\n    enabled\n    setByEnvironment\n    edition\n    components {\n      kind\n      id\n      name\n      license\n      active\n    }\n  }\n": typeof types.OpenSourceModeFieldsFragmentDoc,
     "\n  query OpenSourceMode {\n    openSourceMode {\n      ...OpenSourceModeFields\n    }\n  }\n": typeof types.OpenSourceModeDocument,
     "\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n": typeof types.SetOpenSourceModeDocument,
+    "\n  fragment MigrationCodeInfoFields on MigrationCodeInfo {\n    id\n    createdAt\n    expiresAt\n    revokedAt\n    lastUsedAt\n    lastUsedBy\n    active\n  }\n": typeof types.MigrationCodeInfoFieldsFragmentDoc,
+    "\n  query MigrationCodes {\n    migrationCodes {\n      ...MigrationCodeInfoFields\n    }\n  }\n": typeof types.MigrationCodesDocument,
+    "\n  mutation CreateMigrationCode {\n    createMigrationCode {\n      id\n      code\n      expiresAt\n      addresses\n      p2PLink\n    }\n  }\n": typeof types.CreateMigrationCodeDocument,
+    "\n  mutation RevokeMigrationCode($id: ID!) {\n    revokeMigrationCode(id: $id)\n  }\n": typeof types.RevokeMigrationCodeDocument,
+    "\n  query ArcanistServers {\n    arcanistServers {\n      name\n      url\n      nodeId\n      via\n    }\n  }\n": typeof types.ArcanistServersDocument,
+    "\n  fragment ArcanistSourceAnalysisFields on ArcanistSourceAnalysis {\n    serverName\n    version\n    viaP2P\n    libraries {\n      id\n      name\n      visibleToAll\n      files\n      bytes\n      tracks\n      sameName\n    }\n    users {\n      id\n      userName\n      displayName\n      role\n      isDisabled\n      hasPassword\n      secondFactor\n      exists\n    }\n    extensions {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    players {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    defaultPlayer\n  }\n": typeof types.ArcanistSourceAnalysisFieldsFragmentDoc,
+    "\n  query AnalyzeArcanistServer($input: ArcanistSourceInput!) {\n    analyzeArcanistServer(input: $input) {\n      ...ArcanistSourceAnalysisFields\n    }\n  }\n": typeof types.AnalyzeArcanistServerDocument,
+    "\n  fragment ArcanistImportJobFields on ArcanistImportJob {\n    id\n    sourceName\n    sourceVersion\n    status\n    createdAt\n    finishedAt\n    errorCode\n    libraries\n    usersCreated\n    usersMapped\n    librariesCreated\n    settingsApplied\n    extensionsInstalled\n    playersInstalled\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    bytesTotal\n    copiedBytes\n    ratings\n    playCounts\n    plays\n    playlists\n    wishes\n    unmatched\n    canRetry\n    failures {\n      path\n      reason\n    }\n  }\n": typeof types.ArcanistImportJobFieldsFragmentDoc,
+    "\n  query ArcanistImports {\n    arcanistImports {\n      ...ArcanistImportJobFields\n    }\n  }\n": typeof types.ArcanistImportsDocument,
+    "\n  mutation StartArcanistImport($input: StartArcanistImportInput!) {\n    startArcanistImport(input: $input) {\n      ...ArcanistImportJobFields\n    }\n  }\n": typeof types.StartArcanistImportDocument,
+    "\n  mutation CancelArcanistImport($id: ID!) {\n    cancelArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": typeof types.CancelArcanistImportDocument,
+    "\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": typeof types.RetryArcanistImportDocument,
+    "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n": typeof types.DeleteArcanistImportDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -498,6 +511,19 @@ const documents: Documents = {
     "\n  fragment OpenSourceModeFields on OpenSourceMode {\n    enabled\n    setByEnvironment\n    edition\n    components {\n      kind\n      id\n      name\n      license\n      active\n    }\n  }\n": types.OpenSourceModeFieldsFragmentDoc,
     "\n  query OpenSourceMode {\n    openSourceMode {\n      ...OpenSourceModeFields\n    }\n  }\n": types.OpenSourceModeDocument,
     "\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n": types.SetOpenSourceModeDocument,
+    "\n  fragment MigrationCodeInfoFields on MigrationCodeInfo {\n    id\n    createdAt\n    expiresAt\n    revokedAt\n    lastUsedAt\n    lastUsedBy\n    active\n  }\n": types.MigrationCodeInfoFieldsFragmentDoc,
+    "\n  query MigrationCodes {\n    migrationCodes {\n      ...MigrationCodeInfoFields\n    }\n  }\n": types.MigrationCodesDocument,
+    "\n  mutation CreateMigrationCode {\n    createMigrationCode {\n      id\n      code\n      expiresAt\n      addresses\n      p2PLink\n    }\n  }\n": types.CreateMigrationCodeDocument,
+    "\n  mutation RevokeMigrationCode($id: ID!) {\n    revokeMigrationCode(id: $id)\n  }\n": types.RevokeMigrationCodeDocument,
+    "\n  query ArcanistServers {\n    arcanistServers {\n      name\n      url\n      nodeId\n      via\n    }\n  }\n": types.ArcanistServersDocument,
+    "\n  fragment ArcanistSourceAnalysisFields on ArcanistSourceAnalysis {\n    serverName\n    version\n    viaP2P\n    libraries {\n      id\n      name\n      visibleToAll\n      files\n      bytes\n      tracks\n      sameName\n    }\n    users {\n      id\n      userName\n      displayName\n      role\n      isDisabled\n      hasPassword\n      secondFactor\n      exists\n    }\n    extensions {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    players {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    defaultPlayer\n  }\n": types.ArcanistSourceAnalysisFieldsFragmentDoc,
+    "\n  query AnalyzeArcanistServer($input: ArcanistSourceInput!) {\n    analyzeArcanistServer(input: $input) {\n      ...ArcanistSourceAnalysisFields\n    }\n  }\n": types.AnalyzeArcanistServerDocument,
+    "\n  fragment ArcanistImportJobFields on ArcanistImportJob {\n    id\n    sourceName\n    sourceVersion\n    status\n    createdAt\n    finishedAt\n    errorCode\n    libraries\n    usersCreated\n    usersMapped\n    librariesCreated\n    settingsApplied\n    extensionsInstalled\n    playersInstalled\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    bytesTotal\n    copiedBytes\n    ratings\n    playCounts\n    plays\n    playlists\n    wishes\n    unmatched\n    canRetry\n    failures {\n      path\n      reason\n    }\n  }\n": types.ArcanistImportJobFieldsFragmentDoc,
+    "\n  query ArcanistImports {\n    arcanistImports {\n      ...ArcanistImportJobFields\n    }\n  }\n": types.ArcanistImportsDocument,
+    "\n  mutation StartArcanistImport($input: StartArcanistImportInput!) {\n    startArcanistImport(input: $input) {\n      ...ArcanistImportJobFields\n    }\n  }\n": types.StartArcanistImportDocument,
+    "\n  mutation CancelArcanistImport($id: ID!) {\n    cancelArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": types.CancelArcanistImportDocument,
+    "\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": types.RetryArcanistImportDocument,
+    "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n": types.DeleteArcanistImportDocument,
 };
 
 /**
@@ -1478,6 +1504,58 @@ export function graphql(source: "\n  query OpenSourceMode {\n    openSourceMode 
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment MigrationCodeInfoFields on MigrationCodeInfo {\n    id\n    createdAt\n    expiresAt\n    revokedAt\n    lastUsedAt\n    lastUsedBy\n    active\n  }\n"): (typeof documents)["\n  fragment MigrationCodeInfoFields on MigrationCodeInfo {\n    id\n    createdAt\n    expiresAt\n    revokedAt\n    lastUsedAt\n    lastUsedBy\n    active\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MigrationCodes {\n    migrationCodes {\n      ...MigrationCodeInfoFields\n    }\n  }\n"): (typeof documents)["\n  query MigrationCodes {\n    migrationCodes {\n      ...MigrationCodeInfoFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateMigrationCode {\n    createMigrationCode {\n      id\n      code\n      expiresAt\n      addresses\n      p2PLink\n    }\n  }\n"): (typeof documents)["\n  mutation CreateMigrationCode {\n    createMigrationCode {\n      id\n      code\n      expiresAt\n      addresses\n      p2PLink\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RevokeMigrationCode($id: ID!) {\n    revokeMigrationCode(id: $id)\n  }\n"): (typeof documents)["\n  mutation RevokeMigrationCode($id: ID!) {\n    revokeMigrationCode(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query ArcanistServers {\n    arcanistServers {\n      name\n      url\n      nodeId\n      via\n    }\n  }\n"): (typeof documents)["\n  query ArcanistServers {\n    arcanistServers {\n      name\n      url\n      nodeId\n      via\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment ArcanistSourceAnalysisFields on ArcanistSourceAnalysis {\n    serverName\n    version\n    viaP2P\n    libraries {\n      id\n      name\n      visibleToAll\n      files\n      bytes\n      tracks\n      sameName\n    }\n    users {\n      id\n      userName\n      displayName\n      role\n      isDisabled\n      hasPassword\n      secondFactor\n      exists\n    }\n    extensions {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    players {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    defaultPlayer\n  }\n"): (typeof documents)["\n  fragment ArcanistSourceAnalysisFields on ArcanistSourceAnalysis {\n    serverName\n    version\n    viaP2P\n    libraries {\n      id\n      name\n      visibleToAll\n      files\n      bytes\n      tracks\n      sameName\n    }\n    users {\n      id\n      userName\n      displayName\n      role\n      isDisabled\n      hasPassword\n      secondFactor\n      exists\n    }\n    extensions {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    players {\n      id\n      name\n      version\n      enabled\n      builtIn\n      openSource\n      installed\n      available\n    }\n    defaultPlayer\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query AnalyzeArcanistServer($input: ArcanistSourceInput!) {\n    analyzeArcanistServer(input: $input) {\n      ...ArcanistSourceAnalysisFields\n    }\n  }\n"): (typeof documents)["\n  query AnalyzeArcanistServer($input: ArcanistSourceInput!) {\n    analyzeArcanistServer(input: $input) {\n      ...ArcanistSourceAnalysisFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment ArcanistImportJobFields on ArcanistImportJob {\n    id\n    sourceName\n    sourceVersion\n    status\n    createdAt\n    finishedAt\n    errorCode\n    libraries\n    usersCreated\n    usersMapped\n    librariesCreated\n    settingsApplied\n    extensionsInstalled\n    playersInstalled\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    bytesTotal\n    copiedBytes\n    ratings\n    playCounts\n    plays\n    playlists\n    wishes\n    unmatched\n    canRetry\n    failures {\n      path\n      reason\n    }\n  }\n"): (typeof documents)["\n  fragment ArcanistImportJobFields on ArcanistImportJob {\n    id\n    sourceName\n    sourceVersion\n    status\n    createdAt\n    finishedAt\n    errorCode\n    libraries\n    usersCreated\n    usersMapped\n    librariesCreated\n    settingsApplied\n    extensionsInstalled\n    playersInstalled\n    filesTotal\n    filesCopied\n    filesPresent\n    filesFailed\n    bytesTotal\n    copiedBytes\n    ratings\n    playCounts\n    plays\n    playlists\n    wishes\n    unmatched\n    canRetry\n    failures {\n      path\n      reason\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query ArcanistImports {\n    arcanistImports {\n      ...ArcanistImportJobFields\n    }\n  }\n"): (typeof documents)["\n  query ArcanistImports {\n    arcanistImports {\n      ...ArcanistImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation StartArcanistImport($input: StartArcanistImportInput!) {\n    startArcanistImport(input: $input) {\n      ...ArcanistImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation StartArcanistImport($input: StartArcanistImportInput!) {\n    startArcanistImport(input: $input) {\n      ...ArcanistImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CancelArcanistImport($id: ID!) {\n    cancelArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation CancelArcanistImport($id: ID!) {\n    cancelArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n"): (typeof documents)["\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

@@ -1,7 +1,8 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  lucideArrowRightLeft,
   lucideFolderPlus,
   lucideImport,
   lucideServer,
@@ -30,6 +31,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
+  ArcanistImportJobFieldsFragment as ArcanistImportJob,
   DlnaImportJobFieldsFragment as DlnaImportJob,
   DropFolderFieldsFragment as DropFolder,
   DropFolderKind,
@@ -75,6 +77,12 @@ import {
   MstreamImportForm,
   MstreamSourceInput,
 } from '../../shared/mstream-import';
+import {
+  ArcanistImportJobView,
+  ArcanistMigration,
+  arcanistImportActive,
+  loadArcanistImports,
+} from './arcanist-migration';
 import { DlnaImportForm } from './dlna-import';
 import { UploadsCard } from './uploads-card';
 
@@ -145,9 +153,12 @@ const REFRESH_MS = 5000;
     MstreamImportForm,
     DlnaImportForm,
     UploadsCard,
+    ArcanistMigration,
+    ArcanistImportJobView,
   ],
   providers: [
     provideIcons({
+      lucideArrowRightLeft,
       lucidePlus,
       lucidePencil,
       lucideTrash2,
@@ -256,6 +267,29 @@ export class ImportPage implements OnInit {
   );
   protected readonly dlnaOpen = signal(false);
 
+  // Migrations from other Arcanist servers
+  protected readonly arcanistImports = signal<ArcanistImportJob[]>([]);
+  private readonly arcanist = viewChild(ArcanistMigration);
+
+  protected async openArcanist(): Promise<void> {
+    await this.arcanist()?.open();
+  }
+
+  protected async arcanistStarted(job: ArcanistImportJob): Promise<void> {
+    this.arcanistImports.update((list) => [job, ...list.filter((j) => j.id !== job.id)]);
+    await this.loadLibraries();
+  }
+
+  protected arcanistChanged(id: string, job: ArcanistImportJob | null): void {
+    this.arcanistImports.update((list) =>
+      job ? list.map((j) => (j.id === id ? job : j)) : list.filter((j) => j.id !== id),
+    );
+  }
+
+  private async loadArcanistImports(): Promise<void> {
+    this.arcanistImports.set(await loadArcanistImports(this.gql));
+  }
+
   constructor() {
     const timer = setInterval(() => {
       void this.loadQueue();
@@ -269,6 +303,7 @@ export class ImportPage implements OnInit {
     // Copies move fast: their progress is refreshed more often.
     const dlnaTimer = setInterval(() => {
       if (this.dlnaImports().some((i) => this.dlnaActive(i))) void this.loadDlnaImports();
+      if (this.arcanistImports().some(arcanistImportActive)) void this.loadArcanistImports();
     }, 1500);
     inject(DestroyRef).onDestroy(() => clearInterval(dlnaTimer));
     inject(DestroyRef).onDestroy(() => clearInterval(timer));
@@ -277,7 +312,12 @@ export class ImportPage implements OnInit {
   async ngOnInit(): Promise<void> {
     await this.loadQueue();
     if (this.auth.isAdmin())
-      await Promise.all([this.loadFolders(), this.loadMigrations(), this.loadDlnaImports()]);
+      await Promise.all([
+        this.loadFolders(),
+        this.loadMigrations(),
+        this.loadDlnaImports(),
+        this.loadArcanistImports(),
+      ]);
   }
 
   private async loadDlnaImports(): Promise<void> {
@@ -344,6 +384,7 @@ export class ImportPage implements OnInit {
   protected hasFinishedImports(): boolean {
     return (
       this.dlnaImports().some((job) => !this.dlnaActive(job)) ||
+      this.arcanistImports().some((job) => !arcanistImportActive(job)) ||
       this.migrations().some((job) => job.status === 'COMPLETED' || job.status === 'FAILED')
     );
   }
@@ -374,7 +415,11 @@ export class ImportPage implements OnInit {
     this.clearingHistory.set(false);
     await this.historyAction('history', async () => {
       const count = (await this.gql.mutate(ClearImportHistoryMutation)).clearImportHistory;
-      await Promise.all([this.loadMigrations(), this.loadDlnaImports()]);
+      await Promise.all([
+        this.loadMigrations(),
+        this.loadDlnaImports(),
+        this.loadArcanistImports(),
+      ]);
       toast.success(this.i18n.t('import.migrate.cleared', { count }));
     });
   }

@@ -190,6 +190,16 @@ export const en: Dictionary = {
     },
     restore: {
       offerTitle: 'Coming from a backup?',
+      arcanist: 'Another Arcanist server',
+      arcanistHelp:
+        'Bring another Arcanist that is still running (its database, music, users and settings) with no backup needed.',
+      arcanistCode:
+        'You need a migration code of the other server: Import → “Migrate this server to another”.',
+      arcanistAccount:
+        'First you choose the database and make your account; then the migration opens to choose what comes.',
+      arcanistGo: 'Go on with the migration',
+      migrateNext:
+        'Make the database and your account: then choose what comes from the other Arcanist.',
       offer:
         'If you have a backup of an Arcanist server with its database, you can restore it whole instead of setting it up from scratch.',
       open: 'Restore from a backup',
@@ -299,6 +309,14 @@ export const en: Dictionary = {
         'Extensions and players run with full trust: install only what you know. Installed extensions run after the server restarts.',
     },
     stepOf: 'Step {current} of {total}',
+    jump: 'Go to a step',
+    draft: {
+      passwordAgain:
+        "For safety, passwords are not kept across a reload: type your account's again.",
+      connectionAgain:
+        'For safety, the PostgreSQL connection is not kept across a reload: type it again.',
+      usersAgain: "For safety, passwords are not kept across a reload: type the users' again.",
+    },
     finish: 'Finish setup',
     steps: {
       ultimate: {
@@ -390,6 +408,29 @@ export const en: Dictionary = {
     },
     import: {
       dlna: 'A DLNA/UPnP server',
+      kinds: {
+        arcanist: {
+          name: 'Another Arcanist',
+          help: 'Its libraries, users, data, settings and extensions, over the network or with its P2P link.',
+        },
+        mstream: {
+          name: 'mStream',
+          help: 'Libraries, users with their passwords, playlists, ratings and plays.',
+        },
+        dlna: {
+          name: 'A DLNA server',
+          help: 'The music of another server on your network (MinimServer, Serviio, a NAS…). Files only.',
+        },
+      },
+      chosen: 'Chosen',
+      clear: 'Do not import',
+      use: 'Use this import',
+      blocks:
+        'The import starts when the wizard ends; it shows its progress and does not open the panel until it is over (even if you reload the page).',
+      continuesAgain:
+        'The import starts at the end and goes on in the background: its progress is in Import.',
+      dlnaSummary: '{server}: {folders}',
+      arcanistSummary: '{server}: {libraries} library(ies) and {users} user(s)',
       dlnaHelp:
         'Copies the music of another server on your network (MinimServer, Serviio, a NAS…). Files only: no users.',
       dlnaPick: 'Choose the server and folders',
@@ -413,6 +454,8 @@ export const en: Dictionary = {
         'They stay as they are; to change or remove them, go to Libraries. You can add others here.',
       add: 'Add a library',
       fromMstream: 'From mStream: {vpath}',
+      fromDlna: 'From {server} (DLNA)',
+      fromArcanist: 'From {server}',
       namePlaceholder: 'Music, Audiobooks…',
       nameRequired: 'Name every library that has folders.',
       another: 'Another library',
@@ -505,10 +548,12 @@ export const en: Dictionary = {
         'Once finished you will see Arcanist read your music and, if you import, the data arrive.',
     },
     progress: {
-      migrationWait: 'Wait for the mStream migration to finish.',
+      migrationWait: 'Wait for the import to finish.',
       extrasFailed: 'This could not be applied; you can do it from the panel:',
       libraries: 'Libraries',
       mstream: 'Import from mStream',
+      arcanist: 'Migration from another Arcanist',
+      dlna: 'Copy from a DLNA server',
       created: '{libraries} library(ies) and {users} user(s) created.',
       brought:
         '{playlists} playlists, {ratings} ratings and {plays} played songs · {unmatched} not found.',
@@ -1033,6 +1078,7 @@ export const en: Dictionary = {
       help: 'Bring libraries, users, playlists, ratings and plays from another music server. The other server is not changed.',
       mstream: 'From mStream',
       dlna: 'From a DLNA server',
+      arcanist: 'From another Arcanist',
       clear: 'Clear history',
       clearTitle: 'Clear the import history?',
       clearHelp:
@@ -2428,6 +2474,127 @@ export const en: Dictionary = {
     deviceHelp: 'Scan it with the app on the device. Then sign in to the app as usual.',
     serverHelp: 'Send this link to the other server’s administrator.',
   },
+  arcanistImport: {
+    title: 'Migrate from another Arcanist',
+    subtitle:
+      'Bring another Arcanist server into this one: its libraries and music, its users and their data, its settings, extensions and players. The other server is not changed, and reading it never counts as plays.',
+    how: {
+      found: 'Search the network',
+      address: 'By its address',
+      link: 'With its P2P link',
+    },
+    servers: {
+      title: 'Arcanist servers',
+      search: 'Search again',
+      searching: 'Searching the network…',
+      none: 'None found. Type its address or use its P2P link.',
+      paired: 'Paired through the P2P network',
+    },
+    address: "The other server's address",
+    addressHelp: 'For example 192.168.1.20:8484 or https://music.example.com.',
+    link: 'P2P migration link',
+    linkHelp:
+      "It carries the code and arrives without opening ports. Using it turns this server's P2P network on.",
+    code: 'Migration code',
+    codeHelp:
+      'Make it on the other server: Import → “Migrate this server to another”. It lasts 24 hours.',
+    read: 'Read the server',
+    change: 'Change',
+    libraries: {
+      title: 'Libraries',
+      help: 'Choose those that come and the library of this server each goes to. Several can go to the same one.',
+      helpSetup:
+        'Choose those that come and the folder of this server each is copied into. Those sharing a folder become one library.',
+      same: 'All to the same place',
+      sameHelp: 'Every chosen library goes here:',
+      files: '{count} files',
+      new: 'A new library',
+      name: 'Library name',
+      folder: 'Folder of this server',
+      none: 'The other server has no libraries that can be brought.',
+      copyNote:
+        'Files are copied as they are, with their folders. Nothing is ever overwritten: what is already there is skipped.',
+    },
+    users: {
+      title: 'Users',
+      help: 'Those that already exist here (by name) do not change: only their data comes.',
+      all: 'All',
+      none: 'None',
+      isAdmin: 'This is you',
+      exists: 'Already here',
+      disabled: 'Disabled',
+      noPassword: 'No password',
+      secondFactor: 'Second factor',
+      empty: 'The other server has no users.',
+    },
+    options: {
+      title: 'What else comes',
+      copyPasswords: 'Copy passwords',
+      copyPasswordsHelp:
+        'New users sign in with the same password. App passwords, sessions, devices and second factors are never copied: whoever had one pairs it again when signing in.',
+      permissions: 'Permissions and library access',
+      permissionsHelp:
+        'Each new user keeps their role, permissions and libraries. Without it, they are users who may download and see the libraries visible to everyone.',
+      userData: "Users' data",
+      userDataHelp:
+        'Ratings, plays and history, playlists and wish lists. Bringing them twice never counts anything twice.',
+      settings: 'Server settings',
+      settingsHelp:
+        "Ratings, privacy, online services, language, DLNA, mStream, transcoding, AI… Not this machine's (database, folders, P2P, Ultimate Cloud).",
+      extensions: 'Extensions and players',
+      extensionsHelp:
+        'Built-in ones end up on or off as there; the others are installed (from the marketplace when it has them) and its default player is the default here too.',
+      installed: 'Already here',
+      available: 'Will be installed',
+      unavailable: 'Cannot be brought',
+    },
+    start: 'Start the migration',
+    startedToast: 'The migration started: it goes on in the background.',
+    status: {
+      QUEUED: 'Queued',
+      PREPARING: 'Settings and extensions',
+      COPYING: 'Copying music',
+      WAITING: 'Scanning',
+      APPLYING: 'Bringing the data',
+      COMPLETED: 'Completed',
+      FAILED: 'Failed',
+      CANCELLED: 'Cancelled',
+    },
+    job: {
+      into: 'Into {libraries}',
+      prepared:
+        '{created} user(s) created and {mapped} existing · {libraries} new library(ies) · {extensions} extension(s) and {players} player(s) installed',
+      settings: 'settings applied',
+      files:
+        '{copied} copied, {present} already there and {failed} failed of {total} files · {size} of {totalSize}',
+      waiting: "Waiting for the libraries to be scanned to bring the users' data…",
+      brought:
+        '{ratings} ratings, {plays} plays, {playlists} playlists and {wishes} wishes · {unmatched} references not found.',
+      failures: '{count} files could not be copied',
+      cancel: 'Stop',
+      retry: 'Go on',
+    },
+    codes: {
+      title: 'Migrate this server to another',
+      help: 'Make a code so another Arcanist (a new server, for example) brings this one over: users, libraries and music, data, settings and extensions. Reading this server this way counts no plays and changes nothing here.',
+      create: 'Make a migration code',
+      active: 'Active',
+      revoked: 'Revoked',
+      expired: 'Expired',
+      made: 'Made {when}',
+      until: 'valid until {when}',
+      used: 'used {when} by {by}',
+      revoke: 'Revoke',
+      createdTitle: 'Migration code',
+      createdHelp:
+        'Type it on the other server (Import → From another Arcanist, or in its setup wizard). It is shown only now. Whoever has it can read this whole server, passwords included: share it only with whoever does the migration.',
+      addresses: "This server's addresses on your network",
+      link: 'P2P link (no ports to open)',
+      linkHelp: 'It carries the code: paste it on the other server and nothing else is needed.',
+      noLink: 'With the P2P network on you would also get a link to migrate without opening ports.',
+      validUntil: 'Valid until {when}.',
+    },
+  },
   dlnaImport: {
     choose: 'Use this selection',
     title: 'Copy from a DLNA server',
@@ -2902,6 +3069,11 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    migration_code_invalid: 'The migration code is not valid, expired or was revoked.',
+    migration_source_unreachable:
+      'The other server could not be reached. Check its address and that it is on.',
+    migration_source_unsupported:
+      'That server is not an Arcanist that can be migrated (or its version is one this one does not understand). Update both.',
     wish_link_unreadable: "That link's song could not be read. Try another one or type it in.",
     wish_link_not_a_song: 'That link is not a song (it is an album, a playlist or an artist).',
     external_services_disabled: 'The chosen privacy does not allow outside services.',

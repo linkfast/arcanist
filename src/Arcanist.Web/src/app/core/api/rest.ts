@@ -78,6 +78,19 @@ export interface SetupRequest {
     libraries: { vpath: string; folder: string }[];
     importUsers: boolean;
   } | null;
+  /** Another Arcanist to bring over; each of its libraries goes to one of the folders of `libraries`. */
+  arcanist: {
+    source: { url: string | null; nodeId: string | null; link: string | null; code: string | null };
+    libraries: { sourceLibraryId: string; folder: string }[];
+    users: string[];
+    copyPasswords: boolean;
+    permissions: boolean;
+    userData: boolean;
+    settings: boolean;
+    extensions: boolean;
+  } | null;
+  /** Folders of a DLNA media server to copy into one of the folders of `libraries`. */
+  dlna: { location: string; folders: { id: string; title: string }[]; folder: string } | null;
 }
 
 export interface OnlineServicesChoice {

@@ -54,6 +54,16 @@ public sealed class P2PSettings(SettingsStore settings, IArcanistDbContextFactor
         await settings.SetAsync(SettingKeys.P2P, config, cancellationToken);
         _config = config;
     }
+
+    /// <summary>
+    /// Before setup (no database yet): runs the node with <paramref name="config"/> without storing it, so the wizard
+    /// can reach another server through the P2P network. Setup stores what it ends with.
+    /// </summary>
+    public void UseUntilSetup(P2PConfig config)
+    {
+        if (!setup.CurrentValue.Completed)
+            _config = config;
+    }
 }
 
 /// <summary>

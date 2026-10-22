@@ -317,6 +317,61 @@
         }
       }
     },
+    "/rest/v1/setup/arcanist/servers": {
+      "get": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "Looks for other Arcanist servers on the local networks, to bring one over.",
+        "operationId": "SearchSetupArcanistServers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArcanistServer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/setup/arcanist/analyze": {
+      "post": {
+        "tags": [
+          "Setup"
+        ],
+        "summary": "What another Arcanist holds, read with its migration code (or its P2P migration link), to choose what to bring.",
+        "operationId": "AnalyzeSetupArcanist",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArcanistSourceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArcanistSourceAnalysis"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/setup/restore/browse": {
       "post": {
         "tags": [
@@ -9332,6 +9387,285 @@
           }
         }
       }
+    },
+    "/rest/v1/migration-codes": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "The latest migration codes of this server, active or not. Administrators only.",
+        "operationId": "MigrationCodes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MigrationCodeInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "A code another Arcanist uses, for a day, to bring this server over (users, libraries and music, users\u0027 data, settings, extensions). Shown once. Administrators only, with a recent authentication.",
+        "operationId": "CreateMigrationCode",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationCode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/migration-codes/{id}/revoke": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Stops a migration code from working. Administrators only.",
+        "operationId": "RevokeMigrationCode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/arcanist-import/servers": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Other Arcanist servers: those on the local networks (a few seconds\u0027 search) and those paired through the P2P network. Administrators only.",
+        "operationId": "ArcanistServers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArcanistServer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/arcanist-import/analyze": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "What another Arcanist holds (libraries, users, extensions, players), read with its migration code. Administrators only.",
+        "operationId": "AnalyzeArcanistServer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArcanistSourceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArcanistSourceAnalysis"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/arcanist-import/imports": {
+      "get": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "The latest migrations from other Arcanist servers and how far they got. Administrators only.",
+        "operationId": "ArcanistImports",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArcanistImportJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Brings another Arcanist into this server, in the background: the chosen users, libraries and music, and optionally the users\u0027 data, settings, extensions and players. Administrators only, with a recent authentication.",
+        "operationId": "StartArcanistImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartArcanistImportInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArcanistImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/arcanist-import/imports/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Stops a migration from another Arcanist; what it brought stays. Administrators only.",
+        "operationId": "CancelArcanistImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArcanistImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/arcanist-import/imports/{id}/retry": {
+      "post": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Goes on with a migration that stopped, copying again the files that failed. Administrators only, with a recent authentication.",
+        "operationId": "RetryArcanistImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArcanistImportJob"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/arcanist-import/imports/{id}": {
+      "delete": {
+        "tags": [
+          "Import"
+        ],
+        "summary": "Removes a finished migration from the history; what it brought stays. Administrators only.",
+        "operationId": "DeleteArcanistImport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10559,6 +10893,289 @@
           }
         }
       },
+      "ArcanistImportFailure": {
+        "required": [
+          "path",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "ArcanistImportJob": {
+        "required": [
+          "id",
+          "sourceName",
+          "sourceVersion",
+          "status",
+          "createdAt",
+          "finishedAt",
+          "errorCode",
+          "libraries",
+          "usersCreated",
+          "usersMapped",
+          "librariesCreated",
+          "settingsApplied",
+          "extensionsInstalled",
+          "playersInstalled",
+          "filesTotal",
+          "filesCopied",
+          "filesPresent",
+          "filesFailed",
+          "bytesTotal",
+          "copiedBytes",
+          "ratings",
+          "playCounts",
+          "plays",
+          "playlists",
+          "wishes",
+          "unmatched",
+          "canRetry",
+          "failures"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceName": {
+            "type": "string"
+          },
+          "sourceVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArcanistImportStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "usersCreated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "usersMapped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "librariesCreated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "settingsApplied": {
+            "type": "boolean"
+          },
+          "extensionsInstalled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playersInstalled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesCopied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesPresent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filesFailed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytesTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "copiedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "ratings": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playCounts": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "playlists": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "wishes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unmatched": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "canRetry": {
+            "type": "boolean"
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArcanistImportFailure"
+            }
+          }
+        }
+      },
+      "ArcanistImportStatus": {
+        "enum": [
+          "QUEUED",
+          "PREPARING",
+          "COPYING",
+          "WAITING",
+          "APPLYING",
+          "COMPLETED",
+          "FAILED",
+          "CANCELLED"
+        ]
+      },
+      "ArcanistLibraryChoice": {
+        "required": [
+          "sourceLibraryId",
+          "libraryId",
+          "newLibraryName",
+          "newLibraryPath"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceLibraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "newLibraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "newLibraryPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ArcanistRelease": {
         "required": [
           "version",
@@ -10587,6 +11204,267 @@
             "format": "date-time"
           },
           "prerelease": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ArcanistServer": {
+        "required": [
+          "name",
+          "url",
+          "nodeId",
+          "via"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nodeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "via": {
+            "$ref": "#/components/schemas/ArcanistServerVia"
+          }
+        }
+      },
+      "ArcanistServerVia": {
+        "enum": [
+          "NETWORK",
+          "PAIRED"
+        ]
+      },
+      "ArcanistSourceAnalysis": {
+        "required": [
+          "serverName",
+          "version",
+          "viaP2P",
+          "libraries",
+          "users",
+          "extensions",
+          "players",
+          "defaultPlayer"
+        ],
+        "type": "object",
+        "properties": {
+          "serverName": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "viaP2P": {
+            "type": "boolean"
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArcanistSourceLibrary"
+            }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArcanistSourceUser"
+            }
+          },
+          "extensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArcanistSourceComponent"
+            }
+          },
+          "players": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArcanistSourceComponent"
+            }
+          },
+          "defaultPlayer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ArcanistSourceComponent": {
+        "required": [
+          "id",
+          "name",
+          "version",
+          "enabled",
+          "builtIn",
+          "openSource",
+          "installed",
+          "available"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "builtIn": {
+            "type": "boolean"
+          },
+          "openSource": {
+            "type": "boolean"
+          },
+          "installed": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ArcanistSourceInput": {
+        "required": [
+          "url",
+          "nodeId",
+          "link",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nodeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ArcanistSourceLibrary": {
+        "required": [
+          "id",
+          "name",
+          "visibleToAll",
+          "files",
+          "bytes",
+          "tracks",
+          "sameName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "visibleToAll": {
+            "type": "boolean"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sameName": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ArcanistSourceUser": {
+        "required": [
+          "id",
+          "userName",
+          "displayName",
+          "role",
+          "isDisabled",
+          "hasPassword",
+          "secondFactor",
+          "exists"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "isDisabled": {
+            "type": "boolean"
+          },
+          "hasPassword": {
+            "type": "boolean"
+          },
+          "secondFactor": {
+            "type": "boolean"
+          },
+          "exists": {
             "type": "boolean"
           }
         }
@@ -15883,6 +16761,90 @@
           }
         }
       },
+      "MigrationCode": {
+        "required": [
+          "id",
+          "code",
+          "expiresAt",
+          "addresses",
+          "p2PLink"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "p2PLink": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MigrationCodeInfo": {
+        "required": [
+          "id",
+          "createdAt",
+          "expiresAt",
+          "revokedAt",
+          "lastUsedAt",
+          "lastUsedBy",
+          "active"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastUsedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
       "MigrationPhase": {
         "enum": [
           "PAUSING",
@@ -20160,6 +21122,84 @@
           }
         }
       },
+      "SetupArcanistImport": {
+        "required": [
+          "source",
+          "libraries",
+          "users",
+          "copyPasswords",
+          "permissions",
+          "userData",
+          "settings",
+          "extensions"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ArcanistSourceInput"
+              }
+            ]
+          },
+          "libraries": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SetupArcanistLibrary"
+            }
+          },
+          "users": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "copyPasswords": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "boolean"
+          },
+          "userData": {
+            "type": "boolean"
+          },
+          "settings": {
+            "type": "boolean"
+          },
+          "extensions": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetupArcanistLibrary": {
+        "required": [
+          "sourceLibraryId",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceLibraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folder": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SetupDatabase": {
         "required": [
           "provider",
@@ -20212,6 +21252,37 @@
           },
           "defaultSqlitePath": {
             "type": "string"
+          }
+        }
+      },
+      "SetupDlnaImport": {
+        "required": [
+          "location",
+          "folders",
+          "folder"
+        ],
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "folders": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DlnaFolderInput"
+            }
+          },
+          "folder": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20483,6 +21554,26 @@
           "openSourceOnly": {
             "type": "boolean",
             "default": false
+          },
+          "arcanist": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SetupArcanistImport"
+              }
+            ]
+          },
+          "dlna": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SetupDlnaImport"
+              }
+            ]
           }
         }
       },
@@ -20842,6 +21933,52 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "StartArcanistImportInput": {
+        "required": [
+          "source",
+          "libraries",
+          "users",
+          "copyPasswords",
+          "permissions",
+          "userData",
+          "settings",
+          "extensions"
+        ],
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/ArcanistSourceInput"
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArcanistLibraryChoice"
+            }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "copyPasswords": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "boolean"
+          },
+          "userData": {
+            "type": "boolean"
+          },
+          "settings": {
+            "type": "boolean"
+          },
+          "extensions": {
+            "type": "boolean"
           }
         }
       },

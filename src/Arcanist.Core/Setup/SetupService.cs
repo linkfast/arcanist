@@ -3,6 +3,7 @@ using Arcanist.Core.Api;
 using Arcanist.Core.Application;
 using LibraryRules = Arcanist.Core.Application.Libraries.LibraryRules;
 using Arcanist.Core.Application.Import;
+using Arcanist.Core.Application.ServerMigration;
 using Arcanist.Core.Application.Users;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
@@ -10,6 +11,7 @@ using Arcanist.Core.Hosting;
 using Arcanist.Core.Import.Mstream;
 using Arcanist.Core.Media;
 using Arcanist.Core.Scanning;
+using Arcanist.Core.ServerMigration;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -53,6 +55,26 @@ public sealed record SetupMstreamLibrary(string? Vpath, string? Folder, bool Cop
 /// user with the administrator's name is the administrator: their data goes to them.</param>
 public sealed record SetupMstreamImport(string? Folder, MstreamServerInput? Server, IReadOnlyList<SetupMstreamLibrary>? Libraries, bool ImportUsers);
 
+/// <param name="Folder">Where its music goes: one of the folders of <see cref="SetupRequest.Libraries"/>.</param>
+public sealed record SetupArcanistLibrary(Guid SourceLibraryId, string? Folder);
+
+/// <summary>Brings another Arcanist into the new server (see <c>startArcanistImport</c>).</summary>
+/// <param name="Libraries">Its libraries to bring, and the folder each goes to. Others are left out.</param>
+/// <param name="Users">Its users to bring. One with the administrator's name is the administrator: their data goes to them.</param>
+public sealed record SetupArcanistImport(
+    ArcanistSourceInput? Source,
+    IReadOnlyList<SetupArcanistLibrary>? Libraries,
+    IReadOnlyList<Guid>? Users,
+    bool CopyPasswords,
+    bool Permissions,
+    bool UserData,
+    bool Settings,
+    bool Extensions);
+
+/// <summary>Copies the music of folders of a DLNA/UPnP media server into the new server (see <c>startDlnaImport</c>).</summary>
+/// <param name="Folder">Where it goes: one of the folders of <see cref="SetupRequest.Libraries"/>.</param>
+public sealed record SetupDlnaImport(string? Location, IReadOnlyList<DlnaFolderInput>? Folders, string? Folder);
+
 /// <summary>Everything the wizard collects, submitted at once so setup never ends half-done.</summary>
 /// <param name="FfmpegPath">ffmpeg to use; null to find it automatically (or download it later from the panel).</param>
 /// <param name="OnlineServices">Online services to turn on; none when null.</param>
@@ -61,6 +83,8 @@ public sealed record SetupMstreamImport(string? Folder, MstreamServerInput? Serv
 /// services asked for (and with no outside services at all, the Ultimate Cloud extension starts off).</param>
 /// <param name="Mstream">An mStream installation to import, or null. Its progress shows in <c>mstreamImports</c>
 /// once signed in: the users' data comes once the first scans are over.</param>
+/// <param name="Arcanist">Another Arcanist to bring over, or null; its progress shows in <c>arcanistImports</c>.</param>
+/// <param name="Dlna">A media server to copy music from, or null; its progress shows in <c>dlnaImports</c>.</param>
 public sealed record SetupRequest(
     SetupDatabase? Database,
     SetupAdmin? Admin,
@@ -72,7 +96,9 @@ public sealed record SetupRequest(
     RatingMode? RatingMode = null,
     SetupMstreamImport? Mstream = null,
     Application.Server.SetPrivacyInput? Privacy = null,
-    bool OpenSourceOnly = false);
+    bool OpenSourceOnly = false,
+    SetupArcanistImport? Arcanist = null,
+    SetupDlnaImport? Dlna = null);
 
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
@@ -141,16 +167,83 @@ public sealed class SetupService(
         {
             await using var db = ArcanistDbContextFactory.Create(databaseOptions.CurrentValue, paths);
             var value = await db.Settings.AsNoTracking().Where(s => s.Key == SettingKeys.SetupMigration).Select(s => s.Value).FirstOrDefaultAsync(cancellationToken);
-            if (value is null || JsonSerializer.Deserialize<Guid?>(value) is not { } id)
-                return false;
-            return await db.MstreamImports.AsNoTracking()
-                .AnyAsync(i => i.Id == id && (i.Status == MstreamImportStatus.Waiting || i.Status == MstreamImportStatus.Running), cancellationToken);
+            foreach (var (kind, id) in Migrations(value))
+            {
+                var running = kind switch
+                {
+                    "mstream" => await db.MstreamImports.AsNoTracking().AnyAsync(i => i.Id == id && (i.Status == MstreamImportStatus.Copying
+                        || i.Status == MstreamImportStatus.Waiting || i.Status == MstreamImportStatus.Running), cancellationToken),
+                    "dlna" => await db.DlnaImports.AsNoTracking().AnyAsync(i => i.Id == id && (i.Status == DlnaImportStatus.Queued
+                        || i.Status == DlnaImportStatus.Listing || i.Status == DlnaImportStatus.Copying), cancellationToken),
+                    "arcanist" => await db.ArcanistImports.AsNoTracking().AnyAsync(i => i.Id == id && i.Status != ArcanistImportStatus.Completed
+                        && i.Status != ArcanistImportStatus.Failed && i.Status != ArcanistImportStatus.Cancelled, cancellationToken),
+                    _ => false,
+                };
+                if (running)
+                    return true;
+            }
+
+            return false;
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             logger.LogDebug(e, "Could not read the setup migration");
             return false;
         }
+    }
+
+    /// <summary>
+    /// The imports setup started, as <c>kind:id</c> (<c>mstream</c>, <c>dlna</c>, <c>arcanist</c>); older servers kept
+    /// just the id of an mStream import.
+    /// </summary>
+    private static IEnumerable<(string Kind, Guid Id)> Migrations(string? value)
+    {
+        if (value is null)
+            yield break;
+        List<string>? entries = null;
+        Guid? legacy = null;
+        try
+        {
+            if (value.TrimStart().StartsWith('['))
+                entries = JsonSerializer.Deserialize<List<string>>(value);
+            else
+                legacy = JsonSerializer.Deserialize<Guid?>(value);
+        }
+        catch (JsonException)
+        {
+        }
+
+        if (legacy is { } id)
+            yield return ("mstream", id);
+        foreach (var entry in entries ?? [])
+        {
+            var colon = entry.IndexOf(':');
+            if (colon > 0 && Guid.TryParse(entry[(colon + 1)..], out var parsed))
+                yield return (entry[..colon], parsed);
+        }
+    }
+
+    /// <summary>Arcanist servers on the local networks, to bring one over.</summary>
+    public Task<IReadOnlyList<ArcanistServer>> FindArcanistServersAsync(CancellationToken cancellationToken) =>
+        ArcanistImportService.DiscoverAsync(services.GetRequiredService<Dlna.MediaServerClient>(), null, cancellationToken);
+
+    /// <summary>What another Arcanist holds. A P2P link starts this server's node (stored as on once setup ends).</summary>
+    public async Task<ArcanistSourceAnalysis> AnalyzeArcanistAsync(ArcanistSourceInput input, CancellationToken cancellationToken)
+    {
+        var (source, manifest) = await ReadArcanistAsync(input, cancellationToken);
+        return ArcanistImportService.Analysis(manifest, source, [], new HashSet<string>(),
+            services.GetRequiredService<Extensions.ExtensionHost>(), services.GetRequiredService<FrontendCatalog>());
+    }
+
+    private async Task<(ArcanistEndpoint Source, ExportManifest Manifest)> ReadArcanistAsync(ArcanistSourceInput? input, CancellationToken cancellationToken)
+    {
+        var source = ArcanistImportService.ParseSource(input, null);
+        if (source.Ticket is not null)
+            await ArcanistImportService.EnsureP2PAsync(services, setupPending: true, cancellationToken);
+        var manifest = await services.GetRequiredService<ArcanistSourceClient>().GetAsync<ExportManifest>(source, "/manifest", cancellationToken);
+        if (manifest.Format > ExportApi.Format)
+            throw new ArcanistException.Conflict(ErrorCodes.MigrationSourceUnsupported);
+        return (source, manifest);
     }
 
     /// <summary>Checks the ffmpeg at <paramref name="path"/>, or which one would be found automatically.</summary>
@@ -216,6 +309,8 @@ public sealed class SetupService(
                 errors.Add("ffmpegPath", ErrorCodes.NotFfmpeg);
 
             var mstreamImport = request.Mstream is null ? null : await ValidateMstreamAsync(request.Mstream, libraries, errors, cancellationToken);
+            var arcanistImport = request.Arcanist is null ? null : await ValidateArcanistAsync(request.Arcanist, libraries, errors, cancellationToken);
+            var dlnaImport = request.Dlna is null ? null : await ValidateDlnaAsync(request.Dlna, libraries, errors, cancellationToken);
 
             if (!errors.IsEmpty || database is null)
                 return new SetupResult.Invalid(errors);
@@ -239,6 +334,7 @@ public sealed class SetupService(
 
             IReadOnlyList<Library> created;
             Data.Entities.MstreamImport? imported = null;
+            var migrations = new List<string>();
             await using (var db = ArcanistDbContextFactory.Create(database, paths))
             {
                 if (await db.Users.AnyAsync(cancellationToken))
@@ -256,9 +352,41 @@ public sealed class SetupService(
                 if (mstreamImport is { } found)
                 {
                     imported = await RecordMstreamImportAsync(db, request.Mstream!, found.Source, found.Vpaths, created, adminId, cancellationToken);
-                    db.Settings.Add(new Setting { Key = SettingKeys.SetupMigration, Value = JsonSerializer.Serialize<Guid?>(imported.Id) });
-                    await db.SaveChangesAsync(cancellationToken);
+                    migrations.Add("mstream:" + imported.Id);
                 }
+
+                if (arcanistImport is { } arcanist)
+                {
+                    var map = arcanist.Libraries.ToDictionary(l => l.Key, l => created[l.Value].Id);
+                    var choice = request.Arcanist!;
+                    var import = await ArcanistImportService.RecordAsync(db, arcanist.Source, arcanist.Manifest,
+                        new StartArcanistImportInput(choice.Source!, [], choice.Users ?? [], choice.CopyPasswords, choice.Permissions, choice.UserData,
+                            choice.Settings, choice.Extensions),
+                        map, 0, arcanist.Credentials, (adminId, request.Admin!.UserName!), adminId, time.GetUtcNow().UtcDateTime,
+                        ArcanistImportService.Protector(services), cancellationToken);
+                    migrations.Add("arcanist:" + import.Id);
+                }
+
+                if (dlnaImport is { } dlna)
+                {
+                    var import = new DlnaImport
+                    {
+                        Location = dlna.Server.Location.ToString(),
+                        ServerName = dlna.Server.Name,
+                        Containers = JsonSerializer.Serialize(request.Dlna!.Folders!.DistinctBy(f => f.Id)
+                            .Select(f => new Import.Dlna.DlnaContainerChoice(f.Id, f.Title)).ToList(), JsonSerializerOptions.Web),
+                        LibrarySourceId = created[dlna.Folder.Library].Sources[dlna.Folder.Folder].Id,
+                        Status = DlnaImportStatus.Queued,
+                        RequestedByUserId = adminId,
+                        CreatedAt = time.GetUtcNow().UtcDateTime,
+                    };
+                    db.DlnaImports.Add(import);
+                    migrations.Add("dlna:" + import.Id);
+                }
+
+                if (migrations.Count > 0)
+                    db.Settings.Add(new Setting { Key = SettingKeys.SetupMigration, Value = JsonSerializer.Serialize(migrations) });
+                await db.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
             }
 
@@ -279,6 +407,17 @@ public sealed class SetupService(
             // The wizard's last step shows this first scan in progress.
             foreach (var library in created)
                 await scans.EnqueueAsync(library.Id, ScanKind.Full, requestedBy: null, CancellationToken.None);
+
+            // A P2P link reached the other server: the network stays on.
+            var p2p = services.GetRequiredService<P2P.P2PSettings>();
+            if (arcanistImport is { Source.Ticket: not null } && p2p.Current.Enabled)
+            {
+                await p2p.SetAsync(p2p.Current, CancellationToken.None);
+                services.GetRequiredService<P2P.P2PNode>().Changed();
+            }
+
+            services.GetRequiredService<ArcanistImportWorker>().Wake();
+            services.GetService<Import.Dlna.DlnaImportWorker>()?.Wake();
 
             if (imported is not null)
             {
@@ -396,6 +535,91 @@ public sealed class SetupService(
         }
 
         return (source, vpaths);
+    }
+
+    /// <summary>Where each folder given in the request is: its library and its place among the library's folders.</summary>
+    private static (int Library, int Folder)? FolderOf(IReadOnlyList<SetupLibrary> libraries, string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+        for (var l = 0; l < libraries.Count; l++)
+        {
+            var folders = libraries[l].Folders ?? [];
+            for (var f = 0; f < folders.Count; f++)
+            {
+                if (folders[f] is { } folder && MstreamReader.SamePath(folder, path))
+                    return (l, f);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Reads the other Arcanist and checks the choices: each library one of its own, its folder one of the new libraries'.</summary>
+    private async Task<(ArcanistEndpoint Source, ExportManifest Manifest, Dictionary<Guid, int> Libraries, IReadOnlyList<ExportCredential> Credentials)?>
+        ValidateArcanistAsync(SetupArcanistImport request, IReadOnlyList<SetupLibrary> libraries, ValidationErrors errors, CancellationToken cancellationToken)
+    {
+        ArcanistEndpoint source;
+        ExportManifest manifest;
+        IReadOnlyList<ExportCredential> credentials = [];
+        try
+        {
+            (source, manifest) = await ReadArcanistAsync(request.Source, cancellationToken);
+            if (request.CopyPasswords && (request.Users ?? []).Count > 0)
+                credentials = await services.GetRequiredService<ArcanistSourceClient>().GetAsync<List<ExportCredential>>(source, "/credentials", cancellationToken);
+        }
+        catch (ArcanistException.Invalid invalid)
+        {
+            foreach (var (field, codes) in invalid.Errors.ToDictionary())
+                errors.Add("arcanist." + field, codes[0]);
+            return null;
+        }
+        catch (ArcanistException e)
+        {
+            errors.Add("arcanist", e.Code);
+            return null;
+        }
+
+        var map = new Dictionary<Guid, int>();
+        var chosen = request.Libraries ?? [];
+        for (var i = 0; i < chosen.Count; i++)
+        {
+            var folder = FolderOf(libraries, chosen[i].Folder);
+            if (manifest.Libraries.All(l => l.Id != chosen[i].SourceLibraryId))
+                errors.Add($"arcanist.libraries[{i}].sourceLibraryId", ErrorCodes.NotFound);
+            else if (folder is null)
+                errors.Add($"arcanist.libraries[{i}].folder", ErrorCodes.NotFound);
+            else
+                map.TryAdd(chosen[i].SourceLibraryId, folder.Value.Library);
+        }
+
+        return (source, manifest, map, credentials);
+    }
+
+    private async Task<(Dlna.MediaServerDevice Server, (int Library, int Folder) Folder)?> ValidateDlnaAsync(
+        SetupDlnaImport request, IReadOnlyList<SetupLibrary> libraries, ValidationErrors errors, CancellationToken cancellationToken)
+    {
+        if (request.Folders is not { Count: > 0 })
+            errors.Add("dlna.folders", ErrorCodes.Required);
+        var folder = FolderOf(libraries, request.Folder);
+        if (folder is null)
+            errors.Add("dlna.folder", ErrorCodes.NotFound);
+        if (!Uri.TryCreate(request.Location?.Trim(), UriKind.Absolute, out var location) || location.Scheme is not ("http" or "https"))
+        {
+            errors.Add("dlna.location", ErrorCodes.InvalidFormat);
+            return null;
+        }
+
+        try
+        {
+            var server = await services.GetRequiredService<Dlna.MediaServerClient>().DescribeAsync(location, cancellationToken);
+            return folder is null || request.Folders is not { Count: > 0 } ? null : (server, folder.Value);
+        }
+        catch (ArcanistException e)
+        {
+            errors.Add("dlna.location", e.Code);
+            return null;
+        }
     }
 
     private async Task<Data.Entities.MstreamImport> RecordMstreamImportAsync(

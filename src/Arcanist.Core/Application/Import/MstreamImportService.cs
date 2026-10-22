@@ -172,7 +172,8 @@ public sealed class MstreamImportService(
     public async Task<int> ClearHistoryAsync(CancellationToken cancellationToken)
     {
         guard.Admin();
-        return await ClearAsync(db, cancellationToken) + await DlnaImportService.ClearAsync(db, cancellationToken);
+        return await ClearAsync(db, cancellationToken) + await DlnaImportService.ClearAsync(db, cancellationToken)
+                                                       + await ServerMigration.ArcanistImportService.ClearAsync(db, cancellationToken);
     }
 
     /// <summary>Removes every finished import that nobody needs any more from the history; returns how many.</summary>

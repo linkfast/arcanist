@@ -108,6 +108,157 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("AppPasswords");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("CopiedBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ExtensionsInstalled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FilesCopied")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FilesFailed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FilesPresent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FilesTotal")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LibrariesCreated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LibraryMap")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlayCounts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PlayersInstalled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Playlists")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProtectedCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Ratings")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SettingsApplied")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceTicket")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Unmatched")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserMap")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UsersCreated")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("UsersMapped")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Wishes")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ArcanistImports");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImportFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ImportId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("SourceLibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportId", "Status");
+
+                    b.ToTable("ArcanistImportFiles");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Artist", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1154,6 +1305,43 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsUnique();
 
                     b.ToTable("MediaFiles");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MigrationGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastUsedBy")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.ToTable("MigrationGrants");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImport", b =>
@@ -2596,6 +2784,15 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImportFile", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.ArcanistImport", null)
+                        .WithMany("Files")
+                        .HasForeignKey("ImportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Backup", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.BackupDestination", "Destination")
@@ -3099,6 +3296,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Album", b =>
                 {
                     b.Navigation("Tracks");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImport", b =>
+                {
+                    b.Navigation("Files");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Backup", b =>

@@ -3143,3 +3143,184 @@ export const SetOpenSourceModeMutation = graphql(`
     }
   }
 `);
+
+// Migrations between Arcanist servers
+
+export const MigrationCodeInfoFields = graphql(`
+  fragment MigrationCodeInfoFields on MigrationCodeInfo {
+    id
+    createdAt
+    expiresAt
+    revokedAt
+    lastUsedAt
+    lastUsedBy
+    active
+  }
+`);
+
+export const MigrationCodesQuery = graphql(`
+  query MigrationCodes {
+    migrationCodes {
+      ...MigrationCodeInfoFields
+    }
+  }
+`);
+
+export const CreateMigrationCodeMutation = graphql(`
+  mutation CreateMigrationCode {
+    createMigrationCode {
+      id
+      code
+      expiresAt
+      addresses
+      p2PLink
+    }
+  }
+`);
+
+export const RevokeMigrationCodeMutation = graphql(`
+  mutation RevokeMigrationCode($id: ID!) {
+    revokeMigrationCode(id: $id)
+  }
+`);
+
+export const ArcanistServersQuery = graphql(`
+  query ArcanistServers {
+    arcanistServers {
+      name
+      url
+      nodeId
+      via
+    }
+  }
+`);
+
+export const ArcanistSourceAnalysisFields = graphql(`
+  fragment ArcanistSourceAnalysisFields on ArcanistSourceAnalysis {
+    serverName
+    version
+    viaP2P
+    libraries {
+      id
+      name
+      visibleToAll
+      files
+      bytes
+      tracks
+      sameName
+    }
+    users {
+      id
+      userName
+      displayName
+      role
+      isDisabled
+      hasPassword
+      secondFactor
+      exists
+    }
+    extensions {
+      id
+      name
+      version
+      enabled
+      builtIn
+      openSource
+      installed
+      available
+    }
+    players {
+      id
+      name
+      version
+      enabled
+      builtIn
+      openSource
+      installed
+      available
+    }
+    defaultPlayer
+  }
+`);
+
+export const AnalyzeArcanistServerQuery = graphql(`
+  query AnalyzeArcanistServer($input: ArcanistSourceInput!) {
+    analyzeArcanistServer(input: $input) {
+      ...ArcanistSourceAnalysisFields
+    }
+  }
+`);
+
+export const ArcanistImportJobFields = graphql(`
+  fragment ArcanistImportJobFields on ArcanistImportJob {
+    id
+    sourceName
+    sourceVersion
+    status
+    createdAt
+    finishedAt
+    errorCode
+    libraries
+    usersCreated
+    usersMapped
+    librariesCreated
+    settingsApplied
+    extensionsInstalled
+    playersInstalled
+    filesTotal
+    filesCopied
+    filesPresent
+    filesFailed
+    bytesTotal
+    copiedBytes
+    ratings
+    playCounts
+    plays
+    playlists
+    wishes
+    unmatched
+    canRetry
+    failures {
+      path
+      reason
+    }
+  }
+`);
+
+export const ArcanistImportsQuery = graphql(`
+  query ArcanistImports {
+    arcanistImports {
+      ...ArcanistImportJobFields
+    }
+  }
+`);
+
+export const StartArcanistImportMutation = graphql(`
+  mutation StartArcanistImport($input: StartArcanistImportInput!) {
+    startArcanistImport(input: $input) {
+      ...ArcanistImportJobFields
+    }
+  }
+`);
+
+export const CancelArcanistImportMutation = graphql(`
+  mutation CancelArcanistImport($id: ID!) {
+    cancelArcanistImport(id: $id) {
+      ...ArcanistImportJobFields
+    }
+  }
+`);
+
+export const RetryArcanistImportMutation = graphql(`
+  mutation RetryArcanistImport($id: ID!) {
+    retryArcanistImport(id: $id) {
+      ...ArcanistImportJobFields
+    }
+  }
+`);
+
+export const DeleteArcanistImportMutation = graphql(`
+  mutation DeleteArcanistImport($id: ID!) {
+    deleteArcanistImport(id: $id)
+  }
+`);

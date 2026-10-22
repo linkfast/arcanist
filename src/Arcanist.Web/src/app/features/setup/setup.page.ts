@@ -1,12 +1,29 @@
 import { Edition } from '../../core/server/edition';
 import { Brand } from '../../shared/brand';
 import { PrivacyChoice, PrivacyLevel } from '../../shared/privacy-level';
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  HostListener,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCheck, lucideFolderPlus, lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
+import {
+  lucideArrowRightLeft,
+  lucideCheck,
+  lucideFolderPlus,
+  lucideImport,
+  lucidePlus,
+  lucideServer,
+  lucideTrash2,
+  lucideX,
+} from '@ng-icons/lucide';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { HlmAlertImports } from '@spartan-ng/helm/alert';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
@@ -15,6 +32,7 @@ import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmProgressImports } from '@spartan-ng/helm/progress';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
@@ -34,12 +52,16 @@ import { Gql } from '../../core/graphql/gql.service';
 import { I18n, Language, TranslatePipe } from '../../core/i18n/i18n';
 import { SetupService } from '../../core/setup/setup.service';
 import type {
+  ArcanistImportJobFieldsFragment as ArcanistImportJob,
+  DlnaImportJobFieldsFragment as DlnaImportJob,
   MstreamImportJobFieldsFragment as MstreamImportJob,
   ScanJobFieldsFragment as ScanJob,
 } from '../../graphql/generated/graphql';
 import {
+  ArcanistImportsQuery,
   CreateLibraryMutation,
   CreateServerDirectoryMutation,
+  DlnaImportsQuery,
   FfmpegQuery,
   InstallFfmpegMutation,
   LibrariesQuery,
@@ -60,6 +82,18 @@ import {
   DlnaImportForm,
   startDlnaImport,
 } from '../import/dlna-import';
+import {
+  ArcanistImportJobView,
+  arcanistImportActive,
+  arcanistTargets,
+  panelArcanistApi,
+  startArcanistImport,
+} from '../import/arcanist-migration';
+import {
+  ArcanistImportApi,
+  ArcanistImportDraft,
+  ArcanistImportForm,
+} from '../../shared/arcanist-import';
 
 import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
 import {
@@ -101,9 +135,17 @@ interface DraftLibrary {
   name: string;
   folders: string[];
   visibleToAll: boolean;
-  /** The mStream library it was made for, and the folder chosen for it there. */
-  mstream?: { vpath: string; folder: string };
+  /**
+   * The import it was made for (`mstream:<vpath>`, `dlna`, `arcanist:<folder>`), the folder chosen there, and what
+   * the step shows about it.
+   */
+  origin?: { key: string; folder: string; label: string };
 }
+
+type ImportKind = 'mstream' | 'dlna' | 'arcanist';
+
+/** The wizard's answers, kept in this tab while setting up so a reload goes on where it was. */
+const DRAFT_KEY = 'arcanist.setupDraft';
 
 /** A library the server already has, shown when the wizard runs again. */
 interface ExistingLibrary {
@@ -112,7 +154,7 @@ interface ExistingLibrary {
   locations: string[];
 }
 
-/** How often the last screen refreshes the first scans and the import. */
+/** How often the last screen refreshes the first scans and the imports. */
 const PROGRESS_MS = 1500;
 
 @Component({
@@ -125,6 +167,7 @@ const PROGRESS_MS = 1500;
     HlmButtonImports,
     HlmFieldImports,
     HlmInputImports,
+    HlmNativeSelectImports,
     HlmRadioGroupImports,
     HlmSwitchImports,
     HlmCheckboxImports,
@@ -145,10 +188,23 @@ const PROGRESS_MS = 1500;
     TranslatePipe,
     FolderPicker,
     MstreamImportForm,
+    ArcanistImportForm,
+    ArcanistImportJobView,
     CountPipe,
     BytesPipe,
   ],
-  providers: [provideIcons({ lucideCheck, lucideFolderPlus, lucidePlus, lucideTrash2, lucideX })],
+  providers: [
+    provideIcons({
+      lucideArrowRightLeft,
+      lucideCheck,
+      lucideFolderPlus,
+      lucideImport,
+      lucidePlus,
+      lucideServer,
+      lucideTrash2,
+      lucideX,
+    }),
+  ],
   templateUrl: './setup.page.html',
 })
 export class SetupPage implements OnInit {
@@ -177,6 +233,16 @@ export class SetupPage implements OnInit {
   protected restoreStarted(): void {
     this.restoreOpen.set(false);
     this.restoring.set(true);
+  }
+
+  /** Bringing another Arcanist instead of restoring a backup: once the account exists, its dialog opens. */
+  private arcanistOnImport = false;
+
+  protected restoreMigrate(): void {
+    this.restoreOpen.set(false);
+    this.arcanistOnImport = true;
+    toast.info(this.i18n.t('setup.restore.migrateNext'));
+    void this.next();
   }
 
   protected readonly steps = computed<Step[]>(() => {
@@ -307,10 +373,17 @@ export class SetupPage implements OnInit {
   }
   protected shareStatistics: 'yes' | 'no' | null = 'yes';
   /** Another server to bring music, users and their data from. */
-  protected migrateFrom: 'none' | 'mstream' | 'dlna' = 'none';
+  protected migrateFrom: 'none' | ImportKind = 'none';
+  protected readonly importKinds: ImportKind[] = ['arcanist', 'mstream', 'dlna'];
+  protected readonly importIcons: Record<ImportKind, string> = {
+    arcanist: 'lucideArrowRightLeft',
+    mstream: 'lucideImport',
+    dlna: 'lucideServer',
+  };
+  /** The import whose dialog is open; each can be opened again to change it. */
+  protected readonly importDialog = signal<ImportKind | null>(null);
   /** The copy chosen from a DLNA server; it starts once the server is set up (or at the end, running the wizard again). */
   protected readonly dlnaChoice = signal<DlnaImportChoice | null>(null);
-  protected readonly dlnaPicking = signal(false);
   /** A DLNA copy was started at the end: it goes on in Import. */
   protected readonly dlnaStarted = signal(false);
   /** Running the wizard again: the folders of the libraries the server has, for imports to go into. */
@@ -341,13 +414,79 @@ export class SetupPage implements OnInit {
 
   protected chooseDlna(choice: DlnaImportChoice): void {
     this.dlnaChoice.set(choice);
-    this.dlnaPicking.set(false);
+    this.migrateFrom = 'dlna';
+    this.importDialog.set(null);
+    this.persist();
   }
 
-  /** The users the mStream import brings (one named like the administrator is the administrator). */
+  protected openImport(kind: ImportKind | 'none'): void {
+    if (kind !== 'none') this.importDialog.set(kind);
+  }
+
+  /** Whether the answers of an import's dialog are enough to choose it. */
+  protected importReady(kind: ImportKind): boolean {
+    if (kind === 'mstream') return this.mstream.analysis() !== null && this.mstream.complete();
+    if (kind === 'arcanist') return this.arcanist.analysis() !== null && this.arcanist.complete();
+    return this.dlnaChoice() !== null;
+  }
+
+  protected chooseImport(kind: ImportKind): void {
+    if (!this.importReady(kind)) return;
+    this.migrateFrom = kind;
+    this.importDialog.set(null);
+    this.error.set(null);
+    this.persist();
+  }
+
+  protected clearImport(): void {
+    this.migrateFrom = 'none';
+    this.persist();
+  }
+
+  /** What the chosen import brings, in a line. */
+  protected importSummary(): string {
+    switch (this.migrateFrom) {
+      case 'mstream':
+        return this.i18n.t(
+          this.mstream.importUsers
+            ? 'setup.review.mstreamWithUsers'
+            : 'setup.review.mstreamWithoutUsers',
+          { count: this.mstream.libraryInputs().length },
+        );
+      case 'dlna': {
+        const choice = this.dlnaChoice();
+        return choice
+          ? this.i18n.t('setup.import.dlnaSummary', {
+              server: choice.serverName,
+              folders: this.dlnaFolders(choice),
+            })
+          : '';
+      }
+      case 'arcanist':
+        return this.i18n.t('setup.import.arcanistSummary', {
+          server: this.arcanist.analysis()?.serverName ?? '',
+          libraries: this.arcanist.libraries().filter((l) => l.include).length,
+          users: this.arcanist.users().length,
+        });
+      default:
+        return this.i18n.t('setup.review.importNone');
+    }
+  }
+
+  /** The users the import brings (one named like the administrator is the administrator). */
   protected importedUsers(): { userName: string; displayName?: string | null; role: string }[] {
-    if (this.migrateFrom !== 'mstream' || !this.mstream.importUsers) return [];
     const admin = this.userName.trim().toLowerCase();
+    if (this.migrateFrom === 'arcanist') {
+      const chosen = new Set(this.arcanist.users());
+      return (this.arcanist.analysis()?.users ?? [])
+        .filter((u) => chosen.has(u.id) && u.userName.toLowerCase() !== admin && !u.exists)
+        .map((u) => ({
+          userName: u.userName,
+          displayName: this.arcanist.analysis()?.serverName,
+          role: this.arcanist.permissions ? u.role : 'USER',
+        }));
+    }
+    if (this.migrateFrom !== 'mstream' || !this.mstream.importUsers) return [];
     return (this.mstream.analysis()?.users ?? [])
       .filter((u) => u.userName.toLowerCase() !== admin && !u.exists)
       .map((u) => ({
@@ -356,6 +495,17 @@ export class SetupPage implements OnInit {
         role: u.isAdmin ? 'ADMIN' : 'USER',
       }));
   }
+
+  /** Another Arcanist to bring over, read through the setup API before there is an account. */
+  protected readonly arcanist = new ArcanistImportDraft();
+  private readonly panelArcanist = panelArcanistApi(this.gql);
+  protected readonly arcanistApi: ArcanistImportApi = {
+    servers: () => (this.reconfigure ? this.panelArcanist.servers() : this.setup.arcanistServers()),
+    analyze: (input) =>
+      this.reconfigure ? this.panelArcanist.analyze(input) : this.setup.analyzeArcanist(input),
+  };
+  /** Running the wizard again: the libraries a migration can copy into. */
+  protected readonly arcanistTargets = signal<{ id: string; label: string }[]>([]);
   protected readonly mstream = new MstreamImportDraft();
   protected readonly analyzeMstream = async (source: MstreamSourceInput) =>
     !this.reconfigure
@@ -409,16 +559,24 @@ export class SetupPage implements OnInit {
   protected readonly scanJobs = signal<ScanJob[]>([]);
   protected readonly libraryNames = signal<Record<string, string>>({});
   protected readonly importJob = signal<MstreamImportJob | null>(null);
+  protected readonly dlnaJob = signal<DlnaImportJob | null>(null);
+  protected readonly arcanistJob = signal<ArcanistImportJob | null>(null);
+  /** An import was started with setup: the panel waits until it ends. */
   protected importing = false;
   private readonly progressLoaded = signal(false);
-  protected readonly finished = computed(
-    () =>
+  protected readonly finished = computed(() => {
+    const mstream = this.importJob();
+    const dlna = this.dlnaJob();
+    const arcanist = this.arcanistJob();
+    return (
       this.progressLoaded() &&
       this.scanJobs().every((job) => job.status !== 'QUEUED' && job.status !== 'RUNNING') &&
       (!this.importing ||
-        this.importJob()?.status === 'COMPLETED' ||
-        this.importJob()?.status === 'FAILED'),
-  );
+        ((mstream === null || mstream.status === 'COMPLETED' || mstream.status === 'FAILED') &&
+          (dlna === null || !['QUEUED', 'LISTING', 'COPYING'].includes(dlna.status)) &&
+          (arcanist === null || !arcanistImportActive(arcanist))))
+    );
+  });
 
   // Folder picker
   protected readonly pickingFor = signal<number | null>(null);
@@ -480,6 +638,7 @@ export class SetupPage implements OnInit {
           locations: (l.sources ?? []).map((s) => s.location),
         })),
       );
+      this.arcanistTargets.set(arcanistTargets(existing));
       // Only new libraries are added here: none to start with when there are some.
       if (existing.length > 0) this.libraries.set([]);
       this.status.set({ requiresCode: false } as SetupStatus);
@@ -501,6 +660,167 @@ export class SetupPage implements OnInit {
     }
     this.status.set(status);
     this.step.set(status.requiresCode ? 'code' : 'welcome');
+    await this.restoreDraft();
+  }
+
+  /** Keeps the answers in this tab (never the passwords): a reload goes on where it was. */
+  @HostListener('window:pagehide')
+  protected persist(): void {
+    if (this.reconfigure || this.step() === 'progress' || this.restoring() || !this.status())
+      return;
+    const mstreamFromFolder =
+      this.mstream.analyzed?.folder != null && !this.mstream.analyzed.server;
+    const draft = {
+      step: this.step(),
+      code: this.code,
+      provider: this.provider,
+      userName: this.userName,
+      displayName: this.displayName,
+      libraries: this.libraries(),
+      migrateFrom: this.migrateFrom,
+      dlnaChoice: this.dlnaChoice(),
+      mstream: {
+        kind: this.mstream.kind,
+        folder: this.mstream.folder,
+        url: this.mstream.url,
+        adminUser: this.mstream.adminUser,
+        importUsers: this.mstream.importUsers,
+        // From a server, its password is not kept: it is read again.
+        analysis: mstreamFromFolder ? this.mstream.analysis() : null,
+        choices: mstreamFromFolder ? this.mstream.choices() : [],
+        analyzed: mstreamFromFolder ? this.mstream.analyzed : null,
+      },
+      arcanist: this.arcanist.save(),
+      ffmpegPath: this.ffmpegPath,
+      ratingMode: this.ratingMode,
+      onlineServices: { ...this.onlineServices },
+      noTelemetry: this.noTelemetry,
+      externalServices: this.externalServices,
+      openSourceOnly: this.openSourceOnly,
+      shareStatistics: this.shareStatistics,
+      extras: {
+        users: this.extras.users().map((u) => ({ ...u, password: '' })),
+        p2pEnabled: this.extras.p2pEnabled,
+        p2pName: this.extras.p2pName,
+        p2pRelay: this.extras.p2pRelay,
+        p2pRelayUrl: this.extras.p2pRelayUrl,
+        extensions: { ...this.extras.extensions },
+        extensionUrls: this.extras.extensionUrls(),
+        playerUrl: this.extras.playerUrl,
+        playerDefault: this.extras.playerDefault,
+      },
+    };
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      // Without storage (a private window), a reload starts over.
+    }
+  }
+
+  private forgetDraft(): void {
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // Nothing kept.
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private readDraft(): any {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The answers kept before a reload, and the step it was on. */
+  private async restoreDraft(): Promise<void> {
+    const draft = this.readDraft();
+    if (!draft) return;
+    if (this.status()?.requiresCode) {
+      if (!draft.code) return;
+      try {
+        if (!(await this.setup.verifyCode(draft.code))) return;
+      } catch {
+        return;
+      }
+      this.code = draft.code;
+    }
+    this.provider = draft.provider ?? this.provider;
+    this.userName = draft.userName ?? '';
+    this.displayName = draft.displayName ?? '';
+    if (Array.isArray(draft.libraries) && draft.libraries.length > 0)
+      this.libraries.set(draft.libraries);
+    this.migrateFrom = draft.migrateFrom ?? 'none';
+    this.dlnaChoice.set(draft.dlnaChoice ?? null);
+    if (draft.mstream) {
+      Object.assign(this.mstream, {
+        kind: draft.mstream.kind ?? 'folder',
+        folder: draft.mstream.folder ?? '',
+        url: draft.mstream.url ?? '',
+        adminUser: draft.mstream.adminUser ?? '',
+        importUsers: draft.mstream.importUsers ?? true,
+        analyzed: draft.mstream.analyzed ?? null,
+      });
+      this.mstream.analysis.set(draft.mstream.analysis ?? null);
+      this.mstream.choices.set(draft.mstream.choices ?? []);
+    }
+    this.arcanist.restore(draft.arcanist);
+    this.ffmpegPath = draft.ffmpegPath ?? '';
+    this.ratingMode = draft.ratingMode ?? this.ratingMode;
+    Object.assign(this.onlineServices, draft.onlineServices ?? {});
+    this.noTelemetry = draft.noTelemetry ?? false;
+    this.externalServices = draft.externalServices ?? 'ALL';
+    this.openSourceOnly = draft.openSourceOnly ?? false;
+    this.shareStatistics = draft.shareStatistics ?? 'yes';
+    const extras = draft.extras ?? {};
+    this.extras.users.set(extras.users ?? []);
+    Object.assign(this.extras, {
+      p2pEnabled: extras.p2pEnabled ?? false,
+      p2pName: extras.p2pName ?? '',
+      p2pRelay: extras.p2pRelay ?? 'N0',
+      p2pRelayUrl: extras.p2pRelayUrl ?? '',
+      playerUrl: extras.playerUrl ?? '',
+      playerDefault: extras.playerDefault ?? true,
+    });
+    Object.assign(this.extras.extensions, extras.extensions ?? {});
+    this.extras.extensionUrls.set(extras.extensionUrls ?? []);
+    if (this.steps().includes(draft.step)) this.step.set(draft.step);
+    if (this.step() === 'media') await this.detectFfmpeg();
+  }
+
+  /**
+   * Goes to any step from the selector at the bottom: back at once, forward through the steps in between, stopping
+   * at the first one that needs something.
+   */
+  protected async jump(target: Step): Promise<void> {
+    const to = this.steps().indexOf(target);
+    if (to < 0 || to === this.stepIndex()) return;
+    this.error.set(null);
+    if (to > this.stepIndex()) {
+      for (let i = this.stepIndex(); i < to; i++) {
+        const step = this.steps()[i];
+        if (!(await this.validate(step))) {
+          this.step.set(step);
+          this.persist();
+          return;
+        }
+      }
+    }
+    await this.arrive(target);
+  }
+
+  /** Shows a step, and what it needs when it opens. */
+  private async arrive(step: Step): Promise<void> {
+    this.step.set(step);
+    if (step === 'media' && !this.ffmpegDetected()) await this.detectFfmpeg();
+    if (step === 'import' && this.arcanistOnImport) {
+      this.arcanistOnImport = false;
+      if (this.migrateFrom !== 'arcanist') this.importDialog.set('arcanist');
+    }
+    this.persist();
   }
 
   protected setLanguage(language: string): void {
@@ -509,14 +829,13 @@ export class SetupPage implements OnInit {
 
   protected back(): void {
     this.error.set(null);
-    this.step.set(this.steps()[Math.max(0, this.stepIndex() - 1)]);
+    void this.arrive(this.steps()[Math.max(0, this.stepIndex() - 1)]);
   }
 
   protected async next(): Promise<void> {
     this.error.set(null);
     if (!(await this.validate(this.step()))) return;
-    this.step.set(this.steps()[this.stepIndex() + 1]);
-    if (this.step() === 'media' && !this.ffmpegDetected()) await this.detectFfmpeg();
+    await this.arrive(this.steps()[this.stepIndex() + 1]);
   }
 
   private async detectFfmpeg(): Promise<void> {
@@ -613,7 +932,7 @@ export class SetupPage implements OnInit {
 
   protected goTo(step: Step): void {
     this.error.set(null);
-    this.step.set(step);
+    void this.arrive(step);
   }
 
   protected async testDatabase(): Promise<void> {
@@ -690,42 +1009,97 @@ export class SetupPage implements OnInit {
       .map((c) => ({ vpath: c.vpath, folder: c.path.trim(), copyFiles: this.mstream.copies(c) }));
   }
 
+  /** The new libraries the chosen import needs, one per folder. */
+  private importLibraries(): {
+    key: string;
+    name: string;
+    folder: string;
+    visibleToAll: boolean;
+    label: string;
+  }[] {
+    switch (this.migrateFrom) {
+      case 'mstream':
+        return this.mstream
+          .choices()
+          .filter((c) => c.target === NewLibrary && c.path.trim())
+          .map((c) => ({
+            key: 'mstream:' + c.vpath,
+            name: c.name.trim(),
+            folder: c.path.trim(),
+            // With their users, each sees the libraries they had in mStream.
+            visibleToAll: !this.mstream.importUsers,
+            label: this.i18n.t('setup.libraries.fromMstream', { vpath: c.vpath }),
+          }));
+      case 'dlna': {
+        const choice = this.dlnaChoice();
+        return choice?.newLibraryPath
+          ? [
+              {
+                key: 'dlna',
+                name: choice.newLibraryName ?? choice.serverName,
+                folder: choice.newLibraryPath,
+                visibleToAll: true,
+                label: this.i18n.t('setup.libraries.fromDlna', { server: choice.serverName }),
+              },
+            ]
+          : [];
+      }
+      case 'arcanist': {
+        const server = this.arcanist.analysis()?.serverName ?? '';
+        const byFolder = new Map<
+          string,
+          { key: string; name: string; folder: string; visibleToAll: boolean; label: string }
+        >();
+        for (const library of this.arcanist
+          .libraries()
+          .filter((l) => l.include && l.newPath.trim())) {
+          const folder = library.newPath.trim();
+          const same = byFolder.get(folder);
+          if (same) same.visibleToAll &&= library.visibleToAll;
+          else
+            byFolder.set(folder, {
+              key: 'arcanist:' + folder,
+              name: library.newName.trim() || library.sourceName,
+              folder,
+              visibleToAll: library.visibleToAll,
+              label: this.i18n.t('setup.libraries.fromArcanist', { server }),
+            });
+        }
+        return [...byFolder.values()];
+      }
+      default:
+        return [];
+    }
+  }
+
   /**
-   * Turns the mStream libraries chosen into libraries of the next step: they keep what the user changed there,
-   * those no longer chosen go, and a folder already in a library is not added again.
+   * Turns the libraries the import needs into libraries of the next step: they keep what the user changed there,
+   * those no longer needed go, and a folder already in a library is not added again.
    */
-  private mergeMstreamLibraries(): void {
-    const chosen =
-      this.migrateFrom === 'mstream'
-        ? this.mstream.choices().filter((c) => c.target === NewLibrary && c.path.trim())
-        : [];
+  private mergeImportLibraries(): void {
+    const chosen = this.importLibraries();
     this.libraries.update((libraries) => {
       const kept = libraries
-        .filter((l) => !l.mstream || chosen.some((c) => c.vpath === l.mstream!.vpath))
+        .filter((l) => !l.origin || chosen.some((c) => c.key === l.origin!.key))
         .map((l) => {
-          const choice = l.mstream && chosen.find((c) => c.vpath === l.mstream!.vpath);
-          if (!choice || choice.path.trim() === l.mstream!.folder) return l;
-          const folder = choice.path.trim();
+          const choice = l.origin && chosen.find((c) => c.key === l.origin!.key);
+          if (!choice || choice.folder === l.origin!.folder) return l;
           return {
             ...l,
-            folders: [folder],
-            mstream: { vpath: choice.vpath, folder },
+            folders: [choice.folder],
+            origin: { key: choice.key, folder: choice.folder, label: choice.label },
           };
         });
       const added = chosen
-        .filter(
-          (c) =>
-            !kept.some((l) => l.mstream?.vpath === c.vpath || l.folders.includes(c.path.trim())),
-        )
+        .filter((c) => !kept.some((l) => l.origin?.key === c.key || l.folders.includes(c.folder)))
         .map((c) => ({
-          name: c.name.trim(),
-          folders: [c.path.trim()],
-          // With their users, each sees the libraries they had in mStream.
-          visibleToAll: !this.mstream.importUsers,
-          mstream: { vpath: c.vpath, folder: c.path.trim() },
+          name: c.name,
+          folders: [c.folder],
+          visibleToAll: c.visibleToAll,
+          origin: { key: c.key, folder: c.folder, label: c.label },
         }));
       const result = [
-        ...kept.filter((l) => l.mstream || l.name.trim() || l.folders.length > 0),
+        ...kept.filter((l) => l.origin || l.name.trim() || l.folders.length > 0),
         ...added,
       ];
       return result.length > 0 ? result : [{ name: '', folders: [], visibleToAll: true }];
@@ -764,7 +1138,7 @@ export class SetupPage implements OnInit {
         });
       }
       await this.applyExtras();
-      const imported = await this.startMstream();
+      const imported = (await this.startMstream()) || (await this.startArcanist());
       await this.startDlna();
       toast.success(this.i18n.t('setup.reconfigured'));
       // Imports go on by themselves: their progress is in Import.
@@ -784,6 +1158,13 @@ export class SetupPage implements OnInit {
 
   protected async finish(): Promise<void> {
     if (this.reconfigure) return this.finishReconfigure();
+    // Passwords are never kept across a reload: those missing are asked again.
+    const missing = this.missingAfterReload();
+    if (missing) {
+      this.error.set(this.i18n.t(missing.message));
+      this.step.set(missing.step);
+      return;
+    }
     this.busy.set(true);
     this.error.set(null);
     this.fieldErrors.set({});
@@ -823,15 +1204,36 @@ export class SetupPage implements OnInit {
                 importUsers: this.mstream.importUsers,
               }
             : null,
+        arcanist:
+          this.migrateFrom === 'arcanist' && this.arcanist.analyzed
+            ? {
+                source: this.arcanist.analyzed,
+                libraries: this.arcanist
+                  .libraries()
+                  .filter((l) => l.include && l.newPath.trim())
+                  .map((l) => ({ sourceLibraryId: l.sourceLibraryId, folder: l.newPath.trim() })),
+                users: this.arcanist.users(),
+                ...this.arcanist.options(),
+              }
+            : null,
+        dlna:
+          this.migrateFrom === 'dlna' && this.dlnaChoice()?.newLibraryPath
+            ? {
+                location: this.dlnaChoice()!.location,
+                folders: this.dlnaChoice()!.folders,
+                folder: this.dlnaChoice()!.newLibraryPath!,
+              }
+            : null,
       });
 
+      this.forgetDraft();
       await this.setup.loadStatus();
       await this.auth.login(this.userName.trim(), this.password);
       await this.applyExtras();
-      await this.startDlna();
-      this.importing = this.migrateFrom === 'mstream';
+      // The import runs on the server now; the wizard follows it until it ends (a reload comes back here).
+      this.importing = this.migrateFrom !== 'none';
       if (!this.importing && !this.libraries().some((library) => library.folders.length > 0)) {
-        await this.router.navigateByUrl(this.dlnaStarted() ? '/import' : '/libraries');
+        await this.router.navigateByUrl('/libraries');
         return;
       }
       this.step.set('progress');
@@ -841,19 +1243,55 @@ export class SetupPage implements OnInit {
       this.fieldErrors.set(apiError.fields);
       this.error.set(this.i18n.error(apiError.code));
       // Show the first step with a problem.
-      const prefixes: Partial<Record<Step, string>> = {
-        database: 'database',
-        admin: 'admin',
-        import: 'mstream',
-        libraries: 'libraries',
-        media: 'ffmpegPath',
+      const prefixes: Partial<Record<Step, string[]>> = {
+        database: ['database'],
+        admin: ['admin'],
+        import: ['mstream', 'arcanist', 'dlna'],
+        libraries: ['libraries'],
+        media: ['ffmpegPath'],
       };
       const step = (Object.keys(prefixes) as Step[]).find((s) =>
-        Object.keys(apiError.fields).some((field) => field.startsWith(prefixes[s]!)),
+        Object.keys(apiError.fields).some((field) =>
+          prefixes[s]!.some((prefix) => field.startsWith(prefix)),
+        ),
       );
       if (step) this.step.set(step);
+      if (['mstream', 'arcanist', 'dlna'].includes(apiError.code)) this.step.set('import');
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  /** What a reload left out (passwords are never kept), and the step that asks for it again. */
+  private missingAfterReload(): { step: Step; message: string } | null {
+    if (!this.password) return { step: 'admin', message: 'setup.draft.passwordAgain' };
+    if (
+      !this.status()?.database.lockedByEnvironment &&
+      this.provider === 'POSTGRES' &&
+      !this.connectionString.trim()
+    )
+      return { step: 'database', message: 'setup.draft.connectionAgain' };
+    if (this.migrateFrom === 'mstream' && !this.mstream.analyzed)
+      return { step: 'import', message: 'setup.import.analyzeFirst' };
+    if (this.extras.users().some((u) => !u.password))
+      return { step: 'users', message: 'setup.draft.usersAgain' };
+    return null;
+  }
+
+  /** Running the wizard again: starts the chosen migration from another Arcanist; it goes on in Import. */
+  private async startArcanist(): Promise<boolean> {
+    if (this.migrateFrom !== 'arcanist' || !this.arcanist.analyzed) return false;
+    try {
+      await startArcanistImport(this.gql, this.arcanist);
+      return true;
+    } catch (error) {
+      toast.error(
+        this.i18n.t('setup.extrasFailed', {
+          what: this.arcanist.analysis()?.serverName ?? 'Arcanist',
+          error: this.i18n.error(ApiError.from(error).code),
+        }),
+      );
+      return false;
     }
   }
 
@@ -934,12 +1372,16 @@ export class SetupPage implements OnInit {
     this.libraryNames.set(Object.fromEntries(libraries.map((l) => [l.id, l.name])));
     const refresh = async () => {
       try {
-        const [scans, imports] = await Promise.all([
+        const [scans, mstream, dlna, arcanist] = await Promise.all([
           this.gql.query(ScanJobsQuery, { limit: 50 }),
           this.importing ? this.gql.query(MstreamImportsQuery) : null,
+          this.importing ? this.gql.query(DlnaImportsQuery) : null,
+          this.importing ? this.gql.query(ArcanistImportsQuery) : null,
         ]);
         this.scanJobs.set(scans.scanJobs);
-        this.importJob.set(imports?.mstreamImports[0] ?? null);
+        this.importJob.set(mstream?.mstreamImports[0] ?? null);
+        this.dlnaJob.set(dlna?.dlnaImports[0] ?? null);
+        this.arcanistJob.set(arcanist?.arcanistImports[0] ?? null);
         this.progressLoaded.set(true);
       } catch {
         // Retried on the next tick.
@@ -993,7 +1435,7 @@ export class SetupPage implements OnInit {
         return true;
       case 'import':
         if (this.migrateFrom === 'mstream') {
-          if (!this.mstream.analysis()) {
+          if (!this.mstream.analysis() || !this.mstream.analyzed) {
             this.error.set(this.i18n.t('setup.import.analyzeFirst'));
             return false;
           }
@@ -1002,12 +1444,16 @@ export class SetupPage implements OnInit {
             return false;
           }
         }
+        if (this.migrateFrom === 'arcanist' && !this.importReady('arcanist')) {
+          this.error.set(this.i18n.t('setup.import.incomplete'));
+          return false;
+        }
         if (this.migrateFrom === 'dlna' && !this.dlnaChoice()) {
           this.error.set(this.i18n.t('setup.import.dlnaChoose'));
           return false;
         }
         // Running the wizard again, the import makes its own libraries.
-        if (!this.reconfigure) this.mergeMstreamLibraries();
+        if (!this.reconfigure) this.mergeImportLibraries();
         return true;
       case 'libraries':
         if (

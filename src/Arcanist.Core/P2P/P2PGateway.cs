@@ -219,8 +219,10 @@ internal sealed class P2PGateMiddleware(RequestDelegate next)
             return;
         }
 
+        // The export API checks its own migration code: any node that has one may migrate this server.
         if (path.Equals(PairPath, StringComparison.OrdinalIgnoreCase) || path.Equals(JoinPath, StringComparison.OrdinalIgnoreCase)
-                                                                      || path.Equals("/health", StringComparison.OrdinalIgnoreCase))
+                                                                      || path.Equals("/health", StringComparison.OrdinalIgnoreCase)
+                                                                      || path.StartsWithSegments(ServerMigration.ExportApi.Prefix, StringComparison.OrdinalIgnoreCase))
         {
             await next(context);
             return;

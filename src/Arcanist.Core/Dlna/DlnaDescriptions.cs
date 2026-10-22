@@ -5,6 +5,11 @@ namespace Arcanist.Core.Dlna;
 /// <summary>The UPnP descriptions of the media server and its two services.</summary>
 internal static class DlnaDescriptions
 {
+    /// <summary>How other servers recognise an Arcanist among media servers.</summary>
+    public const string Manufacturer = "LinkFast S.A.";
+
+    public const string ModelName = "Arcanist";
+
     public static string Device(Guid deviceId, string friendlyName, string version, string? sourceUrl, string basePath) =>
         $"""
         <?xml version="1.0" encoding="utf-8"?>
@@ -14,10 +19,10 @@ internal static class DlnaDescriptions
             <deviceType>{Ssdp.MediaServer}</deviceType>
             <dlna:X_DLNADOC>DMS-1.50</dlna:X_DLNADOC>
             <friendlyName>{SecurityElement.Escape(friendlyName)}</friendlyName>
-            <manufacturer>LinkFast S.A.</manufacturer>
+            <manufacturer>{Manufacturer}</manufacturer>
             <manufacturerURL>{SecurityElement.Escape(sourceUrl ?? "https://github.com/linkfast/arcanist")}</manufacturerURL>
             <modelDescription>Arcanist open source music server: your music library for TVs, speakers and players on the local network</modelDescription>
-            <modelName>Arcanist</modelName>
+            <modelName>{ModelName}</modelName>
             <modelNumber>{SecurityElement.Escape(version)}</modelNumber>
             <modelURL>{SecurityElement.Escape(sourceUrl ?? "https://github.com/linkfast/arcanist")}</modelURL>
             <serialNumber>{deviceId:N}</serialNumber>

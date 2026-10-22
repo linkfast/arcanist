@@ -113,6 +113,157 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("AppPasswords");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("CopiedBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("ExtensionsInstalled")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesCopied")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesFailed")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesPresent")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FilesTotal")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LibrariesCreated")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LibraryMap")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PlayCounts")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PlayersInstalled")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Playlists")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Plays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProtectedCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Ratings")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("SettingsApplied")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SourceTicket")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("SourceVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("Unmatched")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserMap")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UsersCreated")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UsersMapped")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Wishes")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("ArcanistImports");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImportFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ImportId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SourceLibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportId", "Status");
+
+                    b.ToTable("ArcanistImportFiles");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Artist", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1159,6 +1310,43 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("MediaFiles");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MigrationGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastUsedBy")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.ToTable("MigrationGrants");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.MstreamImport", b =>
@@ -2601,6 +2789,15 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImportFile", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.ArcanistImport", null)
+                        .WithMany("Files")
+                        .HasForeignKey("ImportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Backup", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.BackupDestination", "Destination")
@@ -3104,6 +3301,11 @@ namespace Arcanist.Core.Data.Migrations.Postgres
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Album", b =>
                 {
                     b.Navigation("Tracks");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ArcanistImport", b =>
+                {
+                    b.Navigation("Files");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Backup", b =>

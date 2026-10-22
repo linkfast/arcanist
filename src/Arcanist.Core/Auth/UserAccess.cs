@@ -112,16 +112,40 @@ public interface ICurrentUser
 
 internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 {
-    public bool IsAuthenticated => accessor.HttpContext?.Items[typeof(UserAccess)] is UserAccess;
+    private static readonly AsyncLocal<Acting?> ActingUser = new();
 
-    public UserAccess Access => accessor.HttpContext?.Items[typeof(UserAccess)] as UserAccess
+    private sealed record Acting(UserAccess Access, DateTimeOffset AuthenticatedAt);
+
+    /// <summary>
+    /// Background work an administrator approved (with a recent authentication) runs as them, until disposed: the
+    /// services it calls check that user, as if they asked now. Only for work started by that user's own request.
+    /// </summary>
+    public static IDisposable ActAs(UserAccess access, DateTimeOffset authenticatedAt)
+    {
+        var previous = ActingUser.Value;
+        ActingUser.Value = new Acting(access, authenticatedAt);
+        return new Restore(previous);
+    }
+
+    private sealed class Restore(Acting? previous) : IDisposable
+    {
+        public void Dispose() => ActingUser.Value = previous;
+    }
+
+    public bool IsAuthenticated => ActingUser.Value is not null || accessor.HttpContext?.Items[typeof(UserAccess)] is UserAccess;
+
+    public UserAccess Access => ActingUser.Value?.Access
+                                ?? accessor.HttpContext?.Items[typeof(UserAccess)] as UserAccess
                                 ?? throw new InvalidOperationException("The request is not authenticated.");
 
     /// <summary>The request's session; none (empty, as the extensions that sign in without one) for background work acting as a user.</summary>
-    public Guid SessionId => accessor.HttpContext is { } context ? Guid.Parse(context.User.FindFirst(ArcanistClaims.SessionId)!.Value) : Guid.Empty;
+    public Guid SessionId => ActingUser.Value is null && accessor.HttpContext is { } context
+        ? Guid.Parse(context.User.FindFirst(ArcanistClaims.SessionId)!.Value)
+        : Guid.Empty;
 
     public DateTimeOffset? AuthenticatedAt =>
-        long.TryParse(accessor.HttpContext?.User.FindFirst(ArcanistClaims.AuthenticatedAt)?.Value, out var seconds)
+        ActingUser.Value is { } acting ? acting.AuthenticatedAt
+        : long.TryParse(accessor.HttpContext?.User.FindFirst(ArcanistClaims.AuthenticatedAt)?.Value, out var seconds)
             ? DateTimeOffset.FromUnixTimeSeconds(seconds)
             : null;
 }

@@ -47,6 +47,12 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
 
     public DbSet<DlnaImport> DlnaImports => Set<DlnaImport>();
 
+    public DbSet<MigrationGrant> MigrationGrants => Set<MigrationGrant>();
+
+    public DbSet<ArcanistImport> ArcanistImports => Set<ArcanistImport>();
+
+    public DbSet<ArcanistImportFile> ArcanistImportFiles => Set<ArcanistImportFile>();
+
     public DbSet<LibraryCloudSync> LibraryCloudSyncs => Set<LibraryCloudSync>();
 
     public DbSet<CloudSyncItem> CloudSyncItems => Set<CloudSyncItem>();
@@ -276,6 +282,32 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             import.HasOne(i => i.LibrarySource).WithMany().HasForeignKey(i => i.LibrarySourceId).OnDelete(DeleteBehavior.Cascade);
             import.HasMany(i => i.Items).WithOne().HasForeignKey(i => i.ImportId).OnDelete(DeleteBehavior.Cascade);
             import.HasIndex(i => i.Status);
+        });
+
+        modelBuilder.Entity<MigrationGrant>(grant =>
+        {
+            grant.Property(g => g.CodeHash).HasMaxLength(64);
+            grant.Property(g => g.LastUsedBy).HasMaxLength(NameLength);
+            grant.HasIndex(g => g.CodeHash).IsUnique();
+        });
+
+        modelBuilder.Entity<ArcanistImport>(import =>
+        {
+            import.Property(i => i.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            import.Property(i => i.SourceName).HasMaxLength(NameLength);
+            import.Property(i => i.SourceVersion).HasMaxLength(64);
+            import.Property(i => i.SourceUrl).HasMaxLength(PathLength);
+            import.Property(i => i.ErrorCode).HasMaxLength(64);
+            import.HasMany(i => i.Files).WithOne().HasForeignKey(f => f.ImportId).OnDelete(DeleteBehavior.Cascade);
+            import.HasIndex(i => i.Status);
+        });
+
+        modelBuilder.Entity<ArcanistImportFile>(file =>
+        {
+            file.Property(f => f.Status).HasConversion<string>().HasMaxLength(EnumLength);
+            file.Property(f => f.Path).HasMaxLength(PathLength);
+            file.Property(f => f.Reason).HasMaxLength(64);
+            file.HasIndex(f => new { f.ImportId, f.Status });
         });
 
         modelBuilder.Entity<LibraryCloudSync>(sync =>

@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { TranslatePipe } from '../../core/i18n/i18n';
+import { HostCard } from './host-card';
 import { MaintenanceCard } from './maintenance-card';
 import { OnlineServicesCard } from './online-services-card';
 import { OpenSourceCard } from './open-source-card';
@@ -19,6 +20,7 @@ import { UpdatesCard } from './updates-card';
     OnlineServicesCard,
     RatingModeCard,
     UpdatesCard,
+    HostCard,
   ],
   template: `
     <header class="mb-6">
@@ -35,6 +37,7 @@ import { UpdatesCard } from './updates-card';
       @if (auth.isAdmin()) {
         <app-open-source-card />
         <app-updates-card />
+        <app-host-card />
         <app-maintenance-card />
       }
     </div>

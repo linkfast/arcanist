@@ -7713,6 +7713,27 @@
         }
       }
     },
+    "/rest/v1/server/host": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Where and how this server runs (how it was installed, system, container, supervisor, user, data folder), so that clients give the steps that fit it when something needs doing outside Arcanist. Administrators only.",
+        "operationId": "ServerHost",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerHost"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/server/update": {
       "get": {
         "tags": [
@@ -13907,6 +13928,14 @@
           "PLAYLISTS"
         ]
       },
+      "HostOs": {
+        "enum": [
+          "WINDOWS",
+          "MAC_OS",
+          "LINUX",
+          "OTHER"
+        ]
+      },
       "IFormFile": {
         "type": "string",
         "format": "binary"
@@ -14532,6 +14561,9 @@
           "TRUE_NAS",
           "UNRAID",
           "ROCKSTOR",
+          "WINDOWS_SERVICE",
+          "MAC_OS",
+          "SYSTEMD",
           "OTHER"
         ]
       },
@@ -19436,6 +19468,41 @@
         ],
         "default": "OPEN_SOURCE"
       },
+      "ServerHost": {
+        "required": [
+          "kind",
+          "os",
+          "architecture",
+          "container",
+          "supervised",
+          "user",
+          "dataDirectory"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/InstallKind"
+          },
+          "os": {
+            "$ref": "#/components/schemas/HostOs"
+          },
+          "architecture": {
+            "type": "string"
+          },
+          "container": {
+            "type": "boolean"
+          },
+          "supervised": {
+            "type": "boolean"
+          },
+          "user": {
+            "type": "string"
+          },
+          "dataDirectory": {
+            "type": "string"
+          }
+        }
+      },
       "ServerInfo": {
         "required": [
           "name",
@@ -20483,6 +20550,16 @@
           "migrating": {
             "type": "boolean",
             "default": false
+          },
+          "host": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ServerHost"
+              }
+            ]
           }
         }
       },

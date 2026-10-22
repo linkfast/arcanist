@@ -25,6 +25,10 @@ public static class ServerAdminEndpoints
             .WithName("ReconfigureServer")
             .WithSummary("The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication.");
 
+        server.MapGet("/host", (HostService service) => service.Get())
+            .WithName("ServerHost")
+            .WithSummary("Where and how this server runs (how it was installed, system, container, supervisor, user, data folder), so that clients give the steps that fit it when something needs doing outside Arcanist. Administrators only.");
+
         server.MapGet("/update", (UpdateService service, CancellationToken ct) => service.GetAsync(ct))
             .WithName("ServerUpdate")
             .WithSummary("Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only.");

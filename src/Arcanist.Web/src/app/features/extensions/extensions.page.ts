@@ -19,6 +19,7 @@ import { CloudOffDialog } from '../../shared/cloud-off-dialog';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
+import { HostHelp } from '../../shared/host-help';
 import type {
   ExtensionFieldsFragment as Extension,
   FrontendFieldsFragment as Frontend,
@@ -83,6 +84,7 @@ interface PendingInstall {
     HlmSpinnerImports,
     HlmSwitchImports,
     TranslatePipe,
+    HostHelp,
   ],
   template: `
     <header class="mb-6">
@@ -114,7 +116,10 @@ interface PendingInstall {
 
       @if (restartNeeded() && !restarting()) {
         <div hlmAlert class="flex flex-wrap items-center justify-between gap-3">
-          <p hlmAlertDescription>{{ 'extensions.list.restartNeeded' | t }}</p>
+          <div class="grid min-w-0 flex-1 gap-1">
+            <p hlmAlertDescription>{{ 'extensions.list.restartNeeded' | t }}</p>
+            <app-host-help topic="restart" />
+          </div>
           <button
             hlmBtn
             size="sm"
@@ -124,6 +129,13 @@ interface PendingInstall {
           >
             {{ 'extensions.list.restartNow' | t }}
           </button>
+        </div>
+      }
+
+      @if (restartFailed()) {
+        <div hlmAlert variant="destructive">
+          <p hlmAlertDescription>{{ 'extensions.list.restartUnreachable' | t }}</p>
+          <app-host-help topic="restart" />
         </div>
       }
 
@@ -457,6 +469,8 @@ export class ExtensionsPage implements OnInit {
   }
   protected readonly extensions = signal<Extension[]>([]);
   protected readonly busy = signal(false);
+  /** The server did not come back after a restart: the steps to start it on this host. */
+  protected readonly restartFailed = signal(false);
   protected readonly restarting = signal(false);
   protected readonly restartNeeded = computed(() =>
     this.extensions().some((e) => e.restartRequired),
@@ -623,6 +637,7 @@ export class ExtensionsPage implements OnInit {
     this.restartPhase.set('stopping');
     this.restartSeconds.set(0);
     this.restarting.set(true);
+    this.restartFailed.set(false);
     const started = Date.now();
     let wentDown = false;
     // Down first (up to 15 s), then up again (up to 2 min).
@@ -644,6 +659,7 @@ export class ExtensionsPage implements OnInit {
       await this.enabledExtensions.refresh();
       toast.success(this.i18n.t('extensions.list.restartDone'));
     } catch {
+      this.restartFailed.set(true);
       toast.error(this.i18n.t('extensions.list.restartUnreachable'));
     }
   }

@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import type { ServerHost } from '../server/host';
 
 // REST types used by the panel: setup and authentication only exist in REST. Everything else goes through
 // GraphQL with generated types (src/app/graphql/generated).
@@ -47,6 +48,8 @@ export interface SetupStatus {
     defaultSqlitePath: string;
   };
   dataDirectory: string;
+  /** Where the server runs, while setup is pending. */
+  host?: ServerHost | null;
 }
 
 /** How users rate tracks: one to five stars (five is a StarTrack), or the StarTrack alone (kept as five). */

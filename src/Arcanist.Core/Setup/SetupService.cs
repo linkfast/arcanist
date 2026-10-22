@@ -26,7 +26,8 @@ public sealed class SetupOptions
 
 /// <param name="Migrating">Set up, but the migration the wizard started (mStream: users and their data) is still
 /// running: the panel shows its progress until it ends.</param>
-public sealed record SetupStatus(bool Completed, bool RequiresCode, SetupDatabaseStatus Database, string DataDirectory, bool Migrating = false);
+/// <param name="Host">Where the server runs, while setup is pending (the wizard gives the steps that fit it).</param>
+public sealed record SetupStatus(bool Completed, bool RequiresCode, SetupDatabaseStatus Database, string DataDirectory, bool Migrating = false, Application.Server.ServerHost? Host = null);
 
 /// <param name="LockedByEnvironment">The database is set outside the wizard (environment variables, appsettings),
 /// so the wizard skips that step and ignores <see cref="SetupRequest.Database"/>.</param>
@@ -127,7 +128,8 @@ public sealed class SetupService(
                 IsDatabaseLockedByEnvironment,
                 database.Provider,
                 Path.Combine(paths.Root, "arcanist.db")),
-            paths.Root);
+            paths.Root,
+            Host: IsCompleted ? null : services.GetRequiredService<Application.Server.HostPlatform>().Current);
     }
 
     /// <summary>Whether the migration the wizard started is still running.</summary>

@@ -89,6 +89,15 @@
   body {
     @apply bg-background text-foreground;
   }
+  /*
+   * The list of a native select: selects are transparent, so the browser draws the list white while its options
+   * inherit the light text of the dark theme. Options get the theme's popover colors, readable in both themes.
+   */
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
   /* Grid items shrink below their content (long paths, names): a page is never wider than the screen. */
   .grid > * {
     min-width: 0;

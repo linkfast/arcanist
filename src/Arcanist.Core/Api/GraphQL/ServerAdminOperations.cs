@@ -16,6 +16,10 @@ public sealed partial class Query
     public static Task<ServerUpdate> ServerUpdate([FromServices] UpdateService updates, CancellationToken cancellationToken) =>
         updates.GetAsync(cancellationToken);
 
+    [Name("serverHost")]
+    [Description("Where and how this server runs (how it was installed, system, container, supervisor, user, data folder), so that clients give the steps that fit it when something needs doing outside Arcanist. Administrators only.")]
+    public static ServerHost ServerHost([FromServices] HostService host) => host.Get();
+
     [Name("openSourceMode")]
     [Description("The 100% open source mode, the server's edition and the closed source components installed. Administrators only.")]
     public static Task<OpenSourceMode> OpenSourceMode([FromServices] OpenSourceService service, CancellationToken cancellationToken) =>

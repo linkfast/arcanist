@@ -1479,6 +1479,125 @@ export const en: Dictionary = {
     save: 'Save',
     saved: 'Conversion settings saved',
   },
+  host: {
+    kinds: {
+      WINDOWS: 'Windows (tray app)',
+      WINDOWS_SERVICE: 'Windows (service)',
+      MAC_OS: 'macOS (Arcanist.app)',
+      DOCKER: 'Docker',
+      SYNOLOGY: 'Synology (DSM package)',
+      QNAP: 'QNAP (QTS package)',
+      OPEN_MEDIA_VAULT: 'OpenMediaVault (plugin)',
+      TRUE_NAS: 'TrueNAS SCALE (app)',
+      UNRAID: 'Unraid (Docker template)',
+      ROCKSTOR: 'Rockstor (Rock-on)',
+      DEBIAN_PACKAGE: 'Ubuntu or Debian (.deb package)',
+      SYSTEMD: 'Linux (systemd service)',
+      OTHER: 'Other (started by hand)',
+    },
+    card: {
+      title: 'This server',
+      description:
+        'Where and how Arcanist runs: the panel gives the steps that fit it when something is done outside Arcanist.',
+      kind: 'Installed as',
+      system: 'System',
+      container: 'In a container',
+      user: 'System user',
+      data: 'Data',
+      supervised: 'Restarts by itself',
+      yes: 'Yes',
+      no: 'No',
+    },
+    folders: {
+      title: "Arcanist doesn't see the folder?",
+      WINDOWS:
+        'Arcanist runs as your Windows user: it sees the folders you see. Mapped network drives (Z:) do not exist for it: use the network path (\\\\server\\folder).',
+      WINDOWS_SERVICE:
+        'The service runs as "NT SERVICE\\Arcanist" and only reads the folders it has permission for. Give it read access (modify, to upload or organize) on the folder: Properties → Security → Edit → Add → "NT SERVICE\\Arcanist". For music on a NAS, use the tray app mode or change the service account in services.msc.',
+      MAC_OS:
+        'macOS asks before an app reads folders such as Music, Documents, Desktop or external drives: in System Settings → Privacy & Security → Full Disk Access, turn Arcanist on and restart it from the menu bar.',
+      DOCKER:
+        "Arcanist only sees the folders mounted in its container (such as /music). Add yours with -v /path/on/the/machine:/music (or in Compose's volumes:), recreate the container and choose it here by its path inside the container. The container's user ({user}) must be able to read it.",
+      SYNOLOGY:
+        'Arcanist runs as the internal user sc-arcanist. Give it access in Control Panel → Shared Folder → the folder → Edit → Permissions → "System internal user" → sc-arcanist: read to listen, read and write to upload or organize. Arcanist\'s window in DSM shows which folders it can read.',
+      QNAP: 'Arcanist runs as an administrator of the NAS and reads every shared folder: they are under /share (such as /share/Music or /share/Multimedia).',
+      OPEN_MEDIA_VAULT:
+        'Add the shared folder in Services → Arcanist → Shared folders ("Allow writing" to upload or organize) and press Apply. The path to choose here is in that list.',
+      TRUE_NAS:
+        "Arcanist only sees its app's storage. Add the dataset in Apps → arcanist → Edit → Additional Storage and give the apps group (568) read access to it (Datasets → Edit ACL; modify to upload or organize).",
+      UNRAID:
+        "Arcanist only sees its template's paths. In Docker → Arcanist → Edit, add a path (Add another Path) with your share, such as /mnt/user/music → /music, and choose it here by its path inside the container.",
+      ROCKSTOR:
+        "Arcanist only sees its shares. Add yours in Rock-ons → Arcanist → Add Storage and give the owner of Arcanist's data share access to it (Access control).",
+      DEBIAN_PACKAGE:
+        'The service runs as its own user ({user}) and only reads folders anyone can read. For the others, give it a group that can: sudo systemctl edit arcanist, add [Service] and SupplementaryGroups=<group> (and ReadWritePaths=<folder> to upload or organize), then sudo systemctl restart arcanist.',
+      SYSTEMD:
+        'The service runs as its own user ({user}) and only reads folders anyone can read. For the others, give it a group that can: sudo systemctl edit arcanist, add [Service] and SupplementaryGroups=<group> (and ReadWritePaths=<folder> to upload or organize), then sudo systemctl restart arcanist.',
+      default:
+        'Arcanist runs as the user {user}: the folder must be on this server and that user must be able to read it (and write to it to upload or organize).',
+    },
+    audio: {
+      WINDOWS:
+        'Connect or turn on an audio output in Windows (Settings → System → Sound); the list updates by itself.',
+      WINDOWS_SERVICE:
+        'Connect or turn on an audio output in Windows (Settings → System → Sound); the list updates by itself.',
+      MAC_OS:
+        'Connect or turn on an audio output in System Settings → Sound; the list updates by itself.',
+      DOCKER:
+        'Give the container the sound card: --device /dev/snd --group-add audio (in Compose, devices: and group_add:) and recreate it.',
+      TRUE_NAS: 'Edit the app (Apps → arcanist → Edit), turn on "Server Audio" and save.',
+      UNRAID:
+        "In Docker → Arcanist → Edit, add --device /dev/snd --group-add <the audio group's id> to Extra Parameters. Unraid may have no sound drivers loaded.",
+      ROCKSTOR:
+        'Rock-ons do not pass the sound card to the container: server audio is not available on Rockstor.',
+      SYNOLOGY:
+        "DSM does not let a package give itself access to the sound card: Arcanist's window in DSM says whether there is one and what is missing.",
+      QNAP: 'Arcanist runs as an administrator: if QTS does not show the sound card or USB DAC, there is no device to use.',
+      OPEN_MEDIA_VAULT: 'Turn on "Server audio" in Services → Arcanist → Settings and press Apply.',
+      DEBIAN_PACKAGE:
+        'The service does not see the devices: sudo systemctl edit arcanist, add [Service], PrivateDevices=no and SupplementaryGroups=audio, then sudo systemctl restart arcanist.',
+      SYSTEMD:
+        'The service does not see the devices: sudo systemctl edit arcanist, add [Service], PrivateDevices=no and SupplementaryGroups=audio, then sudo systemctl restart arcanist.',
+      default: 'The user {user} must be able to open the sound card (on Linux, the audio group).',
+    },
+    restart: {
+      unsupervised:
+        'Nothing starts this server again: restarting stops it, and it has to be started by hand.',
+      WINDOWS:
+        'The tray app starts it again. If it does not come back, open Arcanist from the Start menu.',
+      WINDOWS_SERVICE:
+        'The service starts again by itself. If it does not come back, start it from the tray or in services.msc → Arcanist → Start.',
+      MAC_OS:
+        'The menu bar app starts it again. If it does not come back, open Arcanist from Applications.',
+      DOCKER:
+        'Docker starts it again if the container has a restart policy (--restart unless-stopped). If it does not come back: docker start arcanist (or docker compose up -d).',
+      SYNOLOGY:
+        'The package starts it again. If it does not come back, run it in Package Center → Arcanist.',
+      QNAP: 'The package starts it again. If it does not come back, start it in App Center → Arcanist.',
+      OPEN_MEDIA_VAULT:
+        'systemd starts it again. If it does not come back, press Restart in Services → Arcanist → Settings.',
+      TRUE_NAS: 'TrueNAS starts it again. If it does not come back, start it in Apps → arcanist.',
+      UNRAID:
+        'Docker starts it again. If it does not come back, start it on the Docker tab → Arcanist → Start.',
+      ROCKSTOR:
+        'Docker starts it again. If it does not come back, turn it on in Rock-ons → Arcanist.',
+      DEBIAN_PACKAGE:
+        'systemd starts it again. If it does not come back: sudo systemctl start arcanist (and sudo journalctl -u arcanist to see why).',
+      SYSTEMD:
+        'systemd starts it again. If it does not come back: sudo systemctl start arcanist (and sudo journalctl -u arcanist to see why).',
+      default: 'If it does not come back, start it again the way you started it.',
+    },
+    dlna: {
+      DOCKER:
+        "DLNA announces itself by multicast on the local network, which does not leave the container: use the machine's network (--network host, or network_mode: host in Compose).",
+      TRUE_NAS:
+        'DLNA announces itself by multicast on the local network: edit the app and turn on "Host Network".',
+      UNRAID:
+        'DLNA announces itself by multicast on the local network: in Docker → Arcanist → Edit, choose Network Type: Host.',
+      ROCKSTOR:
+        "DLNA announces itself by multicast on the local network, which does not leave a Rock-on's container: devices may not find Arcanist.",
+    },
+  },
   updates: {
     notice: {
       title: 'Arcanist {version} is available',
@@ -1502,6 +1621,12 @@ export const en: Dictionary = {
       UNRAID: 'On the Docker tab, press Check for updates and then Apply update on Arcanist.',
       ROCKSTOR:
         'Uninstall the Rock-on and install it again with the same shares: the new image is pulled and your data is kept.',
+      WINDOWS_SERVICE:
+        'The tray app installs the update and updates the service: tray menu → Check for updates.',
+      MAC_OS:
+        'Arcanist.app updates itself: menu bar → Check for updates (or with Homebrew: brew upgrade --cask arcanist).',
+      SYSTEMD:
+        "Download the tarball from the release page, replace the server's folder and restart: sudo systemctl restart arcanist.",
       OTHER: "Download your system's package from the release page.",
     },
     card: {

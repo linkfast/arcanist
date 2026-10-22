@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Arcanist.Core.Application.Server;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -99,6 +100,25 @@ public sealed class UpdateTests
 
         var update = await (await admin.PostAsync("/rest/v1/server/update/check", null, Cancel)).Content.ReadFromJsonAsync<ServerUpdate>(ArcanistFactory.Json, Cancel);
         Assert.Equal((false, null, null), (update!.Enabled, update.Latest, update.CheckedAt));
+    }
+
+    [Fact]
+    public async Task Administrators_read_where_the_server_runs()
+    {
+        await using var factory = Create("0.1.0");
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+
+        var host = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/server/host", ArcanistFactory.Json, Cancel);
+        Assert.Equal(factory.DataPath, host.GetProperty("dataDirectory").GetString());
+        Assert.Equal(Environment.UserName, host.GetProperty("user").GetString());
+        Assert.False(string.IsNullOrEmpty(host.GetProperty("kind").GetString()));
+        Assert.Equal(host.GetProperty("kind").GetString(),
+            (await admin.GraphQLAsync("{ serverHost { kind } }")).GetProperty("data").GetProperty("serverHost").GetProperty("kind").GetString());
+
+        await factory.CreateUserAsync("listener");
+        var listener = await factory.CreateAuthenticatedClientAsync("listener");
+        Assert.Equal(HttpStatusCode.Forbidden, (await listener.GetAsync("/rest/v1/server/host", Cancel)).StatusCode);
     }
 
     [Fact]

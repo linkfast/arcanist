@@ -28,6 +28,12 @@ public enum InstallKind
     Unraid,
     /// <summary>The Rockstor Rock-on (a container managed by Rockstor).</summary>
     Rockstor,
+    /// <summary>The Windows installer's server running as a Windows service (NT SERVICE\Arcanist).</summary>
+    WindowsService,
+    /// <summary>Arcanist.app on macOS (the menu bar app runs the server).</summary>
+    MacOS,
+    /// <summary>A Linux tarball run by systemd (packaging/linux/arcanist.service), not the .deb.</summary>
+    Systemd,
     /// <summary>Anything else (a tarball, a build from source).</summary>
     Other,
 }
@@ -156,8 +162,14 @@ public sealed class UpdateChecker(
         if (Enum.TryParse<InstallKind>(Environment.GetEnvironmentVariable("ARCANIST_INSTALL_KIND")?.Replace("_", ""), ignoreCase: true, out var declared)
             && Enum.IsDefined(declared))
             return declared;
+        // The tray (Windows) and the menu bar app (macOS) start the server with ExitWhenInputCloses.
+        var fromApp = Environment.GetCommandLineArgs().Any(a => a.Contains("ExitWhenInputCloses=true", StringComparison.OrdinalIgnoreCase));
         if (OperatingSystem.IsWindows())
-            return InstallKind.Windows;
+            return Microsoft.Extensions.Hosting.WindowsServices.WindowsServiceHelpers.IsWindowsService() ? InstallKind.WindowsService
+                : fromApp ? InstallKind.Windows
+                : InstallKind.Other;
+        if (OperatingSystem.IsMacOS())
+            return fromApp ? InstallKind.MacOS : InstallKind.Other;
         if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
             return string.Equals(Environment.GetEnvironmentVariable("HOST_OS"), "Unraid", StringComparison.OrdinalIgnoreCase)
                 ? InstallKind.Unraid
@@ -168,6 +180,9 @@ public sealed class UpdateChecker(
             return InstallKind.Synology;
         if (home.StartsWith("/opt/arcanist", StringComparison.Ordinal) && File.Exists("/var/lib/dpkg/info/arcanist.list"))
             return File.Exists("/var/lib/dpkg/info/openmediavault-arcanist.list") ? InstallKind.OpenMediaVault : InstallKind.DebianPackage;
+        // systemd sets INVOCATION_ID for the processes of a unit.
+        if (Environment.GetEnvironmentVariable("INVOCATION_ID") is { Length: > 0 })
+            return InstallKind.Systemd;
         return InstallKind.Other;
     }
 

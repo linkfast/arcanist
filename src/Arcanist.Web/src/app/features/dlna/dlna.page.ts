@@ -25,6 +25,7 @@ import { ApiError } from '../../core/api/rest';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
+import { HostHelp } from '../../shared/host-help';
 import type {
   DlnaAlbumSearchQuery as AlbumSearchResult,
   DlnaRendererAction,
@@ -82,6 +83,7 @@ const AllSections: DlnaSection[] = [
     HlmSwitchImports,
     HlmNativeSelectImports,
     TranslatePipe,
+    HostHelp,
   ],
   providers: [
     provideIcons({
@@ -107,6 +109,7 @@ const AllSections: DlnaSection[] = [
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'dlna.server.title' | t }}</h2>
             <p hlmCardDescription>{{ 'dlna.server.description' | t }}</p>
+            <app-host-help topic="dlna" />
           </div>
           <div hlmCardContent class="grid gap-4">
             <label class="flex items-center gap-2 text-sm font-medium">

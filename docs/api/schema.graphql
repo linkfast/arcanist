@@ -154,6 +154,8 @@ type Query {
   serverConfiguration: ServerConfiguration!
   "Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only."
   serverUpdate: ServerUpdate!
+  "Where and how this server runs (how it was installed, system, container, supervisor, user, data folder), so that clients give the steps that fit it when something needs doing outside Arcanist. Administrators only."
+  serverHost: ServerHost!
   "The 100% open source mode, the server's edition and the closed source components installed. Administrators only."
   openSourceMode: OpenSourceMode!
   "No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS."
@@ -1997,6 +1999,9 @@ enum InstallKind {
   TRUE_NAS
   UNRAID
   ROCKSTOR
+  WINDOWS_SERVICE
+  MAC_OS
+  SYSTEMD
   OTHER
 }
 
@@ -2007,6 +2012,23 @@ type ArcanistRelease {
   url: String!
   publishedAt: DateTime!
   prerelease: Boolean!
+}
+
+type ServerHost {
+  kind: InstallKind!
+  os: HostOs!
+  architecture: String!
+  container: Boolean!
+  supervised: Boolean!
+  user: String!
+  dataDirectory: String!
+}
+
+enum HostOs {
+  WINDOWS
+  MAC_OS
+  LINUX
+  OTHER
 }
 
 type OpenSourceMode {

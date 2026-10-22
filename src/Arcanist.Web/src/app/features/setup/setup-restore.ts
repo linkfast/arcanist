@@ -13,6 +13,7 @@ import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { ApiError, SetupRestoreSource, SetupStoredBackup } from '../../core/api/rest';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
+import { HostHelp } from '../../shared/host-help';
 import { SetupService } from '../../core/setup/setup.service';
 import { DirectoryCreator, DirectoryLoader, FolderPicker } from '../../shared/folder-picker';
 import { BytesPipe, DateTimePipe } from '../../shared/format';
@@ -44,6 +45,7 @@ type Snapshot = SetupStoredBackup['snapshots'][number];
     HlmRadioGroupImports,
     HlmSpinnerImports,
     TranslatePipe,
+    HostHelp,
     BytesPipe,
     DateTimePipe,
     FolderPicker,
@@ -208,6 +210,7 @@ type Snapshot = SetupStoredBackup['snapshots'][number];
 
         <div hlmAlert>
           <p hlmAlertDescription>{{ 'setup.restore.supervisor' | t }}</p>
+          <app-host-help class="mt-1" topic="restart" />
         </div>
       }
 

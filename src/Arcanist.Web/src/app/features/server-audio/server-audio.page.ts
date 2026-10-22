@@ -23,6 +23,7 @@ import { ApiError } from '../../core/api/rest';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
+import { HostHelp } from '../../shared/host-help';
 import type {
   DlnaAlbumSearchQuery as AlbumSearchResult,
   DlnaRendererAction,
@@ -65,6 +66,7 @@ const Server = 'server';
     HlmNativeSelectImports,
     HlmSwitchImports,
     TranslatePipe,
+    HostHelp,
   ],
   providers: [
     provideIcons({
@@ -123,11 +125,13 @@ const Server = 'server';
                   {{ 'serverAudio.output.noDeviceHelp' | t }}
                   <code class="mt-1 block break-all text-xs">{{ current.deviceError }}</code>
                 </p>
+                <app-host-help class="mt-2" topic="audio" />
               </div>
             }
 
             @if (current.available && current.devices.length === 0) {
               <p class="text-sm text-muted-foreground">{{ 'serverAudio.output.noDevices' | t }}</p>
+              <app-host-help topic="audio" />
             }
 
             @if (current.connectAccounts > 0) {

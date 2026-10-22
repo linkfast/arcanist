@@ -156,6 +156,8 @@ builder.Services.AddHttpClient(UpdateChecker.HttpClientName, client =>
 });
 builder.Services.AddSingleton<UpdateChecker>();
 builder.Services.AddScoped<UpdateService>();
+builder.Services.AddSingleton<HostPlatform>();
+builder.Services.AddScoped<HostService>();
 builder.Services.AddHostedService<UpdateCheckWorker>();
 builder.Services.AddScoped<AppPasswordService>();
 builder.Services.AddHttpClient(FrontendService.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(5));

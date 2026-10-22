@@ -19,6 +19,7 @@ import type {
   MstreamAnalysisFieldsFragment,
 } from '../../graphql/generated/graphql';
 import type { MstreamSourceInput } from '../../shared/mstream-import';
+import { Host } from '../server/host';
 
 type DlnaMediaServer = DlnaMediaServersQuery['dlnaMediaServers'][number];
 type DlnaFolderContents = BrowseDlnaMediaServerQuery['browseDlnaMediaServer'];
@@ -27,6 +28,7 @@ type DlnaFolderContents = BrowseDlnaMediaServerQuery['browseDlnaMediaServer'];
 @Injectable({ providedIn: 'root' })
 export class SetupService {
   private readonly http = inject(HttpClient);
+  private readonly host = inject(Host);
 
   readonly status = signal<SetupStatus | null>(null);
   readonly code = signal('');
@@ -34,6 +36,7 @@ export class SetupService {
   async loadStatus(): Promise<SetupStatus> {
     const status = await firstValueFrom(this.http.get<SetupStatus>('/rest/v1/setup/status'));
     this.status.set(status);
+    this.host.set(status.host);
     return status;
   }
 

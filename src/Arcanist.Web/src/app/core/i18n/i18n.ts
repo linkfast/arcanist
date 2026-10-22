@@ -51,6 +51,11 @@ export class I18n {
       : value;
   }
 
+  /** Whether the current language has a text for `key`. */
+  has(key: string): boolean {
+    return lookup(this.dictionary(), key) !== undefined;
+  }
+
   /** Message for an API error code, falling back to a generic one. */
   error(code: string | null | undefined): string {
     return code && lookup(this.dictionary(), `errors.${code}`)

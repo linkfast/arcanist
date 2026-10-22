@@ -9,6 +9,7 @@ import { HlmLabelImports } from '@spartan-ng/helm/label';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { ApiError, ServerDirectory, ServerDirectoryListing } from '../core/api/rest';
 import { I18n, TranslatePipe } from '../core/i18n/i18n';
+import { HostHelp } from './host-help';
 
 export type DirectoryLoader = (path: string | null) => Promise<ServerDirectoryListing>;
 
@@ -26,6 +27,7 @@ export type DirectoryCreator = (parent: string, name: string) => Promise<ServerD
     HlmCheckboxImports,
     HlmLabelImports,
     HlmSpinnerImports,
+    HostHelp,
     TranslatePipe,
   ],
   providers: [provideIcons({ lucideArrowUp, lucideFolder, lucideFolderPlus, lucideHardDrive })],
@@ -129,6 +131,13 @@ export type DirectoryCreator = (parent: string, name: string) => Promise<ServerD
       <p class="truncate font-mono text-xs text-muted-foreground" [title]="listing()?.path ?? ''">
         {{ listing()?.path ?? ('folderPicker.roots' | t) }}
       </p>
+
+      <details class="rounded-md border px-3 py-2 text-sm">
+        <summary class="cursor-pointer text-muted-foreground">
+          {{ 'host.folders.title' | t }}
+        </summary>
+        <app-host-help class="mt-2" topic="folders" />
+      </details>
 
       <div class="flex justify-end gap-2">
         <button hlmBtn variant="outline" type="button" (click)="cancelled.emit()">

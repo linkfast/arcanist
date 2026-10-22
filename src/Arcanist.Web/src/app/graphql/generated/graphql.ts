@@ -348,14 +348,17 @@ export type ImportTagsInput = {
 export type InstallKind =
   | 'DEBIAN_PACKAGE'
   | 'DOCKER'
+  | 'MAC_OS'
   | 'OPEN_MEDIA_VAULT'
   | 'OTHER'
   | 'QNAP'
   | 'ROCKSTOR'
   | 'SYNOLOGY'
+  | 'SYSTEMD'
   | 'TRUE_NAS'
   | 'UNRAID'
-  | 'WINDOWS';
+  | 'WINDOWS'
+  | 'WINDOWS_SERVICE';
 
 export type InstallMarketplaceExtensionInput = {
   enable: boolean;

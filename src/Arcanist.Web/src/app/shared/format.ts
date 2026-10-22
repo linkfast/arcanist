@@ -98,3 +98,8 @@ export class CountPipe implements PipeTransform {
     return new Intl.NumberFormat(this.i18n.language()).format(value ?? 0);
   }
 }
+
+/** Text to compare in a search: lowercase, without accents ("clas" finds "Clásica"). */
+export function searchKey(text: string): string {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}

@@ -116,58 +116,74 @@
       </div>
     </div>
 
-    <div hlmTabsContent="access">
-      <p class="mb-3 text-sm text-muted-foreground">{{ 'users.accessHelp' | t }}</p>
+    <div hlmTabsContent="access" class="grid gap-3">
+      <p class="text-sm text-muted-foreground">{{ 'users.accessHelp' | t }}</p>
       @if (accessLibraries().length === 0) {
         <p class="rounded-lg border p-6 text-sm text-muted-foreground">
           {{ 'users.noLibraries' | t }}
         </p>
       } @else {
+        @if ((users() ?? []).length > userSearchFrom) {
+          <input
+            hlmInput
+            type="search"
+            class="w-full sm:max-w-xs"
+            [attr.aria-label]="'users.searchUsers' | t"
+            [placeholder]="'users.searchUsers' | t"
+            [ngModel]="userQuery()"
+            (ngModelChange)="userQuery.set($event)"
+          />
+        }
         <div hlmTableContainer class="rounded-lg border">
           <table hlmTable>
             <thead hlmTHead>
               <tr hlmTr>
                 <th hlmTh>{{ 'common.userName' | t }}</th>
-                @for (library of accessLibraries(); track library.id) {
-                  <th hlmTh class="text-center">
-                    {{ library.name }}
-                    @if (library.visibleToAll) {
-                      <span class="block text-xs font-normal text-muted-foreground">{{
-                        'users.visibleToAll' | t
-                      }}</span>
-                    }
-                  </th>
-                }
+                <th hlmTh>{{ 'users.tabs.access' | t }}</th>
+                <th hlmTh class="text-right">{{ 'common.actions' | t }}</th>
               </tr>
             </thead>
             <tbody hlmTBody>
-              @for (user of users(); track user.id) {
+              @for (user of filteredUsers(); track user.id) {
                 <tr hlmTr>
-                  <td hlmTd class="font-medium">{{ user.userName }}</td>
-                  @for (library of accessLibraries(); track library.id) {
-                    <td hlmTd class="text-center">
-                      @if (user.role === 'ADMIN') {
-                        <span class="text-xs text-muted-foreground">{{
-                          'users.adminAccess' | t
-                        }}</span>
-                      } @else {
-                        <select
-                          hlmNativeSelect
-                          class="h-8 text-xs"
-                          [value]="level(user, library)"
-                          [disabled]="busy() || !canEdit(user)"
-                          [attr.aria-label]="user.userName + ' · ' + library.name"
-                          (change)="setAccess(user, library, $any($event.target).value)"
+                  <td hlmTd>
+                    <div class="font-medium">{{ user.userName }}</div>
+                    @if (user.displayName) {
+                      <div class="text-xs text-muted-foreground">{{ user.displayName }}</div>
+                    }
+                  </td>
+                  <td hlmTd class="text-sm">
+                    @if (user.role === 'ADMIN') {
+                      <span class="text-muted-foreground">{{ 'users.adminAccess' | t }}</span>
+                    } @else {
+                      {{ 'users.accessSummary' | t: accessSummary(user) }}
+                      @if (accessSummary(user).listen > 0) {
+                        <span class="text-muted-foreground">
+                          · {{ 'users.accessListenOnly' | t: accessSummary(user) }}</span
                         >
-                          @for (option of levels(library); track option) {
-                            <option [value]="option" [selected]="option === level(user, library)">
-                              {{ 'users.access.' + option | t }}
-                            </option>
-                          }
-                        </select>
                       }
-                    </td>
-                  }
+                    }
+                  </td>
+                  <td hlmTd class="text-right">
+                    @if (user.role !== 'ADMIN') {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        [disabled]="busy() || !canEdit(user)"
+                        (click)="openAccess(user)"
+                      >
+                        {{ 'users.editAccess' | t }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr hlmTr>
+                  <td hlmTd colspan="3" class="text-sm text-muted-foreground">
+                    {{ 'users.noUsersMatch' | t }}
+                  </td>
                 </tr>
               }
             </tbody>
@@ -178,9 +194,35 @@
   </hlm-tabs>
 }
 
+<!-- A user's access to the libraries -->
+<hlm-dialog [state]="accessFor() ? 'open' : 'closed'" (closed)="accessFor.set(null)">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+    @if (accessFor(); as user) {
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{ 'users.accessFor' | t: { name: user.userName } }}</h3>
+        <p hlmDialogDescription>{{ 'users.accessHelp' | t }}</p>
+      </hlm-dialog-header>
+      <app-library-access-editor
+        [libraries]="accessLibraries()"
+        [value]="accessDraft()"
+        [disabled]="busy()"
+        (changed)="accessDraft.set($event)"
+      />
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" type="button" (click)="accessFor.set(null)">
+          {{ 'common.cancel' | t }}
+        </button>
+        <button hlmBtn type="button" [disabled]="busy()" (click)="saveAccess()">
+          {{ 'common.save' | t }}
+        </button>
+      </hlm-dialog-footer>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
+
 <!-- Create / edit -->
 <hlm-dialog [state]="form() ? 'open' : 'closed'" (closed)="form.set(null)">
-  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-lg">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
     @if (form(); as current) {
       <form class="grid gap-4" (ngSubmit)="saveForm()">
         <hlm-dialog-header>
@@ -260,19 +302,15 @@
             }
           </fieldset>
 
-          @if (!current.id && restrictedLibraries().length > 0) {
-            <fieldset class="grid gap-2">
-              <legend class="mb-1 text-sm font-medium">{{ 'users.libraries' | t }}</legend>
-              @for (library of restrictedLibraries(); track library.id) {
-                <label class="flex items-center gap-2 text-sm">
-                  <hlm-checkbox
-                    [checked]="current.libraryIds.includes(library.id)"
-                    (checkedChange)="toggleFormLibrary(library.id, $event)"
-                  />
-                  {{ library.name }}
-                </label>
-              }
-            </fieldset>
+          @if (!current.id && accessLibraries().length > 0) {
+            <div class="grid gap-2">
+              <p class="text-sm font-medium">{{ 'users.libraries' | t }}</p>
+              <app-library-access-editor
+                [libraries]="accessLibraries()"
+                [value]="current.levels"
+                (changed)="updateForm({ levels: $event })"
+              />
+            </div>
           }
         }
 

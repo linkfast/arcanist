@@ -33,13 +33,11 @@ import {
   UpdateUserMutation,
   UsersQuery,
 } from '../../graphql/operations';
-import { RelativeTimePipe } from '../../shared/format';
+import { AccessLevels, LibraryAccessEditor, grantsOf, levelsOf } from './library-access-editor';
+import { RelativeTimePipe, searchKey } from '../../shared/format';
 
 type User = UserFieldsFragment;
 type Library = UsersResult['libraries'][number];
-
-/** What a user may do in a library: nothing, listen, or listen and add music (uploads). */
-type Level = 'none' | 'listen' | 'upload';
 
 const allPermissions: Permission[] = [
   'MANAGE_LIBRARIES',
@@ -60,7 +58,8 @@ interface UserForm {
   role: UserRole;
   permissions: Permission[];
   isDisabled: boolean;
-  libraryIds: string[];
+  /** For a new user: what they may do in each library. */
+  levels: AccessLevels;
 }
 
 @Component({
@@ -84,6 +83,7 @@ interface UserForm {
     HlmSpinnerImports,
     TranslatePipe,
     RelativeTimePipe,
+    LibraryAccessEditor,
   ],
   providers: [provideIcons({ lucidePlus, lucidePencil, lucideTrash2, lucideKeyRound })],
   templateUrl: './users.page.html',
@@ -105,20 +105,68 @@ export class UsersPage implements OnInit {
 
   /** Permissions the current user may grant: all for administrators, their own otherwise. */
   protected readonly grantable = computed(() => allPermissions.filter((p) => this.auth.can(p)));
-  /** Libraries that need explicit access (the others are visible to everyone). */
-  protected readonly restrictedLibraries = computed(() =>
-    this.libraries().filter((l) => !l.visibleToAll),
-  );
   /** Every library but users' personal ones: each user listens to it, adds to it, or (if restricted) neither. */
   protected readonly accessLibraries = computed(() => this.libraries().filter((l) => !l.personal));
 
-  protected level(user: User, library: Library): Level {
-    if (user.readOnlyLibraryIds.includes(library.id)) return 'listen';
-    return library.visibleToAll || user.libraryIds.includes(library.id) ? 'upload' : 'none';
+  /** A search for users appears from this many. */
+  protected readonly userSearchFrom = 10;
+  protected readonly userQuery = signal('');
+  protected readonly filteredUsers = computed(() => {
+    const words = searchKey(this.userQuery()).trim().split(/\s+/).filter(Boolean);
+    return (this.users() ?? []).filter((user) => {
+      const text = searchKey(`${user.userName} ${user.displayName ?? ''}`);
+      return words.every((word) => text.includes(word));
+    });
+  });
+
+  /** The user whose access is being edited, and the levels chosen so far. */
+  protected readonly accessFor = signal<User | null>(null);
+  protected readonly accessDraft = signal<AccessLevels>({});
+
+  /** How many libraries a user reaches, and in how many they only listen. */
+  protected accessSummary(user: User): { count: number; total: number; listen: number } {
+    const levels = Object.values(
+      levelsOf(this.accessLibraries(), user.libraryIds, user.readOnlyLibraryIds),
+    );
+    return {
+      count: levels.filter((l) => l !== 'none').length,
+      total: levels.length,
+      listen: levels.filter((l) => l === 'listen').length,
+    };
   }
 
-  protected levels(library: Library): Level[] {
-    return library.visibleToAll ? ['listen', 'upload'] : ['none', 'listen', 'upload'];
+  protected openAccess(user: User): void {
+    this.accessDraft.set(
+      levelsOf(this.accessLibraries(), user.libraryIds, user.readOnlyLibraryIds),
+    );
+    this.accessFor.set(user);
+  }
+
+  /** Saves the user's access to every library at once. */
+  protected async saveAccess(): Promise<void> {
+    const user = this.accessFor();
+    if (!user) return;
+    await this.run(async () => {
+      const result = await this.gql.mutate(SetUserLibrariesMutation, {
+        id: user.id,
+        input: grantsOf(this.accessLibraries(), this.accessDraft()),
+      });
+      const account = result.setUserLibraries;
+      this.users.update(
+        (users) =>
+          users?.map((u) =>
+            u.id === user.id
+              ? {
+                  ...u,
+                  libraryIds: account.libraryIds,
+                  readOnlyLibraryIds: account.readOnlyLibraryIds,
+                }
+              : u,
+          ) ?? null,
+      );
+      this.accessFor.set(null);
+      toast.success(this.i18n.t('users.accessSaved', { name: user.userName }));
+    });
   }
 
   async ngOnInit(): Promise<void> {
@@ -139,7 +187,7 @@ export class UsersPage implements OnInit {
       role: 'USER',
       permissions: [],
       isDisabled: false,
-      libraryIds: [],
+      levels: levelsOf(this.accessLibraries(), [], []),
     });
   }
 
@@ -153,7 +201,7 @@ export class UsersPage implements OnInit {
       role: user.role,
       permissions: [...user.permissions],
       isDisabled: user.isDisabled,
-      libraryIds: [...user.libraryIds],
+      levels: levelsOf(this.accessLibraries(), user.libraryIds, user.readOnlyLibraryIds),
     });
   }
 
@@ -169,19 +217,6 @@ export class UsersPage implements OnInit {
             permissions: granted
               ? [...form.permissions, permission]
               : form.permissions.filter((p) => p !== permission),
-          }
-        : form,
-    );
-  }
-
-  protected toggleFormLibrary(libraryId: string, granted: boolean): void {
-    this.form.update((form) =>
-      form
-        ? {
-            ...form,
-            libraryIds: granted
-              ? [...form.libraryIds, libraryId]
-              : form.libraryIds.filter((id) => id !== libraryId),
           }
         : form,
     );
@@ -213,7 +248,9 @@ export class UsersPage implements OnInit {
             displayName: form.displayName.trim() || null,
             role: form.role,
             permissions,
-            libraryIds: form.role === 'ADMIN' ? [] : form.libraryIds,
+            ...(form.role === 'ADMIN'
+              ? { libraryIds: [], readOnlyLibraryIds: [] }
+              : grantsOf(this.accessLibraries(), form.levels)),
           },
         });
       }
@@ -225,35 +262,6 @@ export class UsersPage implements OnInit {
     } finally {
       this.busy.set(false);
     }
-  }
-
-  /** Gives a user nothing, listening, or listening and uploading in a library; the rest stays as it is. */
-  protected async setAccess(user: User, library: Library, level: Level): Promise<void> {
-    const readOnly = user.readOnlyLibraryIds.filter((id) => id !== library.id);
-    const given = user.libraryIds.filter(
-      (id) => id !== library.id && !user.readOnlyLibraryIds.includes(id),
-    );
-    if (level === 'listen') readOnly.push(library.id);
-    if (level === 'upload' && !library.visibleToAll) given.push(library.id);
-    await this.run(async () => {
-      const result = await this.gql.mutate(SetUserLibrariesMutation, {
-        id: user.id,
-        input: { libraryIds: given, readOnlyLibraryIds: readOnly },
-      });
-      const account = result.setUserLibraries;
-      this.users.update(
-        (users) =>
-          users?.map((u) =>
-            u.id === user.id
-              ? {
-                  ...u,
-                  libraryIds: account.libraryIds,
-                  readOnlyLibraryIds: account.readOnlyLibraryIds,
-                }
-              : u,
-          ) ?? null,
-      );
-    });
   }
 
   protected async confirmReset(): Promise<void> {

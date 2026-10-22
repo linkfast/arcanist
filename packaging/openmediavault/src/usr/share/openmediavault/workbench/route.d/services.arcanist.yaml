@@ -1,0 +1,6 @@
+version: "1.0"
+type: route
+data:
+  url: "/services/arcanist"
+  title: _("Arcanist")
+  component: omv-services-arcanist-navigation-page

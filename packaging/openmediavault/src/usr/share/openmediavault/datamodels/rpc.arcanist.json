@@ -1,0 +1,48 @@
+[
+  {
+    "type": "rpc",
+    "id": "rpc.arcanist.setsettings",
+    "params": {
+      "type": "object",
+      "properties": {
+        "enable": {
+          "type": "boolean",
+          "required": true
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535,
+          "required": true
+        },
+        "serveraudio": {
+          "type": "boolean",
+          "required": true
+        }
+      }
+    }
+  },
+  {
+    "type": "rpc",
+    "id": "rpc.arcanist.setshare",
+    "params": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string",
+          "format": "uuidv4",
+          "required": true
+        },
+        "sharedfolderref": {
+          "type": "string",
+          "format": "uuidv4",
+          "required": true
+        },
+        "writable": {
+          "type": "boolean",
+          "required": true
+        }
+      }
+    }
+  }
+]

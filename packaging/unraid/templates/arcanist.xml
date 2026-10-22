@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Arcanist</Name>
+  <Repository>ghcr.io/linkfast/arcanist:preview</Repository>
+  <Registry>https://github.com/linkfast/arcanist/pkgs/container/arcanist</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/linkfast/arcanist/issues</Support>
+  <Project>https://github.com/linkfast/arcanist</Project>
+  <ReadMe>https://github.com/linkfast/arcanist#readme</ReadMe>
+  <Overview>Arcanist is a self-hosted, open source (AGPL-3.0) music server by LinkFast: a personal or family streaming service for your own music. Libraries from your shares, a web player, Subsonic/OpenSubsonic and mStream compatible apps, DLNA, playlists, ratings, mixes, audio analysis (BPM, key, loudness), transcoding with ffmpeg, backups and a P2P network to share libraries between servers.
+
+First run: open the WebUI and follow the setup wizard. It asks for a setup code, printed in the container's log and saved as setup-code.txt in its appdata folder.
+
+Music: map your music share to /music. Read-only is enough to listen; read-write lets Arcanist take uploads, organize and import. Add more paths if your music is in several shares.
+
+DLNA needs Network Type: Host.</Overview>
+  <Category>MediaServer:Music MediaApp:Music</Category>
+  <WebUI>http://[IP]:[PORT:8484]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/linkfast/unraid-templates/main/templates/arcanist.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/linkfast/arcanist/main/src/Arcanist.Web/public/arcanist.png</Icon>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <PostArgs/>
+  <License>AGPL-3.0-or-later</License>
+  <Beta>true</Beta>
+  <DefaultTagDescription>preview: the newest release, pre-releases included</DefaultTagDescription>
+  <Branch>
+    <Tag>edge</Tag>
+    <TagDescription>edge: every change to main (for testing only)</TagDescription>
+  </Branch>
+  <Changes>
+### 2026-10-22
+- First template.
+  </Changes>
+  <Config Name="WebUI" Target="8484" Default="8484" Mode="tcp" Description="Web player, admin panel and API." Type="Port" Display="always" Required="true" Mask="false">8484</Config>
+  <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/arcanist" Mode="rw" Description="Database, settings, keys, caches, logs and setup-code.txt. Keep it on a local disk or a cache pool, never on a network share." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/arcanist</Config>
+  <Config Name="Music" Target="/music" Default="/mnt/user/music" Mode="rw" Description="Your music. Read-only (ro) to listen only; read-write (rw) for uploads, organizing and imports." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/music</Config>
+</Container>

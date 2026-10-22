@@ -18,6 +18,16 @@ public enum InstallKind
     Synology,
     /// <summary>The .deb package for Ubuntu and Debian.</summary>
     DebianPackage,
+    /// <summary>OpenMediaVault's plugin (openmediavault-arcanist, over the .deb).</summary>
+    OpenMediaVault,
+    /// <summary>The QNAP package (.qpkg), from App Center.</summary>
+    Qnap,
+    /// <summary>The TrueNAS SCALE app (a container managed by TrueNAS).</summary>
+    TrueNas,
+    /// <summary>The Unraid template (a container managed by Unraid).</summary>
+    Unraid,
+    /// <summary>The Rockstor Rock-on (a container managed by Rockstor).</summary>
+    Rockstor,
     /// <summary>Anything else (a tarball, a build from source).</summary>
     Other,
 }
@@ -136,18 +146,28 @@ public sealed class UpdateChecker(
             .FirstOrDefault();
     }
 
-    /// <summary>How this server was installed, from where it runs.</summary>
+    /// <summary>
+    /// How this server was installed, from where it runs. The NAS apps that run the image say it with
+    /// <c>ARCANIST_INSTALL_KIND</c> (Unraid already says <c>HOST_OS=Unraid</c>).
+    /// </summary>
     public static InstallKind DetectInstallKind()
     {
         var home = AppContext.BaseDirectory.Replace('\\', '/');
+        if (Enum.TryParse<InstallKind>(Environment.GetEnvironmentVariable("ARCANIST_INSTALL_KIND")?.Replace("_", ""), ignoreCase: true, out var declared)
+            && Enum.IsDefined(declared))
+            return declared;
         if (OperatingSystem.IsWindows())
             return InstallKind.Windows;
         if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
-            return InstallKind.Docker;
+            return string.Equals(Environment.GetEnvironmentVariable("HOST_OS"), "Unraid", StringComparison.OrdinalIgnoreCase)
+                ? InstallKind.Unraid
+                : InstallKind.Docker;
+        if (Environment.GetEnvironmentVariable("QNAP_QPKG") is { Length: > 0 } || home.Contains("/.qpkg/Arcanist", StringComparison.Ordinal))
+            return InstallKind.Qnap;
         if (home.Contains("/@appstore/arcanist", StringComparison.Ordinal) || home.Contains("/var/packages/arcanist", StringComparison.Ordinal))
             return InstallKind.Synology;
         if (home.StartsWith("/opt/arcanist", StringComparison.Ordinal) && File.Exists("/var/lib/dpkg/info/arcanist.list"))
-            return InstallKind.DebianPackage;
+            return File.Exists("/var/lib/dpkg/info/openmediavault-arcanist.list") ? InstallKind.OpenMediaVault : InstallKind.DebianPackage;
         return InstallKind.Other;
     }
 

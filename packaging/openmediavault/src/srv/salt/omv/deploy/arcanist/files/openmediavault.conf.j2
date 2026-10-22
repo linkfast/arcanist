@@ -1,0 +1,25 @@
+{{ pillar['headers']['multiline'] -}}
+# Arcanist's settings from openmediavault (Services > Arcanist). Change them there: this file is rewritten.
+[Unit]
+{%- for share in config.shares.share %}
+RequiresMountsFor="{{ salt['omv_conf.get_sharedfolder_mount_path'](share.sharedfolderref) | replace('%', '%%') }}"
+{%- endfor %}
+
+[Service]
+# The port (appsettings.json says 8484; the Urls variable takes precedence).
+Environment="Urls=http://*:{{ config.port }}"
+# Shared folders belong to the group users: the service can read them, and write to those that allow it.
+{%- if config.serveraudio | to_bool %}
+SupplementaryGroups=users audio
+# Server audio plays through the sound card.
+PrivateDevices=no
+{%- else %}
+SupplementaryGroups=users
+{%- endif %}
+# What it writes there stays writable by the group, as SMB and the other services expect.
+UMask=0002
+{%- for share in config.shares.share %}
+{%- if share.writable | to_bool %}
+ReadWritePaths="{{ salt['omv_conf.get_sharedfolder_path'](share.sharedfolderref) | replace('%', '%%') }}"
+{%- endif %}
+{%- endfor %}

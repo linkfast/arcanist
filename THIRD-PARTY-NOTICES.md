@@ -110,6 +110,28 @@ downloaded from its releases when the server is published. Its folder carries it
 | class-variance-authority | Apache-2.0 |
 | clsx, tailwind-merge, Tailwind CSS (build only) | MIT |
 
+## QNAP package (`packaging/qnap`)
+
+QTS's C library is too old for .NET, so the `.qpkg` brings Debian 12's runtime libraries, unchanged (in `app/lib`,
+their Debian `copyright` files in `app/licenses`):
+
+| Component | License |
+|---|---|
+| GNU C Library (glibc: `ld-linux`, `libc`, `libm`, `libmvec`, `libpthread`, `libdl`, `librt`, `libresolv`, `libnss_*`) | LGPL-2.1-or-later (with GPL parts not shipped) |
+| libstdc++, libgcc_s (GCC runtime) | GPL-3.0-or-later WITH GCC-exception-3.1 |
+| ICU 72 (`libicuuc`, `libicui18n`, `libicudata`) | Unicode-3.0 (ICU license) |
+| OpenSSL 3 (`libssl`, `libcrypto`) | Apache-2.0 |
+| alsa-lib (`libasound.so.2` and ALSA's configuration) | LGPL-2.1-or-later |
+| tzdata (time zones) | public domain |
+| ca-certificates (Mozilla's CA bundle) | MPL-2.0 |
+
+They are loaded dynamically and can be replaced; their source code is Debian 12's (https://sources.debian.org:
+glibc, gcc-12, icu, openssl, alsa-lib), as the LGPL requires. The build tool, QNAP's QDK, is not distributed.
+
+## OpenMediaVault plugin (`packaging/openmediavault`)
+
+Written for Arcanist (AGPL-3.0-or-later); it uses OpenMediaVault's own APIs and includes no third-party code.
+
 ## Windows app (`src/Arcanist.Tray`)
 
 | Component | License |

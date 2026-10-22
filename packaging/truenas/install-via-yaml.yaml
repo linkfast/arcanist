@@ -1,0 +1,45 @@
+# Arcanist on TrueNAS SCALE 24.10 or later: Apps → Discover Apps → ⋮ → Install via YAML, then paste this file.
+# Create both datasets first (see README.md): the data one owned by the apps user (568), the music one readable by it.
+services:
+  arcanist:
+    image: ghcr.io/linkfast/arcanist:preview # the newest release; or a fixed version, e.g. 0.1.0-alpha.6
+    user: "568:568" # TrueNAS's "apps" user and group
+    group_add:
+      - "568"
+      # - "29" # audio group, only with /dev/snd below
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      TZ: Etc/UTC # your time zone, e.g. America/Lima
+      ARCANIST_INSTALL_KIND: TRUE_NAS
+      # Urls: "http://*:8484" # only to listen on another port (with host networking)
+    ports:
+      - "8484:8484"
+    # network_mode: host # instead of ports:, only for DLNA
+    # devices:
+    #   - /dev/snd:/dev/snd # Server audio extension
+    volumes:
+      - type: bind
+        source: /mnt/tank/apps/arcanist # a local dataset writable by 568; never an SMB/NFS share
+        target: /data
+      - type: bind
+        source: /mnt/tank/media/music
+        target: /music
+        read_only: true # false to let Arcanist take uploads, organize and import
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8484 &&
+          printf 'GET /health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 &&
+          head -n1 <&3 | grep -q ' 200 '
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+      start_interval: 2s

@@ -1,0 +1,23 @@
+######################################################################
+# Arcanist's install and remove steps for QTS (sourced by QDK's qinstall.sh).
+# Its data (database, keys, settings, logs) lives outside the package's folder, in <volume>/.arcanist, so removing
+# or upgrading the package never deletes it.
+######################################################################
+
+PKG_POST_REMOVE="{
+    rm -f /home/httpd/cgi-bin/qpkg/Arcanist
+    rm -f /var/run/arcanist.pid
+}"
+
+pkg_post_install(){
+    # The setup code that Arcanist's setup wizard asks for, in QTS's system log (only administrators read it) once
+    # the server has written it. The package's page in App Center shows it too.
+    DATA="${SYS_QPKG_DIR%/.qpkg/*}/.arcanist"
+    (
+        i=0
+        while [ $i -lt 60 ] && [ ! -f "$DATA/setup-code.txt" ]; do sleep 2; i=$((i+1)); done
+        if [ -f "$DATA/setup-code.txt" ]; then
+            /sbin/log_tool -t 0 -a "Arcanist is running: open its page in App Center, or http://<NAS>:8484/, and use setup code $(cat "$DATA/setup-code.txt")" || :
+        fi
+    ) >/dev/null 2>&1 &
+}

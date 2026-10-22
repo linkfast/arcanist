@@ -1,0 +1,65 @@
+version: "1.0"
+type: component
+data:
+  name: omv-services-arcanist-settings-form-page
+  type: formPage
+  config:
+    request:
+      service: Arcanist
+      get:
+        method: getSettings
+      post:
+        method: setSettings
+    hints:
+      - type: info
+        text: _("Arcanist is set up in its own web interface (Open UI). Here you choose its port and, in Shared folders, the folders it may use.")
+        dismissible: true
+        stateId: 2f6d1d0e-6a3b-4c1e-9a55-1c0a4c8d7e01
+    fields:
+      - type: checkbox
+        name: enable
+        label: _("Enabled")
+        value: true
+      - type: numberInput
+        name: port
+        label: _("Port")
+        hint: _("Port of Arcanist's web player, admin panel and API.")
+        value: 8484
+        validators:
+          min: 1024
+          max: 65535
+          patternType: port
+          required: true
+      - type: checkbox
+        name: serveraudio
+        label: _("Server audio")
+        value: false
+        hint: _("Lets Arcanist's Server audio extension play through this machine's sound card.")
+      - type: hint
+        hintType: info
+        text: _("The setup code that Arcanist's setup wizard asks for is on the Status page.")
+    buttons:
+      - text: _("Open UI")
+        enabledConstraint:
+          operator: "truthy"
+          arg0:
+            prop: "enable"
+        execute:
+          type: url
+          url: "/externalRedirect/{{ ['http://', location() | get('hostname'), ':', port] | join | encodeuricomponent }}"
+      - text: _("Restart")
+        enabledConstraint:
+          operator: "truthy"
+          arg0:
+            prop: "enable"
+        execute:
+          type: request
+          request:
+            service: Arcanist
+            method: restart
+            progressMessage: _("Restarting Arcanist ...")
+      - template: submit
+      - template: cancel
+        execute:
+          type: url
+          url: "/services/arcanist"

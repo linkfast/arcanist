@@ -200,3 +200,31 @@ jobs:
           name: synology
           path: artifacts/synology/*.spk
           compression-level: 0
+
+  nas:
+    name: OpenMediaVault plugin and QNAP packages
+    needs: linux
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the plugin's version counts the commits
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: artifacts/linux
+      # openmediavault-arcanist (Architecture: all), over the arcanist .deb of this release.
+      - run: sh packaging/openmediavault/build.sh "$VERSION"
+      # QTS and QuTS hero (x86_64 and arm_64), with Debian 12's C library: QTS's is too old for .NET.
+      - run: |
+          docker build -t arcanist-qnap-builder -f packaging/qnap/builder.Dockerfile packaging/qnap
+          docker run --rm -v "$PWD:/src" -w /src arcanist-qnap-builder sh packaging/qnap/qpkg.sh "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nas
+          path: |
+            artifacts/linux/openmediavault-arcanist_*_all.deb
+            artifacts/qnap/*.qpkg
+          compression-level: 0

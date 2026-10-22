@@ -348,8 +348,13 @@ export type ImportTagsInput = {
 export type InstallKind =
   | 'DEBIAN_PACKAGE'
   | 'DOCKER'
+  | 'OPEN_MEDIA_VAULT'
   | 'OTHER'
+  | 'QNAP'
+  | 'ROCKSTOR'
   | 'SYNOLOGY'
+  | 'TRUE_NAS'
+  | 'UNRAID'
   | 'WINDOWS';
 
 export type InstallMarketplaceExtensionInput = {

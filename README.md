@@ -10,7 +10,7 @@ Arcanist is a self-hosted music server: your own personal and family "Spotify". 
 - **Users and permissions** — an administrator account, regular users, and per-user access to each library.
 - **Open APIs** — GraphQL as the primary API and an equivalent OpenAPI (REST) contract, documented so anyone can build a player.
 - **Replaceable web player** — Ultimate Web Player ships by default; alternative players can be installed from the admin panel.
-- **Runs anywhere you do** — Windows (installer, service, tray icon), macOS (a menu bar app), Linux, Docker and NAS (Synology first).
+- **Runs anywhere you do** — Windows (installer, service, tray icon), macOS (a menu bar app), Linux, Docker and NAS (Synology, QNAP, OpenMediaVault, TrueNAS SCALE, Unraid and Rockstor).
 - **Reach your music without a public IP** through a peer-to-peer network based on [iroh](https://github.com/n0-computer/iroh), and share libraries between Arcanist instances.
 - **mStream compatibility** — mStream clients can use Arcanist as their server, and existing mStream installations can be imported.
 - **Optional Ultimate Cloud integration** — use music stored in Ultimate Cloud, and with a paid plan sync libraries to Ultimate Cloud or S3-compatible storage.
@@ -65,6 +65,17 @@ With Docker Compose (SQLite or PostgreSQL): see [packaging/docker](packaging/doc
 A package for DSM 7.2+ is prepared for SynoCommunity ([packaging/synology](packaging/synology/README.md)). Its install
 wizard shows the setup code.
 
+### Other NAS
+
+- **QNAP** (QTS and QuTS hero 5+): the release's `.qpkg`, in App Center → Install Manually
+  ([packaging/qnap](packaging/qnap/README.md)).
+- **OpenMediaVault** 7+: the `.deb` and the `openmediavault-arcanist` plugin, which adds Services → Arcanist
+  ([packaging/openmediavault](packaging/openmediavault/README.md)).
+- **TrueNAS SCALE** 24.10+: an app for its community catalog, and a YAML for Install via YAML
+  ([packaging/truenas](packaging/truenas/README.md)).
+- **Unraid**: a Community Applications template ([packaging/unraid](packaging/unraid/README.md)).
+- **Rockstor** 5.5+: a Rock-on ([packaging/rockstor](packaging/rockstor/README.md)).
+
 ## Repository layout
 
 | Path | Contents |
@@ -74,7 +85,7 @@ wizard shows the setup code.
 | `src/Arcanist.Tray` | The Windows tray app and macOS menu bar app (Avalonia), installed with Velopack |
 | `native/arcanist-audio` | Audio analysis in Rust (Symphonia): loudness, fingerprints, waveform, tempo and key |
 | `tests/` | Server and tray tests |
-| `packaging/` | Windows installer, macOS app (.dmg, .pkg, MacPorts), Linux tarballs, .deb and systemd unit, Synology package |
+| `packaging/` | Windows installer, macOS app (.dmg, .pkg, MacPorts), Linux tarballs, .deb and systemd unit, NAS packages (Synology, QNAP, OpenMediaVault, TrueNAS, Unraid, Rockstor) |
 | `.github/workflows` | CI, and releases on `v*` tags |
 
 ## Building

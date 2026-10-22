@@ -1,0 +1,12 @@
+version: "1.0"
+type: component
+data:
+  name: omv-services-arcanist-status-text-page
+  type: textPage
+  config:
+    hasReloadButton: true
+    hasCopyToClipboardButton: true
+    request:
+      service: Arcanist
+      get:
+        method: getInfo

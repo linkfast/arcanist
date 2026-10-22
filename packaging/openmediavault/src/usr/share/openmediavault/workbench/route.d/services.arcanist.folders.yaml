@@ -1,0 +1,6 @@
+version: "1.0"
+type: route
+data:
+  url: "/services/arcanist/folders"
+  title: _("Shared folders")
+  component: omv-services-arcanist-folders-datatable-page

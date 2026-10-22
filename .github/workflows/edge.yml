@@ -116,6 +116,11 @@ jobs:
           path: upload
       - uses: actions/download-artifact@v4
         with:
+          name: nas
+          path: upload
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
           pattern: macos-*
           path: upload
           merge-multiple: true
@@ -134,6 +139,8 @@ jobs:
           - **macOS** (Apple Silicon \`arm64\`, Intel \`x64\`): the \`.dmg\` (drag Arcanist.app to Applications) or the \`.pkg\`. It is not notarized: confirm it the first time in System Settings → Privacy & Security → Open Anyway. It updates itself from later edge builds only.
           - **Ubuntu 24.04+ / Debian 12+**: \`sudo apt install ./arcanist_*_amd64.deb\` (or \`_arm64\`).
           - **Synology DSM 7.2+**: Package Center → Manual Install with the \`.spk\` of your NAS (\`x64\` or \`aarch64\`). It needs SynoCommunity's .NET 10 runtime and FFmpeg packages.
+          - **OpenMediaVault 7+**: \`sudo apt install ./arcanist_*_amd64.deb ./openmediavault-arcanist_*_all.deb\`, then Services → Arcanist.
+          - **QNAP QTS / QuTS hero 5+**: App Center → Install Manually with the \`.qpkg\` of your NAS (\`x86_64\` or \`arm_64\`); accept the unsigned-package warning.
           - **Docker**: \`ghcr.io/${GITHUB_REPOSITORY_OWNER}/arcanist:edge\`.
           EOF
           gh release create edge upload/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \

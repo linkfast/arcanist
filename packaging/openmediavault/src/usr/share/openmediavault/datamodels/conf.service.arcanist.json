@@ -1,0 +1,50 @@
+{
+  "type": "config",
+  "id": "conf.service.arcanist",
+  "title": "Arcanist",
+  "queryinfo": {
+    "xpath": "//services/arcanist",
+    "iterable": false
+  },
+  "properties": {
+    "enable": {
+      "type": "boolean",
+      "default": true
+    },
+    "port": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 65535,
+      "default": 8484
+    },
+    "serveraudio": {
+      "type": "boolean",
+      "default": false
+    },
+    "shares": {
+      "type": "object",
+      "properties": {
+        "share": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "uuid": {
+                "type": "string",
+                "format": "uuidv4"
+              },
+              "sharedfolderref": {
+                "type": "string",
+                "format": "uuidv4"
+              },
+              "writable": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

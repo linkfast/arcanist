@@ -1,0 +1,13 @@
+images:
+  image:
+    repository: ghcr.io/linkfast/arcanist
+    tag: "0.1.0-alpha.6@sha256:bbbe95a0c5887ca474bdb73405280631f30b1ec8139a8beebf97299b7e195845"
+  container_utils_image:
+    repository: ghcr.io/truenas/containers/container-utils
+    tag: "1.1.1@sha256:d1bdb3a3ed7fc158eca53cd78486c388345c603fe2bf42fb24a1e03e1068ff38"
+
+consts:
+  arcanist_container_name: arcanist
+  perms_container_name: permissions
+  data_path: /data
+  music_path: /music

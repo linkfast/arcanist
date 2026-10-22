@@ -1,0 +1,81 @@
+#!/bin/sh
+# Runs and supervises Arcanist on QTS:  arcanist-run <package folder> <data folder>
+#
+# QTS's C library is too old for .NET (glibc 2.21; Arcanist needs 2.27), so the package brings Debian 12's: the
+# server runs through its loader (app/ld-linux-*), which takes the libraries from app/lib. --library-path, unlike
+# LD_LIBRARY_PATH, is not passed on: the programs Arcanist starts (ffmpeg) use their own.
+#
+# Starts the server again when it asks to (exit code 75: a restart from the panel, a factory reset, a restore; more
+# than five times in a minute and it stops) and after a crash, waiting longer each time.
+ROOT=$1
+DATA=$2
+APP="$ROOT/app"
+LOADER=$(ls "$APP"/ld-linux-* 2>/dev/null | head -n 1)
+LOG="$DATA/package.log"
+
+export TZDIR="$APP/zoneinfo"
+export SSL_CERT_FILE="$APP/certs/ca-certificates.crt"
+export SSL_CERT_DIR="$APP/certs"
+export ALSA_CONFIG_DIR="$APP/alsa"
+export ALSA_CONFIG_PATH="$APP/alsa/alsa.conf"
+export DOTNET_gcServer=0
+export ARCANIST_INSTALL_KIND=QNAP
+# ffmpeg through the same loader (see bin/ffmpeg): the one Arcanist downloads needs a newer C library too.
+export Arcanist__Ffmpeg__Path="$ROOT/bin/ffmpeg"
+
+child=
+stopping=
+trap 'stopping=1; [ -n "$child" ] && kill -TERM "$child" 2>/dev/null' TERM INT
+
+restarts=0
+window=$(date +%s)
+failures=0
+while :; do
+    # The package's log keeps its last 2 MB once it passes 10 MB.
+    if [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 10485760 ]; then
+        tail -c 2097152 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+    fi
+    PORT=8484
+    [ -f "$DATA/package.conf" ] && . "$DATA/package.conf"
+
+    echo "$(date '+%Y-%m-%d %H:%M:%S') Starting Arcanist on port $PORT"
+    "$LOADER" --library-path "$APP/lib" "$APP/arcanist" --data-dir "$DATA" --urls "http://*:$PORT" &
+    child=$!
+    wait "$child"
+    code=$?
+    # A signal interrupts wait: wait again for the server to stop.
+    while kill -0 "$child" 2>/dev/null; do
+        wait "$child"
+        code=$?
+    done
+    child=
+    [ -n "$stopping" ] && exit 0
+    echo "$(date '+%Y-%m-%d %H:%M:%S') Arcanist stopped with code $code"
+
+    case "$code" in
+        0)
+            exit 0
+            ;;
+        75)
+            now=$(date +%s)
+            if [ $((now - window)) -gt 60 ]; then
+                window=$now
+                restarts=0
+            fi
+            restarts=$((restarts + 1))
+            if [ $restarts -gt 5 ]; then
+                echo "Arcanist asked to restart more than five times in a minute: stopping."
+                exit 1
+            fi
+            failures=0
+            ;;
+        *)
+            failures=$((failures + 1))
+            if [ $failures -gt 5 ]; then
+                echo "Arcanist failed five times in a row: stopping."
+                exit 1
+            fi
+            sleep $((failures * 5))
+            ;;
+    esac
+done

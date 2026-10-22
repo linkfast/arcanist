@@ -1,0 +1,7 @@
+version: "1.0"
+type: route
+data:
+  url: "/services/arcanist/folders/create"
+  title: _("Create")
+  notificationTitle: _("Added shared folder.")
+  component: omv-services-arcanist-folder-form-page

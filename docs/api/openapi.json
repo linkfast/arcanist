@@ -14527,6 +14527,11 @@
           "DOCKER",
           "SYNOLOGY",
           "DEBIAN_PACKAGE",
+          "OPEN_MEDIA_VAULT",
+          "QNAP",
+          "TRUE_NAS",
+          "UNRAID",
+          "ROCKSTOR",
           "OTHER"
         ]
       },

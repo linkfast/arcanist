@@ -1,0 +1,16 @@
+#!/bin/sh
+# The ffmpeg Arcanist uses on QTS. The one it downloads (Settings > ffmpeg, BtbN's static build) needs a newer C
+# library than QTS has, so it runs through the package's loader; a fully static ffmpeg (such as the community's
+# ffmpeg package in /opt/ffmpeg) runs as it is. Without either, Arcanist offers to download it.
+ROOT=$(dirname "$(dirname "$(readlink -f "$0")")")
+APP="$ROOT/app"
+DATA="${ROOT%/.qpkg/*}/.arcanist"
+
+if [ -x "$DATA/tools/ffmpeg/ffmpeg" ]; then
+    exec "$(ls "$APP"/ld-linux-* | head -n 1)" --library-path "$APP/lib" "$DATA/tools/ffmpeg/ffmpeg" "$@"
+fi
+for candidate in /opt/ffmpeg/ffmpeg /usr/local/bin/ffmpeg; do
+    [ -x "$candidate" ] && exec "$candidate" "$@"
+done
+echo "ffmpeg is not installed: download it from Arcanist's settings" >&2
+exit 127

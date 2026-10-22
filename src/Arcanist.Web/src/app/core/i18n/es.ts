@@ -1513,6 +1513,14 @@ export const es: Dictionary = {
       SYNOLOGY: 'Actualízalo desde el Centro de paquetes de DSM cuando esté disponible allí.',
       DEBIAN_PACKAGE:
         'Descarga el .deb de la página del release e instálalo con sudo apt install ./arcanist_….deb: el servicio se reinicia solo.',
+      OPEN_MEDIA_VAULT:
+        'Descarga los .deb de arcanist y openmediavault-arcanist de la página del release y súbelos en Sistema → Complementos (o instálalos con apt install ./…deb): tus datos se conservan.',
+      QNAP: 'Descarga el .qpkg de tu NAS (x86_64 o arm_64) de la página del release e instálalo en App Center → Instalar manualmente: tus datos se conservan.',
+      TRUE_NAS:
+        'Actualízala en Apps cuando TrueNAS ofrezca la versión nueva (si la instalaste con YAML, cambia la etiqueta de la imagen o vuelve a desplegarla).',
+      UNRAID: 'En la pestaña Docker, pulsa Check for updates y luego Apply update en Arcanist.',
+      ROCKSTOR:
+        'Desinstala el Rock-on y vuelve a instalarlo con las mismas comparticiones: baja la imagen nueva y conserva tus datos.',
       OTHER: 'Descarga el paquete de tu sistema desde la página del release.',
     },
     card: {

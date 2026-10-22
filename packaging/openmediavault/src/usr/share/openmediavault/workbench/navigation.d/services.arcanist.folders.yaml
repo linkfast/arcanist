@@ -1,0 +1,8 @@
+version: "1.0"
+type: navigation-item
+data:
+  path: "services.arcanist.folders"
+  text: _("Shared folders")
+  position: 20
+  icon: "share"
+  url: "/services/arcanist/folders"

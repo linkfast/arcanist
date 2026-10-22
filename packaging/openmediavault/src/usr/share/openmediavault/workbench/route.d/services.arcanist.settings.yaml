@@ -1,0 +1,8 @@
+version: "1.0"
+type: route
+data:
+  url: "/services/arcanist/settings"
+  title: _("Settings")
+  editing: true
+  notificationTitle: _("Updated Arcanist settings.")
+  component: omv-services-arcanist-settings-form-page

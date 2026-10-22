@@ -1,0 +1,47 @@
+version: "1.0"
+type: component
+data:
+  name: omv-services-arcanist-folders-datatable-page
+  type: datatablePage
+  config:
+    autoReload: false
+    stateId: 6c1b8f0a-3d2e-4b7a-8f61-7d9e2a4b5c10
+    sorters:
+      - dir: asc
+        prop: sharedfoldername
+    store:
+      proxy:
+        service: Arcanist
+        get:
+          method: getShareList
+    columns:
+      - name: _("Shared folder")
+        prop: sharedfoldername
+        flexGrow: 1
+        sortable: true
+      - name: _("Path in Arcanist")
+        prop: sharedfolderpath
+        flexGrow: 2
+        sortable: true
+      - name: _("Writable")
+        prop: writable
+        flexGrow: 1
+        sortable: true
+        cellTemplateName: checkIcon
+    actions:
+      - template: create
+        execute:
+          type: url
+          url: "/services/arcanist/folders/create"
+      - template: edit
+        execute:
+          type: url
+          url: "/services/arcanist/folders/edit/{{ _selected[0].uuid }}"
+      - template: delete
+        execute:
+          type: request
+          request:
+            service: Arcanist
+            method: deleteShare
+            params:
+              uuid: "{{ _selected[0].uuid }}"

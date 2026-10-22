@@ -1,0 +1,24 @@
+{
+  "type": "config",
+  "id": "conf.service.arcanist.share",
+  "title": "Arcanist shared folder",
+  "queryinfo": {
+    "xpath": "//services/arcanist/shares/share",
+    "iterable": true,
+    "idproperty": "uuid"
+  },
+  "properties": {
+    "uuid": {
+      "type": "string",
+      "format": "uuidv4"
+    },
+    "sharedfolderref": {
+      "type": "string",
+      "format": "uuidv4"
+    },
+    "writable": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

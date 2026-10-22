@@ -1,0 +1,41 @@
+annotations:
+  min_scale_version: 24.10.2.2
+app_version: 0.1.0-alpha.6
+capabilities: []
+categories:
+- media
+changelog_url: https://github.com/linkfast/arcanist/releases
+date_added: '2026-10-22'
+description: Arcanist is a self-hosted music server to stream your music library to all your devices
+home: https://github.com/linkfast/arcanist
+host_mounts:
+- description: Sound device. Only when server audio is enabled.
+  host_path: /dev/snd
+icon: https://media.sys.truenas.net/apps/arcanist/icons/icon.svg
+keywords:
+- media
+- music
+- streaming
+- subsonic
+- dlna
+lib_version: 2.3.17
+lib_version_hash: ''
+maintainers:
+- email: dev@truenas.com
+  name: truenas
+  url: https://www.truenas.com/
+name: arcanist
+run_as_context:
+- description: Container [arcanist] can run as any non-root user and group.
+  gid: 568
+  group_name: Host group is [apps]
+  uid: 568
+  user_name: Host user is [apps]
+screenshots:
+- https://media.sys.truenas.net/apps/arcanist/screenshots/screenshot1.png
+sources:
+- https://github.com/linkfast/arcanist
+- https://github.com/linkfast/arcanist/pkgs/container/arcanist
+title: Arcanist
+train: community
+version: 1.0.0

@@ -1,0 +1,8 @@
+version: "1.0"
+type: navigation-item
+data:
+  path: "services.arcanist.status"
+  text: _("Status")
+  position: 30
+  icon: "mdi:information-outline"
+  url: "/services/arcanist/status"

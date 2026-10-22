@@ -1,0 +1,36 @@
+version: "1.0"
+type: component
+data:
+  name: omv-services-arcanist-folder-form-page
+  type: formPage
+  config:
+    request:
+      service: Arcanist
+      get:
+        method: getShare
+        params:
+          uuid: "{{ _routeParams.uuid }}"
+      post:
+        method: setShare
+    fields:
+      - type: confObjUuid
+      - type: sharedFolderSelect
+        name: sharedfolderref
+        label: _("Shared folder")
+        hint: _("Arcanist reads it as a member of the group <em>users</em>. Then choose its path as a library folder in Arcanist.")
+        validators:
+          required: true
+      - type: checkbox
+        name: writable
+        label: _("Allow writing")
+        value: false
+        hint: _("Needed for uploads, organizing files, drop folders, imports and backups to this folder.")
+    buttons:
+      - template: submit
+        execute:
+          type: url
+          url: "/services/arcanist/folders"
+      - template: cancel
+        execute:
+          type: url
+          url: "/services/arcanist/folders"

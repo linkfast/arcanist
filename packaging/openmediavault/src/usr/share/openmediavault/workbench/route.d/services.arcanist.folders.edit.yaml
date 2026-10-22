@@ -1,0 +1,8 @@
+version: "1.0"
+type: route
+data:
+  url: "/services/arcanist/folders/edit/:uuid"
+  title: _("Edit")
+  editing: true
+  notificationTitle: _("Updated shared folder.")
+  component: omv-services-arcanist-folder-form-page

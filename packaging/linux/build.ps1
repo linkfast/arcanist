@@ -6,7 +6,8 @@
 .DESCRIPTION
     Every step runs in a container (see packaging/build-steps.ps1): native libraries, admin panel, the self-contained
     server (artifacts/linux/arcanist-<version>-linux-<arch>.tar.gz) and the package for Ubuntu 24.04 and later and
-    Debian 12 and later (artifacts/linux/arcanist_<version>-1_<amd64|arm64>.deb).
+    Debian 12 and later (artifacts/linux/arcanist_<version>-1_<amd64|arm64>.deb), and OpenMediaVault's plugin
+    (artifacts/linux/openmediavault-arcanist_<version>_all.deb, see packaging/openmediavault/README.md).
 
     Install the .deb on the machine with:  sudo apt install ./arcanist_<version>-1_amd64.deb
 
@@ -59,6 +60,10 @@ Build-Server $root $Version $arches $flavors $bundled -Skip:$SkipServer
 Write-Step 'Debian package'
 Invoke-Docker run --rm -v "${root}:/src" -w /src -e "ARCHES=$($arches -join ' ')" debian:12-slim sh packaging/linux/deb.sh $Version
 
+Write-Step 'OpenMediaVault plugin'
+$pluginVersion = "1.$((git -C $root rev-list --count HEAD).Trim())"
+Invoke-Docker run --rm -v "${root}:/src" -w /src debian:12-slim sh packaging/openmediavault/build.sh $Version $pluginVersion
+
 $elapsed = (Get-Date) - $started
 Write-Host ''
 Write-Host "Done in $([int]$elapsed.TotalMinutes) min $($elapsed.Seconds) s:" -ForegroundColor Green
@@ -69,4 +74,6 @@ foreach ($a in $arches) {
     Write-Host "  artifacts/linux/$($deb.Name)  ($([math]::Round($deb.Length / 1MB, 1)) MB)"
     Write-Host "  artifacts/linux/arcanist-$Version-linux-$a.tar.gz"
 }
+Write-Host "  artifacts/linux/openmediavault-arcanist_${pluginVersion}_all.deb"
 Write-Host 'On the server: sudo apt install ./<the .deb>, then open http://<server>:8484/'
+Write-Host 'On OpenMediaVault, install both: sudo apt install ./<the .deb> ./openmediavault-arcanist_<version>_all.deb'

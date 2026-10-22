@@ -1,0 +1,7 @@
+version: "1.0"
+type: navigation-item
+data:
+  path: "services.arcanist"
+  text: _("Arcanist")
+  icon: "mdi:music-box-multiple"
+  url: "/services/arcanist"

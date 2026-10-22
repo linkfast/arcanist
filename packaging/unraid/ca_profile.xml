@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>LinkFast (LinkFast S.A.) maintains the official Unraid template of Arcanist, its self-hosted, open source (AGPL-3.0) music server. Support and bug reports: the issues of github.com/linkfast/arcanist.</Profile>
+  <Icon>https://raw.githubusercontent.com/linkfast/arcanist/main/src/Arcanist.Web/public/arcanist.png</Icon>
+  <WebPage>https://github.com/linkfast/arcanist</WebPage>
+</CommunityApplications>

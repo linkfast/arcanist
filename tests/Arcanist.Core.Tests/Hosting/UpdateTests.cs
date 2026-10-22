@@ -100,4 +100,24 @@ public sealed class UpdateTests
         var update = await (await admin.PostAsync("/rest/v1/server/update/check", null, Cancel)).Content.ReadFromJsonAsync<ServerUpdate>(ArcanistFactory.Json, Cancel);
         Assert.Equal((false, null, null), (update!.Enabled, update.Latest, update.CheckedAt));
     }
+
+    [Fact]
+    public void A_NAS_app_says_how_it_was_installed()
+    {
+        // Only this test sets the variable, and only DetectInstallKind reads it.
+        try
+        {
+            foreach (var (value, kind) in new[] { ("ROCKSTOR", InstallKind.Rockstor), ("TRUE_NAS", InstallKind.TrueNas), ("qnap", InstallKind.Qnap) })
+            {
+                Environment.SetEnvironmentVariable("ARCANIST_INSTALL_KIND", value);
+                Assert.Equal(kind, UpdateChecker.DetectInstallKind());
+            }
+            Environment.SetEnvironmentVariable("ARCANIST_INSTALL_KIND", "SOMETHING_ELSE");
+            Assert.NotEqual(InstallKind.Rockstor, UpdateChecker.DetectInstallKind());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ARCANIST_INSTALL_KIND", null);
+        }
+    }
 }

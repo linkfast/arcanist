@@ -1494,6 +1494,14 @@ export const en: Dictionary = {
       SYNOLOGY: "Update it from DSM's Package Center once it is available there.",
       DEBIAN_PACKAGE:
         'Download the .deb from the release page and install it with sudo apt install ./arcanist_….deb: the service restarts by itself.',
+      OPEN_MEDIA_VAULT:
+        'Download the arcanist and openmediavault-arcanist .deb files from the release page and upload them in System → Plugins (or install them with apt install ./…deb): your data is kept.',
+      QNAP: "Download your NAS's .qpkg (x86_64 or arm_64) from the release page and install it in App Center → Install Manually: your data is kept.",
+      TRUE_NAS:
+        'Update it in Apps when TrueNAS offers the new version (if you installed it with YAML, change the image tag or deploy it again).',
+      UNRAID: 'On the Docker tab, press Check for updates and then Apply update on Arcanist.',
+      ROCKSTOR:
+        'Uninstall the Rock-on and install it again with the same shares: the new image is pulled and your data is kept.',
       OTHER: "Download your system's package from the release page.",
     },
     card: {

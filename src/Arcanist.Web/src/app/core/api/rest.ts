@@ -65,6 +65,8 @@ export interface SetupRequest {
   onlineServices: OnlineServicesChoice;
   ratingMode: RatingMode;
   privacy: { noTelemetry: boolean; externalServices: ExternalServicesMode };
+  /** Only open source components (closed source ones neither install nor run). */
+  openSourceOnly: boolean;
   /** An mStream installation to import; each vpath goes to one of the folders of `libraries`. */
   mstream: {
     folder: string | null;

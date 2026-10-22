@@ -28,7 +28,8 @@ folder usually produces).
 |---|---|---|
 | `id` | Yes | 2–64 characters: lowercase letters, digits and dashes. It names the folder and the URL `/players/<id>/`. `admin` and `player` are taken, and so are the ids of the players that come with the server (`webamp`). Installing a package with an id already installed replaces that player. |
 | `name`, `version` | Yes | Shown in the panel. |
-| `description`, `author`, `license`, `homepage` | No | Shown in the panel, so administrators know what they install. |
+| `description`, `author`, `homepage` | No | Shown in the panel, so administrators know what they install. |
+| `license` | No | An SPDX id or expression (`MIT`, `AGPL-3.0-or-later AND MIT`). It decides whether it is open source: without an open source license (none, or `LicenseRef-…`) it is closed source, which makes the server's edition STANDARD and is neither installed nor run while the server's 100% open source mode is on (`closed_source_disabled`). |
 | `minApiVersion` | No (1) | The oldest `serverInfo.apiVersion` the player works with. Servers with an older API refuse the package. |
 | `entry` | No (`index.html`) | The page served for the player's routes. |
 

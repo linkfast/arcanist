@@ -16,6 +16,11 @@ public sealed partial class Query
     public static Task<ServerUpdate> ServerUpdate([FromServices] UpdateService updates, CancellationToken cancellationToken) =>
         updates.GetAsync(cancellationToken);
 
+    [Name("openSourceMode")]
+    [Description("The 100% open source mode, the server's edition and the closed source components installed. Administrators only.")]
+    public static Task<OpenSourceMode> OpenSourceMode([FromServices] OpenSourceService service, CancellationToken cancellationToken) =>
+        service.StatusAsync(cancellationToken);
+
     [Name("privacy")]
     [Description("No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS.")]
     public static Task<Privacy> Privacy([FromServices] PrivacyService privacy, CancellationToken cancellationToken) =>
@@ -43,6 +48,11 @@ public sealed partial class Mutation
     [Description("The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication.")]
     public static Task<ServerConfiguration> ReconfigureServer(ReconfigureServerInput input, [FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>
         admin.ReconfigureAsync(input, cancellationToken);
+
+    [Name("setOpenSourceMode")]
+    [Description("Turns the 100% open source mode on or off: while on, closed source extensions, players and tools are neither installed nor run (closed_source_disabled). Administrators only, with a recent authentication.")]
+    public static Task<OpenSourceMode> SetOpenSourceMode(SetOpenSourceModeInput input, [FromServices] OpenSourceService service, CancellationToken cancellationToken) =>
+        service.SetAsync(input.Enabled, cancellationToken);
 
     [Name("setPrivacy")]
     [Description("Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud's extension off too). What they leave out is turned off. The music server's own services are not affected. Requires MANAGE_SETTINGS.")]

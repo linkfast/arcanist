@@ -34,7 +34,9 @@ public sealed record Extension(
     string BasePath,
     string? AdminUrl = null,
     string? IconUrl = null,
-    bool Managed = false);
+    bool Managed = false,
+    bool OpenSource = true,
+    bool Blocked = false);
 
 /// <summary>
 /// A page of a running extension that the user may open from a player (in a window or a tab of its own). Part of the
@@ -149,6 +151,8 @@ public sealed class ExtensionService(
                 ExtensionHost.Validate(manifest, unpacked);
                 if (host.Find(manifest.Id) is { BuiltIn: true })
                     throw ArcanistException.Field("id", ErrorCodes.Duplicate);
+                if (host.OpenSourceOnly && !OpenSource.IsOpenLicense(manifest.License))
+                    throw new ArcanistException.Conflict(ErrorCodes.ClosedSourceDisabled);
 
                 // Assemblies are loaded from memory, so even a running extension's files can be replaced.
                 var target = Path.Combine(paths.Extensions, manifest.Id);
@@ -189,6 +193,8 @@ public sealed class ExtensionService(
         var extension = Current().SingleOrDefault(e => e.Manifest.Id == id) ?? throw new ArcanistException.NotFound();
         if (host.IsManaged(id))
             throw new ArcanistException.Conflict(ErrorCodes.ExtensionManaged);
+        if (enabled && host.IsBlocked(id))
+            throw new ArcanistException.Conflict(ErrorCodes.ClosedSourceDisabled);
         if (settings.IsSetOutsideSettingsFile(ExtensionHost.EnabledKey(id)))
             throw new ArcanistException.Conflict(ErrorCodes.SetByEnvironment);
         if (enabled && id == Core.Extensions.UltimateCloud.UltimateCloudExtension.Id
@@ -253,7 +259,8 @@ public sealed class ExtensionService(
         return new Extension(manifest.Id, manifest.Name, manifest.Version, manifest.Description, manifest.Author, manifest.License,
             manifest.Homepage, registration.BuiltIn, enabled, registration.Status, registration.ErrorCode, restart,
             manifest.Routes ?? [], $"/ext/{manifest.Id}", manifest.AdminPage is null ? null : $"/admin/extensions/{manifest.Id}",
-            manifest.AdminPage?.Icon ?? manifest.Apps?.FirstOrDefault(a => a.Icon is not null)?.Icon, host.IsManaged(manifest.Id));
+            manifest.AdminPage?.Icon ?? manifest.Apps?.FirstOrDefault(a => a.Icon is not null)?.Icon, host.IsManaged(manifest.Id),
+            registration.BuiltIn || OpenSource.IsOpenLicense(manifest.License), host.IsBlocked(manifest.Id));
     }
 
     private void RequireSensitive()

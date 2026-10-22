@@ -76,7 +76,7 @@ public static partial class FrontendHost
 
         // Every frontend, default or not, also lives under /players/<id>/ (the slash matters for relative URLs).
         app.MapMethods(PlayersPath + "/{id}/{**path}", read, (HttpContext context, string id, string? path) =>
-                catalog.Find(id) is not { } frontend ? Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound)
+                catalog.FindUsable(id) is not { } frontend ? Problems.Create(StatusCodes.Status404NotFound, ErrorCodes.NotFound)
                 : string.IsNullOrEmpty(path) && !context.Request.Path.Value!.EndsWith('/') ? Results.Redirect($"{PlayersPath}/{id}/")
                 : Serve(context, frontend, $"{PlayersPath}/{id}/", path))
             .ExcludeFromDescription();

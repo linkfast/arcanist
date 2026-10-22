@@ -1,3 +1,4 @@
+import { Edition } from '../../core/server/edition';
 import { Brand } from '../../shared/brand';
 import { Component, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -31,7 +32,7 @@ import { ThemeSelect } from '../../shared/theme-select';
     <main class="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <section hlmCard class="w-full max-w-sm">
         <div hlmCardHeader>
-          <h1 hlmCardTitle class="mb-2"><app-brand edition="Admin" /></h1>
+          <h1 hlmCardTitle class="mb-2"><app-brand [edition]="edition.label()" /></h1>
           <p hlmCardDescription>{{ 'login.subtitle' | t }}</p>
         </div>
         <form hlmCardContent (ngSubmit)="submit()" class="grid gap-4">
@@ -82,6 +83,12 @@ import { ThemeSelect } from '../../shared/theme-select';
   `,
 })
 export class LoginPage {
+  protected readonly edition = inject(Edition);
+
+  constructor() {
+    // The edition under the wordmark, before anyone signs in.
+    void this.edition.refresh();
+  }
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18n);

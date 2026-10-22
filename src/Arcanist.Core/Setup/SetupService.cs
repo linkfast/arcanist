@@ -70,7 +70,8 @@ public sealed record SetupRequest(
     Application.Online.OnlineServicesSettings? OnlineServices = null,
     RatingMode? RatingMode = null,
     SetupMstreamImport? Mstream = null,
-    Application.Server.SetPrivacyInput? Privacy = null);
+    Application.Server.SetPrivacyInput? Privacy = null,
+    bool OpenSourceOnly = false);
 
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
@@ -263,6 +264,8 @@ public sealed class SetupService(
             if (request.Privacy?.ExternalServices == Application.Server.ExternalServices.None)
                 await Application.Server.PrivacyService.TurnOffUltimateCloudAsync(
                     settingsWriter, services.GetRequiredService<Extensions.ExtensionHost>(), CancellationToken.None);
+            if (request.OpenSourceOnly && !settingsWriter.IsSetOutsideSettingsFile(Hosting.OpenSource.ModeKey))
+                await settingsWriter.SetAsync(new Dictionary<string, object?> { [Hosting.OpenSource.ModeKey] = true }, CancellationToken.None);
             await settingsWriter.SetAsync(new Dictionary<string, object?> { [SetupOptions.CompletedKey] = true }, CancellationToken.None);
             setupCode.Discard();
 

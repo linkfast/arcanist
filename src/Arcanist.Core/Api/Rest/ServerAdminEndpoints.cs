@@ -63,6 +63,16 @@ public static class ServerAdminEndpoints
             .WithName("SetPrivacy")
             .WithSummary("Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud's extension off too). What they leave out is turned off. The music server's own services are not affected. Requires MANAGE_SETTINGS.");
 
+        rest.MapGet("/settings/open-source", (OpenSourceService service, CancellationToken ct) => service.StatusAsync(ct))
+            .WithTags("Settings")
+            .WithName("OpenSourceMode")
+            .WithSummary("The 100% open source mode, the server's edition and the closed source components installed. Administrators only.");
+
+        rest.MapPut("/settings/open-source", (SetOpenSourceModeInput input, OpenSourceService service, CancellationToken ct) => service.SetAsync(input.Enabled, ct))
+            .WithTags("Settings")
+            .WithName("SetOpenSourceMode")
+            .WithSummary("Turns the 100% open source mode on or off: while on, closed source extensions, players and tools are neither installed nor run (closed_source_disabled). Administrators only, with a recent authentication.");
+
         rest.MapGet("/settings/anonymous-statistics", (ServerAdminService service, CancellationToken ct) => service.AnonymousStatisticsAsync(ct))
             .WithTags("Settings")
             .WithName("AnonymousStatistics")

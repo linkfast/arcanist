@@ -111,6 +111,8 @@ builder.Services.AddScoped<AnalysisService>();
 builder.Services.AddScoped<FfmpegService>();
 builder.Services.AddScoped<TranscodingService>();
 builder.Services.AddScoped<StreamingDefaultsService>();
+builder.Services.AddSingleton<Arcanist.Core.Application.Server.EditionResolver>();
+builder.Services.AddScoped<Arcanist.Core.Application.Server.OpenSourceService>();
 builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<TrackMatchService>();

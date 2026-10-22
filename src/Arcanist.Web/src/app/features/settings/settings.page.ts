@@ -3,6 +3,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { TranslatePipe } from '../../core/i18n/i18n';
 import { MaintenanceCard } from './maintenance-card';
 import { OnlineServicesCard } from './online-services-card';
+import { OpenSourceCard } from './open-source-card';
 import { PrivacyCard } from './privacy-card';
 import { RatingModeCard } from './rating-mode-card';
 import { UpdatesCard } from './updates-card';
@@ -13,6 +14,7 @@ import { UpdatesCard } from './updates-card';
   imports: [
     TranslatePipe,
     PrivacyCard,
+    OpenSourceCard,
     MaintenanceCard,
     OnlineServicesCard,
     RatingModeCard,
@@ -31,6 +33,7 @@ import { UpdatesCard } from './updates-card';
         <app-online-services-card />
       }
       @if (auth.isAdmin()) {
+        <app-open-source-card />
         <app-updates-card />
         <app-maintenance-card />
       }

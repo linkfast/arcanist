@@ -85,7 +85,16 @@ public sealed class ExtensionHost
 
     /// <summary>Whether the extension is enabled in the current configuration (it may need a restart to apply).</summary>
     public bool IsEnabled(string id) =>
-        _managed.Contains(id) || (_configuration.GetValue<bool?>(EnabledKey(id)) ?? Find(id)?.EnabledByDefault ?? false);
+        _managed.Contains(id) || ((_configuration.GetValue<bool?>(EnabledKey(id)) ?? Find(id)?.EnabledByDefault ?? false) && !IsBlocked(id));
+
+    /// <summary>The 100% open source mode is on: closed source extensions neither install nor run.</summary>
+    public bool OpenSourceOnly => OpenSource.IsOn(_configuration);
+
+    /// <summary>An installed extension that is not open source (by its manifest's license); built-in ones are Arcanist's own.</summary>
+    public bool IsClosed(string id) => Find(id) is { BuiltIn: false } extension && !OpenSource.IsOpenLicense(extension.Manifest.License);
+
+    /// <summary>Closed source while the open source mode is on (and not managed by the deployment): off, whatever it says.</summary>
+    public bool IsBlocked(string id) => OpenSourceOnly && !_managed.Contains(id) && IsClosed(id);
 
     /// <summary>Installed through the configuration (<see cref="ManagedExtensions"/>): always on, never uninstalled.</summary>
     public bool IsManaged(string id) => _managed.Contains(id);

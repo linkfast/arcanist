@@ -1,3 +1,4 @@
+import { Edition } from '../../core/server/edition';
 import { Brand } from '../../shared/brand';
 import { PrivacyChoice, PrivacyLevel } from '../../shared/privacy-level';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
@@ -44,6 +45,7 @@ import {
   LibrariesQuery,
   MstreamImportsQuery,
   ReconfigureServerMutation,
+  SetOpenSourceModeMutation,
   ScanJobsQuery,
   ServerConfigurationQuery,
   ServerDirectoriesQuery,
@@ -235,6 +237,9 @@ export class SetupPage implements OnInit {
   protected readonly extrasFailures = signal<ExtraFailure[]>([]);
   /** No statistics leave the server. */
   protected noTelemetry = false;
+  /** Only open source components: closed source ones neither install nor run, until it is turned off. */
+  protected openSourceOnly = false;
+  private readonly edition = inject(Edition);
   protected externalServices: ExternalServicesMode = 'ALL';
 
   /**
@@ -441,6 +446,8 @@ export class SetupPage implements OnInit {
       Object.assign(this.onlineServices, online);
       this.noTelemetry = current.privacy.noTelemetry;
       this.externalServices = current.privacy.externalServices;
+      await this.edition.refresh();
+      this.openSourceOnly = this.edition.openSourceOnly();
       const extras = await this.gql.query(SetupExtrasQuery);
       this.existingUsers.set(extras.users);
       const p2p = extras.p2pStatus;
@@ -741,6 +748,10 @@ export class SetupPage implements OnInit {
           privacy: { noTelemetry: this.noTelemetry, externalServices: this.externalServices },
         },
       });
+      if (this.openSourceOnly !== this.edition.openSourceOnly())
+        await this.gql.mutate(SetOpenSourceModeMutation, {
+          input: { enabled: this.openSourceOnly },
+        });
       for (const library of this.libraries().filter((l) => l.folders.length > 0)) {
         await this.gql.mutate(CreateLibraryMutation, {
           input: {
@@ -802,6 +813,7 @@ export class SetupPage implements OnInit {
         onlineServices: { ...this.onlineServices },
         ratingMode: this.ratingMode,
         privacy: { noTelemetry: this.noTelemetry, externalServices: this.externalServices },
+        openSourceOnly: this.openSourceOnly,
         mstream:
           this.migrateFrom === 'mstream' && this.mstream.analyzed
             ? {

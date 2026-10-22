@@ -165,6 +165,10 @@ export const en: Dictionary = {
     hideDetails: 'Hide the details',
   },
   setup: {
+    openSource: {
+      title: '100% open source mode',
+      help: 'Only open source components install and run: closed source extensions, players and tools (such as Ultimate Web Player) cannot be used until you turn it off in Settings.',
+    },
     edition: 'Setup',
     ultimate: {
       intro:
@@ -540,6 +544,26 @@ export const en: Dictionary = {
       'Arcanist compares the acoustic fingerprint of every song when it analyzes it. Obvious copies are joined automatically; only doubtful cases show up here.',
   },
   settings: {
+    openSource: {
+      title: 'Open source',
+      description:
+        'Which parts of this server are not open source, and the mode that only lets the open source ones run.',
+      switch: '100% open source mode',
+      help: 'Closed source extensions, players and tools (by their license) neither install nor run while it is on.',
+      byEnvironment:
+        "Set by the server's configuration (environment variables): it cannot be changed here.",
+      edition: "Server's edition:",
+      editions: { OPEN_SOURCE: 'OPENSOURCE', STANDARD: 'STANDARD', ULTIMATE: 'ULTIMATE' },
+      closed: 'Closed source components installed',
+      noneClosed: 'No closed source component is installed.',
+      kinds: { EXTENSION: 'Extension', PLAYER: 'Web player', TOOL: 'Tool' },
+      active: 'In use',
+      inactive: 'Not in use',
+      blocked: 'Blocked',
+      offNote: 'An extension that was blocked runs again after the server restarts.',
+      on: 'Open source mode on',
+      off: 'Open source mode off',
+    },
     privacy: {
       title: 'Privacy',
       description:
@@ -1485,6 +1509,8 @@ export const en: Dictionary = {
     },
   },
   extensions: {
+    blocked: 'Blocked: not open source',
+    blockedHelp: 'The 100% open source mode is on (Settings).',
     page: {
       noLibrary: 'None',
       secretKept: 'Saved (type to change it)',
@@ -1538,6 +1564,8 @@ export const en: Dictionary = {
       installed: 'Extension installed: switch it on and restart the server to use it.',
     },
     marketplace: {
+      closedSource: 'Not open source',
+      closedSourceHelp: 'The 100% open source mode is on: turn it off in Settings to install it.',
       kind: 'What to browse',
       kinds: { extensions: 'Extensions', players: 'Web players' },
       extensions: {
@@ -2863,6 +2891,8 @@ export const en: Dictionary = {
     s3_wrong_key:
       'What that bucket holds is encrypted with another key. Use the key it was created with.',
     library_read_only: 'You can only listen to this library: you cannot upload music to it.',
+    closed_source_disabled:
+      'The 100% open source mode is on: closed source components cannot be installed or used.',
     library_disabled: 'This library needs Ultimate Cloud, which is switched off.',
     storage_conflict: 'A different file with the same name is already in the new folder.',
     cleanup_incomplete: 'Moved, but some files of the old folder could not be deleted.',

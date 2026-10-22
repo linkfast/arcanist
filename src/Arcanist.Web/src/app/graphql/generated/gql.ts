@@ -94,12 +94,12 @@ type Documents = {
     "\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n": typeof types.AppPasswordsDocument,
     "\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n": typeof types.CreateAppPasswordDocument,
     "\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n": typeof types.DeleteAppPasswordDocument,
-    "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n": typeof types.FrontendFieldsFragmentDoc,
+    "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n    openSource\n    blocked\n  }\n": typeof types.FrontendFieldsFragmentDoc,
     "\n  query Frontends {\n    frontends {\n      ...FrontendFields\n    }\n  }\n": typeof types.FrontendsDocument,
     "\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n": typeof types.InstallFrontendFromUrlDocument,
     "\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n": typeof types.SetDefaultFrontendDocument,
     "\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n": typeof types.UninstallFrontendDocument,
-    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
+    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n    openSource\n    blocked\n  }\n": typeof types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": typeof types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": typeof types.InstallExtensionFromUrlDocument,
     "\n  fragment TranscodingFields on TranscodingStatus {\n    cacheBytes\n    cacheFiles\n    working\n    ffmpegAvailable\n    settings {\n      cacheEnabled\n      cacheMaxBytes\n      cacheMaxAgeDays\n      pregenerateLibraries\n      pregenerateOnlyLossless\n      pregenerate {\n        format\n        bitRate\n      }\n    }\n    pregenerated {\n      format\n      bitRate\n      done\n      total\n      bytes\n      estimatedBytes\n    }\n  }\n": typeof types.TranscodingFieldsFragmentDoc,
@@ -250,6 +250,9 @@ type Documents = {
     "\n  mutation PrioritizeTrackAnalysis($trackId: ID!) {\n    prioritizeTrackAnalysis(trackId: $trackId) {\n      ...TrackAnalysisFields\n    }\n  }\n": typeof types.PrioritizeTrackAnalysisDocument,
     "\n  query UploadLog($input: UploadLogInput) {\n    uploads(input: $input) {\n      totalCount\n      active\n      nextCursor\n      items {\n        id\n        origin\n        source\n        status\n        name\n        size\n        libraryId\n        libraryName\n        userId\n        userName\n        path\n        errorCode\n        createdAt\n        updatedAt\n        track {\n          id\n          title\n          artists {\n            name\n          }\n        }\n      }\n    }\n  }\n": typeof types.UploadLogDocument,
     "\n  query UploadLibraries {\n    libraries {\n      id\n      name\n      canUpload\n      virtual\n    }\n  }\n": typeof types.UploadLibrariesDocument,
+    "\n  fragment OpenSourceModeFields on OpenSourceMode {\n    enabled\n    setByEnvironment\n    edition\n    components {\n      kind\n      id\n      name\n      license\n      active\n    }\n  }\n": typeof types.OpenSourceModeFieldsFragmentDoc,
+    "\n  query OpenSourceMode {\n    openSourceMode {\n      ...OpenSourceModeFields\n    }\n  }\n": typeof types.OpenSourceModeDocument,
+    "\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n": typeof types.SetOpenSourceModeDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -332,12 +335,12 @@ const documents: Documents = {
     "\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n": types.AppPasswordsDocument,
     "\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n": types.CreateAppPasswordDocument,
     "\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n": types.DeleteAppPasswordDocument,
-    "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n": types.FrontendFieldsFragmentDoc,
+    "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n    openSource\n    blocked\n  }\n": types.FrontendFieldsFragmentDoc,
     "\n  query Frontends {\n    frontends {\n      ...FrontendFields\n    }\n  }\n": types.FrontendsDocument,
     "\n  mutation InstallFrontendFromUrl($url: String!) {\n    installFrontendFromUrl(url: $url) {\n      ...FrontendFields\n    }\n  }\n": types.InstallFrontendFromUrlDocument,
     "\n  mutation SetDefaultFrontend($id: String!) {\n    setDefaultFrontend(id: $id) {\n      ...FrontendFields\n    }\n  }\n": types.SetDefaultFrontendDocument,
     "\n  mutation UninstallFrontend($id: String!) {\n    uninstallFrontend(id: $id)\n  }\n": types.UninstallFrontendDocument,
-    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n  }\n": types.ExtensionFieldsFragmentDoc,
+    "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n    openSource\n    blocked\n  }\n": types.ExtensionFieldsFragmentDoc,
     "\n  query Extensions {\n    extensions {\n      ...ExtensionFields\n    }\n  }\n": types.ExtensionsDocument,
     "\n  mutation InstallExtensionFromUrl($url: String!) {\n    installExtensionFromUrl(url: $url) {\n      ...ExtensionFields\n    }\n  }\n": types.InstallExtensionFromUrlDocument,
     "\n  fragment TranscodingFields on TranscodingStatus {\n    cacheBytes\n    cacheFiles\n    working\n    ffmpegAvailable\n    settings {\n      cacheEnabled\n      cacheMaxBytes\n      cacheMaxAgeDays\n      pregenerateLibraries\n      pregenerateOnlyLossless\n      pregenerate {\n        format\n        bitRate\n      }\n    }\n    pregenerated {\n      format\n      bitRate\n      done\n      total\n      bytes\n      estimatedBytes\n    }\n  }\n": types.TranscodingFieldsFragmentDoc,
@@ -488,6 +491,9 @@ const documents: Documents = {
     "\n  mutation PrioritizeTrackAnalysis($trackId: ID!) {\n    prioritizeTrackAnalysis(trackId: $trackId) {\n      ...TrackAnalysisFields\n    }\n  }\n": types.PrioritizeTrackAnalysisDocument,
     "\n  query UploadLog($input: UploadLogInput) {\n    uploads(input: $input) {\n      totalCount\n      active\n      nextCursor\n      items {\n        id\n        origin\n        source\n        status\n        name\n        size\n        libraryId\n        libraryName\n        userId\n        userName\n        path\n        errorCode\n        createdAt\n        updatedAt\n        track {\n          id\n          title\n          artists {\n            name\n          }\n        }\n      }\n    }\n  }\n": types.UploadLogDocument,
     "\n  query UploadLibraries {\n    libraries {\n      id\n      name\n      canUpload\n      virtual\n    }\n  }\n": types.UploadLibrariesDocument,
+    "\n  fragment OpenSourceModeFields on OpenSourceMode {\n    enabled\n    setByEnvironment\n    edition\n    components {\n      kind\n      id\n      name\n      license\n      active\n    }\n  }\n": types.OpenSourceModeFieldsFragmentDoc,
+    "\n  query OpenSourceMode {\n    openSourceMode {\n      ...OpenSourceModeFields\n    }\n  }\n": types.OpenSourceModeDocument,
+    "\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n": types.SetOpenSourceModeDocument,
 };
 
 /**
@@ -827,7 +833,7 @@ export function graphql(source: "\n  mutation DeleteAppPassword($id: ID!) {\n   
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n"): (typeof documents)["\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n  }\n"];
+export function graphql(source: "\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n    openSource\n    blocked\n  }\n"): (typeof documents)["\n  fragment FrontendFields on Frontend {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    isDefault\n    path\n    installedAt\n    openSource\n    blocked\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -847,7 +853,7 @@ export function graphql(source: "\n  mutation UninstallFrontend($id: String!) {\
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n  }\n"): (typeof documents)["\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n  }\n"];
+export function graphql(source: "\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n    openSource\n    blocked\n  }\n"): (typeof documents)["\n  fragment ExtensionFields on Extension {\n    id\n    name\n    version\n    description\n    author\n    license\n    homepage\n    builtIn\n    enabled\n    status\n    errorCode\n    restartRequired\n    routes\n    basePath\n    adminUrl\n    iconUrl\n    managed\n    openSource\n    blocked\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -1448,6 +1454,18 @@ export function graphql(source: "\n  query UploadLog($input: UploadLogInput) {\n
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query UploadLibraries {\n    libraries {\n      id\n      name\n      canUpload\n      virtual\n    }\n  }\n"): (typeof documents)["\n  query UploadLibraries {\n    libraries {\n      id\n      name\n      canUpload\n      virtual\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment OpenSourceModeFields on OpenSourceMode {\n    enabled\n    setByEnvironment\n    edition\n    components {\n      kind\n      id\n      name\n      license\n      active\n    }\n  }\n"): (typeof documents)["\n  fragment OpenSourceModeFields on OpenSourceMode {\n    enabled\n    setByEnvironment\n    edition\n    components {\n      kind\n      id\n      name\n      license\n      active\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query OpenSourceMode {\n    openSourceMode {\n      ...OpenSourceModeFields\n    }\n  }\n"): (typeof documents)["\n  query OpenSourceMode {\n    openSourceMode {\n      ...OpenSourceModeFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {\n    setOpenSourceMode(input: $input) {\n      ...OpenSourceModeFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

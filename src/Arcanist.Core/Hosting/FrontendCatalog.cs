@@ -42,8 +42,15 @@ public sealed partial class FrontendCatalog(
     IWebHostEnvironment environment,
     SettingsStore settings,
     IArcanistDbContextFactory databases,
-    IOptionsMonitor<SetupOptions> setup)
+    IOptionsMonitor<SetupOptions> setup,
+    IConfiguration configuration)
 {
+    /// <summary>Served: always, unless it is closed source and the 100% open source mode is on.</summary>
+    public bool IsUsable(InstalledFrontend frontend) => !OpenSource.IsOn(configuration) || OpenSource.IsOpenLicense(frontend.Manifest.License);
+
+    /// <summary>A player that may be served now (<see cref="IsUsable"/>).</summary>
+    public InstalledFrontend? FindUsable(string id) => Find(id) is { } frontend && IsUsable(frontend) ? frontend : null;
+
     public const string ManifestFile = "arcanist-frontend.json";
 
     private readonly SemaphoreSlim _changes = new(1, 1);
@@ -115,7 +122,10 @@ public sealed partial class FrontendCatalog(
             _defaultLoaded = true;
         }
 
-        return (_defaultId is { } id ? Find(id) : null) ?? BuiltIn ?? Bundled.FirstOrDefault();
+        // A closed source player while the open source mode is on is skipped: the next one that may run.
+        return (_defaultId is { } id ? FindUsable(id) : null)
+               ?? (BuiltIn is { } builtIn && IsUsable(builtIn) ? builtIn : null)
+               ?? Bundled.FirstOrDefault(IsUsable);
     }
 
     /// <summary>Back to the bundled player at <c>/</c>.</summary>
@@ -128,8 +138,10 @@ public sealed partial class FrontendCatalog(
 
     public async Task SetDefaultAsync(string id, CancellationToken cancellationToken)
     {
-        if (Find(id) is null)
+        if (Find(id) is not { } frontend)
             throw new ArcanistException.NotFound();
+        if (!IsUsable(frontend))
+            throw new ArcanistException.Conflict(ErrorCodes.ClosedSourceDisabled);
         await settings.SetAsync<string?>(SettingKeys.DefaultFrontend, id, cancellationToken);
         _defaultId = id;
         _defaultLoaded = true;
@@ -148,6 +160,8 @@ public sealed partial class FrontendCatalog(
                 var manifest = Validate(PackageArchive.ReadManifest<FrontendManifest>(unpacked, ManifestFile), unpacked);
                 if (BuiltIn?.Manifest.Id == manifest.Id || Bundled.Any(b => b.Manifest.Id == manifest.Id))
                     throw ArcanistException.Field("id", ErrorCodes.Duplicate);
+                if (OpenSource.IsOn(configuration) && !OpenSource.IsOpenLicense(manifest.License))
+                    throw new ArcanistException.Conflict(ErrorCodes.ClosedSourceDisabled);
 
                 // Swapped in by renames, so requests never see half a frontend.
                 var target = Path.Combine(paths.Frontends, manifest.Id);

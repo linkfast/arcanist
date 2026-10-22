@@ -55,6 +55,7 @@ public sealed class UltimateAudioTool(
     IHttpClientFactory clients,
     IOptionsMonitor<UltimateCloudOptions> options,
     ArcanistPaths paths,
+    IConfiguration configuration,
     ILogger<UltimateAudioTool> logger) : IUltimateAudio
 {
     /// <summary>The public half of the key that signs what Ultimate Cloud serves (ECDSA P-256, SHA-256).</summary>
@@ -127,6 +128,13 @@ public sealed class UltimateAudioTool(
     /// <summary>Installs the version Ultimate Cloud serves, if it is not installed yet. Failures are kept in <see cref="ErrorCode"/>.</summary>
     public async Task EnsureAsync(CancellationToken cancellationToken)
     {
+        // Closed source: not installed nor run while the 100% open source mode is on.
+        if (OpenSource.IsOn(configuration))
+        {
+            ErrorCode = ErrorCodes.ClosedSourceDisabled;
+            return;
+        }
+
         await _installing.WaitAsync(cancellationToken);
         try
         {
@@ -284,6 +292,8 @@ public sealed class UltimateAudioTool(
     /// <exception cref="UltimateCloudException"><c>cloud_tool_missing</c>, or the tool's own error code (prefixed <c>tool:</c>) with its message.</exception>
     private async Task<JsonNode> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
+        if (OpenSource.IsOn(configuration))
+            throw new UltimateCloudException(ErrorCodes.ClosedSourceDisabled);
         if (Current is not { } installed)
             throw new UltimateCloudException(ErrorCodes.CloudToolMissing);
 

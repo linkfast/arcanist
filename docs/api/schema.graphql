@@ -154,6 +154,8 @@ type Query {
   serverConfiguration: ServerConfiguration!
   "Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only."
   serverUpdate: ServerUpdate!
+  "The 100% open source mode, the server's edition and the closed source components installed. Administrators only."
+  openSourceMode: OpenSourceMode!
   "No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS."
   privacy: Privacy!
   "Whether anonymous play counts go to Ultimate Cloud's global statistics. Requires MANAGE_SETTINGS."
@@ -1079,6 +1081,8 @@ type Extension {
   adminUrl: String
   iconUrl: String
   managed: Boolean!
+  openSource: Boolean!
+  blocked: Boolean!
 }
 
 enum ExtensionStatus {
@@ -1147,6 +1151,8 @@ type Frontend {
   isDefault: Boolean!
   path: String!
   installedAt: DateTime!
+  openSource: Boolean!
+  blocked: Boolean!
 }
 
 type PlayerMarketplaceInfo {
@@ -1998,6 +2004,33 @@ type ArcanistRelease {
   prerelease: Boolean!
 }
 
+type OpenSourceMode {
+  enabled: Boolean!
+  setByEnvironment: Boolean!
+  edition: ServerEdition!
+  components: [ClosedComponent!]!
+}
+
+enum ServerEdition {
+  OPEN_SOURCE
+  STANDARD
+  ULTIMATE
+}
+
+type ClosedComponent {
+  kind: ClosedComponentKind!
+  id: String!
+  name: String!
+  license: String
+  active: Boolean!
+}
+
+enum ClosedComponentKind {
+  EXTENSION
+  PLAYER
+  TOOL
+}
+
 type ServerAudioStatus {
   enabled: Boolean!
   available: Boolean!
@@ -2365,6 +2398,8 @@ type ServerInfo {
   ratingMode: RatingMode!
   features: [ApiFeature!]!
   trackAnalysis: TrackAnalysisProgress
+  edition: ServerEdition!
+  openSourceOnly: Boolean!
 }
 
 enum ApiFeature {
@@ -2667,6 +2702,8 @@ type Mutation {
   setServerUpdateSettings(input: SetServerUpdateSettingsInput!): ServerUpdate!
   "The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication."
   reconfigureServer(input: ReconfigureServerInput!): ServerConfiguration!
+  "Turns the 100% open source mode on or off: while on, closed source extensions, players and tools are neither installed nor run (closed_source_disabled). Administrators only, with a recent authentication."
+  setOpenSourceMode(input: SetOpenSourceModeInput!): OpenSourceMode!
   "Chooses no telemetry (anonymous statistics off; linked accounts start without sending plays) and which outside services may be used: ALL, ULTIMATE_CLOUD_ONLY (no online services) or NONE (Ultimate Cloud's extension off too). What they leave out is turned off. The music server's own services are not affected. Requires MANAGE_SETTINGS."
   setPrivacy(input: SetPrivacyInput!): Privacy!
   "Sends anonymous play counts to Ultimate Cloud's global statistics, or stops. Requires MANAGE_SETTINGS."
@@ -3227,6 +3264,10 @@ input ReconfigureServerInput {
 input SetPrivacyInput {
   noTelemetry: Boolean!
   externalServices: ExternalServices!
+}
+
+input SetOpenSourceModeInput {
+  enabled: Boolean!
 }
 
 type ResetResult {

@@ -1,3 +1,4 @@
+import { Edition } from '../../core/server/edition';
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -272,6 +273,13 @@ export type MarketplaceKind = 'extensions' | 'players';
                     </p>
                     @if (entry.builtIn) {
                       <span hlmBadge variant="outline">{{ 'extensions.builtIn' | t }}</span>
+                    } @else if (edition.openSourceOnly() && entry.pricing !== 'OPEN_SOURCE') {
+                      <span
+                        hlmBadge
+                        variant="outline"
+                        [title]="'extensions.marketplace.closedSourceHelp' | t"
+                        >{{ 'extensions.marketplace.closedSource' | t }}</span
+                      >
                     } @else if (!entry.compatible) {
                       <span hlmBadge variant="outline">{{
                         'extensions.marketplace.needs'
@@ -389,6 +397,7 @@ export type MarketplaceKind = 'extensions' | 'players';
 })
 export class ExtensionMarketplace implements OnInit {
   protected readonly i18n = inject(I18n);
+  protected readonly edition = inject(Edition);
   private readonly gql = inject(Gql);
 
   /** The page is busy with another change. */

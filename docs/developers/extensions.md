@@ -98,7 +98,8 @@ folder:
 | `apps` | No | Pages users open from their players (see [Apps](#apps)). |
 | `adminPage` | No | It has a settings page for administrators, with an optional `icon` under `/ext/<id>/` (see [Settings page](#settings-page)). |
 | `minApiVersion` | No (1) | The oldest `serverInfo.apiVersion` the extension works with. |
-| `description`, `author`, `license`, `homepage` | No | Shown in the panel. |
+| `description`, `author`, `homepage` | No | Shown in the panel. |
+| `license` | No | An SPDX id or expression (`MIT`, `AGPL-3.0-or-later AND MIT`). It decides whether it is open source: without an open source license (none, or `LicenseRef-…`) it is closed source, which makes the server's edition STANDARD and is neither installed nor run while the server's 100% open source mode is on (`closed_source_disabled`). |
 
 ## Apps
 

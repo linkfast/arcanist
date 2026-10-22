@@ -271,6 +271,15 @@ interface PendingInstall {
                         @if (frontend.isDefault) {
                           <span hlmBadge class="ml-1">{{ 'extensions.players.default' | t }}</span>
                         }
+                        @if (frontend.blocked) {
+                          <span
+                            hlmBadge
+                            variant="destructive"
+                            class="ml-1"
+                            [title]="'extensions.blockedHelp' | t"
+                            >{{ 'extensions.blocked' | t }}</span
+                          >
+                        }
                         @if (frontend.builtIn) {
                           <span hlmBadge variant="secondary" class="ml-1">{{
                             'extensions.builtIn' | t

@@ -169,6 +169,10 @@ export const es: Dictionary = {
     hideDetails: 'Ocultar el detalle',
   },
   setup: {
+    openSource: {
+      title: 'Modo 100% open source',
+      help: 'Solo se instalan y funcionan componentes de código abierto: extensiones, reproductores y herramientas cerrados (como Ultimate Web Player) no se pueden usar hasta que lo desactives en Ajustes.',
+    },
     edition: 'Configuración',
     ultimate: {
       intro:
@@ -553,6 +557,26 @@ export const es: Dictionary = {
       'Arcanist compara la huella acústica de cada canción al analizarla. Las copias evidentes se unen solas; aquí solo aparecen los casos dudosos.',
   },
   settings: {
+    openSource: {
+      title: 'Open source',
+      description:
+        'Qué partes de este servidor no son de código abierto, y el modo que solo deja usar las que sí lo son.',
+      switch: 'Modo 100% open source',
+      help: 'Las extensiones, reproductores y herramientas de código cerrado (por su licencia) no se instalan ni funcionan mientras esté activo.',
+      byEnvironment:
+        'Lo fija la configuración del servidor (variables de entorno): no se puede cambiar aquí.',
+      edition: 'Edición del servidor:',
+      editions: { OPEN_SOURCE: 'OPENSOURCE', STANDARD: 'STANDARD', ULTIMATE: 'ULTIMATE' },
+      closed: 'Componentes de código cerrado instalados',
+      noneClosed: 'No hay ningún componente de código cerrado instalado.',
+      kinds: { EXTENSION: 'Extensión', PLAYER: 'Reproductor web', TOOL: 'Herramienta' },
+      active: 'En uso',
+      inactive: 'Sin usar',
+      blocked: 'Bloqueado',
+      offNote: 'Una extensión que estaba bloqueada vuelve a funcionar tras reiniciar el servidor.',
+      on: 'Modo open source activado',
+      off: 'Modo open source desactivado',
+    },
     privacy: {
       title: 'Privacidad',
       description:
@@ -1504,6 +1528,8 @@ export const es: Dictionary = {
     },
   },
   extensions: {
+    blocked: 'Bloqueado: no es open source',
+    blockedHelp: 'El modo 100% open source está activado (Ajustes).',
     page: {
       noLibrary: 'Ninguna',
       secretKept: 'Guardado (escribe para cambiarlo)',
@@ -1558,6 +1584,9 @@ export const es: Dictionary = {
       installed: 'Extensión instalada: actívala y reinicia el servidor para usarla.',
     },
     marketplace: {
+      closedSource: 'No es open source',
+      closedSourceHelp:
+        'El modo 100% open source está activado: desactívalo en Ajustes para instalarla.',
       kind: 'Qué buscar',
       kinds: { extensions: 'Extensiones', players: 'Reproductores web' },
       extensions: {
@@ -2902,6 +2931,8 @@ export const es: Dictionary = {
     s3_wrong_key:
       'Lo que hay en ese bucket está cifrado con otra clave. Usa la clave con la que se creó.',
     library_read_only: 'En esta biblioteca solo puedes escuchar: no puedes subirle música.',
+    closed_source_disabled:
+      'El modo 100% open source está activado: los componentes de código cerrado no se pueden instalar ni usar.',
     library_disabled: 'Esta biblioteca necesita Ultimate Cloud, que está desactivado.',
     storage_conflict: 'En la carpeta nueva ya hay un archivo distinto con el mismo nombre.',
     cleanup_incomplete:

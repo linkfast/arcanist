@@ -16,7 +16,7 @@ public sealed class ExtensionTests
 {
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
-    private static readonly string Assembly = Path.Combine(AppContext.BaseDirectory, "test-extension", "Arcanist.TestExtension.dll");
+    internal static readonly string Assembly = Path.Combine(AppContext.BaseDirectory, "test-extension", "Arcanist.TestExtension.dll");
 
     private static readonly object[] Apps =
     [

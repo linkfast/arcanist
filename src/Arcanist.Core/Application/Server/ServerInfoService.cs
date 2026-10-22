@@ -25,6 +25,8 @@ public sealed class ServerOptions
 /// <param name="TranscodingFormats">Formats the stream endpoint can convert to (none without ffmpeg).</param>
 /// <param name="RatingMode">How users rate tracks here: show five stars, or a single star.</param>
 /// <param name="Features">Parts of the API this version has, for clients that also talk to older servers.</param>
+/// <param name="Edition">What the server is: open source only, with closed source parts (Standard), or with Ultimate Cloud unlocked.</param>
+/// <param name="OpenSourceOnly">The 100% open source mode is on: closed source components neither install nor run.</param>
 public sealed record ServerInfo(
     string Name,
     string Version,
@@ -36,7 +38,9 @@ public sealed record ServerInfo(
     IReadOnlyList<Core.Media.TranscodeFormat> TranscodingFormats,
     Data.Entities.RatingMode RatingMode,
     IReadOnlyList<ApiFeature> Features,
-    Ai.TrackAnalysisProgress? TrackAnalysis);
+    Ai.TrackAnalysisProgress? TrackAnalysis,
+    ServerEdition Edition = ServerEdition.OpenSource,
+    bool OpenSourceOnly = false);
 
 /// <summary>A part of the API that clients may need to know a server has (older versions lack it).</summary>
 public enum ApiFeature
@@ -115,7 +119,8 @@ public sealed class ServerInfoService(
     Core.Media.Transcoder transcoder,
     Listening.RatingSettings ratings,
     Core.Extensions.ExtensionHost extensions,
-    Core.Ai.AiMonitor ai)
+    Core.Ai.AiMonitor ai,
+    EditionResolver edition)
 {
     public const int ApiVersion = 1;
 
@@ -133,7 +138,9 @@ public sealed class ServerInfoService(
         transcoder.Formats(ffmpeg.Current),
         ratings.Current,
         Enum.GetValues<ApiFeature>().Where(f => f != ApiFeature.TrackAnalysis || AnalysisOn).ToList(),
-        AnalysisOn ? ai.Current.Progress with { AnalysisVersion = Core.Analysis.DjAudioAnalyzer.Version } : null);
+        AnalysisOn ? ai.Current.Progress with { AnalysisVersion = Core.Analysis.DjAudioAnalyzer.Version } : null,
+        edition.Current,
+        extensions.OpenSourceOnly);
 
     private bool AnalysisOn => extensions.IsEnabled(Core.Extensions.Ai.AiExtension.Id) && Core.Analysis.DjAudioAnalyzer.IsAvailable;
 }

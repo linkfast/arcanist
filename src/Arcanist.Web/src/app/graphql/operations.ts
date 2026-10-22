@@ -983,6 +983,8 @@ export const FrontendFields = graphql(`
     isDefault
     path
     installedAt
+    openSource
+    blocked
   }
 `);
 
@@ -1035,6 +1037,8 @@ export const ExtensionFields = graphql(`
     adminUrl
     iconUrl
     managed
+    openSource
+    blocked
   }
 `);
 
@@ -3072,6 +3076,37 @@ export const UploadLibrariesQuery = graphql(`
       name
       canUpload
       virtual
+    }
+  }
+`);
+
+export const OpenSourceModeFields = graphql(`
+  fragment OpenSourceModeFields on OpenSourceMode {
+    enabled
+    setByEnvironment
+    edition
+    components {
+      kind
+      id
+      name
+      license
+      active
+    }
+  }
+`);
+
+export const OpenSourceModeQuery = graphql(`
+  query OpenSourceMode {
+    openSourceMode {
+      ...OpenSourceModeFields
+    }
+  }
+`);
+
+export const SetOpenSourceModeMutation = graphql(`
+  mutation SetOpenSourceMode($input: SetOpenSourceModeInput!) {
+    setOpenSourceMode(input: $input) {
+      ...OpenSourceModeFields
     }
   }
 `);

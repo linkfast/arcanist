@@ -19,7 +19,9 @@ public sealed record Frontend(
     bool BuiltIn,
     bool IsDefault,
     string Path,
-    DateTime InstalledAt);
+    DateTime InstalledAt,
+    bool OpenSource = true,
+    bool Blocked = false);
 
 /// <summary>
 /// Installing and choosing web players. Administrators only, and changes need a recent authentication: a frontend
@@ -33,7 +35,10 @@ public sealed class FrontendService(AccessGuard guard, FrontendCatalog catalog, 
     {
         guard.Admin();
         var current = await catalog.DefaultAsync(cancellationToken);
-        return catalog.List().Select(f => ToModel(f, current)).ToList();
+        return catalog.List().Select(f => ToModel(f, current) with
+        {
+            OpenSource = Hosting.OpenSource.IsOpenLicense(f.Manifest.License), Blocked = !catalog.IsUsable(f),
+        }).ToList();
     }
 
     public async Task<Frontend> InstallAsync(Stream archive, CancellationToken cancellationToken)

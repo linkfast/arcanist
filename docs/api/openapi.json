@@ -2207,6 +2207,56 @@
         }
       }
     },
+    "/rest/v1/settings/open-source": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "The 100% open source mode, the server\u0027s edition and the closed source components installed. Administrators only.",
+        "operationId": "OpenSourceMode",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenSourceMode"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Turns the 100% open source mode on or off: while on, closed source extensions, players and tools are neither installed nor run (closed_source_disabled). Administrators only, with a recent authentication.",
+        "operationId": "SetOpenSourceMode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOpenSourceModeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenSourceMode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/settings/anonymous-statistics": {
       "get": {
         "tags": [
@@ -11580,6 +11630,43 @@
           }
         }
       },
+      "ClosedComponent": {
+        "required": [
+          "kind",
+          "id",
+          "name",
+          "license",
+          "active"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ClosedComponentKind"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "license": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClosedComponentKind": {
+        "enum": [
+          "EXTENSION",
+          "PLAYER",
+          "TOOL"
+        ]
+      },
       "CloudAlbumRanking": {
         "required": [
           "title",
@@ -13325,6 +13412,14 @@
           "managed": {
             "type": "boolean",
             "default": false
+          },
+          "openSource": {
+            "type": "boolean",
+            "default": true
+          },
+          "blocked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13685,6 +13780,14 @@
           "installedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "openSource": {
+            "type": "boolean",
+            "default": true
+          },
+          "blocked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -16776,6 +16879,32 @@
           }
         }
       },
+      "OpenSourceMode": {
+        "required": [
+          "enabled",
+          "setByEnvironment",
+          "edition",
+          "components"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "setByEnvironment": {
+            "type": "boolean"
+          },
+          "edition": {
+            "$ref": "#/components/schemas/ServerEdition"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosedComponent"
+            }
+          }
+        }
+      },
       "OrganizePreview": {
         "required": [
           "template",
@@ -19263,6 +19392,14 @@
           }
         }
       },
+      "ServerEdition": {
+        "enum": [
+          "OPEN_SOURCE",
+          "STANDARD",
+          "ULTIMATE"
+        ],
+        "default": "OPEN_SOURCE"
+      },
       "ServerInfo": {
         "required": [
           "name",
@@ -19335,6 +19472,13 @@
                 "$ref": "#/components/schemas/TrackAnalysisProgress"
               }
             ]
+          },
+          "edition": {
+            "$ref": "#/components/schemas/ServerEdition"
+          },
+          "openSourceOnly": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -19653,6 +19797,17 @@
             "type": "boolean"
           },
           "lyrics": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetOpenSourceModeInput": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
             "type": "boolean"
           }
         }
@@ -20160,6 +20315,10 @@
                 "$ref": "#/components/schemas/SetPrivacyInput"
               }
             ]
+          },
+          "openSourceOnly": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

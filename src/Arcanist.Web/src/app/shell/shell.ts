@@ -1,3 +1,4 @@
+import { Edition } from '../core/server/edition';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -88,7 +89,7 @@ import { UpdateNotice } from './update-notice';
         class="sticky top-0 z-30 flex items-center justify-between gap-2 border-b bg-background/95 px-3 py-2 backdrop-blur md:hidden"
       >
         <a routerLink="/" class="min-w-0" [attr.aria-label]="'nav.overview' | t">
-          <app-brand [compact]="true" />
+          <app-brand [compact]="true" [edition]="edition.label()" />
         </a>
         <button
           hlmBtn
@@ -113,7 +114,7 @@ import { UpdateNotice } from './update-notice';
       >
         <div class="flex items-start justify-between gap-2 px-2 pt-1 pb-3">
           <div class="grid min-w-0 gap-2">
-            <a routerLink="/" class="w-fit"><app-brand edition="Admin" /></a>
+            <a routerLink="/" class="w-fit"><app-brand [edition]="edition.label()" /></a>
             <p class="truncate text-xs text-muted-foreground">
               {{ auth.user()?.displayName || auth.user()?.userName }}
             </p>
@@ -255,12 +256,17 @@ export class Shell {
     { initialValue: this.router.url },
   );
 
+  protected readonly edition = inject(Edition);
+
   /** The menu on phones (beside the page on wider screens); any navigation closes it. */
   protected readonly menuOpen = signal(false);
 
   private readonly closeOnNavigation = effect(() => {
     this.url();
-    untracked(() => this.menuOpen.set(false));
+    untracked(() => {
+      this.menuOpen.set(false);
+      void this.edition.refresh();
+    });
   });
 
   /** The Extensions group, opened or closed by the user (remembered). */

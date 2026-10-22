@@ -2423,6 +2423,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Client")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("CloudTrackId")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");

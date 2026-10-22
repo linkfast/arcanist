@@ -76,6 +76,7 @@ import {
   MstreamSourceInput,
 } from '../../shared/mstream-import';
 import { DlnaImportForm } from './dlna-import';
+import { UploadsCard } from './uploads-card';
 
 type Library = LibrariesResult['libraries'][number];
 type Summary = ImportQueueQuery['importSummary'];
@@ -143,6 +144,7 @@ const REFRESH_MS = 5000;
     RelativeTimePipe,
     MstreamImportForm,
     DlnaImportForm,
+    UploadsCard,
   ],
   providers: [
     provideIcons({

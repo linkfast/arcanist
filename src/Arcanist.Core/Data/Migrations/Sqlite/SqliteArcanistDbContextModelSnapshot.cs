@@ -2418,6 +2418,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Client")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CloudTrackId")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");

@@ -3031,3 +3031,47 @@ export const PrioritizeTrackAnalysisMutation = graphql(`
     }
   }
 `);
+
+export const UploadLogQuery = graphql(`
+  query UploadLog($input: UploadLogInput) {
+    uploads(input: $input) {
+      totalCount
+      active
+      nextCursor
+      items {
+        id
+        origin
+        source
+        status
+        name
+        size
+        libraryId
+        libraryName
+        userId
+        userName
+        path
+        errorCode
+        createdAt
+        updatedAt
+        track {
+          id
+          title
+          artists {
+            name
+          }
+        }
+      }
+    }
+  }
+`);
+
+export const UploadLibrariesQuery = graphql(`
+  query UploadLibraries {
+    libraries {
+      id
+      name
+      canUpload
+      virtual
+    }
+  }
+`);

@@ -1335,6 +1335,78 @@
         }
       }
     },
+    "/rest/v1/uploads": {
+      "get": {
+        "tags": [
+          "arcanist"
+        ],
+        "summary": "Every upload into the server\u0027s libraries, by any user and from any client (the admin panel, Ultimate Desktop, web players, phones, extensions), newest first, with optional filters. Requires MANAGE_LIBRARIES (only libraries the caller can access, unless administrator).",
+        "operationId": "Uploads",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadLogPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/me/uploads": {
       "get": {
         "tags": [
@@ -3042,7 +3114,7 @@
         "tags": [
           "Libraries"
         ],
-        "summary": "Adds an audio file (the request body, \u0060application/octet-stream\u0060; its name in \u0060fileName\u0060) to a library the user can access, placed with the library\u0027s template and never overwriting. 201 when it entered the library (catalogued by a scan shortly after the last upload), 200 when the library already had that audio. Requires UPLOAD.",
+        "summary": "Adds an audio file (the request body, \u0060application/octet-stream\u0060; its name in \u0060fileName\u0060) to a library the user can access, placed with the library\u0027s template and never overwriting. 201 when it entered the library (catalogued by a scan shortly after the last upload), 200 when the library already had that audio. \u0060client\u0060 (PANEL, DESKTOP, WEB or MOBILE) says what sends it, for the log of uploads administrators see. Every upload goes through here (extensions too, in the server). Requires UPLOAD.",
         "operationId": "UploadToLibrary",
         "parameters": [
           {
@@ -3058,6 +3130,13 @@
             "name": "fileName",
             "in": "query",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client",
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -10307,7 +10386,8 @@
           "EXTENSION_APPS",
           "VIRTUAL_LIBRARIES",
           "WISH_LIST",
-          "STREAMING_DEFAULTS"
+          "STREAMING_DEFAULTS",
+          "UPLOAD_LOG"
         ]
       },
       "AppPassword": {
@@ -22701,6 +22781,155 @@
           }
         }
       },
+      "UploadLogEntry": {
+        "required": [
+          "id",
+          "origin",
+          "source",
+          "status",
+          "name",
+          "size",
+          "libraryId",
+          "libraryName",
+          "userId",
+          "userName",
+          "path",
+          "track",
+          "errorCode",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/UploadOrigin"
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/MyUploadStatus"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "libraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "track": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Track"
+              }
+            ]
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UploadLogPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount",
+          "active"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UploadLogEntry"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "active": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "UploadOrigin": {
+        "enum": [
+          "PANEL",
+          "DESKTOP",
+          "WEB",
+          "MOBILE",
+          "EXTENSION",
+          "API"
+        ]
+      },
       "UploadResult": {
         "required": [
           "status",
@@ -23175,6 +23404,9 @@
     },
     {
       "name": "Playlists"
+    },
+    {
+      "name": "arcanist"
     },
     {
       "name": "Uploads"

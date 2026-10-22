@@ -55,6 +55,60 @@ public sealed class MyUploadsTests : IAsyncDisposable
         history.GetProperty("items")[index].GetProperty("status").GetString()!;
 
     [Fact]
+    public async Task Every_upload_from_any_client_is_in_the_log_administrators_see()
+    {
+        _factory = new ArcanistFactory(new Dictionary<string, string?> { ["Arcanist:Uploads:ScanDelay"] = "00:00:00.2" });
+        await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
+        var admin = await _factory.CreateAuthenticatedClientAsync();
+        await _factory.WaitForScansAsync(admin);
+        var libraryId = Guid.Parse((await admin.GraphQLAsync("query { libraries { id } }")).GetProperty("data").GetProperty("libraries")[0].GetProperty("id").GetString()!);
+        HttpContent Body(int seed) => new ByteArrayContent(File.ReadAllBytes(
+                AudioFixtures.WriteWav(Path.Combine(_staging, $"s{seed}.wav"), seed, new FixtureTags($"Song {seed}", "Band", "Sent", "Band", TrackNumber: seed))))
+            { Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") } };
+
+        var user = await _factory.CreateUserAsync("listener", permissions: Permissions.Upload);
+        var listener = await _factory.CreateAuthenticatedClientAsync("listener");
+        Assert.Equal(HttpStatusCode.Created, (await admin.PostAsync($"/rest/v1/libraries/{libraryId}/uploads?fileName=a.wav&client=panel", Body(1), Cancel)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await listener.PostAsync($"/rest/v1/libraries/{libraryId}/uploads?fileName=b.wav&client=WEB", Body(2), Cancel)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await listener.PostAsync($"/rest/v1/libraries/{libraryId}/uploads?fileName=c.wav", Body(3), Cancel)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await listener.PostAsync($"/rest/v1/libraries/{libraryId}/uploads?fileName=d.wav&client=fridge", Body(4), Cancel)).StatusCode);
+        // An extension, in the server: the same service.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var access = (await scope.ServiceProvider.GetRequiredService<Core.Auth.UserAccessCache>().GetUserAsync(user.Id, Cancel))!;
+            await using var stream = new MemoryStream(await Body(5).ReadAsByteArrayAsync(Cancel));
+            await scope.ServiceProvider.GetRequiredService<Core.Application.Libraries.UploadService>().UploadAsync(access, libraryId, "e.wav", stream, "youtube", Cancel);
+        }
+
+        var log = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/uploads", ArcanistFactory.Json, Cancel);
+        var entries = log.GetProperty("items").EnumerateArray()
+            .ToDictionary(e => e.GetProperty("name").GetString()!, e => (Origin: e.GetProperty("origin").GetString(), User: e.GetProperty("userName").GetString()));
+        Assert.Equal(("PANEL", "admin"), entries["a.wav"]);
+        Assert.Equal(("WEB", "listener"), entries["b.wav"]);
+        Assert.Equal(("API", "listener"), entries["c.wav"]);
+        Assert.Equal(("EXTENSION", "listener"), entries["e.wav"]);
+        // A request that does not say a known client never reaches the library.
+        Assert.False(entries.ContainsKey("d.wav"));
+        Assert.Equal("Music", log.GetProperty("items")[0].GetProperty("libraryName").GetString());
+
+        var web = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/uploads?origin=web", ArcanistFactory.Json, Cancel);
+        Assert.Equal("b.wav", Assert.Single(web.GetProperty("items").EnumerateArray()).GetProperty("name").GetString());
+        var extension = (await admin.GraphQLAsync("query { uploads(input: { origin: EXTENSION }) { items { source } } }"))
+            .GetProperty("data").GetProperty("uploads").GetProperty("items");
+        Assert.Equal("youtube", Assert.Single(extension.EnumerateArray()).GetProperty("source").GetString());
+
+        // Followed until catalogued, as each user's history is.
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while ((await admin.GetFromJsonAsync<JsonElement>("/rest/v1/uploads?status=added", ArcanistFactory.Json, Cancel)).GetProperty("totalCount").GetInt32() < 4)
+        {
+            Assert.True(DateTime.UtcNow < deadline);
+            await Task.Delay(200, Cancel);
+        }
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await listener.GetAsync("/rest/v1/uploads", Cancel)).StatusCode);
+    }
+
+    [Fact]
     public async Task Uploads_into_a_library_are_followed_until_catalogued_and_can_be_forgotten()
     {
         _factory = new ArcanistFactory(new Dictionary<string, string?> { ["Arcanist:Uploads:ScanDelay"] = "00:00:00.2" });

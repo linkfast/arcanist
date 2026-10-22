@@ -6,6 +6,11 @@ namespace Arcanist.Core.Api.GraphQL;
 
 public sealed partial class Query
 {
+    [Name("uploads")]
+    [Description("Every upload into the server's libraries, by any user and from any client (the admin panel, Ultimate Desktop, web players, phones, extensions), newest first, with optional filters. Requires MANAGE_LIBRARIES (only libraries the caller can access, unless administrator).")]
+    public static Task<UploadLogPage> Uploads(UploadLogInput? input, [FromServices] UploadLogService log, CancellationToken cancellationToken) =>
+        log.ListAsync(input ?? new UploadLogInput(), cancellationToken);
+
     [Name("myUploads")]
     [Description("The user's uploads, newest first: files sent into libraries (and whether each is in the catalog yet) and songs sent to their own Ultimate Cloud library.")]
     public static Task<MyUploadPage> MyUploads(string? after, int? first, [FromServices] MyUploadService uploads, CancellationToken cancellationToken) =>

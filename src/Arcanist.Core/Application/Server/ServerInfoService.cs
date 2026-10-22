@@ -98,6 +98,12 @@ public enum ApiFeature
     /// stream to apply it.
     /// </summary>
     StreamingDefaults,
+
+    /// <summary>
+    /// <c>client</c> on uploads (PANEL, DESKTOP, WEB, MOBILE), shown in <c>uploads</c>: the log of every upload that
+    /// administrators see in the panel's Import page.
+    /// </summary>
+    UploadLog,
 }
 
 public sealed class ServerInfoService(

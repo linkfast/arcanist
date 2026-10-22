@@ -26,16 +26,25 @@ public static class LibraryEndpoints
             .WithSummary("Requires MANAGE_LIBRARIES.")
             .Produces<Library>(StatusCodes.Status201Created);
 
-        libraries.MapPost("/{id:guid}/uploads", async (Guid id, string fileName, HttpContext context, UploadService service,
+        libraries.MapPost("/{id:guid}/uploads", async (Guid id, string fileName, string? client, HttpContext context, UploadService service,
                 Microsoft.Extensions.Options.IOptionsMonitor<UploadOptions> options, CancellationToken ct) =>
             {
+                // Parsed here rather than bound: query binding of enums is case-sensitive.
+                UploadClient? kind = null;
+                if (!string.IsNullOrEmpty(client))
+                {
+                    if (!Enum.TryParse<UploadClient>(client, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+                        throw Application.ArcanistException.Field("client", Application.ErrorCodes.InvalidFormat);
+                    kind = parsed;
+                }
+
                 if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
                     limit.MaxRequestBodySize = options.CurrentValue.MaxBytes;
-                var result = await service.UploadAsync(id, fileName, context.Request.Body, ct);
+                var result = await service.UploadAsync(id, fileName, context.Request.Body, kind, ct);
                 return result.Status == UploadStatus.Imported ? Results.Created((string?)null, result) : Results.Ok(result);
             })
             .WithName("UploadToLibrary")
-            .WithSummary("Adds an audio file (the request body, `application/octet-stream`; its name in `fileName`) to a library the user can access, placed with the library's template and never overwriting. 201 when it entered the library (catalogued by a scan shortly after the last upload), 200 when the library already had that audio. Requires UPLOAD.")
+            .WithSummary("Adds an audio file (the request body, `application/octet-stream`; its name in `fileName`) to a library the user can access, placed with the library's template and never overwriting. 201 when it entered the library (catalogued by a scan shortly after the last upload), 200 when the library already had that audio. `client` (PANEL, DESKTOP, WEB or MOBILE) says what sends it, for the log of uploads administrators see. Every upload goes through here (extensions too, in the server). Requires UPLOAD.")
             .Accepts<Stream>("application/octet-stream")
             .Produces<UploadResult>(StatusCodes.Status201Created)
             .Produces<UploadResult>();

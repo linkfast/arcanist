@@ -122,6 +122,7 @@ builder.Services.AddScoped<Arcanist.Core.Application.Server.PrivacyService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Listening.ListeningSignals>();
 builder.Services.Configure<Arcanist.Core.Application.Libraries.UploadOptions>(builder.Configuration.GetSection("Arcanist:Uploads"));
 builder.Services.AddScoped<Arcanist.Core.Application.Libraries.UploadService>();
+builder.Services.AddScoped<Arcanist.Core.Application.Uploads.UploadLogService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.UploadScans>();
 builder.Services.AddScoped<Arcanist.Core.Application.Uploads.MyUploadService>();
 builder.Services.AddScoped<Arcanist.Core.Application.WishList.WishListService>();

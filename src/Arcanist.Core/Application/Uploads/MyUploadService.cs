@@ -229,10 +229,10 @@ public sealed class MyUploadService(
     /// Brings the uploads into libraries up to date: one waiting for its scan is added once the library has its
     /// audio, and not added once the library has no scan coming and still lacks it.
     /// </summary>
-    private async Task ResolveAsync(Guid user, CancellationToken cancellationToken)
+    internal async Task ResolveAsync(Guid? user, CancellationToken cancellationToken)
     {
         var waiting = await db.UserUploads
-            .Where(u => u.UserId == user && u.Kind == UserUploadKind.Library && u.ContentHash != null && u.LibraryId != null
+            .Where(u => (user == null || u.UserId == user) && u.Kind == UserUploadKind.Library && u.ContentHash != null && u.LibraryId != null
                         && (u.Status == UserUploadStatus.Processing || (u.Status == UserUploadStatus.Duplicate && u.TrackId == null)))
             .ToListAsync(cancellationToken);
         if (waiting.Count == 0)

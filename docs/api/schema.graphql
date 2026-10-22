@@ -174,6 +174,8 @@ type Query {
   myUltimateCloudMetrics: UltimateCloudMetrics!
   "How each library with folders on this server syncs with the Ultimate Cloud account. Administrators only."
   cloudSyncs: [LibraryCloudSyncState!]!
+  "Every upload into the server's libraries, by any user and from any client (the admin panel, Ultimate Desktop, web players, phones, extensions), newest first, with optional filters. Requires MANAGE_LIBRARIES (only libraries the caller can access, unless administrator)."
+  uploads(input: UploadLogInput): UploadLogPage!
   "The user's uploads, newest first: files sent into libraries (and whether each is in the catalog yet) and songs sent to their own Ultimate Cloud library."
   myUploads(after: String, first: Int): MyUploadPage!
   "Public description of the server. Does not require authentication."
@@ -2269,6 +2271,61 @@ type CloudSyncFailure {
   reason: String!
 }
 
+type UploadLogPage {
+  items: [UploadLogEntry!]!
+  nextCursor: String
+  totalCount: Int!
+  active: Int!
+}
+
+type UploadLogEntry {
+  id: ID!
+  origin: UploadOrigin!
+  source: String
+  status: MyUploadStatus!
+  name: String!
+  size: Long
+  libraryId: ID
+  libraryName: String
+  userId: ID!
+  userName: String!
+  path: String
+  track: Track
+  errorCode: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum UploadOrigin {
+  PANEL
+  DESKTOP
+  WEB
+  MOBILE
+  EXTENSION
+  API
+}
+
+enum MyUploadStatus {
+  PROCESSING
+  ADDED
+  DUPLICATE
+  NOT_ADDED
+  QUEUED
+  UPLOADING
+  UPLOADED
+  ALREADY_IN_CLOUD
+  FAILED
+}
+
+input UploadLogInput {
+  libraryId: ID
+  userId: ID
+  origin: UploadOrigin
+  status: MyUploadStatus
+  after: String
+  first: Int
+}
+
 type MyUploadPage {
   items: [MyUpload!]!
   nextCursor: String
@@ -2294,18 +2351,6 @@ type MyUpload {
 enum MyUploadKind {
   LIBRARY
   ULTIMATE_CLOUD
-}
-
-enum MyUploadStatus {
-  PROCESSING
-  ADDED
-  DUPLICATE
-  NOT_ADDED
-  QUEUED
-  UPLOADING
-  UPLOADED
-  ALREADY_IN_CLOUD
-  FAILED
 }
 
 type ServerInfo {
@@ -2336,6 +2381,7 @@ enum ApiFeature {
   VIRTUAL_LIBRARIES
   WISH_LIST
   STREAMING_DEFAULTS
+  UPLOAD_LOG
 }
 
 type UserAccount {

@@ -1,3 +1,4 @@
+using Arcanist.Core.Application;
 using Arcanist.Core.Application.Uploads;
 
 namespace Arcanist.Core.Api.Rest;
@@ -6,6 +7,21 @@ public static class UploadEndpoints
 {
     public static IEndpointRouteBuilder MapUploadEndpoints(this IEndpointRouteBuilder rest)
     {
+        rest.MapGet("/uploads", (Guid? libraryId, Guid? userId, string? origin, string? status, string? after, int? first, UploadLogService service,
+                CancellationToken ct) =>
+            {
+                // Parsed here rather than bound: query binding of enums is case-sensitive.
+                UploadOrigin? from = null;
+                if (!string.IsNullOrEmpty(origin))
+                    from = Enum.TryParse<UploadOrigin>(origin, true, out var o) && Enum.IsDefined(o) ? o : throw ArcanistException.Field("origin", ErrorCodes.InvalidFormat);
+                MyUploadStatus? state = null;
+                if (!string.IsNullOrEmpty(status))
+                    state = Enum.TryParse<MyUploadStatus>(status, true, out var s) && Enum.IsDefined(s) ? s : throw ArcanistException.Field("status", ErrorCodes.InvalidFormat);
+                return service.ListAsync(new UploadLogInput(libraryId, userId, from, state, after, first), ct);
+            })
+            .WithName("Uploads")
+            .WithSummary("Every upload into the server's libraries, by any user and from any client (the admin panel, Ultimate Desktop, web players, phones, extensions), newest first, with optional filters. Requires MANAGE_LIBRARIES (only libraries the caller can access, unless administrator).");
+
         rest.MapGet("/me/uploads", (string? after, int? first, MyUploadService service, CancellationToken ct) => service.UploadsAsync(first, after, ct))
             .WithTags("Uploads")
             .WithName("MyUploads")

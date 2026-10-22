@@ -37,6 +37,22 @@ public sealed class UploadOptions
     public TimeSpan ScanDelay { get; set; } = TimeSpan.FromSeconds(20);
 }
 
+/// <summary>The kind of client an upload came from, as it says with <c>client=</c>. Part of the API contract.</summary>
+public enum UploadClient
+{
+    /// <summary>Arcanist's admin panel (Import → Upload music).</summary>
+    Panel,
+
+    /// <summary>Ultimate Desktop.</summary>
+    Desktop,
+
+    /// <summary>A web player (Ultimate Web Player, Webamp for Arcanist…).</summary>
+    Web,
+
+    /// <summary>A phone or tablet app.</summary>
+    Mobile,
+}
+
 /// <summary>
 /// Files sent by apps into a library (migrating Ultimate Desktop's library, for one): placed with the library's
 /// template like a drop folder's, never overwriting, and skipped when the library already has the audio. Needs the
@@ -53,8 +69,9 @@ public sealed class UploadService(
     TimeProvider time,
     ILogger<UploadService> logger)
 {
-    public Task<UploadResult> UploadAsync(Guid libraryId, string fileName, Stream body, CancellationToken cancellationToken) =>
-        UploadAsync(guard.Permission(Permissions.Upload), libraryId, fileName, body, null, cancellationToken);
+    /// <param name="client">The kind of client sending it (the admin panel, Ultimate Desktop, a web player, a phone), for the log of uploads.</param>
+    public Task<UploadResult> UploadAsync(Guid libraryId, string fileName, Stream body, UploadClient? client, CancellationToken cancellationToken) =>
+        UploadAsync(guard.Permission(Permissions.Upload), libraryId, fileName, body, null, client, cancellationToken);
 
     /// <summary>
     /// A file into a library on behalf of a user, as if they had uploaded it (for extensions, also from background
@@ -63,8 +80,12 @@ public sealed class UploadService(
     /// <c>library_read_only</c>), and shows in the user's history of uploads
     /// with <paramref name="source"/> (the extension's id).
     /// </summary>
-    public async Task<UploadResult> UploadAsync(UserAccess access, Guid libraryId, string fileName, Stream body, string? source,
-        CancellationToken cancellationToken)
+    public Task<UploadResult> UploadAsync(UserAccess access, Guid libraryId, string fileName, Stream body, string? source,
+        CancellationToken cancellationToken) =>
+        UploadAsync(access, libraryId, fileName, body, source, null, cancellationToken);
+
+    private async Task<UploadResult> UploadAsync(UserAccess access, Guid libraryId, string fileName, Stream body, string? source,
+        UploadClient? client, CancellationToken cancellationToken)
     {
         if (access.IsDisabled || !access.Has(Permissions.Upload))
             throw new ArcanistException.Forbidden();
@@ -81,19 +102,19 @@ public sealed class UploadService(
         try
         {
             var result = await ImportAsync(access, libraryId, fileName, body, length => size = length, cancellationToken);
-            await RecordAsync(access.UserId, libraryId, fileName, size, result, null, source, cancellationToken);
+            await RecordAsync(access.UserId, libraryId, fileName, size, result, null, source, client, cancellationToken);
             return result;
         }
         catch (ArcanistException e) when (e is not ArcanistException.NotFound && !cancellationToken.IsCancellationRequested)
         {
             var code = e is ArcanistException.Invalid invalid ? invalid.Errors.ToDictionary().Values.SelectMany(c => c).FirstOrDefault() ?? e.Code : e.Code;
-            await RecordAsync(access.UserId, libraryId, fileName, size, null, code, source, cancellationToken);
+            await RecordAsync(access.UserId, libraryId, fileName, size, null, code, source, client, cancellationToken);
             throw;
         }
     }
 
     private async Task RecordAsync(Guid user, Guid libraryId, string fileName, long? size, UploadResult? result, string? error, string? source,
-        CancellationToken cancellationToken)
+        UploadClient? client, CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow().UtcDateTime;
         db.ChangeTracker.Clear();
@@ -110,6 +131,7 @@ public sealed class UploadService(
             Path = result?.Path,
             ErrorCode = error,
             Source = source,
+            Client = client,
             CreatedAt = now,
             UpdatedAt = now,
         });

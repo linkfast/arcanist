@@ -39,6 +39,9 @@ public sealed class UserUpload : Entity
     /// <summary>The extension that brought the file (its id, such as <c>youtube</c>); null when the user sent it.</summary>
     public string? Source { get; set; }
 
+    /// <summary>The kind of client that sent it through the upload API, when it said (<c>client=</c>).</summary>
+    public Application.Libraries.UploadClient? Client { get; set; }
+
     public string? ErrorCode { get; set; }
 
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;

@@ -359,8 +359,8 @@ Amazon Music, or any page that describes a song (schema.org or Open Graph) — a
 It adds nothing: show it, let the user correct it, and pass it to `addWish` with `sourceUrl` and `artworkId`, which the
 wish keeps (`sourceUrl`, `sourceService`, `artworkId`: link to the song's page in a new tab). Text around the link is
 ignored (a share text works). The recording is MusicBrainz's when the link says it exactly (its ISRC, or a MusicBrainz
-link), or the likely one for its title, artist and duration; the cover is the Cover Art Archive's for an exact
-recording and the service's own image otherwise. Errors: `wish_link_not_a_song` (an album, a playlist, an artist…),
+link), or the likely one for its title, artist and duration; the cover is the Cover Art Archive's for that recording
+(none when there is no recording or no cover: the services' own artwork is never taken, their terms do not allow it). Errors: `wish_link_not_a_song` (an album, a playlist, an artist…),
 `wish_link_unreadable`, `external_services_disabled` (the server's privacy allows no outside services; the server
 reads the page, never the client).
 

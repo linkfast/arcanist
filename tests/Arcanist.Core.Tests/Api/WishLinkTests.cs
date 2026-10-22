@@ -67,12 +67,10 @@ public sealed class WishLinkTests : IAsyncLifetime
                 {"title":"Weird Fishes / Arpeggi (Remastered)","author_name":"Radiohead - Topic","thumbnail_url":"https://i.ytimg.com/vi/abc/hqdefault.jpg"}
                 """),
             _ when url.StartsWith("https://musicbrainz.org/ws/2/recording/?query=", StringComparison.Ordinal) => FakeOnlineServices.Json("""{"recordings":[]}"""),
-            "https://i.ytimg.com/vi/abc123/hqdefault.jpg" => Image(SKColors.Blue),
             "https://artist.bandcamp.test/track/song" => Html("""
                 <html><head><meta property="og:title" content="Night Drive, by The Midnight &amp; Friends">
                 <meta property="og:image" content="https://f4.bcbits.test/img.jpg"></head></html>
                 """),
-            "https://f4.bcbits.test/img.jpg" => Image(SKColors.Green),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound),
         };
     }
@@ -122,10 +120,12 @@ public sealed class WishLinkTests : IAsyncLifetime
         var topic = await ResolveAsync("https://music.youtube.com/watch?v=abc123&si=xyz");
         // A Topic channel is the artist's; "(Remastered)" is not part of the name.
         Assert.Equal((WishLinkService.YouTubeMusic, "Weird Fishes / Arpeggi", "Radiohead", null), (topic.Service, topic.Title, topic.Artist, topic.MusicBrainzRecordingId));
-        Assert.NotNull(topic.ArtworkId);
+        // No recording in MusicBrainz, so no cover: the services' own artwork is never taken (their terms).
+        Assert.Null(topic.ArtworkId);
 
         var page = await ResolveAsync("https://artist.bandcamp.test/track/song");
-        Assert.Equal((WishLinkService.Other, "Night Drive", "The Midnight & Friends"), (page.Service, page.Title, page.Artist));
+        Assert.Equal((WishLinkService.Other, "Night Drive", "The Midnight & Friends", null), (page.Service, page.Title, page.Artist, page.ArtworkId));
+        Assert.DoesNotContain(_online.Requests, r => r.RequestUri!.Host is "i.ytimg.com" or "f4.bcbits.test");
 
         Assert.Equal("wish_link_not_a_song", await ErrorAsync("https://open.spotify.com/album/2noRn2Aes5aoNVsU6iWThc"));
         Assert.Equal("wish_link_not_a_song", await ErrorAsync("https://www.deezer.com/playlist/908622995"));

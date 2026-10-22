@@ -27,11 +27,11 @@ public interface IWishLists
     Task<WishListEntryInput?> ResolveLinkAsync(string url, CancellationToken cancellationToken);
 }
 
-/// <summary>A wish.</summary>
-/// <param name="ObtainedAt">When the song arrived; null while it is wanted.</param>
-/// <param name="TrackId">The track that fulfilled it, when it arrived.</param>
-/// <param name="SourceUrl">The streaming service's page it was added from.</param>
-/// <param name="ArtworkId">Its cover, served at <c>/rest/v1/artwork/{id}</c>.</param>
+/// <summary>
+/// A wish of a user. <c>ObtainedAt</c> is when the song arrived (null while it is wanted) and <c>TrackId</c> the track
+/// that fulfilled it; <c>SourceUrl</c> is the streaming service's page it was added from, and <c>ArtworkId</c> its cover,
+/// served at <c>/rest/v1/artwork/{id}</c>.
+/// </summary>
 public sealed record WishListEntry(
     Guid Id,
     Guid UserId,

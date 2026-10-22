@@ -18,7 +18,7 @@ namespace Arcanist.Core.Application.WishList;
 /// <summary>What a link to a song says about it, to fill a wish before adding it.</summary>
 /// <param name="Url">The link as given (short links are followed).</param>
 /// <param name="MusicBrainzRecordingId">The recording in MusicBrainz, found by the link's ISRC, or its title and artist.</param>
-/// <param name="ArtworkId">Its cover, served by the artwork endpoint: the Cover Art Archive's, or the service's own.</param>
+/// <param name="ArtworkId">Its cover from the Cover Art Archive, served by the artwork endpoint; null when there is none.</param>
 public sealed record WishLinkPreview(
     WishLinkService Service,
     string Url,
@@ -35,7 +35,8 @@ public sealed record ResolveWishLinkInput(string Url);
 /// Reads a song's link from a streaming service (Spotify, YouTube Music, Deezer, Apple Music, MusicBrainz, Tidal,
 /// SoundCloud, Bandcamp, Amazon Music… or any page that describes a song) into a wish: title, artist, album and
 /// duration from the service (its public API, oEmbed or the page's metadata), the MusicBrainz recording (by ISRC, or by
-/// title and artist), and a cover (the Cover Art Archive's first, the service's otherwise), kept in the artwork cache.
+/// title and artist), and its cover from the Cover Art Archive, kept in the artwork cache (never the services' artwork:
+/// their terms do not allow it).
 /// Only links the user gives are read, and only with external services allowed (Privacy).
 /// </summary>
 public sealed partial class WishLinkResolver(
@@ -86,14 +87,13 @@ public sealed partial class WishLinkResolver(
         if (found is not { Title.Length: > 0, Artist.Length: > 0 })
             throw new ArcanistException.Conflict(ErrorCodes.WishLinkUnreadable);
 
-        // A MusicBrainz link or the ISRC say the exact recording: its cover is the Cover Art Archive's. A search by
-        // title, artist and duration only finds a likely one: the service's own image (the art of that very link)
-        // goes first then.
-        var (recording, release, exact) = (found.RecordingMbid, found.ReleaseMbid, found.RecordingMbid is not null);
+        // The recording: exact from a MusicBrainz link or the ISRC, likely from title, artist and duration. The cover is
+        // only ever the Cover Art Archive's: the services' terms do not allow taking their artwork (as for the catalog).
+        var (recording, release) = (found.RecordingMbid, found.ReleaseMbid);
         if (recording is null)
-            (recording, release, exact) = await FindInMusicBrainzAsync(found, cancellationToken);
+            (recording, release, _) = await FindInMusicBrainzAsync(found, cancellationToken);
 
-        var artwork = await ArtworkAsync(http, release, found.ImageUrl, coverArtFirst: exact, cancellationToken);
+        var artwork = await ArtworkAsync(release, cancellationToken);
         return new WishLinkPreview(service, uri.ToString(), Clip(found.Title), Clip(found.Artist), found.Album is { Length: > 0 } album ? Clip(album) : null,
             found.DurationMs is > 0 ? found.DurationMs : null, recording, artwork);
     }
@@ -133,7 +133,7 @@ public sealed partial class WishLinkResolver(
     }
 
     internal sealed record Found(string Title, string Artist, string? Album = null, int? DurationMs = null, string? Isrc = null,
-        Guid? RecordingMbid = null, Guid? ReleaseMbid = null, string? ImageUrl = null);
+        Guid? RecordingMbid = null, Guid? ReleaseMbid = null);
 
     private static bool IsShortLink(Uri uri) =>
         uri.Host is "link.deezer.com" or "deezer.page.link" or "spotify.link" or "spoti.fi" or "on.soundcloud.com";
@@ -166,7 +166,7 @@ public sealed partial class WishLinkResolver(
         return new Found(Text(track, "title") ?? "", Text(track.GetPropertyOrDefault("artist"), "name") ?? "",
             Text(track.GetPropertyOrDefault("album"), "title"),
             track.TryGetProperty("duration", out var seconds) && seconds.TryGetInt32(out var s) ? s * 1000 : null,
-            Text(track, "isrc"), ImageUrl: Text(track.GetPropertyOrDefault("album"), "cover_xl"));
+            Text(track, "isrc"));
     }
 
     // The iTunes Search API's lookup (https://performance-partners.apple.com/search-api): no key needed.
@@ -182,8 +182,7 @@ public sealed partial class WishLinkResolver(
         if (track.ValueKind != JsonValueKind.Object)
             return null;
         return new Found(Text(track, "trackName") ?? "", Text(track, "artistName") ?? "", Text(track, "collectionName"),
-            track.TryGetProperty("trackTimeMillis", out var ms) && ms.TryGetInt32(out var m) ? m : null,
-            ImageUrl: Text(track, "artworkUrl100")?.Replace("100x100bb", "1000x1000bb", StringComparison.Ordinal));
+            track.TryGetProperty("trackTimeMillis", out var ms) && ms.TryGetInt32(out var m) ? m : null);
     }
 
     // YouTube's oEmbed: the title, and the channel (a "Topic" channel is the artist's).
@@ -209,7 +208,7 @@ public sealed partial class WishLinkResolver(
         else
             artist = channel.EndsWith("VEVO", StringComparison.Ordinal) ? channel[..^4] : channel;
 
-        return new Found(CleanTitle(title), artist.Trim(), ImageUrl: $"https://i.ytimg.com/vi/{Uri.EscapeDataString(id)}/hqdefault.jpg");
+        return new Found(CleanTitle(title), artist.Trim());
     }
 
     private async Task<Found?> MusicBrainzAsync(Uri uri, CancellationToken cancellationToken)
@@ -234,7 +233,7 @@ public sealed partial class WishLinkResolver(
             throw new ArcanistException.Conflict(ErrorCodes.WishLinkNotASong);
         var body = await http.GetFromJsonAsync<JsonElement>($"https://soundcloud.com/oembed?format=json&url={Uri.EscapeDataString(uri.ToString())}", cancellationToken);
         var (title, artist) = SplitBy(Text(body, "title") ?? "", " by ");
-        return new Found(title, artist ?? Text(body, "author_name") ?? "", ImageUrl: Text(body, "thumbnail_url"));
+        return new Found(title, artist ?? Text(body, "author_name") ?? "");
     }
 
     // Spotify's pages describe the song in their metadata: og:title, music:musician_description, og:description
@@ -250,8 +249,7 @@ public sealed partial class WishLinkResolver(
         var artist = meta.GetValueOrDefault("music:musician_description") ?? parts.ElementAtOrDefault(0);
         var album = parts.Length >= 3 && parts[^2] is "Song" or "Canción" ? parts.ElementAtOrDefault(1) : null;
         return new Found(meta.GetValueOrDefault("og:title") ?? "", artist ?? "", album,
-            int.TryParse(meta.GetValueOrDefault("music:duration"), out var seconds) ? seconds * 1000 : null,
-            ImageUrl: meta.GetValueOrDefault("og:image"));
+            int.TryParse(meta.GetValueOrDefault("music:duration"), out var seconds) ? seconds * 1000 : null);
     }
 
     // Any other page: schema.org's MusicRecording (JSON-LD), then the Open Graph and music metadata.
@@ -259,7 +257,6 @@ public sealed partial class WishLinkResolver(
     {
         var page = await ReadPageAsync(http, uri, cancellationToken);
         var meta = Meta(page);
-        var image = meta.GetValueOrDefault("og:image");
         foreach (Match script in JsonLd().Matches(page))
         {
             JsonElement root;
@@ -281,7 +278,7 @@ public sealed partial class WishLinkResolver(
             var artist = byArtist.ValueKind == JsonValueKind.Array ? Text(byArtist.EnumerateArray().FirstOrDefault(), "name") : Text(byArtist, "name") ?? Text(recording, "byArtist");
             if (Text(recording, "name") is { Length: > 0 } name && artist is { Length: > 0 })
                 return new Found(name, artist, Text(recording.GetPropertyOrDefault("inAlbum"), "name"), IsoDuration(Text(recording, "duration")),
-                    Text(recording, "isrcCode"), ImageUrl: image);
+                    Text(recording, "isrcCode"));
         }
 
         var title = meta.GetValueOrDefault("og:title") ?? meta.GetValueOrDefault("twitter:title");
@@ -289,7 +286,7 @@ public sealed partial class WishLinkResolver(
             return null;
         var musician = meta.GetValueOrDefault("music:musician_description");
         var (song, by) = musician is null ? SplitBy(title, ", by ", " by ", " - ") : (title, musician);
-        return new Found(song, by ?? "", DurationMs: int.TryParse(meta.GetValueOrDefault("music:duration"), out var s) ? s * 1000 : null, ImageUrl: image);
+        return new Found(song, by ?? "", DurationMs: int.TryParse(meta.GetValueOrDefault("music:duration"), out var s) ? s * 1000 : null);
     }
 
     private static async Task<string> ReadPageAsync(HttpClient http, Uri uri, CancellationToken cancellationToken)
@@ -414,44 +411,18 @@ public sealed partial class WishLinkResolver(
                 best.Release.ValueKind == JsonValueKind.Object && Guid.TryParse(Text(best.Release, "id"), out var rel) ? rel : null);
     }
 
-    /// <summary>
-    /// The cover in the artwork cache: the Cover Art Archive's for the release and the service's image, in that order
-    /// when the recording is exact, the other way round when it is only likely.
-    /// </summary>
-    private async Task<Guid?> ArtworkAsync(HttpClient http, Guid? release, string? imageUrl, bool coverArtFirst, CancellationToken cancellationToken)
+    /// <summary>The release's front cover from the Cover Art Archive, in the artwork cache; null when it has none.</summary>
+    private async Task<Guid?> ArtworkAsync(Guid? release, CancellationToken cancellationToken)
     {
-        async Task<byte[]?> CoverArtAsync()
+        byte[]? image;
+        try
         {
-            try
-            {
-                return release is { } releaseMbid ? await coverArt.FrontAsync(releaseMbid, cancellationToken) : null;
-            }
-            catch (OnlineServiceException)
-            {
-                return null;
-            }
+            image = release is { } releaseMbid ? await coverArt.FrontAsync(releaseMbid, cancellationToken) : null;
         }
-
-        async Task<byte[]?> ServiceImageAsync()
+        catch (OnlineServiceException)
         {
-            if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var source) || source.Scheme != "https")
-                return null;
-            try
-            {
-                using var response = await http.GetAsync(source, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                return response.IsSuccessStatusCode && response.Content.Headers.ContentLength is null or <= MaxImageBytes
-                    ? await response.Content.ReadAsByteArrayAsync(cancellationToken)
-                    : null;
-            }
-            catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
-            {
-                return null;
-            }
+            return null;
         }
-
-        var image = coverArtFirst
-            ? await CoverArtAsync() ?? await ServiceImageAsync()
-            : await ServiceImageAsync() ?? await CoverArtAsync();
 
         if (image is not { Length: > 0 and <= MaxImageBytes } || artworkStore.Store(image) is not { } stored)
             return null;

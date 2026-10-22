@@ -221,10 +221,12 @@ jobs:
       - run: |
           docker build -t arcanist-qnap-builder -f packaging/qnap/builder.Dockerfile packaging/qnap
           docker run --rm -v "$PWD:/src" -w /src arcanist-qnap-builder sh packaging/qnap/qpkg.sh "$VERSION"
+      # In one folder: with paths from two folders the artifact keeps them, and the release uploads files only.
+      - run: |
+          mkdir -p artifacts/nas
+          cp artifacts/linux/openmediavault-arcanist_*_all.deb artifacts/qnap/*.qpkg artifacts/nas/
       - uses: actions/upload-artifact@v4
         with:
           name: nas
-          path: |
-            artifacts/linux/openmediavault-arcanist_*_all.deb
-            artifacts/qnap/*.qpkg
+          path: artifacts/nas/*
           compression-level: 0

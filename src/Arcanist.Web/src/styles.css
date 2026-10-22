@@ -89,4 +89,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Grid items shrink below their content (long paths, names): a page is never wider than the screen. */
+  .grid > * {
+    min-width: 0;
+  }
+  /* Long unbroken text (paths, ids, URLs) wraps instead of pushing the layout out. */
+  .font-mono {
+    overflow-wrap: anywhere;
+  }
 }

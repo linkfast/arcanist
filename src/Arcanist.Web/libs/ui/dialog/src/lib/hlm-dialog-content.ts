@@ -67,7 +67,7 @@ export class HlmDialogContent {
 
   constructor() {
     classes(() => [
-      'bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-4 rounded-xl p-4 text-sm ring-1 duration-100 sm:max-w-sm relative mx-auto w-full outline-none sm:mx-0',
+      'bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain gap-4 rounded-xl p-4 text-sm ring-1 duration-100 sm:max-w-sm sm:max-h-[calc(100dvh-4rem)] relative mx-auto w-full outline-none sm:mx-0',
       this._dynamicComponentClass,
     ]);
   }

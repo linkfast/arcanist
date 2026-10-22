@@ -208,10 +208,7 @@ const IdleMs = 30000;
     </section>
 
     <hlm-dialog [state]="sendOpen() ? 'open' : 'closed'" (closed)="closeSend()">
-      <hlm-dialog-content
-        *brnDialogContent="let ctx"
-        class="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
-      >
+      <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-lg">
         <hlm-dialog-header>
           <h3 hlmDialogTitle>{{ 'import.uploads.send' | t }}</h3>
           <p hlmDialogDescription>{{ 'import.uploads.sendHelp' | t }}</p>

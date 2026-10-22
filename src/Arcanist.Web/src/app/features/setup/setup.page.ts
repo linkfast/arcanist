@@ -1,3 +1,4 @@
+import { Brand } from '../../shared/brand';
 import { PrivacyChoice, PrivacyLevel } from '../../shared/privacy-level';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -132,6 +133,7 @@ const PROGRESS_MS = 1500;
     SetupRestoreDialog,
     SetupRestoring,
     PrivacyLevel,
+    Brand,
     DlnaImportForm,
     HlmAlertImports,
     HlmBadgeImports,

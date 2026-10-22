@@ -196,7 +196,7 @@
 
 <!-- A user's access to the libraries -->
 <hlm-dialog [state]="accessFor() ? 'open' : 'closed'" (closed)="accessFor.set(null)">
-  <hlm-dialog-content *brnDialogContent="let ctx" class="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-xl">
     @if (accessFor(); as user) {
       <hlm-dialog-header>
         <h3 hlmDialogTitle>{{ 'users.accessFor' | t: { name: user.userName } }}</h3>
@@ -222,107 +222,110 @@
 
 <!-- Create / edit -->
 <hlm-dialog [state]="form() ? 'open' : 'closed'" (closed)="form.set(null)">
-  <hlm-dialog-content *brnDialogContent="let ctx" class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-lg lg:max-w-4xl">
     @if (form(); as current) {
       <form class="grid gap-4" (ngSubmit)="saveForm()">
         <hlm-dialog-header>
           <h3 hlmDialogTitle>{{ (current.id ? 'users.edit' : 'users.create') | t }}</h3>
         </hlm-dialog-header>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-          <hlm-field>
-            <label hlmFieldLabel for="user-name">{{ 'common.userName' | t }}</label>
-            <input
-              hlmInput
-              id="user-name"
-              name="userName"
-              autocomplete="off"
-              [disabled]="!!current.id"
-              [ngModel]="current.userName"
-              (ngModelChange)="updateForm({ userName: $event })"
-            />
-          </hlm-field>
-          <hlm-field>
-            <label hlmFieldLabel for="display-name">{{ 'common.displayName' | t }}</label>
-            <input
-              hlmInput
-              id="display-name"
-              name="displayName"
-              [ngModel]="current.displayName"
-              (ngModelChange)="updateForm({ displayName: $event })"
-            />
-          </hlm-field>
-          @if (!current.id) {
-            <hlm-field class="sm:col-span-2">
-              <label hlmFieldLabel for="user-password">{{ 'common.password' | t }}</label>
-              <input
-                hlmInput
-                id="user-password"
-                name="password"
-                type="password"
-                autocomplete="new-password"
-                [ngModel]="current.password"
-                (ngModelChange)="updateForm({ password: $event })"
-              />
-              <p hlmFieldDescription>{{ 'setup.admin.passwordHelp' | t }}</p>
-            </hlm-field>
-          }
-        </div>
-
-        @if (auth.isAdmin()) {
-          <hlm-field>
-            <label hlmFieldLabel>{{ 'users.role' | t }}</label>
-            <hlm-native-select
-              [value]="current.role"
-              (change)="updateForm({ role: $any($event.target).value })"
-            >
-              <option hlmNativeSelectOption value="USER">{{ 'users.roles.USER' | t }}</option>
-              <option hlmNativeSelectOption value="ADMIN">{{ 'users.roles.ADMIN' | t }}</option>
-            </hlm-native-select>
-          </hlm-field>
-        }
-
-        @if (current.role !== 'ADMIN') {
-          <fieldset class="grid gap-2">
-            <legend class="mb-1 text-sm font-medium">{{ 'users.permissions' | t }}</legend>
-            @for (permission of grantable(); track permission) {
-              <label class="flex items-start gap-2 text-sm">
-                <hlm-checkbox
-                  class="mt-0.5"
-                  [checked]="current.permissions.includes(permission)"
-                  (checkedChange)="togglePermission(permission, $event)"
+        <!-- Wide screens: the account on one side, what it may do on the other, the libraries below. -->
+        <div class="grid gap-4 lg:grid-cols-2 lg:gap-x-8">
+          <div class="grid content-start gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <hlm-field>
+                <label hlmFieldLabel for="user-name">{{ 'common.userName' | t }}</label>
+                <input
+                  hlmInput
+                  id="user-name"
+                  name="userName"
+                  autocomplete="off"
+                  [disabled]="!!current.id"
+                  [ngModel]="current.userName"
+                  (ngModelChange)="updateForm({ userName: $event })"
                 />
-                <span>
-                  {{ 'permissions.' + permission | t }}
-                  <span class="block text-xs text-muted-foreground">{{
-                    'permissionHelp.' + permission | t
-                  }}</span>
-                </span>
+              </hlm-field>
+              <hlm-field>
+                <label hlmFieldLabel for="display-name">{{ 'common.displayName' | t }}</label>
+                <input
+                  hlmInput
+                  id="display-name"
+                  name="displayName"
+                  [ngModel]="current.displayName"
+                  (ngModelChange)="updateForm({ displayName: $event })"
+                />
+              </hlm-field>
+              @if (!current.id) {
+                <hlm-field class="sm:col-span-2">
+                  <label hlmFieldLabel for="user-password">{{ 'common.password' | t }}</label>
+                  <input
+                    hlmInput
+                    id="user-password"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    [ngModel]="current.password"
+                    (ngModelChange)="updateForm({ password: $event })"
+                  />
+                  <p hlmFieldDescription>{{ 'setup.admin.passwordHelp' | t }}</p>
+                </hlm-field>
+              }
+            </div>
+
+            @if (auth.isAdmin()) {
+              <hlm-field>
+                <label hlmFieldLabel>{{ 'users.role' | t }}</label>
+                <hlm-native-select
+                  [value]="current.role"
+                  (change)="updateForm({ role: $any($event.target).value })"
+                >
+                  <option hlmNativeSelectOption value="USER">{{ 'users.roles.USER' | t }}</option>
+                  <option hlmNativeSelectOption value="ADMIN">{{ 'users.roles.ADMIN' | t }}</option>
+                </hlm-native-select>
+              </hlm-field>
+            }
+            @if (current.id && current.id !== auth.user()?.id) {
+              <label class="flex items-center gap-2 text-sm">
+                <hlm-switch
+                  [checked]="current.isDisabled"
+                  (checkedChange)="updateForm({ isDisabled: $event })"
+                />
+                {{ 'users.disableAccount' | t }}
               </label>
             }
-          </fieldset>
+          </div>
+          @if (current.role !== 'ADMIN') {
+            <fieldset class="grid gap-2">
+              <legend class="mb-1 text-sm font-medium">{{ 'users.permissions' | t }}</legend>
+              @for (permission of grantable(); track permission) {
+                <label class="flex items-start gap-2 text-sm">
+                  <hlm-checkbox
+                    class="mt-0.5"
+                    [checked]="current.permissions.includes(permission)"
+                    (checkedChange)="togglePermission(permission, $event)"
+                  />
+                  <span>
+                    {{ 'permissions.' + permission | t }}
+                    <span class="block text-xs text-muted-foreground">{{
+                      'permissionHelp.' + permission | t
+                    }}</span>
+                  </span>
+                </label>
+              }
+            </fieldset>
 
-          @if (!current.id && accessLibraries().length > 0) {
-            <div class="grid gap-2">
-              <p class="text-sm font-medium">{{ 'users.libraries' | t }}</p>
-              <app-library-access-editor
-                [libraries]="accessLibraries()"
-                [value]="current.levels"
-                (changed)="updateForm({ levels: $event })"
-              />
-            </div>
+            @if (!current.id && accessLibraries().length > 0) {
+              <div class="grid gap-2 lg:col-span-2">
+                <p class="text-sm font-medium">{{ 'users.libraries' | t }}</p>
+                <app-library-access-editor
+                  [libraries]="accessLibraries()"
+                  [value]="current.levels"
+                  (changed)="updateForm({ levels: $event })"
+                />
+              </div>
+            }
           }
-        }
-
-        @if (current.id && current.id !== auth.user()?.id) {
-          <label class="flex items-center gap-2 text-sm">
-            <hlm-switch
-              [checked]="current.isDisabled"
-              (checkedChange)="updateForm({ isDisabled: $event })"
-            />
-            {{ 'users.disableAccount' | t }}
-          </label>
-        }
+        </div>
 
         @if (formError()) {
           <p class="text-sm text-destructive">{{ formError() }}</p>

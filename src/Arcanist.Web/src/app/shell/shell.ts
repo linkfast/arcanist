@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -19,6 +19,8 @@ import {
   lucideInbox,
   lucideLibrary,
   lucideLogOut,
+  lucideMenu,
+  lucideX,
   lucideMusic,
   lucideNetwork,
   lucideSpeaker,
@@ -32,6 +34,7 @@ import { AuthService } from '../core/auth/auth.service';
 import { EnabledExtensions } from '../core/extensions/enabled-extensions';
 import { I18n, TranslatePipe } from '../core/i18n/i18n';
 import { LanguageSelect } from '../shared/language-select';
+import { Brand } from '../shared/brand';
 import { ThemeSelect } from '../shared/theme-select';
 import { UpdateNotice } from './update-notice';
 
@@ -39,6 +42,7 @@ import { UpdateNotice } from './update-notice';
 @Component({
   selector: 'app-shell',
   imports: [
+    Brand,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -67,6 +71,8 @@ import { UpdateNotice } from './update-notice';
       lucideUsers,
       lucideUserCog,
       lucideLogOut,
+      lucideMenu,
+      lucideX,
       lucideMusic,
       lucideNetwork,
       lucideSpeaker,
@@ -76,18 +82,56 @@ import { UpdateNotice } from './update-notice';
     }),
   ],
   template: `
-    <div class="flex min-h-screen flex-col md:flex-row">
-      <aside
-        class="flex shrink-0 flex-col gap-1 border-b bg-muted/40 p-3 md:w-60 md:border-r md:border-b-0"
+    <div class="min-h-dvh md:flex">
+      <!-- Phones: a bar with the mark and the menu, which slides in from the side. -->
+      <header
+        class="sticky top-0 z-30 flex items-center justify-between gap-2 border-b bg-background/95 px-3 py-2 backdrop-blur md:hidden"
       >
-        <div class="px-2 pb-3 pt-1">
-          <p class="text-lg font-semibold">Arcanist</p>
-          <p class="truncate text-xs text-muted-foreground">
-            {{ auth.user()?.displayName || auth.user()?.userName }}
-          </p>
+        <a routerLink="/" class="min-w-0" [attr.aria-label]="'nav.overview' | t">
+          <app-brand [compact]="true" />
+        </a>
+        <button
+          hlmBtn
+          variant="ghost"
+          size="icon"
+          type="button"
+          [attr.aria-label]="'nav.menu' | t"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="menuOpen.set(true)"
+        >
+          <ng-icon name="lucideMenu" size="20" />
+        </button>
+      </header>
+      @if (menuOpen()) {
+        <div class="fixed inset-0 z-40 bg-black/50 md:hidden" (click)="menuOpen.set(false)"></div>
+      }
+
+      <aside
+        class="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col gap-1 overflow-y-auto overscroll-contain [scrollbar-width:thin] border-r bg-background p-3 transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-dvh md:w-60 md:max-w-none md:shrink-0 md:translate-x-0 md:bg-muted/40 md:transition-none"
+        [class.-translate-x-full]="!menuOpen()"
+        [attr.aria-label]="'nav.menu' | t"
+      >
+        <div class="flex items-start justify-between gap-2 px-2 pt-1 pb-3">
+          <div class="grid min-w-0 gap-2">
+            <a routerLink="/" class="w-fit"><app-brand edition="Admin" /></a>
+            <p class="truncate text-xs text-muted-foreground">
+              {{ auth.user()?.displayName || auth.user()?.userName }}
+            </p>
+          </div>
+          <button
+            hlmBtn
+            variant="ghost"
+            size="icon-sm"
+            type="button"
+            class="md:hidden"
+            [attr.aria-label]="'common.close' | t"
+            (click)="menuOpen.set(false)"
+          >
+            <ng-icon name="lucideX" />
+          </button>
         </div>
 
-        <nav class="flex flex-row flex-wrap gap-1 md:flex-col">
+        <nav class="flex flex-col gap-1">
           @for (item of navigation(); track item.path) {
             @if (item.path === '/extensions') {
               <!-- Extensions: their list, and below it the pages that manage each one. -->
@@ -124,7 +168,7 @@ import { UpdateNotice } from './update-notice';
                 }
               </div>
               @if (extensionsExpanded()) {
-                <div class="flex flex-row flex-wrap gap-1 md:ml-4 md:flex-col md:border-l md:pl-2">
+                <div class="ml-4 flex flex-col gap-1 border-l pl-2">
                   @for (page of extensionPages(); track page.path) {
                     <a
                       hlmBtn
@@ -160,9 +204,7 @@ import { UpdateNotice } from './update-notice';
           }
         </nav>
 
-        <div
-          class="flex flex-row flex-wrap items-center gap-2 pt-2 md:mt-auto md:flex-col md:items-stretch md:pt-6"
-        >
+        <div class="mt-auto flex flex-col items-stretch gap-2 pt-6">
           <a
             hlmBtn
             variant="ghost"
@@ -189,7 +231,7 @@ import { UpdateNotice } from './update-notice';
         </div>
       </aside>
 
-      <main class="min-w-0 flex-1 p-4 md:p-8">
+      <main class="min-w-0 flex-1 px-3 py-4 sm:p-6 md:p-8">
         <router-outlet />
       </main>
       <!-- In a chunk of its own: most visits have nothing to tell. -->
@@ -212,6 +254,14 @@ export class Shell {
     ),
     { initialValue: this.router.url },
   );
+
+  /** The menu on phones (beside the page on wider screens); any navigation closes it. */
+  protected readonly menuOpen = signal(false);
+
+  private readonly closeOnNavigation = effect(() => {
+    this.url();
+    untracked(() => this.menuOpen.set(false));
+  });
 
   /** The Extensions group, opened or closed by the user (remembered). */
   protected readonly extensionsOpen = signal(readOpen());

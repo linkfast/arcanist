@@ -114,6 +114,7 @@ export const es: Dictionary = {
     dark: 'Oscuro',
   },
   nav: {
+    menu: 'Menú',
     transcoding: 'Transcodificación',
     extensionsToggle: 'Mostrar u ocultar las extensiones',
     ai: 'AI',
@@ -168,6 +169,7 @@ export const es: Dictionary = {
     hideDetails: 'Ocultar el detalle',
   },
   setup: {
+    edition: 'Configuración',
     ultimate: {
       intro:
         'Arcanist funciona con cualquier app compatible, pero brilla con Ultimate, los clientes oficiales de LinkFast: hablan con tu servidor de forma nativa y llevan tu música, tus StarTracks y tus estadísticas a todos tus dispositivos.',

@@ -1,3 +1,4 @@
+import { Brand } from '../../shared/brand';
 import { Component, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,6 +16,7 @@ import { ThemeSelect } from '../../shared/theme-select';
 @Component({
   selector: 'app-login-page',
   imports: [
+    Brand,
     FormsModule,
     HlmCardImports,
     HlmFieldImports,
@@ -29,7 +31,7 @@ import { ThemeSelect } from '../../shared/theme-select';
     <main class="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <section hlmCard class="w-full max-w-sm">
         <div hlmCardHeader>
-          <h1 hlmCardTitle class="text-xl">Arcanist</h1>
+          <h1 hlmCardTitle class="mb-2"><app-brand edition="Admin" /></h1>
           <p hlmCardDescription>{{ 'login.subtitle' | t }}</p>
         </div>
         <form hlmCardContent (ngSubmit)="submit()" class="grid gap-4">

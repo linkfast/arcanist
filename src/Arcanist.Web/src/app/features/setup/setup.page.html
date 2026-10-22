@@ -4,6 +4,7 @@
   } @else {
     <section hlmCard class="w-full max-w-2xl">
       <div hlmCardHeader>
+        <app-brand class="mb-2" [edition]="'setup.edition' | t" />
         @if (step() !== 'progress') {
           <p class="text-xs text-muted-foreground">
             {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}

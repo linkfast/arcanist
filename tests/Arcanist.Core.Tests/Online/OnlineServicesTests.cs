@@ -38,7 +38,7 @@ public sealed class FakeOnlineServices : HttpMessageHandler
     /// <summary>Uses this handler for every online service client.</summary>
     public void Register(IServiceCollection services)
     {
-        foreach (var name in new[] { OnlineHttp.MusicBrainz, OnlineHttp.AcoustId, OnlineHttp.CoverArtArchive, OnlineHttp.LrcLib })
+        foreach (var name in new[] { OnlineHttp.MusicBrainz, OnlineHttp.AcoustId, OnlineHttp.CoverArtArchive, OnlineHttp.LrcLib, Application.WishList.WishLinkResolver.HttpClientName })
             services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => this);
     }
 }

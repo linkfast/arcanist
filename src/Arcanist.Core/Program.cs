@@ -128,6 +128,16 @@ builder.Services.AddScoped<Arcanist.Core.Application.Uploads.UploadLogService>()
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.UploadScans>();
 builder.Services.AddScoped<Arcanist.Core.Application.Uploads.MyUploadService>();
 builder.Services.AddScoped<Arcanist.Core.Application.WishList.WishListService>();
+builder.Services.AddScoped<Arcanist.Core.Application.WishList.WishLinkResolver>();
+builder.Services.AddSingleton<Arcanist.Core.Application.WishList.WishLinkGate>();
+builder.Services.AddScoped<Arcanist.Extensibility.IWishLists, Arcanist.Core.Application.WishList.ExtensionWishLists>();
+builder.Services.AddHttpClient(Arcanist.Core.Application.WishList.WishLinkResolver.HttpClientName, client =>
+{
+    // Pages describe the song (Open Graph) to link previewers: say what Arcanist is, as they do.
+    client.DefaultRequestHeaders.UserAgent.ParseAdd($"Mozilla/5.0 (compatible; Arcanist/{Arcanist.Core.Hosting.ArcanistVersion.Current}; +https://github.com/linkfast/arcanist)");
+    client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en");
+    client.Timeout = TimeSpan.FromSeconds(20);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { MaxAutomaticRedirections = 5 });
 builder.Services.AddSingleton<Arcanist.Core.Application.WishList.WishListSignals>();
 builder.Services.AddSingleton<Arcanist.Core.Application.WishList.WishListMatcher>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<Arcanist.Core.Application.WishList.WishListMatcher>());

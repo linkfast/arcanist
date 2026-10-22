@@ -192,8 +192,8 @@ type Query {
   users: [UserAccount!]!
   "A user by id. Requires the MANAGE_USERS permission."
   user(id: ID!): UserAccount!
-  "The user's wish list: songs they want (newest first), then those that arrived (by when). Optionally only the wanted or the obtained ones."
-  wishList(status: WishStatus): WishListResult!
+  "The user's wish list: songs they want (newest first), then those that arrived (by when). Optionally only the wanted or the obtained ones. With scope ALL, everyone's wishes, each with its owner (requires VIEW_ALL_WISHES)."
+  wishList(status: WishStatus, scope: WishListScope): WishListResult!
 }
 
 type TrackAnalysisResult {
@@ -2473,6 +2473,7 @@ enum Permission {
   VIEW_ALL_STATS
   UPLOAD
   PLAY_ON_SERVER
+  VIEW_ALL_WISHES
 }
 
 type Session {
@@ -2508,11 +2509,40 @@ type Wish {
   matchedBy: TrackMatchKind
   foundWhenAdded: Boolean!
   seen: Boolean!
+  sourceUrl: String
+  sourceService: WishLinkService
+  artworkId: ID
+  owner: WishOwner
 }
 
 enum WishStatus {
   WANTED
   OBTAINED
+}
+
+enum WishLinkService {
+  SPOTIFY
+  YOU_TUBE_MUSIC
+  YOU_TUBE
+  DEEZER
+  APPLE_MUSIC
+  MUSIC_BRAINZ
+  TIDAL
+  SOUND_CLOUD
+  BANDCAMP
+  AMAZON_MUSIC
+  OTHER
+}
+
+type WishOwner {
+  id: ID!
+  userName: String!
+  displayName: String
+}
+
+enum WishListScope {
+  MINE
+  ALL
 }
 
 type Mutation {
@@ -2795,6 +2825,8 @@ type Mutation {
   revokeMySession(id: ID!): Boolean!
   "Adds a song to the user's wish list (title and artist; album, duration, MusicBrainz recording or AcoustID narrow it). When a library the user can play has it already, it comes obtained (foundWhenAdded)."
   addWish(input: WishInput!): Wish!
+  "Reads a song's link from a streaming service (Spotify, YouTube Music, Deezer, Apple Music, MusicBrainz, Tidal, SoundCloud, Bandcamp…) to fill a wish: title, artist, album, duration, the MusicBrainz recording and a cover (kept in the artwork cache). Adds nothing: pass what it returns to addWish with sourceUrl and artworkId. Needs external services allowed (external_services_disabled); wish_link_not_a_song for albums or playlists, wish_link_unreadable when the page does not say the song."
+  resolveWishLink(input: ResolveWishLinkInput!): WishLinkPreview!
   "Changes a wish of the user. Another song makes it wanted again, and it is looked for at once."
   updateWish(id: ID!, input: WishInput!): Wish!
   "Removes a wish (wanted or obtained) from the user's list."
@@ -3377,6 +3409,23 @@ input WishInput {
   acoustId: String
   durationMs: Int
   note: String
+  sourceUrl: String
+  artworkId: ID
+}
+
+type WishLinkPreview {
+  service: WishLinkService!
+  url: String!
+  title: String!
+  artist: String!
+  album: String
+  durationMs: Int
+  musicBrainzRecordingId: ID
+  artworkId: ID
+}
+
+input ResolveWishLinkInput {
+  url: String!
 }
 
 type Subscription {

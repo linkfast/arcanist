@@ -20,6 +20,9 @@ public enum Permission
 
     /// <summary>Play on the server's own audio output (server audio), from "play to" and Ultimate Connect.</summary>
     PlayOnServer,
+
+    /// <summary>Sees everyone's wish lists, not only their own.</summary>
+    ViewAllWishes,
 }
 
 /// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed,
@@ -91,6 +94,7 @@ public static class PermissionMapping
         Permission.ViewAllStats => Permissions.ViewAllStats,
         Permission.Upload => Permissions.Upload,
         Permission.PlayOnServer => Permissions.PlayOnServer,
+        Permission.ViewAllWishes => Permissions.ViewAllWishes,
         _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null),
     };
 

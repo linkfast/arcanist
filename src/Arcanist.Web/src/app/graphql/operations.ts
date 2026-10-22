@@ -1877,6 +1877,16 @@ export const WishFields = graphql(`
     matchedBy
     foundWhenAdded
     seen
+    durationMs
+    musicBrainzRecordingId
+    sourceUrl
+    sourceService
+    artworkId
+    owner {
+      id
+      userName
+      displayName
+    }
     track {
       id
       title
@@ -1889,8 +1899,8 @@ export const WishFields = graphql(`
 `);
 
 export const WishListQuery = graphql(`
-  query WishList {
-    wishList {
+  query WishList($scope: WishListScope) {
+    wishList(scope: $scope) {
       wanted
       unseen
       items {
@@ -1904,6 +1914,21 @@ export const AddWishMutation = graphql(`
   mutation AddWish($input: WishInput!) {
     addWish(input: $input) {
       ...WishFields
+    }
+  }
+`);
+
+export const ResolveWishLinkMutation = graphql(`
+  mutation ResolveWishLink($input: ResolveWishLinkInput!) {
+    resolveWishLink(input: $input) {
+      service
+      url
+      title
+      artist
+      album
+      durationMs
+      musicBrainzRecordingId
+      artworkId
     }
   }
 `);

@@ -2508,6 +2508,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ArtworkId")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -2533,6 +2536,14 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.Property<bool>("Seen")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceService")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()

@@ -39,6 +39,30 @@ public sealed class WishListItem : Entity
 
     /// <summary>The user saw that it arrived.</summary>
     public bool Seen { get; set; }
+
+    /// <summary>The page of a streaming service it was added from (Spotify, Deezer, YouTube Music…).</summary>
+    public string? SourceUrl { get; set; }
+
+    public WishLinkService? SourceService { get; set; }
+
+    /// <summary>Its cover: the Cover Art Archive's, or the service's when that has none. Kept in the artwork cache.</summary>
+    public Guid? ArtworkId { get; set; }
+}
+
+/// <summary>The services a wish can be added from by its link. Part of the API contract.</summary>
+public enum WishLinkService
+{
+    Spotify,
+    YouTubeMusic,
+    YouTube,
+    Deezer,
+    AppleMusic,
+    MusicBrainz,
+    Tidal,
+    SoundCloud,
+    Bandcamp,
+    AmazonMusic,
+    Other,
 }
 
 public enum WishMatch

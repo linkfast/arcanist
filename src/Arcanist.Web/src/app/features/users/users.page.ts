@@ -48,6 +48,7 @@ const allPermissions: Permission[] = [
   'VIEW_ALL_STATS',
   'UPLOAD',
   'PLAY_ON_SERVER',
+  'VIEW_ALL_WISHES',
 ];
 
 interface UserForm {

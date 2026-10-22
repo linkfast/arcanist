@@ -433,6 +433,9 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             wish.Property(w => w.Album).HasMaxLength(NameLength);
             wish.Property(w => w.Note).HasMaxLength(1000);
             wish.Property(w => w.MatchedBy).HasConversion<string>().HasMaxLength(EnumLength);
+            wish.Property(w => w.SourceService).HasConversion<string>().HasMaxLength(EnumLength);
+            wish.Property(w => w.SourceUrl).HasMaxLength(2000);
+            // No foreign key (SQLite would rebuild the table): CatalogCleaner keeps the covers wishes use.
             wish.HasIndex(w => new { w.UserId, w.CreatedAt });
             wish.HasIndex(w => w.ObtainedAt);
         });

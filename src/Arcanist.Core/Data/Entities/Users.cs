@@ -20,6 +20,8 @@ public enum Permissions : long
     ViewAllStats = 1 << 5,
     Upload = 1 << 6,
     PlayOnServer = 1 << 7,
+    /// <summary>Sees everyone's wish lists (the server's), not only their own.</summary>
+    ViewAllWishes = 1 << 8,
 }
 
 public sealed class User : Entity

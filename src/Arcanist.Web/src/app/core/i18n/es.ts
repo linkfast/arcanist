@@ -889,6 +889,7 @@ export const es: Dictionary = {
     VIEW_ALL_STATS: 'Ver todas las estadísticas',
     UPLOAD: 'Subir música',
     PLAY_ON_SERVER: 'Reproducir en el servidor',
+    VIEW_ALL_WISHES: 'Ver la lista de deseos de todos',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Crear, editar y eliminar las bibliotecas a las que tiene acceso.',
@@ -901,6 +902,8 @@ export const es: Dictionary = {
       'Añadir música a las bibliotecas a las que tiene acceso, desde las apps (por ejemplo, al migrar la biblioteca de Ultimate Desktop).',
     PLAY_ON_SERVER:
       'Reproducir en el dispositivo de audio del servidor (Audio del servidor) desde los reproductores y Ultimate Connect.',
+    VIEW_ALL_WISHES:
+      'Ver las canciones que quieren todos los usuarios (la lista de deseos del servidor), por ejemplo para conseguirlas.',
   },
   account: {
     cloud: {
@@ -2379,6 +2382,25 @@ export const es: Dictionary = {
     },
   },
   wishes: {
+    tabs: {
+      mine: 'Mi lista',
+      all: 'De todos',
+    },
+    allHelp:
+      'Las canciones que quieren todos los usuarios del servidor. Solo cada uno puede cambiar su lista.',
+    by_user: 'Lo quiere {name}',
+    link: 'Desde un enlace',
+    linkHelp:
+      'Pega el enlace de una canción de Spotify, YouTube Music, Deezer, Apple Music, Tidal, SoundCloud, Bandcamp, MusicBrainz… y se rellena sola, con su carátula. O escríbela a mano debajo.',
+    linkPlaceholder: 'https://open.spotify.com/track/…',
+    read: 'Leer enlace',
+    reading: 'Leyendo…',
+    readFrom: 'Leída de {service}: revisa los datos y añádela.',
+    clearLink: 'Quitar el enlace',
+    manual: 'O a mano',
+    openIn: 'Abrir en {service}',
+    otherPage: 'la página',
+    cover: 'Carátula',
     title: 'Lista de deseos',
     description:
       'Las canciones que quieres y aún no tienes. Cuando una entra en una biblioteca que puedes escuchar (al escanear, subir, importar o sincronizar), se reconoce sola y te avisamos.',
@@ -2916,6 +2938,9 @@ export const es: Dictionary = {
     },
   },
   errors: {
+    wish_link_unreadable:
+      'No se pudo leer la canción de ese enlace. Prueba con otro o escríbela a mano.',
+    wish_link_not_a_song: 'Ese enlace no es de una canción (es un álbum, una lista o un artista).',
     external_services_disabled: 'La privacidad elegida no permite servicios externos.',
     telemetry_disabled: 'La privacidad elegida no permite enviar estadísticas.',
     maintenance:

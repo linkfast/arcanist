@@ -249,6 +249,19 @@ These libraries work without Ultimate Cloud (neither its extension nor its plan)
 organizing, drop folders), and administrators cannot delete them or change their sources (`library_managed`, 409).
 `Library.managedBy` says which extension keeps one; the panel marks it **Managed**.
 
+### Wish lists
+
+`IWishLists` (from DI, in the SDK) reads and changes the users' wish lists: one user's (`ListAsync`), everyone's
+(`ListAllAsync`, each entry with its user), `AddAsync` (the song is looked for at once among the libraries that user
+can play), `RemoveAsync`, and `ResolveLinkAsync`, which reads a streaming service's link into a `WishListEntryInput`
+(null when the link is not a song or outside services are not allowed). It checks no permissions: when an extension
+shows someone else's wishes, it decides who may see them (the server's own rule is `VIEW_ALL_WISHES`). For example, a
+downloader can offer what users want:
+
+```csharp
+var wanted = await wishLists.ListAllAsync(wantedOnly: true, cancellationToken);
+```
+
 ## Publishing in the Marketplace
 
 The panel's **Marketplace** (Extensions) lists the extensions of the catalog at

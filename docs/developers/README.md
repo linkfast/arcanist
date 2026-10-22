@@ -348,7 +348,21 @@ imports and syncs): by MusicBrainz recording, AcoustID, or title and artist, the
 `wishList(status)` / `GET /rest/v1/me/wishes` lists the wanted ones first and then those that arrived (the history),
 each with its `track` and `matchedBy`, plus `wanted` and `unseen` counts. The `wishObtained` subscription tells the
 user as soon as one arrives; `markWishesSeen` (`POST /rest/v1/me/wishes/seen`) clears `unseen`. `updateWish` changes
-one (another song is wanted again) and `removeWish` drops it. Every user sees only their own.
+one (another song is wanted again) and `removeWish` drops it. Every user sees only their own; with the
+`VIEW_ALL_WISHES` permission (administrators have it), `wishList(scope: ALL)` / `GET /rest/v1/me/wishes?scope=ALL`
+lists everyone's, each with its `owner`.
+
+**From a link.** `resolveWishLink(input: {url})` / `POST /rest/v1/me/wishes/resolve-link` reads a song's link from a
+streaming service — Spotify, YouTube Music, YouTube, Deezer, Apple Music, MusicBrainz, Tidal, SoundCloud, Bandcamp,
+Amazon Music, or any page that describes a song (schema.org or Open Graph) — and returns `service`, `url`, `title`,
+`artist`, `album`, `durationMs`, `musicBrainzRecordingId` and `artworkId` (its cover, served by the artwork endpoint).
+It adds nothing: show it, let the user correct it, and pass it to `addWish` with `sourceUrl` and `artworkId`, which the
+wish keeps (`sourceUrl`, `sourceService`, `artworkId`: link to the song's page in a new tab). Text around the link is
+ignored (a share text works). The recording is MusicBrainz's when the link says it exactly (its ISRC, or a MusicBrainz
+link), or the likely one for its title, artist and duration; the cover is the Cover Art Archive's for an exact
+recording and the service's own image otherwise. Errors: `wish_link_not_a_song` (an album, a playlist, an artist…),
+`wish_link_unreadable`, `external_services_disabled` (the server's privacy allows no outside services; the server
+reads the page, never the client).
 
 ## Apps with a library of their own
 

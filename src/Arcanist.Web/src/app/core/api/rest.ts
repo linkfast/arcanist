@@ -13,7 +13,8 @@ export type Permission =
   | 'DOWNLOAD'
   | 'VIEW_ALL_STATS'
   | 'UPLOAD'
-  | 'PLAY_ON_SERVER';
+  | 'PLAY_ON_SERVER'
+  | 'VIEW_ALL_WISHES';
 export type DatabaseProvider = 'SQLITE' | 'POSTGRES';
 
 export interface UserAccount {

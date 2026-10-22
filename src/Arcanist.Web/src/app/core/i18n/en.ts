@@ -877,6 +877,7 @@ export const en: Dictionary = {
     VIEW_ALL_STATS: 'View all statistics',
     UPLOAD: 'Upload music',
     PLAY_ON_SERVER: 'Play on the server',
+    VIEW_ALL_WISHES: "View everyone's wish lists",
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Create, edit and delete the libraries they can access.',
@@ -889,6 +890,8 @@ export const en: Dictionary = {
       'Add music to the libraries they can access, from apps (for example, migrating Ultimate Desktop’s library).',
     PLAY_ON_SERVER:
       'Play on the server’s audio device (Server audio) from players and Ultimate Connect.',
+    VIEW_ALL_WISHES:
+      'See the songs every user wants (the server’s wish list), for example to get them.',
   },
   account: {
     cloud: {
@@ -2348,6 +2351,24 @@ export const en: Dictionary = {
     },
   },
   wishes: {
+    tabs: {
+      mine: 'My list',
+      all: "Everyone's",
+    },
+    allHelp: 'The songs every user of the server wants. Only each user can change their own list.',
+    by_user: '{name} wants it',
+    link: 'From a link',
+    linkHelp:
+      "Paste a song's link from Spotify, YouTube Music, Deezer, Apple Music, Tidal, SoundCloud, Bandcamp, MusicBrainz… and it fills itself in, with its cover. Or type it in below.",
+    linkPlaceholder: 'https://open.spotify.com/track/…',
+    read: 'Read link',
+    reading: 'Reading…',
+    readFrom: 'Read from {service}: check it and add it.',
+    clearLink: 'Clear the link',
+    manual: 'Or by hand',
+    openIn: 'Open in {service}',
+    otherPage: 'its page',
+    cover: 'Cover',
     title: 'Wish list',
     description:
       'Songs you want and do not have yet. When one enters a library you can play (a scan, an upload, an import or a sync brings it), it is recognised by itself and you are told.',
@@ -2881,6 +2902,8 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    wish_link_unreadable: "That link's song could not be read. Try another one or type it in.",
+    wish_link_not_a_song: 'That link is not a song (it is an album, a playlist or an artist).',
     external_services_disabled: 'The chosen privacy does not allow outside services.',
     telemetry_disabled: 'The chosen privacy does not allow sending statistics.',
     maintenance:

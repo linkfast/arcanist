@@ -4694,11 +4694,18 @@
         "tags": [
           "Wish list"
         ],
-        "summary": "The user\u0027s wish list: songs they want (newest first), then those that arrived (by when). Optionally only the WANTED or the OBTAINED ones.",
+        "summary": "The user\u0027s wish list: songs they want (newest first), then those that arrived (by when). Optionally only the WANTED or the OBTAINED ones. With scope=ALL, everyone\u0027s wishes, each with its owner (requires VIEW_ALL_WISHES).",
         "operationId": "WishList",
         "parameters": [
           {
             "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
             "in": "query",
             "schema": {
               "type": "string"
@@ -4741,6 +4748,37 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Wish"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/wishes/resolve-link": {
+      "post": {
+        "tags": [
+          "Wish list"
+        ],
+        "summary": "Reads a song\u0027s link from a streaming service (Spotify, YouTube Music, Deezer, Apple Music, MusicBrainz, Tidal, SoundCloud, Bandcamp\u2026) to fill a wish: title, artist, album, duration, the MusicBrainz recording and a cover (kept in the artwork cache). Adds nothing: pass what it returns to AddWish with sourceUrl and artworkId. Needs external services allowed (external_services_disabled); wish_link_not_a_song for albums or playlists, wish_link_unreadable when the page does not say the song.",
+        "operationId": "ResolveWishLink",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveWishLinkInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WishLinkPreview"
                 }
               }
             }
@@ -17983,7 +18021,8 @@
           "DOWNLOAD",
           "VIEW_ALL_STATS",
           "UPLOAD",
-          "PLAY_ON_SERVER"
+          "PLAY_ON_SERVER",
+          "VIEW_ALL_WISHES"
         ]
       },
       "PlannedMove": {
@@ -18813,6 +18852,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ResolveWishLinkInput": {
+        "required": [
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
           }
         }
       },
@@ -23553,6 +23603,39 @@
           },
           "seen": {
             "type": "boolean"
+          },
+          "sourceUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceService": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WishLinkService"
+              }
+            ]
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "owner": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WishOwner"
+              }
+            ]
           }
         }
       },
@@ -23602,8 +23685,93 @@
               "null",
               "string"
             ]
+          },
+          "sourceUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
+      },
+      "WishLinkPreview": {
+        "required": [
+          "service",
+          "url",
+          "title",
+          "artist",
+          "album",
+          "durationMs",
+          "musicBrainzRecordingId",
+          "artworkId"
+        ],
+        "type": "object",
+        "properties": {
+          "service": {
+            "$ref": "#/components/schemas/WishLinkService"
+          },
+          "url": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "musicBrainzRecordingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "WishLinkService": {
+        "enum": [
+          "SPOTIFY",
+          "YOU_TUBE_MUSIC",
+          "YOU_TUBE",
+          "DEEZER",
+          "APPLE_MUSIC",
+          "MUSIC_BRAINZ",
+          "TIDAL",
+          "SOUND_CLOUD",
+          "BANDCAMP",
+          "AMAZON_MUSIC",
+          "OTHER",
+          null
+        ]
       },
       "WishListResult": {
         "required": [
@@ -23634,6 +23802,29 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "WishOwner": {
+        "required": [
+          "id",
+          "userName",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

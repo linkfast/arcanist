@@ -2513,6 +2513,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<Guid?>("ArtworkId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2538,6 +2541,14 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<bool>("Seen")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("SourceService")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("Title")
                         .IsRequired()

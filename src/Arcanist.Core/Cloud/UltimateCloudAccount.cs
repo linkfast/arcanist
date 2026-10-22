@@ -163,8 +163,9 @@ public sealed class UltimateCloudAccount(
             _plan = ParsePlan(await client.SendAsync(PlanQuery, null, cancellationToken), time);
             ErrorCode = null;
             await settings.SetAsync(SettingKeys.UltimateCloudPlan, _plan, cancellationToken);
-            // Installed with the account, and updated when Ultimate Cloud serves a new version.
-            await tool.EnsureAsync(cancellationToken);
+            // The sync component, when an administrator installed it: updated when Ultimate Cloud serves a new version.
+            if (tool.IsInstalled)
+                await tool.EnsureAsync(cancellationToken);
             await ConnectAsync(cancellationToken);
         }
         catch (UltimateCloudException e)

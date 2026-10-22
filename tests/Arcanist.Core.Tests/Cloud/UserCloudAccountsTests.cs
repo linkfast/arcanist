@@ -34,7 +34,10 @@ public sealed class UserCloudAccountsTests : IAsyncDisposable
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = FakeUltimateCloud.ApiUrl,
             ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
+            // Syncing a library installs the sync component, which the fake Ultimate Cloud signs and serves.
+            ["Arcanist:UltimateCloud:ToolsPublicKey"] = _cloud.ToolKey.ExportSubjectPublicKeyInfoPem(),
         }, services: _cloud.Register);
+        _cloud.ServeTool = true;
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
         _admin = await _factory.CreateAuthenticatedClientAsync();
         await _factory.WaitForScansAsync(_admin);

@@ -161,16 +161,26 @@
                   <dd [title]="plan.checkedAt | dateTime">{{ plan.checkedAt | relativeTime }}</dd>
                 }
                 <dt class="text-muted-foreground">{{ 'cloud.tool.title' | t }}</dt>
-                <dd>
-                  @if (current.audioTool.version; as version) {
-                    {{ 'cloud.tool.installed' | t: { version } }}
-                  } @else if (current.audioTool.errorCode) {
-                    <span class="text-destructive">{{
+                <dd class="grid gap-1">
+                  <label class="flex items-center gap-2">
+                    <hlm-switch
+                      [checked]="!!current.audioTool.version"
+                      [disabled]="busy()"
+                      (checkedChange)="setSync($event)"
+                      [aria-label]="'cloud.tool.title' | t"
+                    />
+                    @if (current.audioTool.version; as version) {
+                      {{ 'cloud.tool.installed' | t: { version } }}
+                    } @else {
+                      <span class="text-muted-foreground">{{ 'cloud.tool.off' | t }}</span>
+                    }
+                  </label>
+                  @if (current.audioTool.errorCode) {
+                    <span class="text-xs text-destructive">{{
                       i18n.error(current.audioTool.errorCode)
                     }}</span>
-                  } @else {
-                    <span class="text-muted-foreground">{{ 'cloud.tool.pending' | t }}</span>
                   }
+                  <span class="text-xs text-muted-foreground">{{ 'cloud.tool.help' | t }}</span>
                 </dd>
               </dl>
               <div class="flex flex-wrap gap-2">

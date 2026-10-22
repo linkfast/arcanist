@@ -209,6 +209,7 @@ type Documents = {
     "\n  mutation TestS3Connection($input: S3ConnectionInput!) {\n    testS3Connection(input: $input) {\n      success\n      errorCode\n      audioFiles\n      truncated\n    }\n  }\n": typeof types.TestS3ConnectionDocument,
     "\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n": typeof types.CreateS3LibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.RefreshUltimateCloudDocument,
+    "\n  mutation SetUltimateCloudSync($enabled: Boolean!) {\n    setUltimateCloudSync(enabled: $enabled) {\n      ...UltimateCloudStatusFields\n    }\n  }\n": typeof types.SetUltimateCloudSyncDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": typeof types.ResolvePreviousSqliteDocument,
     "\n  fragment BackupJobFields on BackupJob {\n    id\n    backupId\n    backupName\n    status\n    trigger\n    snapshot\n    requestedAt\n    startedAt\n    finishedAt\n    files\n    copied\n    unchanged\n    versioned\n    skipped\n    failed\n    bytes\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n": typeof types.BackupJobFieldsFragmentDoc,
     "\n  fragment BackupDestinationFields on BackupDestinationInfo {\n    id\n    name\n    kind\n    location\n    backups\n    createdAt\n  }\n": typeof types.BackupDestinationFieldsFragmentDoc,
@@ -450,6 +451,7 @@ const documents: Documents = {
     "\n  mutation TestS3Connection($input: S3ConnectionInput!) {\n    testS3Connection(input: $input) {\n      success\n      errorCode\n      audioFiles\n      truncated\n    }\n  }\n": types.TestS3ConnectionDocument,
     "\n  mutation CreateS3Library($input: CreateS3LibraryInput!) {\n    createS3Library(input: $input) {\n      id\n    }\n  }\n": types.CreateS3LibraryDocument,
     "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.RefreshUltimateCloudDocument,
+    "\n  mutation SetUltimateCloudSync($enabled: Boolean!) {\n    setUltimateCloudSync(enabled: $enabled) {\n      ...UltimateCloudStatusFields\n    }\n  }\n": types.SetUltimateCloudSyncDocument,
     "\n  mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {\n    resolvePreviousSqlite(input: $input) {\n      ...DatabaseStatusFields\n    }\n  }\n": types.ResolvePreviousSqliteDocument,
     "\n  fragment BackupJobFields on BackupJob {\n    id\n    backupId\n    backupName\n    status\n    trigger\n    snapshot\n    requestedAt\n    startedAt\n    finishedAt\n    files\n    copied\n    unchanged\n    versioned\n    skipped\n    failed\n    bytes\n    errorCode\n    failures {\n      path\n      code\n    }\n  }\n": types.BackupJobFieldsFragmentDoc,
     "\n  fragment BackupDestinationFields on BackupDestinationInfo {\n    id\n    name\n    kind\n    location\n    backups\n    createdAt\n  }\n": types.BackupDestinationFieldsFragmentDoc,
@@ -1290,6 +1292,10 @@ export function graphql(source: "\n  mutation CreateS3Library($input: CreateS3Li
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation RefreshUltimateCloud {\n    refreshUltimateCloud {\n      ...UltimateCloudStatusFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetUltimateCloudSync($enabled: Boolean!) {\n    setUltimateCloudSync(enabled: $enabled) {\n      ...UltimateCloudStatusFields\n    }\n  }\n"): (typeof documents)["\n  mutation SetUltimateCloudSync($enabled: Boolean!) {\n    setUltimateCloudSync(enabled: $enabled) {\n      ...UltimateCloudStatusFields\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

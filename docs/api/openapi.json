@@ -7344,6 +7344,37 @@
         }
       }
     },
+    "/rest/v1/ultimate-cloud/sync": {
+      "put": {
+        "tags": [
+          "Ultimate Cloud"
+        ],
+        "summary": "Turns Ultimate Cloud\u0027s sync component (ultimate-audio, closed source) on or off: on, it is installed and syncing libraries, Cloud Drop and uploads to Ultimate Cloud work, and the server\u0027s edition is ULTIMATE; off, it is removed. Administrators only, with a recent authentication.",
+        "operationId": "SetUltimateCloudSync",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUltimateCloudSyncInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UltimateCloudStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/ultimate-cloud/refresh": {
       "post": {
         "tags": [
@@ -19964,6 +19995,17 @@
             }
           },
           "pregenerateOnlyLossless": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetUltimateCloudSyncInput": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
             "type": "boolean"
           }
         }

@@ -152,6 +152,9 @@ public sealed class MyUploadService(
             throw new ArcanistException.Conflict(ErrorCodes.CloudDisabled);
         if (accounts.TierOf(access.UserId) == CloudTier.None)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
+        using (UltimateCloudClient.As(access.UserId))
+            if (await services.GetRequiredService<IUltimateAudio>().EnsureInstalledAsync(cancellationToken) is { } unavailable)
+                throw new ArcanistException.Conflict(unavailable);
         if (input.TrackIds is not { Count: > 0 and <= MaxTracks })
             throw ArcanistException.Field("trackIds", ErrorCodes.InvalidFormat);
 

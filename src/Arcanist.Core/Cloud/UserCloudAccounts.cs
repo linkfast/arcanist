@@ -174,9 +174,10 @@ public sealed class UserCloudAccounts(
                 _plans[user] = plan;
                 _errors.TryRemove(user, out _);
                 await settings.SetAsync(SettingKeys.UltimateCloudUser(user, "plan"), plan, cancellationToken);
-                // An administrator's account can sync libraries without the server's: the tool comes with it too.
-                if (_admins.Contains(user) && await auth.LinkAsync(cancellationToken) is null)
-                    await services.GetRequiredService<UltimateAudioTool>().EnsureAsync(cancellationToken);
+                // An administrator's account can sync libraries without the server's: it keeps the sync component up to date too.
+                var tool = services.GetRequiredService<UltimateAudioTool>();
+                if (_admins.Contains(user) && await auth.LinkAsync(cancellationToken) is null && tool.IsInstalled)
+                    await tool.EnsureAsync(cancellationToken);
             }
         }
         catch (UltimateCloudException e)

@@ -13,10 +13,10 @@ public enum ServerEdition
     /// <summary>Only open source components are in use.</summary>
     OpenSource,
 
-    /// <summary>Some closed source component is in use (a web player such as Ultimate Web Player, an extension, a tool), without Ultimate Cloud.</summary>
+    /// <summary>Some closed source component is in use (a web player such as Ultimate Web Player, an extension, a tool).</summary>
     Standard,
 
-    /// <summary>Ultimate Cloud's features are unlocked (a linked account).</summary>
+    /// <summary>Ultimate Cloud's paid plan, with its sync component (ultimate-audio) installed and running. A free account does not make it Ultimate.</summary>
     Ultimate,
 }
 
@@ -44,7 +44,8 @@ public sealed class EditionResolver(ExtensionHost extensions, FrontendCatalog pl
     IConfiguration configuration)
 {
     public ServerEdition Current =>
-        cloud.Tier != CloudTier.None ? ServerEdition.Ultimate
+        // Ultimate: the paid plan (a free account unlocks nothing of it) with the sync component running.
+        cloud.Tier == CloudTier.Paid && ultimateAudio.IsInstalled && !OpenSource.IsOn(configuration) ? ServerEdition.Ultimate
         : Components().Any(c => c.Active) ? ServerEdition.Standard
         : ServerEdition.OpenSource;
 

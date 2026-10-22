@@ -53,7 +53,10 @@ public sealed record AddUltimateCloudLibraryInput(UltimateCloudCollection Collec
 /// <summary>ultimate-audio, the tool Ultimate Cloud serves for syncing (audio hashes and tags as Ultimate clients handle them).</summary>
 /// <param name="Version">The installed version; null while it is not installed.</param>
 /// <param name="ErrorCode">Why the last install or update failed.</param>
+/// <summary>Ultimate Cloud's sync component (ultimate-audio): its version when installed, or why it could not be.</summary>
 public sealed record UltimateCloudTool(string? Version, string? ErrorCode);
+
+public sealed record SetUltimateCloudSyncInput(bool Enabled);
 
 /// <summary>The Ultimate Cloud account linked to this server, and what it enables.</summary>
 /// <param name="Account">The account's user name or email.</param>
@@ -118,6 +121,29 @@ public sealed class UltimateCloudService(
         guard.Admin();
         guard.RecentAuthentication();
         await account.UnlinkAsync(cancellationToken);
+        return await CurrentAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Turns Ultimate Cloud's sync component (ultimate-audio, closed source) on or off: on, it is installed (signed by
+    /// Ultimate Cloud) and syncing, Cloud Drop and uploads to Ultimate Cloud work, and the server's edition is ULTIMATE;
+    /// off, it is removed and they stop. Administrators only, with a recent authentication.
+    /// </summary>
+    public async Task<UltimateCloudStatus> SetSyncAsync(bool enabled, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        RequireEnabled();
+        if (!enabled)
+            await tool.UninstallAsync(cancellationToken);
+        else
+        {
+            // Ultimate Cloud serves it to a linked account: the server's, or else the administrator's own.
+            var actor = guard.Authenticated().UserId;
+            using (UltimateCloudClient.As(await auth.LinkAsync(cancellationToken) is null ? actor : null))
+                if (await tool.EnsureInstalledAsync(cancellationToken) is { } unavailable)
+                    throw new ArcanistException.Conflict(unavailable);
+        }
         return await CurrentAsync(cancellationToken);
     }
 

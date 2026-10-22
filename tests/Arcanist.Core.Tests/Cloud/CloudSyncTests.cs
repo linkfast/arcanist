@@ -16,6 +16,9 @@ public sealed class FakeUltimateAudio : IUltimateAudio
 {
     public bool IsInstalled { get; set; } = true;
 
+    public Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(IsInstalled ? null : (string?)Core.Application.ErrorCodes.CloudToolMissing);
+
     public Task<string> HashAsync(string path, CancellationToken cancellationToken) =>
         Task.FromResult(Convert.ToHexStringLower(SHA1.HashData(File.ReadAllBytes(path))));
 

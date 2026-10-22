@@ -80,6 +80,11 @@ public sealed class ImportService(
         var errors = new ValidationErrors();
         var storage = storages.For(LibrarySourceKind.Local);
 
+        // Cloud Drop gives the audio without its tags: Ultimate Cloud's sync component puts them back (installed now).
+        if (folder.Kind == DropFolderKind.UltimateCloudDrop && input.Enabled
+            && await services.GetRequiredService<Core.Cloud.IUltimateAudio>().EnsureInstalledAsync(cancellationToken) is { } unavailable)
+            throw new ArcanistException.Conflict(unavailable);
+
         string? path = null;
         if (folder.Kind == DropFolderKind.UltimateCloudDrop)
         {

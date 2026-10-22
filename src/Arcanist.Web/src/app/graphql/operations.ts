@@ -2404,6 +2404,14 @@ export const RefreshUltimateCloudMutation = graphql(`
   }
 `);
 
+export const SetUltimateCloudSyncMutation = graphql(`
+  mutation SetUltimateCloudSync($enabled: Boolean!) {
+    setUltimateCloudSync(enabled: $enabled) {
+      ...UltimateCloudStatusFields
+    }
+  }
+`);
+
 export const ResolvePreviousSqliteMutation = graphql(`
   mutation ResolvePreviousSqlite($input: ResolvePreviousSqliteInput!) {
     resolvePreviousSqlite(input: $input) {

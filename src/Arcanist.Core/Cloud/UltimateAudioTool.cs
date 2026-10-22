@@ -33,6 +33,12 @@ public interface IUltimateAudio
 {
     bool IsInstalled { get; }
 
+    /// <summary>
+    /// Installs it if it is not (it is Ultimate Cloud's sync component, closed source): null when it is ready,
+    /// otherwise why not (<c>closed_source_disabled</c>, <c>cloud_tool_unavailable</c>…).
+    /// </summary>
+    Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken);
+
     Task<string> HashAsync(string path, CancellationToken cancellationToken);
 
     Task<(string AudioHash, string Sha1, long Size)> StripAsync(string path, string output, CancellationToken cancellationToken);
@@ -47,7 +53,9 @@ public interface IUltimateAudio
 /// <para>
 /// Nothing runs unless it comes from Ultimate Cloud: the manifest must carry a valid signature of the key below (or
 /// <see cref="UltimateCloudOptions.ToolsPublicKey"/>), and the downloaded file the SHA-256 the manifest gives. It is
-/// installed in <c>&lt;data&gt;/tools/ultimate-audio/</c> when the account is linked, and updated when the plan is checked.
+/// the sync component: installed in <c>&lt;data&gt;/tools/ultimate-audio/</c> only when an administrator turns sync on
+/// (or a feature that needs it: syncing a library, Cloud Drop, uploads to Ultimate Cloud), and then updated when the
+/// plan is checked. Installed and running, it makes the server's edition ULTIMATE.
 /// </para>
 /// </summary>
 public sealed class UltimateAudioTool(
@@ -124,6 +132,32 @@ public sealed class UltimateAudioTool(
             (_, true, Architecture.Arm64) => "linux-arm64",
             _ => null,
         };
+
+    public async Task<string?> EnsureInstalledAsync(CancellationToken cancellationToken)
+    {
+        if (IsInstalled && !OpenSource.IsOn(configuration))
+            return null;
+        await EnsureAsync(cancellationToken);
+        return IsInstalled && ErrorCode is null ? null : ErrorCode ?? ErrorCodes.CloudToolMissing;
+    }
+
+    /// <summary>Removes it: sync stops (nothing in Ultimate Cloud or the libraries changes).</summary>
+    public async Task UninstallAsync(CancellationToken cancellationToken)
+    {
+        await _installing.WaitAsync(cancellationToken);
+        try
+        {
+            if (Directory.Exists(Folder))
+                Directory.Delete(Folder, recursive: true);
+            _installed = null;
+            _loaded = true;
+            ErrorCode = null;
+        }
+        finally
+        {
+            _installing.Release();
+        }
+    }
 
     /// <summary>Installs the version Ultimate Cloud serves, if it is not installed yet. Failures are kept in <see cref="ErrorCode"/>.</summary>
     public async Task EnsureAsync(CancellationToken cancellationToken)

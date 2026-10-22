@@ -567,7 +567,7 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         }
     }
 
-    /// <summary>The audio tool is installed right after the plan is read.</summary>
+    /// <summary>The audio tool, once sync is turned on.</summary>
     private static async Task<JsonElement> WaitForToolAsync(HttpClient admin)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);
@@ -774,8 +774,12 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         Assert.Equal(["Drift", "Undertow"], (await BrowseAsync(album.Id)).Select(s => s.Title));
     }
 
+    private static async Task<string?> EditionAsync(HttpClient client) =>
+        (await client.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, TestContext.Current.CancellationToken))
+        .GetProperty("edition").GetString();
+
     [Fact]
-    public async Task The_audio_tool_comes_with_the_account_and_runs_as_a_separate_program()
+    public async Task The_sync_component_installs_when_sync_is_turned_on_and_runs_as_a_separate_program()
     {
         _cloud.ServeTool = true;
         var admin = await StartAsync();
@@ -783,7 +787,16 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         _cloud.Approve = true;
         await WaitForStateAsync(admin, "LINKED");
 
+        // Linking installs nothing closed source: the server is still open source.
+        await admin.GraphQLAsync("mutation { refreshUltimateCloud { state } }");
+        Assert.False(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
+        Assert.Equal("OPEN_SOURCE", await EditionAsync(admin));
+
+        // Sync on: installed, and with the paid plan the server is Ultimate.
+        Assert.Equal("LINKED", (await admin.GraphQLAsync("mutation { setUltimateCloudSync(enabled: true) { state } }"))
+            .GetProperty("data").GetProperty("setUltimateCloudSync").GetProperty("state").GetString());
         var tool = await WaitForToolAsync(admin);
+        Assert.Equal("ULTIMATE", await EditionAsync(admin));
         Assert.Equal("1.0.0", tool.GetProperty("version").GetString());
         Assert.Equal(JsonValueKind.Null, tool.GetProperty("errorCode").ValueKind);
         Assert.True(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
@@ -793,6 +806,16 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         var failure = await Assert.ThrowsAsync<UltimateCloudException>(() =>
             audio.StripAsync("in.flac", "out.flac", TestContext.Current.CancellationToken));
         Assert.Equal("tool:corrupt_file", failure.Code);
+
+        // A free plan unlocks nothing of Ultimate: the closed source component in use makes it Standard.
+        _cloud.Plan = "Standard";
+        await admin.GraphQLAsync("mutation { refreshUltimateCloud { state } }");
+        Assert.Equal("STANDARD", await EditionAsync(admin));
+
+        // Sync off: removed, open source again.
+        await admin.GraphQLAsync("mutation { setUltimateCloudSync(enabled: false) { state } }");
+        Assert.False(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
+        Assert.Equal("OPEN_SOURCE", await EditionAsync(admin));
     }
 
     [Theory]
@@ -805,6 +828,7 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         await admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }");
         _cloud.Approve = true;
         await WaitForStateAsync(admin, "LINKED");
+        Assert.Equal("cloud_tool_invalid", (await admin.GraphQLAsync("mutation { setUltimateCloudSync(enabled: true) { state } }")).ErrorCode());
 
         var tool = await WaitForToolAsync(admin);
         Assert.Equal(JsonValueKind.Null, tool.GetProperty("version").ValueKind);

@@ -1907,9 +1907,10 @@ export const es: Dictionary = {
       },
     },
     tool: {
-      title: 'Herramienta de audio',
-      installed: 'ultimate-audio {version}, firmada por Ultimate',
-      pending: 'Se instalará al comprobar el plan',
+      title: 'Sincronización',
+      installed: 'Activada: ultimate-audio {version}, firmada por Ultimate',
+      off: 'Desactivada',
+      help: 'El componente de sincronización (ultimate-audio, de código cerrado) sube y baja música compatible con las apps de Ultimate: sincronizar bibliotecas, Cloud Drop y «Subir a mi Ultimate Cloud» lo necesitan, y se activa solo al usarlas. Con el plan Cloud, el servidor pasa a ser ULTIMATE.',
     },
     extension: {
       enabled: 'Ultimate Cloud',

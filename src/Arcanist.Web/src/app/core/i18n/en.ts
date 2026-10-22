@@ -1884,9 +1884,10 @@ export const en: Dictionary = {
       },
     },
     tool: {
-      title: 'Audio tool',
-      installed: 'ultimate-audio {version}, signed by Ultimate',
-      pending: 'Installed when the plan is checked',
+      title: 'Sync',
+      installed: 'On: ultimate-audio {version}, signed by Ultimate',
+      off: 'Off',
+      help: 'The sync component (ultimate-audio, closed source) moves music in a way Ultimate\'s apps understand: syncing libraries, Cloud Drop and "Upload to my Ultimate Cloud" need it, and turn it on when used. With the Cloud plan, the server becomes ULTIMATE.',
     },
     extension: {
       enabled: 'Ultimate Cloud',

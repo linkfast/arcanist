@@ -77,6 +77,10 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
                 throw new ArcanistException.Conflict(ErrorCodes.CloudSyncUnavailable);
             if (library.Sources.Count == 0 || library.Sources.Any(s => s.Kind != LibrarySourceKind.Local))
                 throw ArcanistException.Field("mode", ErrorCodes.ReadOnly);
+            // Syncing needs Ultimate Cloud's sync component (closed source): turning it on installs it.
+            using (Core.Cloud.UltimateCloudClient.As(input.AccountUserId))
+                if (await services.GetRequiredService<IUltimateAudio>().EnsureInstalledAsync(cancellationToken) is { } unavailable)
+                    throw new ArcanistException.Conflict(unavailable);
             if (input.DownloadSourceId is { } sourceId && library.Sources.All(s => s.Id != sourceId))
                 throw ArcanistException.Field("downloadSourceId", ErrorCodes.NotFound);
             if (input.Mode is CloudSyncMode.Download or CloudSyncMode.Both

@@ -2744,6 +2744,8 @@ type Mutation {
   refreshMyUltimateCloud: MyUltimateCloudStatus!
   "Chooses what the caller's own account gets from this server: their plays, albums heard whole, StarTracks, statistics."
   setMyUltimateCloudServices(input: UltimateCloudServicesInput!): MyUltimateCloudStatus!
+  "Turns Ultimate Cloud's sync component (ultimate-audio, closed source) on or off: on, it is installed and syncing libraries, Cloud Drop and uploads to Ultimate Cloud work, and the server's edition is ULTIMATE; off, it is removed. Administrators only, with a recent authentication."
+  setUltimateCloudSync(enabled: Boolean!): UltimateCloudStatus!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
   "Forgets the user's finished uploads (what is still on its way stays). Returns how many were forgotten."

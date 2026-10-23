@@ -90,15 +90,18 @@ public sealed class CloudSyncTests : IAsyncDisposable
             new { id = libraryId ?? _libraryId, m = mode });
 
     /// <summary>Waits for the run asked for to finish.</summary>
-    private async Task<JsonElement> WaitForSyncAsync()
+    /// <summary>Waits for a run to finish; after <paramref name="previous"/>, for one that finished after it.</summary>
+    private async Task<JsonElement> WaitForSyncAsync(JsonElement? previous = null)
     {
+        var after = previous?.GetProperty("lastRunAt").GetString();
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (true)
         {
             var sync = (await _admin.GraphQLAsync(Syncs)).GetProperty("data").GetProperty("cloudSyncs").EnumerateArray()
                 .Single(s => s.GetProperty("libraryId").GetString() == _libraryId);
             if (!sync.GetProperty("requested").GetBoolean() && sync.GetProperty("running").ValueKind == JsonValueKind.Null
-                                                          && sync.GetProperty("lastRunAt").ValueKind != JsonValueKind.Null)
+                                                          && sync.GetProperty("lastRunAt").ValueKind != JsonValueKind.Null
+                                                          && sync.GetProperty("lastRunAt").GetString() != after)
                 return sync;
             if (DateTime.UtcNow > deadline)
                 Assert.Fail($"Still {sync}");
@@ -133,7 +136,7 @@ public sealed class CloudSyncTests : IAsyncDisposable
 
         // A second run finds nothing to do: nothing goes up or comes down twice.
         await _admin.GraphQLAsync("mutation($id: ID!) { syncLibraryWithCloud(libraryId: $id) { requested } }", new { id = _libraryId });
-        sync = await WaitForSyncAsync();
+        sync = await WaitForSyncAsync(sync);
         Assert.Single(_cloud.Uploaded);
         Assert.Equal((1, 1, 1), (sync.GetProperty("matched").GetInt32(), sync.GetProperty("uploaded").GetInt32(), sync.GetProperty("downloaded").GetInt32()));
         Assert.Single(Directory.EnumerateFiles(Path.Combine(_music, "Echo"), "*", SearchOption.AllDirectories));
@@ -155,7 +158,7 @@ public sealed class CloudSyncTests : IAsyncDisposable
         // With room again, the next run uploads what was left.
         _cloud.Full = false;
         await _admin.GraphQLAsync("mutation($id: ID!) { syncLibraryWithCloud(libraryId: $id) { requested } }", new { id = _libraryId });
-        sync = await WaitForSyncAsync();
+        sync = await WaitForSyncAsync(sync);
         Assert.Equal((1, 1, 0), (sync.GetProperty("matched").GetInt32(), sync.GetProperty("uploaded").GetInt32(), sync.GetProperty("localOnly").GetInt32()));
     }
 

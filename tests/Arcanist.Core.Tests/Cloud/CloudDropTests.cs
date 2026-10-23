@@ -138,6 +138,11 @@ public sealed class CloudDropTests : IAsyncDisposable
             (await added.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("uploadAccount").GetString());
         await WaitAsync(async () => (await FetchesAsync()).Any(f => f.Upload == CloudDropUpload.Waiting), "The song was not brought");
         await _factory.WaitForScansAsync(_admin);
+        await WaitAsync(async () =>
+        {
+            await using var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext();
+            return await db.Tracks.AnyAsync(t => t.Title == "Tidal", Cancel);
+        }, "The song did not reach the library");
 
         // Not identified yet: it waits.
         var worker = _factory.Services.GetRequiredService<CloudDropWorker>();

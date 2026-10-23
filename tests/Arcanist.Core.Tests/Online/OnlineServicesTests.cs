@@ -242,7 +242,8 @@ public sealed class OnlineServicesTests : IAsyncLifetime
         _factory = new ArcanistFactory(services: _online.Register);
         var response = await _factory.CreateClient().PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
             new SetupDatabase(DatabaseProvider.Sqlite, null), new SetupAdmin("admin", ArcanistFactory.Password, null), [], false, null,
-            OnlineServices: new OnlineServicesSettings(MusicBrainz: true, AcoustId: false, CoverArtArchive: true, Lyrics: false)), ArcanistFactory.Json, Cancel);
+            OnlineServices: new OnlineServicesSettings(MusicBrainz: true, AcoustId: false, CoverArtArchive: true, Lyrics: false),
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), ArcanistFactory.Json, Cancel);
         response.EnsureSuccessStatusCode();
         _admin = await _factory.CreateAuthenticatedClientAsync();
 

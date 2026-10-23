@@ -89,6 +89,8 @@ export interface SetupRequest {
     settings: boolean;
     extensions: boolean;
   } | null;
+  /** The version of the terms and the disclaimer the administrator accepted. */
+  acceptedTerms: string | null;
   /** Folders of a DLNA media server to copy into one of the folders of `libraries`. */
   dlna: { location: string; folders: { id: string; title: string }[]; folder: string } | null;
 }

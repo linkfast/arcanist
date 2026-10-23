@@ -1,0 +1,172 @@
+{
+  "version": "2026-10-22",
+  "status": "Draft pending legal review",
+  "documents": {
+    "es": {
+      "title": "Términos y condiciones",
+      "sections": [
+        {
+          "id": "software",
+          "title": "Software libre, tal cual",
+          "paragraphs": [
+            "Arcanist es software libre de código abierto, creado por LinkFast S.A. y sus colaboradores, y distribuido bajo la licencia GNU Affero General Public License, versión 3 o posterior (AGPL-3.0-or-later).",
+            "Se ofrece «tal cual» (AS-IS), sin garantías de ningún tipo, expresas o implícitas, incluidas las de comerciabilidad, idoneidad para un fin concreto, disponibilidad o ausencia de errores, en la máxima medida que permita la ley aplicable."
+          ]
+        },
+        {
+          "id": "self-hosted",
+          "modes": ["SELF_HOSTED"],
+          "title": "Instalaciones propias",
+          "paragraphs": [
+            "En una instalación propia (self-hosted) quien la instala y la administra es el único responsable de ella, de sus datos y de su uso. LinkFast S.A. no presta soporte ni asume obligaciones sobre instalaciones de terceros, ni responde por daños o pérdidas derivados de su uso.",
+            "El único medio para dejar constancia de un error es abrir un issue en el repositorio público del proyecto: {issuesUrl}. Abrirlo no crea ninguna obligación de respuesta ni de corrección."
+          ],
+          "audiences": ["ADMIN", "USER"]
+        },
+        {
+          "id": "service",
+          "modes": ["LINKFAST_SERVICE"],
+          "title": "Servicio de LinkFast",
+          "paragraphs": [
+            "Este servidor forma parte de un servicio prestado por LinkFast S.A. (incluido su almacenamiento gestionado). El soporte, las garantías y las condiciones de ese servicio son los de su contrato con LinkFast S.A., que prevalecen sobre lo dicho en estos términos para el servicio.",
+            "Los errores del software también pueden comunicarse como issue en el repositorio público del proyecto: {issuesUrl}."
+          ],
+          "audiences": ["ADMIN", "USER"]
+        },
+        {
+          "id": "trademark",
+          "title": "Marca y servicios comerciales",
+          "paragraphs": [
+            "«Arcanist» y «LinkFast» son nombres y marcas de LinkFast S.A. Ofrecer Arcanist como servicio comercial a terceros (SaaS) con esos nombres, su logotipo o su apariencia está reservado a LinkFast S.A. salvo autorización expresa y por escrito.",
+            "Esto no limita los derechos que la licencia AGPL concede sobre el código: quien redistribuya o modifique el software para ofrecerlo a otros debe hacerlo con otro nombre y cumpliendo la licencia, incluida la publicación de su código fuente."
+          ],
+          "audiences": ["ADMIN"]
+        },
+        {
+          "id": "claims",
+          "title": "Reclamaciones",
+          "paragraphs": [
+            "Salvo en el servicio de LinkFast S.A., no pueden dirigirse reclamaciones a LinkFast S.A. por el funcionamiento, la disponibilidad o el uso de una instalación de Arcanist: corresponden a quien la administra."
+          ],
+          "audiences": ["ADMIN", "USER"]
+        }
+      ],
+      "disclaimerTitle": "Descargo de responsabilidad",
+      "disclaimer": [
+        {
+          "id": "purpose",
+          "title": "Un servidor de música personal",
+          "paragraphs": [
+            "Arcanist es un servidor de streaming personal: sirve para escuchar, en tus dispositivos y con quien tú decidas, la música de tu propia colección.",
+            "Arcanist promueve comprar música, en formato digital o en discos físicos, para importarla y que forme parte de tu colección. No tiene ni busca ningún propósito fuera de la ley."
+          ]
+        },
+        {
+          "id": "ownership",
+          "title": "Tu música es tuya",
+          "paragraphs": [
+            "LinkFast S.A. no almacena obras protegidas por propiedad intelectual ni las pone a disposición de nadie: la música, sus archivos y sus derechos son del usuario, que decide qué guarda y con quién lo comparte."
+          ]
+        },
+        {
+          "id": "sharing",
+          "title": "Compartir",
+          "paragraphs": [
+            "Si compartes tu biblioteca con otras personas o servidores, permitiendo escucharla (streaming) o descargarla, debes contar con los permisos o licencias que en cada caso hagan falta para hacerlo."
+          ]
+        },
+        {
+          "id": "use",
+          "title": "Uso correcto",
+          "paragraphs": [
+            "Eres responsable de usar Arcanist conforme a la ley y a los derechos de los autores y de los titulares de la música. LinkFast S.A. no promueve ni ampara ningún uso que los infrinja."
+          ]
+        }
+      ],
+      "accept": "He leído y acepto los términos y condiciones y el descargo de responsabilidad."
+    },
+    "en": {
+      "title": "Terms and conditions",
+      "sections": [
+        {
+          "id": "software",
+          "title": "Free software, as is",
+          "paragraphs": [
+            "Arcanist is free, open source software made by LinkFast S.A. and its contributors, distributed under the GNU Affero General Public License, version 3 or later (AGPL-3.0-or-later).",
+            "It is provided “as is”, without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, availability or freedom from errors, to the fullest extent the applicable law allows."
+          ]
+        },
+        {
+          "id": "self-hosted",
+          "modes": ["SELF_HOSTED"],
+          "title": "Your own installations",
+          "paragraphs": [
+            "In a self-hosted installation, whoever installs and administers it is solely responsible for it, its data and its use. LinkFast S.A. gives no support and takes on no obligations for installations of third parties, and is not liable for damages or losses arising from their use.",
+            "The only way to leave evidence of a bug is to open an issue in the project's public repository: {issuesUrl}. Opening one creates no obligation to answer or fix it."
+          ],
+          "audiences": ["ADMIN", "USER"]
+        },
+        {
+          "id": "service",
+          "modes": ["LINKFAST_SERVICE"],
+          "title": "LinkFast's service",
+          "paragraphs": [
+            "This server is part of a service provided by LinkFast S.A. (its managed storage included). Support, warranties and conditions of that service are those of its contract with LinkFast S.A., which prevail over these terms for the service.",
+            "Bugs of the software can also be reported as an issue in the project's public repository: {issuesUrl}."
+          ],
+          "audiences": ["ADMIN", "USER"]
+        },
+        {
+          "id": "trademark",
+          "title": "Trademark and commercial services",
+          "paragraphs": [
+            "“Arcanist” and “LinkFast” are names and trademarks of LinkFast S.A. Offering Arcanist as a commercial service to others (SaaS) under those names, its logo or its look is reserved to LinkFast S.A. unless expressly authorised in writing.",
+            "This does not limit the rights the AGPL grants over the code: whoever redistributes or modifies the software to offer it to others must do so under another name and comply with the license, including publishing their source code."
+          ],
+          "audiences": ["ADMIN"]
+        },
+        {
+          "id": "claims",
+          "title": "Claims",
+          "paragraphs": [
+            "Except for LinkFast S.A.'s service, claims about how an Arcanist installation works, its availability or its use cannot be made against LinkFast S.A.: they belong to whoever administers it."
+          ],
+          "audiences": ["ADMIN", "USER"]
+        }
+      ],
+      "disclaimerTitle": "Disclaimer",
+      "disclaimer": [
+        {
+          "id": "purpose",
+          "title": "A personal music server",
+          "paragraphs": [
+            "Arcanist is a personal streaming server: it is for listening to the music of your own collection, on your devices and with whoever you choose.",
+            "Arcanist encourages buying music, as digital files or on physical records, to import it into your collection. It has and seeks no purpose outside the law."
+          ]
+        },
+        {
+          "id": "ownership",
+          "title": "Your music is yours",
+          "paragraphs": [
+            "LinkFast S.A. does not store works protected by intellectual property nor makes them available to anyone: the music, its files and its rights are the user's, who decides what to keep and whom to share it with."
+          ]
+        },
+        {
+          "id": "sharing",
+          "title": "Sharing",
+          "paragraphs": [
+            "If you share your library with other people or servers, letting them listen to it (streaming) or download it, you must hold whatever permissions or licenses doing so requires in each case."
+          ]
+        },
+        {
+          "id": "use",
+          "title": "Proper use",
+          "paragraphs": [
+            "You are responsible for using Arcanist in accordance with the law and the rights of the music's authors and rights holders. LinkFast S.A. does not encourage or support any use that infringes them."
+          ]
+        }
+      ],
+      "accept": "I have read and accept the terms and conditions and the disclaimer."
+    }
+  }
+}

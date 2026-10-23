@@ -114,7 +114,8 @@ public sealed class OpenSourceModeTests
         var response = await factory.CreateClient().PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
             new SetupDatabase(DatabaseProvider.Sqlite, null),
             new SetupAdmin(ArcanistFactory.AdminUserName, ArcanistFactory.Password, null),
-            [], ShareAnonymousStatistics: false, Language: null, OpenSourceOnly: true), ArcanistFactory.Json, Cancel);
+            [], ShareAnonymousStatistics: false, Language: null, OpenSourceOnly: true,
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), ArcanistFactory.Json, Cancel);
         response.EnsureSuccessStatusCode();
 
         var deadline = DateTime.UtcNow.AddSeconds(10);

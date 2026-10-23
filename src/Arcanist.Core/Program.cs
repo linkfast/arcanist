@@ -185,6 +185,7 @@ builder.Services.AddOnlineServices(builder.Configuration);
 builder.Services.AddOrganization(builder.Configuration);
 builder.Services.AddMstreamImport();
 builder.Services.AddArcanistMigration();
+builder.Services.AddSingleton<Arcanist.Core.Legal.LegalService>();
 builder.Services.AddDlna(builder.Configuration);
 builder.Services.AddServerAudio();
 builder.Services.AddAi(builder.Configuration);

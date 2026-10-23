@@ -630,6 +630,43 @@
         }
       }
     },
+    "/rest/v1/legal/terms": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "The terms and conditions and the disclaimer, in a language, for this server (self-hosted, or part of LinkFast\u0027s service): the setup wizard asks administrators to accept them, and players their users (audience USER). Does not require authentication.",
+        "operationId": "LegalTerms",
+        "parameters": [
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "audience",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalTerms"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/library-sources/{id}": {
       "delete": {
         "tags": [
@@ -15729,6 +15766,83 @@
           "MINOR"
         ]
       },
+      "LegalMode": {
+        "enum": [
+          "SELF_HOSTED",
+          "LINKFAST_SERVICE"
+        ]
+      },
+      "LegalSection": {
+        "required": [
+          "id",
+          "title",
+          "paragraphs"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LegalTerms": {
+        "required": [
+          "version",
+          "mode",
+          "language",
+          "title",
+          "sections",
+          "disclaimerTitle",
+          "disclaimer",
+          "accept",
+          "issuesUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/LegalMode"
+          },
+          "language": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegalSection"
+            }
+          },
+          "disclaimerTitle": {
+            "type": "string"
+          },
+          "disclaimer": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegalSection"
+            }
+          },
+          "accept": {
+            "type": "string"
+          },
+          "issuesUrl": {
+            "type": "string"
+          }
+        }
+      },
       "Library": {
         "required": [
           "id",
@@ -21783,6 +21897,12 @@
               {
                 "$ref": "#/components/schemas/SetupDlnaImport"
               }
+            ]
+          },
+          "acceptedTerms": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }

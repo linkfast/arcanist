@@ -82,7 +82,8 @@ public sealed class ArcanistFactory(
             ShareAnonymousStatistics: false,
             Language: null,
             // Five stars, which the tests rate with (servers start with a single star).
-            RatingMode: Core.Data.Entities.RatingMode.Stars), Json);
+            RatingMode: Core.Data.Entities.RatingMode.Stars,
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), Json);
 
         response.EnsureSuccessStatusCode();
 

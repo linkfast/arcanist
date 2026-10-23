@@ -15,6 +15,12 @@ public static class UserEndpoints
             .WithName("ServerInfo")
             .WithSummary("Public description of the server. Does not require authentication.");
 
+        rest.MapGet("/legal/terms", (string? language, string? audience, Legal.LegalService legal) =>
+                legal.Get(language, string.Equals(audience, "USER", StringComparison.OrdinalIgnoreCase) ? Legal.LegalAudience.User : Legal.LegalAudience.Admin))
+            .WithTags("Server")
+            .WithName("LegalTerms")
+            .WithSummary("The terms and conditions and the disclaimer, in a language, for this server (self-hosted, or part of LinkFast's service): the setup wizard asks administrators to accept them, and players their users (audience USER). Does not require authentication.");
+
         var me = rest.MapGroup("/me").WithTags("Me");
 
         me.MapGet("", (UserService users, CancellationToken ct) => users.MeAsync(ct))

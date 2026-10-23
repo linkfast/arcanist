@@ -128,6 +128,7 @@ public static class ErrorCodes
     public const string LibraryManaged = "library_managed";
     public const string LibraryReadOnly = "library_read_only";
     public const string UploadLibraryRequired = "upload_library_required";
+    public const string TermsNotAccepted = "terms_not_accepted";
     public const string ClosedSourceDisabled = "closed_source_disabled";
     public const string S3WrongKey = "s3_wrong_key";
     /// <summary>The library is a view of others ("All"): nothing can be uploaded to it or changed in it.</summary>

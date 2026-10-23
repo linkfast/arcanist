@@ -21,6 +21,7 @@ import type {
   MstreamAnalysisFieldsFragment,
 } from '../../graphql/generated/graphql';
 import type { ArcanistSourceInput } from '../../shared/arcanist-import';
+import type { LegalTerms } from '../../shared/legal-terms';
 import type { MstreamSourceInput } from '../../shared/mstream-import';
 import { Host } from '../server/host';
 
@@ -133,6 +134,15 @@ export class SetupService {
   }
 
   /** What another Arcanist holds, read with its migration code or P2P link. */
+  /** The terms and the disclaimer the administrator accepts to set the server up. */
+  legalTerms(language: string): Promise<LegalTerms> {
+    return this.call(
+      this.http.get<LegalTerms>('/rest/v1/legal/terms', {
+        params: new HttpParams().set('language', language),
+      }),
+    );
+  }
+
   analyzeArcanist(source: ArcanistSourceInput): Promise<ArcanistSourceAnalysisFieldsFragment> {
     return this.call(
       this.http.post<ArcanistSourceAnalysisFieldsFragment>(

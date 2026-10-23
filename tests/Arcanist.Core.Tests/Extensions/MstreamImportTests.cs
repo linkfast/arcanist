@@ -370,7 +370,8 @@ public sealed class MstreamImportTests : IAsyncDisposable
             ShareAnonymousStatistics: false,
             Language: null,
             RatingMode: Core.Data.Entities.RatingMode.Stars,
-            Mstream: new SetupMstreamImport(_install, null, [new SetupMstreamLibrary("music", folder)], ImportUsers: true));
+            Mstream: new SetupMstreamImport(_install, null, [new SetupMstreamLibrary("music", folder)], ImportUsers: true),
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion);
 
         // The vpath must go to one of the new libraries' folders; nothing is set up otherwise.
         var refused = await client.PostAsJsonAsync("/rest/v1/setup/complete", Request(Path.Combine(_music, "Zed")), ArcanistFactory.Json, Cancel);

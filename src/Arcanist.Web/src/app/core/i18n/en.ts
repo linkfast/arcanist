@@ -318,6 +318,9 @@ export const en: Dictionary = {
       usersAgain: "For safety, passwords are not kept across a reload: type the users' again.",
     },
     finish: 'Finish setup',
+    terms: {
+      required: 'You need to accept the terms and the disclaimer to go on.',
+    },
     steps: {
       ultimate: {
         title: 'Ultimate',
@@ -338,6 +341,10 @@ export const en: Dictionary = {
       code: {
         title: 'Setup code',
         description: 'You are setting up Arcanist from another device.',
+      },
+      terms: {
+        title: 'Terms and conditions',
+        description: 'Read and accept them to use Arcanist.',
       },
       welcome: { title: 'Welcome to Arcanist', description: 'Your own music service, at home.' },
       database: {
@@ -3101,6 +3108,7 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    terms_not_accepted: 'The terms and the disclaimer must be accepted.',
     ffmpeg_downloading: 'ffmpeg is being downloaded: wait until it ends.',
     ffmpeg_in_use: 'ffmpeg is in use right now. Try again in a moment.',
     upload_library_required: 'Choose a library: this server has no default one for uploads.',

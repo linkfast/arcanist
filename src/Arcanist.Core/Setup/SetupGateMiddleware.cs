@@ -17,6 +17,7 @@ internal sealed class SetupGateMiddleware(RequestDelegate next, IOptionsMonitor<
     [
         "/rest/v1/setup",
         "/rest/v1/server-info",
+        "/rest/v1/legal",
         "/rest/v1/openapi.json",
         "/rest/docs",
         "/admin",

@@ -66,6 +66,11 @@
     FetchBundledPlayers alone (`dotnet msbuild -t:FetchBundledPlayers`) checks the downloads.
   -->
   <ItemGroup>
+    <!-- The terms and the disclaimer the setup wizard and the players ask to accept (Legal/LegalTerms.cs). -->
+    <EmbeddedResource Include="Legal\terms.json" LogicalName="Arcanist.Core.Legal.terms.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- github.com/linkfast/arcanist-webamp: its README says how to release a new version. -->
     <BundledPlayer Include="webamp" Version="0.8.0-alpha.1" Sha256="dc55c66073c9873a354f8efc90150b63a3116f4d48ce6b041ebdac6ff920e728"
                    Url="https://github.com/linkfast/arcanist-webamp/releases/download/arcanist-webamp-v0.8.0-alpha.1/arcanist-webamp-0.8.0-alpha.1.zip" />

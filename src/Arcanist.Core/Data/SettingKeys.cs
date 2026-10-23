@@ -45,6 +45,9 @@ public static class SettingKeys
     /// <summary>Where uploads that name no library go (<c>StoredUploadSettings</c>).</summary>
     public const string Uploads = "uploads.settings";
 
+    /// <summary>The terms accepted while setting the server up (<c>LegalAcceptance</c>).</summary>
+    public const string LegalAcceptance = "legal.acceptance";
+
     /// <summary>The connect secret of mStream's quick connect, protected with Data Protection.</summary>
     public const string MstreamQuickConnect = "mstream.quickConnect";
 

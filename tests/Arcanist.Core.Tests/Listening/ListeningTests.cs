@@ -326,6 +326,7 @@ public sealed class ListeningTests : IAsyncLifetime
             libraries = Array.Empty<object>(),
             shareAnonymousStatistics = false,
             ratingMode = "STAR",
+            acceptedTerms = Arcanist.Core.Legal.LegalService.CurrentVersion,
         }, ArcanistFactory.Json, Cancel);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 

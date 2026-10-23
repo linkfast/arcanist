@@ -194,6 +194,8 @@ type Query {
   myUploads(after: String, first: Int): MyUploadPage!
   "Public description of the server. Does not require authentication."
   serverInfo: ServerInfo!
+  "The terms and conditions and the disclaimer, in a language, for this server (self-hosted, or part of LinkFast's service): the setup wizard asks administrators to accept them, and players their users (audience USER). Does not require authentication."
+  legalTerms(language: String, audience: LegalAudience): LegalTerms!
   "The signed-in user."
   me: UserAccount!
   "Devices where the signed-in user is currently signed in."
@@ -2588,6 +2590,34 @@ enum ApiFeature {
   STREAMING_DEFAULTS
   UPLOAD_LOG
   UPLOAD_DESTINATION
+}
+
+type LegalTerms {
+  version: String!
+  mode: LegalMode!
+  language: String!
+  title: String!
+  sections: [LegalSection!]!
+  disclaimerTitle: String!
+  disclaimer: [LegalSection!]!
+  accept: String!
+  issuesUrl: String!
+}
+
+enum LegalMode {
+  SELF_HOSTED
+  LINKFAST_SERVICE
+}
+
+type LegalSection {
+  id: String!
+  title: String!
+  paragraphs: [String!]!
+}
+
+enum LegalAudience {
+  ADMIN
+  USER
 }
 
 type UserAccount {

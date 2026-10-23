@@ -208,7 +208,8 @@ public sealed class FfmpegIntegrationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Forbidden, (await remote.PostAsync("/rest/v1/setup/ffmpeg/install", null, Cancel)).StatusCode);
 
         (await client.PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
-            new SetupDatabase(Core.Data.DatabaseProvider.Sqlite, null), new SetupAdmin("admin", ArcanistFactory.Password, null), [], false, null),
+            new SetupDatabase(Core.Data.DatabaseProvider.Sqlite, null), new SetupAdmin("admin", ArcanistFactory.Password, null), [], false, null,
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion),
             ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Conflict, (await client.GetAsync("/rest/v1/setup/ffmpeg/install", Cancel)).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync("/rest/v1/setup/ffmpeg/install", null, Cancel)).StatusCode);
@@ -225,14 +226,16 @@ public sealed class FfmpegIntegrationTests : IAsyncLifetime
 
         var invalid = await client.PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
             new SetupDatabase(Core.Data.DatabaseProvider.Sqlite, null), new SetupAdmin("admin", ArcanistFactory.Password, null), [], false, null,
-            FfmpegPath: Path.Combine(_music, "nope")), ArcanistFactory.Json, Cancel);
+            FfmpegPath: Path.Combine(_music, "nope"),
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), ArcanistFactory.Json, Cancel);
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Contains("ffmpegPath", await invalid.Content.ReadAsStringAsync(Cancel));
 
         var ffmpeg = TestFfmpeg.Require();
         var valid = await client.PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
             new SetupDatabase(Core.Data.DatabaseProvider.Sqlite, null), new SetupAdmin("admin", ArcanistFactory.Password, null), [], false, null,
-            FfmpegPath: ffmpeg), ArcanistFactory.Json, Cancel);
+            FfmpegPath: ffmpeg,
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), ArcanistFactory.Json, Cancel);
         valid.EnsureSuccessStatusCode();
 
         var located = await factory.Services.GetRequiredService<FfmpegLocator>().ResolveAsync(Cancel);

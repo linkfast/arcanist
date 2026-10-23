@@ -20,6 +20,36 @@ public sealed class SetupTests : IAsyncLifetime
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
     [Fact]
+    public async Task Setup_needs_the_terms_and_anyone_can_read_them()
+    {
+        var client = _factory.CreateClient();
+        var terms = await client.GetFromJsonAsync<JsonElement>("/rest/v1/legal/terms?language=es", ArcanistFactory.Json, Cancel);
+        Assert.Equal(Arcanist.Core.Legal.LegalService.CurrentVersion, terms.GetProperty("version").GetString());
+        Assert.Equal("SELF_HOSTED", terms.GetProperty("mode").GetString());
+        Assert.Equal("https://github.com/linkfast/arcanist/issues", terms.GetProperty("issuesUrl").GetString());
+        var sections = terms.GetProperty("sections").EnumerateArray().Select(s => s.GetProperty("id").GetString()).ToList();
+        Assert.Contains("self-hosted", sections);
+        Assert.Contains("trademark", sections);
+        Assert.DoesNotContain("service", sections);
+        Assert.Contains(terms.GetProperty("sections").EnumerateArray(), s => s.GetProperty("paragraphs").EnumerateArray()
+            .Any(p => p.GetString()!.Contains("https://github.com/linkfast/arcanist/issues")));
+        Assert.Equal(4, terms.GetProperty("disclaimer").GetArrayLength());
+
+        // A player's users get theirs, without what is for administrators.
+        var users = await client.GetFromJsonAsync<JsonElement>("/rest/v1/legal/terms?language=en&audience=USER", ArcanistFactory.Json, Cancel);
+        Assert.DoesNotContain(users.GetProperty("sections").EnumerateArray(), s => s.GetProperty("id").GetString() == "trademark");
+
+        var refused = await client.PostAsJsonAsync("/rest/v1/setup/complete", new SetupRequest(
+            new SetupDatabase(DatabaseProvider.Sqlite, null),
+            new SetupAdmin("admin", "correct horse battery", null),
+            [new SetupLibrary("Music", [_musicFolder])],
+            ShareAnonymousStatistics: false,
+            Language: null), ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("terms_not_accepted", await refused.Content.ReadAsStringAsync(Cancel));
+    }
+
+    [Fact]
     public async Task Servers_start_rating_with_a_single_star()
     {
         var client = _factory.CreateClient();
@@ -28,7 +58,8 @@ public sealed class SetupTests : IAsyncLifetime
             new SetupAdmin("admin", "correct horse battery", null),
             [new SetupLibrary("Music", [_musicFolder])],
             ShareAnonymousStatistics: false,
-            Language: null), ArcanistFactory.Json, TestContext.Current.CancellationToken);
+            Language: null,
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), ArcanistFactory.Json, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
         var info = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, TestContext.Current.CancellationToken);
         Assert.Equal("STAR", info.GetProperty("ratingMode").GetString());
@@ -45,7 +76,8 @@ public sealed class SetupTests : IAsyncLifetime
             ShareAnonymousStatistics: true,
             Language: null,
             OnlineServices: new Core.Application.Online.OnlineServicesSettings(true, true, true, true),
-            Privacy: new Core.Application.Server.SetPrivacyInput(true, Core.Application.Server.ExternalServices.None)),
+            Privacy: new Core.Application.Server.SetPrivacyInput(true, Core.Application.Server.ExternalServices.None),
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion),
             ArcanistFactory.Json, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -127,7 +159,8 @@ public sealed class SetupTests : IAsyncLifetime
                 new SetupLibrary("Two", [_musicFolder, _musicFolder + "2"]),
             ],
             ShareAnonymousStatistics: null,
-            Language: null);
+            Language: null,
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion);
 
         var response = await _factory.CreateClient().PostAsJsonAsync("/rest/v1/setup/complete", request, ArcanistFactory.Json, Cancel);
 
@@ -222,7 +255,8 @@ public sealed class SetupTests : IAsyncLifetime
         new SetupAdmin("Admin", "correct horse battery", "The Admin"),
         [new SetupLibrary("Music", [_musicFolder])],
         ShareAnonymousStatistics: false,
-        Language: "es");
+        Language: "es",
+        AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion);
 
     private static async Task<JsonElement> ReadProblem(HttpResponseMessage response) =>
         await response.Content.ReadFromJsonAsync<JsonElement>(Cancel);
@@ -263,7 +297,8 @@ public sealed class PostgresSetupTests(PostgresContainer postgres) : IClassFixtu
             new SetupAdmin("admin", "correct horse battery", null),
             [new SetupLibrary("Music", [_musicFolder])],
             ShareAnonymousStatistics: true,
-            Language: null), ArcanistFactory.Json, TestContext.Current.CancellationToken);
+            Language: null,
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), ArcanistFactory.Json, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await using var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext();

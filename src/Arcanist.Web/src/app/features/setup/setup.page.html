@@ -87,6 +87,22 @@
             }
           }
 
+          @case ('terms') {
+            @if (terms(); as t) {
+              <app-legal-terms [terms]="t" />
+              <label class="flex items-start gap-3 text-sm">
+                <hlm-checkbox
+                  class="mt-0.5"
+                  [checked]="termsAccepted"
+                  (checkedChange)="termsAccepted = $event; persist()"
+                />
+                <span>{{ t.accept }}</span>
+              </label>
+            } @else {
+              <div class="flex justify-center py-8"><hlm-spinner /></div>
+            }
+          }
+
           @case ('database') {
             @if (status()?.database?.lockedByEnvironment) {
               <div hlmAlert>

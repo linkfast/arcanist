@@ -326,6 +326,9 @@ export const es: Dictionary = {
         'Por seguridad, las contraseñas no se guardan al recargar: escribe de nuevo las de los usuarios.',
     },
     finish: 'Terminar la configuración',
+    terms: {
+      required: 'Tienes que aceptar los términos y el descargo de responsabilidad para continuar.',
+    },
     steps: {
       ultimate: {
         title: 'Ultimate',
@@ -346,6 +349,10 @@ export const es: Dictionary = {
       code: {
         title: 'Código de configuración',
         description: 'Estás configurando Arcanist desde otro dispositivo.',
+      },
+      terms: {
+        title: 'Términos y condiciones',
+        description: 'Léelos y acéptalos para usar Arcanist.',
       },
       welcome: {
         title: 'Te damos la bienvenida a Arcanist',
@@ -3137,6 +3144,7 @@ export const es: Dictionary = {
     },
   },
   errors: {
+    terms_not_accepted: 'Hay que aceptar los términos y el descargo de responsabilidad.',
     ffmpeg_downloading: 'ffmpeg se está descargando: espera a que termine.',
     ffmpeg_in_use: 'ffmpeg se está usando ahora mismo. Inténtalo en un momento.',
     upload_library_required:

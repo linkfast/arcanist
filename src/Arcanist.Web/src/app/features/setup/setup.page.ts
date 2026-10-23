@@ -1,5 +1,6 @@
 import { Edition } from '../../core/server/edition';
 import { Brand } from '../../shared/brand';
+import { LegalTerms, LegalTermsView } from '../../shared/legal-terms';
 import { PrivacyChoice, PrivacyLevel } from '../../shared/privacy-level';
 import {
   Component,
@@ -117,6 +118,7 @@ import {
 type Step =
   | 'code'
   | 'welcome'
+  | 'terms'
   | 'database'
   | 'admin'
   | 'import'
@@ -190,6 +192,7 @@ const PROGRESS_MS = 1500;
     MstreamImportForm,
     ArcanistImportForm,
     ArcanistImportJobView,
+    LegalTermsView,
     CountPipe,
     BytesPipe,
   ],
@@ -263,6 +266,7 @@ export class SetupPage implements OnInit {
     const status = this.status();
     const steps: Step[] = [
       'welcome',
+      'terms',
       'database',
       'admin',
       'import',
@@ -372,6 +376,18 @@ export class SetupPage implements OnInit {
     return parts.join(', ');
   }
   protected shareStatistics: 'yes' | 'no' | null = 'yes';
+  /** The terms and the disclaimer, in the wizard's language, and whether they were accepted. */
+  protected readonly terms = signal<LegalTerms | null>(null);
+  protected termsAccepted = false;
+
+  private async loadTerms(): Promise<void> {
+    try {
+      this.terms.set(await this.setup.legalTerms(this.i18n.language()));
+    } catch (error) {
+      this.error.set(this.i18n.error(ApiError.from(error).code));
+    }
+  }
+
   /** Another server to bring music, users and their data from. */
   protected migrateFrom: 'none' | ImportKind = 'none';
   protected readonly importKinds: ImportKind[] = ['arcanist', 'mstream', 'dlna'];
@@ -673,6 +689,7 @@ export class SetupPage implements OnInit {
     const draft = {
       step: this.step(),
       code: this.code,
+      termsAccepted: this.termsAccepted,
       provider: this.provider,
       userName: this.userName,
       displayName: this.displayName,
@@ -748,6 +765,8 @@ export class SetupPage implements OnInit {
       }
       this.code = draft.code;
     }
+    this.termsAccepted = draft.termsAccepted ?? false;
+    if (this.termsAccepted) await this.loadTerms();
     this.provider = draft.provider ?? this.provider;
     this.userName = draft.userName ?? '';
     this.displayName = draft.displayName ?? '';
@@ -815,6 +834,7 @@ export class SetupPage implements OnInit {
   /** Shows a step, and what it needs when it opens. */
   private async arrive(step: Step): Promise<void> {
     this.step.set(step);
+    if (step === 'terms' && this.terms()?.language !== this.i18n.language()) await this.loadTerms();
     if (step === 'media' && !this.ffmpegDetected()) await this.detectFfmpeg();
     if (step === 'import' && this.arcanistOnImport) {
       this.arcanistOnImport = false;
@@ -1195,6 +1215,7 @@ export class SetupPage implements OnInit {
         ratingMode: this.ratingMode,
         privacy: { noTelemetry: this.noTelemetry, externalServices: this.externalServices },
         openSourceOnly: this.openSourceOnly,
+        acceptedTerms: this.termsAccepted ? (this.terms()?.version ?? null) : null,
         mstream:
           this.migrateFrom === 'mstream' && this.mstream.analyzed
             ? {
@@ -1244,6 +1265,7 @@ export class SetupPage implements OnInit {
       this.error.set(this.i18n.error(apiError.code));
       // Show the first step with a problem.
       const prefixes: Partial<Record<Step, string[]>> = {
+        terms: ['acceptedTerms'],
         database: ['database'],
         admin: ['admin'],
         import: ['mstream', 'arcanist', 'dlna'],
@@ -1407,6 +1429,12 @@ export class SetupPage implements OnInit {
         } finally {
           this.busy.set(false);
         }
+      case 'terms':
+        if (!this.termsAccepted || !this.terms()) {
+          this.error.set(this.i18n.t('setup.terms.required'));
+          return false;
+        }
+        return true;
       case 'database':
         if (this.status()?.database.lockedByEnvironment || this.provider === 'SQLITE') return true;
         if (!this.connectionString.trim()) {

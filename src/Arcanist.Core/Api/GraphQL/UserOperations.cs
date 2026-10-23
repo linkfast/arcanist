@@ -15,6 +15,11 @@ public sealed partial class Query
     [Description("Public description of the server. Does not require authentication.")]
     public static ServerInfo ServerInfo([FromServices] ServerInfoService service) => service.Get();
 
+    [Name("legalTerms")]
+    [Description("The terms and conditions and the disclaimer, in a language, for this server (self-hosted, or part of LinkFast's service): the setup wizard asks administrators to accept them, and players their users (audience USER). Does not require authentication.")]
+    public static Legal.LegalTerms LegalTerms(string? language, Legal.LegalAudience? audience, [FromServices] Legal.LegalService legal) =>
+        legal.Get(language, audience ?? Legal.LegalAudience.Admin);
+
     [Name("me")]
     [Description("The signed-in user.")]
     public static Task<UserAccount> Me([FromServices] UserService users, CancellationToken cancellationToken) =>

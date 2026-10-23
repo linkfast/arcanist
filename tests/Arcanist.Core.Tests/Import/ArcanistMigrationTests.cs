@@ -232,7 +232,8 @@ public sealed class ArcanistMigrationTests : IAsyncDisposable
             Language: null,
             RatingMode: RatingMode.Stars,
             Arcanist: new SetupArcanistImport(new ArcanistSourceInput(SourceUrl, null, null, code), [new SetupArcanistLibrary(library, copied)], users,
-                CopyPasswords: true, Permissions: true, UserData: true, Settings: true, Extensions: false)), ArcanistFactory.Json, Cancel);
+                CopyPasswords: true, Permissions: true, UserData: true, Settings: true, Extensions: false),
+            AcceptedTerms: Arcanist.Core.Legal.LegalService.CurrentVersion), ArcanistFactory.Json, Cancel);
         response.EnsureSuccessStatusCode();
 
         // The admin of the same name is the new one: their password is the one typed in the wizard.

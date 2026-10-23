@@ -271,6 +271,7 @@ type Documents = {
     "\n  mutation CancelArcanistImport($id: ID!) {\n    cancelArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": typeof types.CancelArcanistImportDocument,
     "\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": typeof types.RetryArcanistImportDocument,
     "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n": typeof types.DeleteArcanistImportDocument,
+    "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n": typeof types.LyricsTimingDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -530,6 +531,7 @@ const documents: Documents = {
     "\n  mutation CancelArcanistImport($id: ID!) {\n    cancelArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": types.CancelArcanistImportDocument,
     "\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": types.RetryArcanistImportDocument,
     "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n": types.DeleteArcanistImportDocument,
+    "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n": types.LyricsTimingDocument,
 };
 
 /**
@@ -1574,6 +1576,10 @@ export function graphql(source: "\n  mutation RetryArcanistImport($id: ID!) {\n 
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n"): (typeof documents)["\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

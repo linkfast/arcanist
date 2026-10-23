@@ -1,3 +1,4 @@
+import { LyricsTimingCard } from './lyrics-timing-card';
 import { Component, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { TranslatePipe } from '../../core/i18n/i18n';
@@ -13,6 +14,7 @@ import { UpdatesCard } from './updates-card';
 @Component({
   selector: 'app-settings-page',
   imports: [
+    LyricsTimingCard,
     TranslatePipe,
     PrivacyCard,
     OpenSourceCard,
@@ -35,6 +37,7 @@ import { UpdatesCard } from './updates-card';
         <app-online-services-card />
       }
       @if (auth.isAdmin()) {
+        <app-lyrics-timing-card />
         <app-open-source-card />
         <app-updates-card />
         <app-host-card />

@@ -2363,6 +2363,27 @@
         }
       }
     },
+    "/rest/v1/lyrics/timing": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "How many songs have lyrics, how many of them are timed (and how many timed on this server), how many plain lyrics could be timed here, and whether the official extension that does it (Lyrics Sync) is installed and running. Administrators only.",
+        "operationId": "LyricsTiming",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsTimingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/settings/privacy": {
       "get": {
         "tags": [
@@ -16767,8 +16788,76 @@
           "SIDECAR",
           "EMBEDDED",
           "ONLINE",
+          "ALIGNED",
           null
         ]
+      },
+      "LyricsTimingExtension": {
+        "enum": [
+          "NOT_INSTALLED",
+          "INSTALLED",
+          "RUNNING"
+        ]
+      },
+      "LyricsTimingStatus": {
+        "required": [
+          "withLyrics",
+          "timed",
+          "aligned",
+          "untimed",
+          "waiting",
+          "extensionId",
+          "extension"
+        ],
+        "type": "object",
+        "properties": {
+          "withLyrics": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "timed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aligned": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "untimed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "waiting": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "extensionId": {
+            "type": "string"
+          },
+          "extension": {
+            "$ref": "#/components/schemas/LyricsTimingExtension"
+          }
+        }
       },
       "MaintenanceState": {
         "required": [

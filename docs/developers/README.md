@@ -277,8 +277,10 @@ statistics of that song.
 `SIDECAR` (a `.lrc` file next to the audio), `EMBEDDED` (the file's tags) or `ONLINE`. LRC written into a file's plain
 lyrics tag (as many taggers do) counts as synchronized. When a file has plain lyrics only, the server looks for their
 timing online (LRCLib, when the administrator turned it on): `plain` stays the file's words and `syncedSource` says
-where the timing came from (`ONLINE`), while `source` is still the file's. Players that show lyrics as the song goes
-(karaoke, visualizers) should use `synced` and fall back to `plain`.
+where the timing came from (`ONLINE`), while `source` is still the file's. With the official Lyrics Sync extension,
+the server also works out the timing of what LRCLib does not have from the song itself (`syncedSource` `ALIGNED`):
+reading the lyrics of an untimed song asks for it first, so it may come a minute or two later. Players that show
+lyrics as the song goes (karaoke, visualizers) should use `synced` and fall back to `plain`.
 
 ## Ratings and StarTracks
 

@@ -116,6 +116,8 @@ builder.Services.AddSingleton<Arcanist.Core.Application.Server.EditionResolver>(
 builder.Services.AddScoped<Arcanist.Core.Application.Server.OpenSourceService>();
 builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddSingleton<LyricsTiming>();
+builder.Services.AddScoped<LyricsTimingService>();
 builder.Services.AddScoped<TrackMatchService>();
 builder.Services.AddScoped<Arcanist.Core.Application.Server.ServerAdminService>();
 builder.Services.AddScoped<Arcanist.Core.Application.Server.StorageUsageService>();

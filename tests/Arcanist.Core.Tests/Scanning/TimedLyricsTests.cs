@@ -95,6 +95,80 @@ public sealed class TimedLyricsTests : IAsyncLifetime
         Assert.DoesNotContain(_online.Requests, r => r.RequestUri!.ToString().Contains("track_name=Timed"));
     }
 
+    [Fact]
+    public async Task Timing_worked_out_here_is_kept_while_the_words_stay_the_same()
+    {
+        var path = Path.Combine(_music, "plain.wav");
+        AudioFixtures.WriteWav(path, 1, new FixtureTags("Plain", "Band", Lyrics: "First words\nSecond words"));
+        AudioFixtures.WriteWav(Path.Combine(_music, "timed.wav"), 2,
+            new FixtureTags("Timed", "Band", Lyrics: "[00:01.00]Timed words\n[00:02.00]More"));
+        _online.Respond = _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
+        _factory = new ArcanistFactory(new Dictionary<string, string?> { ["Arcanist:Online:RequestInterval"] = "00:00:00.010" },
+            services: _online.Register);
+        await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
+        _admin = await _factory.CreateAuthenticatedClientAsync();
+        await _factory.WaitForScansAsync(_admin);
+        var timing = _factory.Services.GetRequiredService<Core.Application.Catalog.LyricsTiming>();
+        var id = Guid.Parse(await TrackIdAsync("Plain"));
+
+        // With LRCLib off, plain lyrics are timed here straight away; already timed ones are not.
+        var pending = Assert.Single(await timing.PendingAsync(null, 10, Cancel));
+        Assert.Equal((id, "First words\nSecond words", "Band"), (pending.TrackId, pending.Plain, pending.Artist));
+        Assert.Equal(Path.GetFullPath(path), Path.GetFullPath(pending.AudioPath));
+        Assert.Empty(await timing.PendingAsync(id, 10, Cancel));
+
+        // A listener looking at them asks for them first.
+        Assert.Empty(timing.TakeRequested());
+        await LyricsAsync(id.ToString());
+        Assert.Equal([id], timing.TakeRequested());
+
+        Assert.False(await timing.SaveAsync(id, "other words", "[00:01.00]First words", Cancel));
+        Assert.True(await timing.SaveAsync(id, pending.PlainHash, "[00:01.00]First words\n[00:03.20]Second words", Cancel));
+        var lyrics = await LyricsAsync(id.ToString());
+        Assert.Equal(("EMBEDDED", "ALIGNED"), (lyrics.GetProperty("source").GetString(), lyrics.GetProperty("syncedSource").GetString()));
+        Assert.Equal([1000, 3200], lyrics.GetProperty("synced").EnumerateArray().Select(l => l.GetProperty("timeMs").GetInt32()));
+        Assert.Empty(await timing.PendingAsync(null, 10, Cancel));
+        Assert.Equal(1, (await timing.CountAsync(Cancel)).Aligned);
+
+        // Read again, the same words keep their timing; other words lose it and wait to be timed again.
+        var libraryId = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))[0].GetProperty("id").GetString();
+        (await _admin.PostAsJsonAsync($"/rest/v1/libraries/{libraryId}/scans", new Core.Api.Rest.StartScanInput(Full: true), Cancel)).EnsureSuccessStatusCode();
+        await _factory.WaitForScansAsync(_admin);
+        Assert.Equal("ALIGNED", (await LyricsAsync(id.ToString())).GetProperty("syncedSource").GetString());
+
+        AudioFixtures.WriteWav(path, 1, new FixtureTags("Plain", "Band", Lyrics: "New words\nSecond words"));
+        (await _admin.PostAsJsonAsync($"/rest/v1/libraries/{libraryId}/scans", new Core.Api.Rest.StartScanInput(Full: true), Cancel)).EnsureSuccessStatusCode();
+        await _factory.WaitForScansAsync(_admin);
+        Assert.Equal(JsonValueKind.Null, (await LyricsAsync(id.ToString())).GetProperty("synced").ValueKind);
+        Assert.Equal("New words\nSecond words", Assert.Single(await timing.PendingAsync(null, 10, Cancel)).Plain);
+
+        // With LRCLib on, only what it did not find is timed here (its answers written here, and not due again: the
+        // test does not wait for LRCLib's worker).
+        var lookup = new Core.Data.Entities.OnlineLookup
+        {
+            Service = OnlineService.Lyrics, Subject = id.ToString(), Outcome = Core.Data.Entities.LookupOutcome.Failed,
+            CheckedAt = DateTime.UtcNow, RetryAfter = DateTime.UtcNow.AddDays(1),
+        };
+        await using (var db = _factory.Services.GetRequiredService<Core.Data.IArcanistDbContextFactory>().CreateDbContext())
+        {
+            db.OnlineLookups.Add(lookup);
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        (await _admin.PutAsJsonAsync("/rest/v1/online-services", new SetOnlineServicesInput(false, false, false, true), Cancel)).EnsureSuccessStatusCode();
+        Assert.Empty(await timing.PendingAsync(null, 10, Cancel));
+        await using (var db = _factory.Services.GetRequiredService<Core.Data.IArcanistDbContextFactory>().CreateDbContext())
+        {
+            db.OnlineLookups.Attach(lookup);
+            lookup.Outcome = Core.Data.Entities.LookupOutcome.NotFound;
+            lookup.RetryAfter = DateTime.UtcNow.AddDays(90);
+            await db.SaveChangesAsync(Cancel);
+        }
+
+        Assert.Equal(id, Assert.Single(await timing.PendingAsync(null, 10, Cancel)).TrackId);
+        Assert.Equal(1, (await timing.CountAsync(Cancel)).Untimed);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_factory is not null)

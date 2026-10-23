@@ -238,12 +238,17 @@ public sealed class Artwork : Entity
     public ArtworkSource Source { get; init; }
 }
 
-/// <summary>Where a track's lyrics came from, from most to least trusted: a sidecar file next to the audio, the audio's tags, an online service.</summary>
+/// <summary>
+/// Where a track's lyrics came from, from most to least trusted: a sidecar file next to the audio, the audio's tags,
+/// an online service. <see cref="Aligned"/> is only ever the source of a timing: worked out on this server from the
+/// audio and the plain lyrics (by an extension).
+/// </summary>
 public enum LyricsSource
 {
     Sidecar,
     Embedded,
     Online,
+    Aligned,
 }
 
 /// <summary>A track's lyrics. Each track keeps the most trusted ones it has found.</summary>
@@ -262,7 +267,8 @@ public sealed class Lyrics
 
     /// <summary>
     /// Where <see cref="Synced"/> came from when it is not <see cref="Source"/>: a file with plain lyrics gets its timing
-    /// from an online service. Null means the same as <see cref="Source"/>.
+    /// from an online service, or worked out here (<see cref="LyricsSource.Aligned"/>). Null means the same as
+    /// <see cref="Source"/>.
     /// </summary>
     public LyricsSource? SyncedSource { get; set; }
 

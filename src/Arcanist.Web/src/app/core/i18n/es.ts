@@ -693,6 +693,16 @@ export const es: Dictionary = {
     },
     title: 'Ajustes',
     subtitle: 'Herramientas y servicios del servidor.',
+    lyricsTiming: {
+      title: 'Letras con tiempos',
+      description: 'Las letras con el momento de cada línea, para seguirlas mientras suena la canción.',
+      counts: '{timed} de {all} letras tienen tiempos ({aligned} calculados en este servidor).',
+      left: '{count} letras siguen sin tiempos.',
+      offer: 'La extensión oficial Lyrics Sync los calcula en este servidor a partir de la propia canción (separa la voz y la reconoce con Whisper). Descarga unos 340 MB y trabaja en segundo plano con prioridad baja.',
+      install: 'Instalar Lyrics Sync',
+      installed: 'Lyrics Sync está instalada pero apagada o esperando un reinicio:',
+      open: 'Abrir Lyrics Sync',
+    },
     online: {
       restricted: 'Desactivados por la privacidad elegida (Ajustes › Privacidad).',
       title: 'Servicios en línea',

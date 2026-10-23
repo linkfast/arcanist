@@ -20,6 +20,7 @@ public sealed class CatalogService(
     StreamTokens streamTokens,
     Listening.RatingSettings ratings,
     Core.Extensions.ExtensionHost extensions,
+    LyricsTiming lyricsTiming,
     TimeProvider time)
 {
     public const int DefaultPageSize = 50;
@@ -371,6 +372,9 @@ public sealed class CatalogService(
             lyrics.Plain = null;
         var synced = timing is { } lrc ? Core.Scanning.Lrc.Parse(lrc).Select(l => new LyricsLine(l.TimeMs, l.Text)).ToList() : null;
         var plain = lyrics.Plain ?? (synced is { Count: > 0 } ? string.Join('\n', synced.Select(l => l.Text)) : null);
+        // Someone is looking at lyrics without timing: a timing extension works these out first.
+        if (synced is not { Count: > 0 } && plain is not null && !lyrics.Instrumental)
+            lyricsTiming.Request(trackId);
         return new TrackLyrics(trackId, plain, synced is { Count: > 0 } ? synced : null, lyrics.Source, lyrics.Instrumental,
             synced is { Count: > 0 } ? lyrics.SyncedSource ?? lyrics.Source : null);
     }

@@ -679,6 +679,16 @@ export const en: Dictionary = {
     },
     title: 'Settings',
     subtitle: 'Server tools and services.',
+    lyricsTiming: {
+      title: 'Timed lyrics',
+      description: 'Lyrics with the moment of each line, to follow them while the song plays.',
+      counts: '{timed} of {all} lyrics are timed ({aligned} worked out on this server).',
+      left: '{count} lyrics have no timing yet.',
+      offer: 'The official Lyrics Sync extension works it out on this server from the song itself (it separates the voice and recognizes it with Whisper). It downloads about 340 MB and works in the background at low priority.',
+      install: 'Install Lyrics Sync',
+      installed: 'Lyrics Sync is installed but off or waiting for a restart:',
+      open: 'Open Lyrics Sync',
+    },
     online: {
       restricted: 'Off because of the chosen privacy (Settings › Privacy).',
       title: 'Online services',

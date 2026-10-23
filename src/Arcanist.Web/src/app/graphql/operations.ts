@@ -3371,3 +3371,17 @@ export const DeleteArcanistImportMutation = graphql(`
     deleteArcanistImport(id: $id)
   }
 `);
+
+export const LyricsTimingQuery = graphql(`
+  query LyricsTiming {
+    lyricsTiming {
+      withLyrics
+      timed
+      aligned
+      untimed
+      waiting
+      extensionId
+      extension
+    }
+  }
+`);

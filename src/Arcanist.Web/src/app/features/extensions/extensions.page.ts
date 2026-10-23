@@ -14,6 +14,7 @@ import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
+import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiError } from '../../core/api/rest';
 import { CloudOffDialog } from '../../shared/cloud-off-dialog';
@@ -30,6 +31,7 @@ import {
   FrontendsQuery,
   InstallExtensionFromUrlMutation,
   InstallFrontendFromUrlMutation,
+  InstallMarketplaceExtensionMutation,
   RestartServerMutation,
   SetDefaultFrontendMutation,
   SetExtensionEnabledMutation,
@@ -457,6 +459,8 @@ export class ExtensionsPage implements OnInit {
   private readonly gql = inject(Gql);
   private readonly enabledExtensions = inject(EnabledExtensions);
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly frontends = signal<Frontend[]>([]);
   protected readonly marketKinds: MarketplaceKind[] = ['extensions', 'players'];
@@ -498,6 +502,23 @@ export class ExtensionsPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.reload();
+    // Offered elsewhere in the panel (Settings › Timed lyrics): an extension of the marketplace, installed on demand.
+    const id = this.route.snapshot.queryParamMap.get('install');
+    if (id) {
+      void this.router.navigate([], { queryParams: { install: null }, replaceUrl: true });
+      if (!this.extensions().some((e) => e.id === id)) await this.installFromMarketplace(id);
+    }
+  }
+
+  private async installFromMarketplace(id: string): Promise<void> {
+    this.choose('marketplace');
+    let installed: Extension | null = null;
+    await this.run(async () => {
+      installed = (
+        await this.gql.mutate(InstallMarketplaceExtensionMutation, { input: { id, enable: true } })
+      ).installMarketplaceExtension;
+    });
+    if (installed) this.afterInstall(installed);
   }
 
   private async reload(): Promise<void> {

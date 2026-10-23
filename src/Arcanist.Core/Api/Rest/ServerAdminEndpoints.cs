@@ -17,6 +17,13 @@ public static class ServerAdminEndpoints
                          "catalog and the music of each library. Measured at most every five minutes unless refresh is true. " +
                          "Administrators only.");
 
+        rest.MapGet("/lyrics/timing", (Application.Catalog.LyricsTimingService service, CancellationToken ct) => service.StatusAsync(ct))
+            .WithTags("Server")
+            .WithName("LyricsTiming")
+            .WithSummary("How many songs have lyrics, how many of them are timed (and how many timed on this server), how many plain " +
+                         "lyrics could be timed here, and whether the official extension that does it (Lyrics Sync) is installed and " +
+                         "running. Administrators only.");
+
         server.MapGet("/configuration", (ServerAdminService service, CancellationToken ct) => service.ConfigurationAsync(ct))
             .WithName("ServerConfiguration")
             .WithSummary("What the setup wizard chose, as it is now, to run it again. Administrators only.");

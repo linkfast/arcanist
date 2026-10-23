@@ -167,6 +167,10 @@ public sealed class HelloAdminPage(HelloSettings settings) : IExtensionAdminPage
   field key, which the panel shows under each field.
 - Every call comes from an administrator; saving and actions also need a recent authentication (the panel asks for
   the password when needed). An exception becomes `extension_failed`.
+- **What it still needs** (tools to download, an account to set): return the page with `Setup = new AdminSetup(title,
+  description, items, action, actionLabel)` while it is missing, and null once done. Right after the extension is
+  installed and starts, the panel shows it in a dialog and, with the administrator's consent, runs that action (the
+  same `RunAsync`); the page shows it at the top too. Needs Arcanist 0.1.0-alpha.8 or later.
 
 The panel uses `GET /rest/v1/extensions/{id}/admin`, `PUT /rest/v1/extensions/{id}/admin` (`{ "values": { … } }`)
 and `POST /rest/v1/extensions/{id}/admin/actions/{action}`, which other admin tools can use too.

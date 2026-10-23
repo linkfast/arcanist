@@ -188,6 +188,8 @@ type Query {
   cloudSyncs: [LibraryCloudSyncState!]!
   "Every upload into the server's libraries, by any user and from any client (the admin panel, Ultimate Desktop, web players, phones, extensions), newest first, with optional filters. Requires MANAGE_LIBRARIES (only libraries the caller can access, unless administrator)."
   uploads(input: UploadLogInput): UploadLogPage!
+  "The library uploads go to when they name none (and wishes with no target of their own), or none."
+  uploadSettings: UploadSettings!
   "The user's uploads, newest first: files sent into libraries (and whether each is in the catalog yet) and songs sent to their own Ultimate Cloud library."
   myUploads(after: String, first: Int): MyUploadPage!
   "Public description of the server. Does not require authentication."
@@ -800,6 +802,7 @@ type TrackLyrics {
   synced: [LyricsLine!]
   source: LyricsSource!
   instrumental: Boolean!
+  syncedSource: LyricsSource
 }
 
 type LyricsLine {
@@ -1423,6 +1426,9 @@ type FfmpegStatus {
   configuredPathWorks: Boolean!
   canDownload: Boolean!
   download: FfmpegDownloadProgress!
+  outdated: Boolean!
+  recommendedVersion: String!
+  downloaded: Boolean!
 }
 
 enum FfmpegSource {
@@ -2518,6 +2524,11 @@ input UploadLogInput {
   first: Int
 }
 
+type UploadSettings {
+  defaultLibraryId: ID
+  defaultLibraryName: String
+}
+
 type MyUploadPage {
   items: [MyUpload!]!
   nextCursor: String
@@ -2576,6 +2587,7 @@ enum ApiFeature {
   WISH_LIST
   STREAMING_DEFAULTS
   UPLOAD_LOG
+  UPLOAD_DESTINATION
 }
 
 type UserAccount {
@@ -2640,6 +2652,7 @@ type Wish {
   sourceService: WishLinkService
   artworkId: ID
   owner: WishOwner
+  targetLibraryId: ID
 }
 
 enum WishStatus {
@@ -2795,6 +2808,8 @@ type Mutation {
   clearTranscodeCache: TranscodingStatus!
   "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password."
   installFfmpeg: FfmpegStatus!
+  "Deletes the ffmpeg Arcanist downloaded; the next one found (the configured one, the system's) takes its place. Administrators only, with a recent password."
+  removeDownloadedFfmpeg: FfmpegStatus!
   "A code another Arcanist uses, for a day, to bring this server over (users, libraries and music, users' data, settings, extensions). Shown once. Administrators only, with a recent authentication."
   createMigrationCode: MigrationCode!
   "Stops a migration code from working. Administrators only."
@@ -2944,6 +2959,8 @@ type Mutation {
   setUltimateCloudSync(enabled: Boolean!): UltimateCloudStatus!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
+  "Sets the library uploads go to when they name none; null leaves the choice to each upload. Requires MANAGE_LIBRARIES."
+  setUploadSettings(input: SetUploadSettingsInput!): UploadSettings!
   "Forgets the user's finished uploads (what is still on its way stays). Returns how many were forgotten."
   clearMyUploads: Int!
   "Sends songs of this server (at most 1000) to the user's own Ultimate Cloud library, in the background; their progress is in myUploads. Needs the DOWNLOAD permission, and for a library another server shares, its permission to download."
@@ -3531,6 +3548,10 @@ input StartMyUltimateCloudLinkInput {
   libraryName: String
 }
 
+input SetUploadSettingsInput {
+  defaultLibraryId: ID
+}
+
 input UploadTracksToMyCloudInput {
   trackIds: [ID!]!
 }
@@ -3576,6 +3597,7 @@ input WishInput {
   note: String
   sourceUrl: String
   artworkId: ID
+  targetLibraryId: ID
 }
 
 type WishLinkPreview {

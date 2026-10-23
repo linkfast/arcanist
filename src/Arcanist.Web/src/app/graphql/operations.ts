@@ -350,6 +350,9 @@ export const FfmpegStatusFields = graphql(`
     configuredPath
     configuredPathWorks
     canDownload
+    outdated
+    recommendedVersion
+    downloaded
     download {
       state
       bytesReceived
@@ -479,6 +482,14 @@ export const FfmpegQuery = graphql(`
 export const SetFfmpegPathMutation = graphql(`
   mutation SetFfmpegPath($path: String) {
     setFfmpegPath(path: $path) {
+      ...FfmpegStatusFields
+    }
+  }
+`);
+
+export const RemoveDownloadedFfmpegMutation = graphql(`
+  mutation RemoveDownloadedFfmpeg {
+    removeDownloadedFfmpeg {
       ...FfmpegStatusFields
     }
   }
@@ -1887,13 +1898,49 @@ export const WishFields = graphql(`
       userName
       displayName
     }
+    targetLibraryId
     track {
       id
       title
+      durationMs
+      libraryIds
+      artists {
+        name
+      }
       album {
         id
         title
       }
+      files {
+        format
+        bitRate
+        sampleRate
+        bitDepth
+      }
+    }
+  }
+`);
+
+export const UploadTargetsQuery = graphql(`
+  query UploadTargets {
+    libraries {
+      id
+      name
+      canUpload
+      personal
+    }
+    uploadSettings {
+      defaultLibraryId
+      defaultLibraryName
+    }
+  }
+`);
+
+export const SetUploadSettingsMutation = graphql(`
+  mutation SetUploadSettings($input: SetUploadSettingsInput!) {
+    setUploadSettings(input: $input) {
+      defaultLibraryId
+      defaultLibraryName
     }
   }
 `);

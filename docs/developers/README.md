@@ -274,7 +274,11 @@ statistics of that song.
 `Track.hasLyrics` says whether `trackLyrics(trackId)` / `GET /rest/v1/tracks/{trackId}/lyrics` has something
 (otherwise it answers `not_found`). The result has the whole text in `plain`, time-synchronized `synced` lines
 (`timeMs`, `text`; each shown until the next) when known, `instrumental` for tracks without words, and `source`:
-`SIDECAR` (a `.lrc` file next to the audio), `EMBEDDED` (the file's tags) or `ONLINE`.
+`SIDECAR` (a `.lrc` file next to the audio), `EMBEDDED` (the file's tags) or `ONLINE`. LRC written into a file's plain
+lyrics tag (as many taggers do) counts as synchronized. When a file has plain lyrics only, the server looks for their
+timing online (LRCLib, when the administrator turned it on): `plain` stays the file's words and `syncedSource` says
+where the timing came from (`ONLINE`), while `source` is still the file's. Players that show lyrics as the song goes
+(karaoke, visualizers) should use `synced` and fall back to `plain`.
 
 ## Ratings and StarTracks
 
@@ -364,6 +368,11 @@ link), or the likely one for its title, artist and duration; the cover is the Co
 `wish_link_unreadable`, `external_services_disabled` (the server's privacy allows no outside services; the server
 reads the page, never the client).
 
+**Where it goes.** A wish may say `targetLibraryId`: a library the user can upload to, where the song goes when it is
+uploaded for the wish (see uploads without a library, below); null follows the server's default. It is fulfilled
+wherever it arrives, as long as the user can play that library. When `addWish` answers `OBTAINED` with
+`foundWhenAdded`, tell the user they have it already and where (`track.libraryIds`, its album and its files).
+
 ## Apps with a library of their own
 
 An app that keeps its own library (Ultimate Desktop, for one) can use the server next to it, or move to it:
@@ -386,6 +395,11 @@ An app that keeps its own library (Ultimate Desktop, for one) can use the server
   template and never overwrites anything: `201` with `status: IMPORTED`, its `contentHash` and `path`, or `200` with
   `status: DUPLICATE` when the library already has that audio (with its `trackId` once catalogued). The library is
   scanned shortly after the last upload of a batch; then `matchTracks` finds the new tracks by `contentHash`.
+- **Uploading without choosing a library** (`UPLOAD_DESTINATION`): `POST /rest/v1/uploads?fileName=…[&wishId=…]` works
+  the same, into the library the server chooses: the `targetLibraryId` of the user's wish `wishId` when it has one,
+  else the server's default for uploads (`uploadSettings` / `GET /rest/v1/uploads/settings`, set by those with
+  `MANAGE_LIBRARIES` with `setUploadSettings`); `400 upload_library_required` when none applies. Use it for songs
+  fetched for a wish, so they land where the user asked.
 - **The user's uploads** (`UPLOAD_HISTORY`): `myUploads` / `GET /rest/v1/me/uploads` lists them newest first, with
   `active` (how many are still on their way: worth asking again in a few seconds). An upload into a library is
   `PROCESSING` until the library's scan catalogues it (`ADDED`, with its `track`), or `DUPLICATE`, `NOT_ADDED` (the

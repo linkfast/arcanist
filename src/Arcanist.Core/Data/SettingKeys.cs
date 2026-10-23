@@ -42,6 +42,9 @@ public static class SettingKeys
     /// <summary>mStream apps: the star threshold, sign-in with the user's password and their own functions (<c>MstreamConfig</c>).</summary>
     public const string Mstream = "mstream.settings";
 
+    /// <summary>Where uploads that name no library go (<c>StoredUploadSettings</c>).</summary>
+    public const string Uploads = "uploads.settings";
+
     /// <summary>The connect secret of mStream's quick connect, protected with Data Protection.</summary>
     public const string MstreamQuickConnect = "mstream.quickConnect";
 

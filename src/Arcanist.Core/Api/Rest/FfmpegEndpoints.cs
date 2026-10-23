@@ -22,6 +22,10 @@ public static class FfmpegEndpoints
             .WithName("InstallFfmpeg")
             .WithSummary("Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Poll the status to follow it. Administrators only, with a recent password.");
 
+        ffmpeg.MapDelete("/download", (FfmpegService service, CancellationToken ct) => service.RemoveDownloadedAsync(ct))
+            .WithName("RemoveDownloadedFfmpeg")
+            .WithSummary("Deletes the ffmpeg Arcanist downloaded; the next one found (the configured one, the system's) takes its place. Administrators only, with a recent password.");
+
         var transcoding = rest.MapGroup("/transcoding").WithTags("Media tools");
 
         transcoding.MapGet("", (TranscodingService service, CancellationToken ct) => service.StatusAsync(ct))

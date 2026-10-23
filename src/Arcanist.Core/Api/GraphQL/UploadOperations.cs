@@ -11,6 +11,11 @@ public sealed partial class Query
     public static Task<UploadLogPage> Uploads(UploadLogInput? input, [FromServices] UploadLogService log, CancellationToken cancellationToken) =>
         log.ListAsync(input ?? new UploadLogInput(), cancellationToken);
 
+    [Name("uploadSettings")]
+    [Description("The library uploads go to when they name none (and wishes with no target of their own), or none.")]
+    public static Task<Application.Libraries.UploadSettings> UploadSettings([FromServices] Application.Libraries.UploadDestinations service,
+        CancellationToken cancellationToken) => service.GetAsync(cancellationToken);
+
     [Name("myUploads")]
     [Description("The user's uploads, newest first: files sent into libraries (and whether each is in the catalog yet) and songs sent to their own Ultimate Cloud library.")]
     public static Task<MyUploadPage> MyUploads(string? after, int? first, [FromServices] MyUploadService uploads, CancellationToken cancellationToken) =>
@@ -19,6 +24,12 @@ public sealed partial class Query
 
 public sealed partial class Mutation
 {
+    [Name("setUploadSettings")]
+    [Description("Sets the library uploads go to when they name none; null leaves the choice to each upload. Requires MANAGE_LIBRARIES.")]
+    public static Task<Application.Libraries.UploadSettings> SetUploadSettings(Application.Libraries.SetUploadSettingsInput input,
+        [FromServices] Application.Libraries.UploadDestinations service, CancellationToken cancellationToken) =>
+        service.SetAsync(input, cancellationToken);
+
     [Name("clearMyUploads")]
     [Description("Forgets the user's finished uploads (what is still on its way stays). Returns how many were forgotten.")]
     public static Task<int> ClearMyUploads([FromServices] MyUploadService uploads, CancellationToken cancellationToken) =>

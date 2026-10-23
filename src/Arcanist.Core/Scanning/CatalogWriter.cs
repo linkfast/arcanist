@@ -281,7 +281,13 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         }
 
         current.Plain = meta.Lyrics;
-        current.Synced = meta.SyncedLyrics;
+        // Timing found online for the file's plain lyrics stays until the file brings its own.
+        if (meta.SyncedLyrics is not null || current.SyncedSource is not LyricsSource.Online)
+        {
+            current.Synced = meta.SyncedLyrics;
+            current.SyncedSource = null;
+        }
+
         current.Source = source;
         current.Instrumental = false;
         current.UpdatedAt = now;

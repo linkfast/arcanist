@@ -8,6 +8,9 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
+import { BrnDialogContent } from '@spartan-ng/brain/dialog';
+import { HlmDialogImports } from '@spartan-ng/helm/dialog';
+import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmTabsImports } from '@spartan-ng/helm/tabs';
 import { ApiError } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
@@ -23,6 +26,7 @@ import {
   MarkWishesSeenMutation,
   RemoveWishMutation,
   ResolveWishLinkMutation as ResolveWishLink,
+  UploadTargetsQuery,
   WishListQuery,
   WishObtainedSubscription,
 } from '../../graphql/operations';
@@ -47,6 +51,9 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
     HlmFieldImports,
     HlmInputImports,
     HlmTabsImports,
+    BrnDialogContent,
+    HlmDialogImports,
+    HlmNativeSelectImports,
     TranslatePipe,
     DateTimePipe,
     RelativeTimePipe,
@@ -166,6 +173,28 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
                   />
                 </hlm-field>
               </div>
+              @if (targets().length > 0) {
+                <hlm-field>
+                  <label hlmFieldLabel for="wish-target">{{ 'wishes.target' | t }}</label>
+                  <hlm-native-select
+                    id="wish-target"
+                    [value]="target"
+                    (change)="target = $any($event.target).value"
+                  >
+                    <option hlmNativeSelectOption value="">
+                      {{
+                        automaticName()
+                          ? ('wishes.targetAutomaticNamed' | t: { library: automaticName() ?? '' })
+                          : ('wishes.targetAutomatic' | t)
+                      }}
+                    </option>
+                    @for (library of targets(); track library.id) {
+                      <option hlmNativeSelectOption [value]="library.id">{{ library.name }}</option>
+                    }
+                  </hlm-native-select>
+                  <p hlmFieldDescription>{{ 'wishes.targetHelp' | t }}</p>
+                </hlm-field>
+              }
               <details class="text-sm">
                 <summary class="cursor-pointer text-muted-foreground">
                   {{ 'wishes.ids' | t }}
@@ -218,6 +247,9 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
                     {{ 'wishes.by_user' | t: { name: owner.displayName || owner.userName } }} ·
                   }
                   {{ 'wishes.since' | t: { when: (wish.createdAt | relativeTime) } }}
+                  @if (wish.targetLibraryId) {
+                    · {{ 'wishes.goesTo' | t: { library: libraryName(wish.targetLibraryId) } }}
+                  }
                   @if (wish.note) {
                     · {{ wish.note }}
                   }
@@ -337,6 +369,45 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
         </p>
       }
     </ng-template>
+
+    <hlm-dialog [state]="found() ? 'open' : 'closed'" (closed)="found.set(null)">
+      <hlm-dialog-content
+        *brnDialogContent="let ctx"
+        class="w-[min(30rem,calc(100vw-2rem))] sm:max-w-md"
+      >
+        @if (found(); as wish) {
+          <hlm-dialog-header>
+            <h3 hlmDialogTitle>{{ 'wishes.foundTitle' | t }}</h3>
+            <p hlmDialogDescription>{{ 'wishes.foundHelp' | t }}</p>
+          </hlm-dialog-header>
+          @if (wish.track; as track) {
+            <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
+              <dt class="text-muted-foreground">{{ 'wishes.songTitle' | t }}</dt>
+              <dd class="font-medium">{{ track.title }}</dd>
+              <dt class="text-muted-foreground">{{ 'wishes.artist' | t }}</dt>
+              <dd>{{ artistsOf(track) }}</dd>
+              <dt class="text-muted-foreground">{{ 'wishes.album' | t }}</dt>
+              <dd>{{ track.album.title }}</dd>
+              <dt class="text-muted-foreground">{{ 'wishes.where' | t }}</dt>
+              <dd>{{ librariesOf(track) }}</dd>
+              <dt class="text-muted-foreground">{{ 'wishes.duration' | t }}</dt>
+              <dd>{{ duration(track.durationMs) }}</dd>
+              @if (track.files[0]; as file) {
+                <dt class="text-muted-foreground">{{ 'wishes.quality' | t }}</dt>
+                <dd>{{ quality(file) }}</dd>
+              }
+              @if (wish.matchedBy) {
+                <dt class="text-muted-foreground">{{ 'wishes.recognisedBy' | t }}</dt>
+                <dd>{{ 'wishes.by.' + wish.matchedBy | t }}</dd>
+              }
+            </dl>
+          }
+          <hlm-dialog-footer>
+            <button hlmBtn type="button" (click)="found.set(null)">{{ 'common.close' | t }}</button>
+          </hlm-dialog-footer>
+        }
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class WishesPage implements OnInit {
@@ -366,8 +437,17 @@ export class WishesPage implements OnInit {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  /** Libraries the user can upload to: where a wished song goes when it is uploaded for the wish. */
+  protected readonly targets = signal<{ id: string; name: string }[]>([]);
+  private readonly libraryNames = signal<Record<string, string>>({});
+  /** The server's library for uploads that name none («automatic»), if any. */
+  protected readonly automaticName = signal<string | null>(null);
+  protected target = '';
+  /** A wish the user added that a library had already: where it is, and what it is like. */
+  protected readonly found = signal<Wish | null>(null);
+
   async ngOnInit(): Promise<void> {
-    await this.load();
+    await Promise.all([this.load(), this.loadTargets()]);
     // What arrives while the page is open shows at once (and counts as seen when the page is opened again).
     this.gql
       .subscribe(WishObtainedSubscription)
@@ -376,6 +456,48 @@ export class WishesPage implements OnInit {
         toast.success(this.i18n.t('wishes.arrivedToast', { title: wishObtained.title }));
         void this.load(false);
       });
+  }
+
+  private async loadTargets(): Promise<void> {
+    try {
+      const result = await this.gql.query(UploadTargetsQuery);
+      this.libraryNames.set(Object.fromEntries(result.libraries.map((l) => [l.id, l.name])));
+      this.targets.set(
+        result.libraries
+          .filter((l) => l.canUpload && !l.personal)
+          .map((l) => ({ id: l.id, name: l.name })),
+      );
+      this.automaticName.set(result.uploadSettings.defaultLibraryName ?? null);
+    } catch {
+      // Without them the form only lacks the choice.
+    }
+  }
+
+  protected libraryName(id: string): string {
+    return this.libraryNames()[id] ?? '?';
+  }
+
+  protected librariesOf(track: NonNullable<Wish['track']>): string {
+    return track.libraryIds
+      .map((id) => this.libraryNames()[id])
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  protected artistsOf(track: NonNullable<Wish['track']>): string {
+    return track.artists.map((a) => a.name).join(', ');
+  }
+
+  protected duration(ms: number): string {
+    const seconds = Math.round(ms / 1000);
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
+  protected quality(file: NonNullable<Wish['track']>['files'][number]): string {
+    const rate = file.sampleRate ? `${file.sampleRate / 1000} kHz` : null;
+    const depth = file.bitDepth ? `${file.bitDepth} bit` : null;
+    const bitRate = file.bitRate ? `${file.bitRate} kbit/s` : null;
+    return [file.format, depth, rate, depth ? null : bitRate].filter(Boolean).join(' · ');
   }
 
   protected serviceName(service: Preview['service'] | null | undefined): string {
@@ -449,12 +571,16 @@ export class WishesPage implements OnInit {
           durationMs: found ? this.durationMs : null,
           sourceUrl: found?.url ?? null,
           artworkId: found?.artworkId ?? null,
+          targetLibraryId: this.target || null,
         },
       });
       this.wishes.update((list) => [addWish, ...list]);
-      toast.success(
-        this.i18n.t(addWish.status === 'OBTAINED' ? 'wishes.alreadyThere' : 'wishes.added'),
-      );
+      // Already in a library the user can play: show where, instead of a passing notice.
+      if (addWish.status === 'OBTAINED' && addWish.track) this.found.set(addWish);
+      else
+        toast.success(
+          this.i18n.t(addWish.status === 'OBTAINED' ? 'wishes.alreadyThere' : 'wishes.added'),
+        );
       // Empty and untouched again: no fields marked as missing.
       form.resetForm({ title: '', artist: '', album: '', note: '', mbid: '', acoustId: '' });
       this.clearLink();

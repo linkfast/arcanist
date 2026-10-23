@@ -224,8 +224,10 @@ internal sealed class EnrichmentWorker(
                 .Where(a => !blocked.Contains(a.Id.ToString()))
                 .OrderBy(a => a.Id)
                 .Select(a => a.Id.ToString()),
+            // No lyrics yet, or plain ones (from the file) without timing.
             _ => db.Tracks
-                .Where(t => !db.Lyrics.Any(l => l.TrackId == t.Id) && t.Files.Any(f => f.MissingSince == null))
+                .Where(t => !db.Lyrics.Any(l => l.TrackId == t.Id && (l.Synced != null || l.Instrumental || l.Source == LyricsSource.Online))
+                            && t.Files.Any(f => f.MissingSince == null))
                 .Where(t => t.Artists.Any(a => a.Role == ArtistRole.Primary && a.Artist.Name != CatalogWriter.UnknownArtist))
                 .Where(t => !blocked.Contains(t.Id.ToString()))
                 .OrderBy(t => t.Id)
@@ -337,8 +339,28 @@ internal sealed class EnrichmentWorker(
             return LookupOutcome.NotFound;
         }
 
-        // The scanner may have found the track's own lyrics meanwhile; those win.
-        if (!await db.Lyrics.AnyAsync(l => l.TrackId == trackId, cancellationToken))
+        // The track's own plain lyrics stay; only their timing comes from LRCLib.
+        if (await db.Lyrics.SingleOrDefaultAsync(l => l.TrackId == trackId, cancellationToken) is { } own)
+        {
+            if (own.Synced is null && own.Plain is { } text && Scanning.Lrc.LooksTimed(text))
+            {
+                // Read before LRC in plain lyrics was recognised: the file's own timing.
+                var lines = Scanning.Lrc.Parse(text);
+                own.Synced = Scanning.Lrc.Format(lines);
+                own.Plain = string.Join('\n', lines.Select(l => l.Text));
+                own.UpdatedAt = time.GetUtcNow().UtcDateTime;
+                await db.SaveChangesAsync(cancellationToken);
+                return LookupOutcome.Found;
+            }
+
+            if (own.Synced is not null || found.Synced is null)
+                return LookupOutcome.NotFound;
+            own.Synced = found.Synced;
+            own.SyncedSource = LyricsSource.Online;
+            own.UpdatedAt = time.GetUtcNow().UtcDateTime;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        else
         {
             db.Lyrics.Add(new Lyrics
             {

@@ -121,6 +121,14 @@ public static partial class TagReader
         {
             var plain = Clean(lyrics.UnsynchronizedLyrics);
             var synced = lyrics.SynchronizedLyrics is { Count: > 0 } phrases ? Clean(Lrc.Format(phrases.Select(p => (p.TimestampStart, p.Text)))) : null;
+            // Many taggers write LRC into the plain lyrics field (LYRICS in FLAC, USLT in MP3): those are synchronized.
+            if (synced is null && plain is not null && Lrc.LooksTimed(plain))
+            {
+                var lines = Lrc.Parse(plain);
+                synced = Lrc.Format(lines);
+                plain = string.Join('\n', lines.Select(l => l.Text));
+            }
+
             if (plain is not null || synced is not null)
                 return (plain, synced);
         }

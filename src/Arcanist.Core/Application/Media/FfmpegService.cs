@@ -12,6 +12,8 @@ namespace Arcanist.Core.Application.Media;
 /// <param name="ConfiguredPath">The path set in the setup wizard, the admin panel or <c>Arcanist:Ffmpeg:Path</c>.</param>
 /// <param name="ConfiguredPathWorks">False when a configured path is not a working ffmpeg (another one may be in use).</param>
 /// <param name="CanDownload">Whether a build can be downloaded for this operating system and processor.</param>
+/// <param name="Outdated">The ffmpeg in use is older than <see cref="RecommendedVersion"/>: downloading Arcanist's is recommended.</param>
+/// <param name="Downloaded">A build downloaded by Arcanist is in the data directory (in use or not); it can be removed.</param>
 public sealed record FfmpegStatus(
     bool Available,
     string? Path,
@@ -20,7 +22,10 @@ public sealed record FfmpegStatus(
     string? ConfiguredPath,
     bool ConfiguredPathWorks,
     bool CanDownload,
-    FfmpegDownloadProgress Download);
+    FfmpegDownloadProgress Download,
+    bool Outdated,
+    string RecommendedVersion,
+    bool Downloaded);
 
 public sealed class FfmpegService(
     AccessGuard guard,
@@ -68,6 +73,32 @@ public sealed class FfmpegService(
         return Status(await locator.ResolveAsync(cancellationToken));
     }
 
+    /// <summary>
+    /// Deletes the build Arcanist downloaded; the next ffmpeg found (the configured one, the system's) takes its place.
+    /// Administrators only, with step-up.
+    /// </summary>
+    public async Task<FfmpegStatus> RemoveDownloadedAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        if (downloader.IsRunning)
+            throw new ArcanistException.Conflict(ErrorCodes.FfmpegDownloading);
+        try
+        {
+            if (Directory.Exists(locator.DownloadDirectory))
+                Directory.Delete(locator.DownloadDirectory, recursive: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // A conversion running right now keeps the program open (Windows).
+            throw new ArcanistException.Conflict(ErrorCodes.FfmpegInUse);
+        }
+
+        var resolution = await locator.RefreshAsync(cancellationToken);
+        analysis.RequestRun();
+        return Status(resolution);
+    }
+
     private FfmpegStatus Status(FfmpegLocator.Resolution resolution) => new(
         resolution.Installation is not null,
         resolution.Installation?.Path,
@@ -76,5 +107,8 @@ public sealed class FfmpegService(
         resolution.ConfiguredPath,
         resolution.ConfiguredPathWorks,
         FfmpegDownloader.Platform is not null,
-        downloader.Progress);
+        downloader.Progress,
+        FfmpegLocator.IsOutdated(resolution.Installation?.Version),
+        $"{FfmpegLocator.RecommendedMajor}.0",
+        File.Exists(locator.DownloadedExecutable));
 }

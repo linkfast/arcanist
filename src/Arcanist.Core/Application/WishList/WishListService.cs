@@ -56,12 +56,15 @@ public sealed record Wish(
     string? SourceUrl = null,
     WishLinkService? SourceService = null,
     Guid? ArtworkId = null,
-    WishOwner? Owner = null);
+    WishOwner? Owner = null,
+    Guid? TargetLibraryId = null);
 
 /// <param name="Album">Only a copy from this album fulfils it.</param>
 /// <param name="DurationMs">Only a copy this long (give or take three seconds) fulfils it.</param>
 /// <param name="SourceUrl">The streaming service's page of the song (from <c>resolveWishLink</c>).</param>
 /// <param name="ArtworkId">Its cover (from <c>resolveWishLink</c>).</param>
+/// <param name="TargetLibraryId">Where the song goes when it is uploaded for this wish (a library the user can upload
+/// to); null follows the server's rule for uploads (<c>uploadSettings</c>).</param>
 public sealed record WishInput(
     string Title,
     string Artist,
@@ -71,7 +74,8 @@ public sealed record WishInput(
     int? DurationMs = null,
     string? Note = null,
     string? SourceUrl = null,
-    Guid? ArtworkId = null);
+    Guid? ArtworkId = null,
+    Guid? TargetLibraryId = null);
 
 /// <param name="Items">The wanted ones by the newest wish, then the obtained ones by when they arrived.</param>
 /// <param name="Wanted">How many are still wanted.</param>
@@ -94,6 +98,7 @@ public sealed class WishListService(
     CatalogService catalog,
     WishListSignals signals,
     WishLinkResolver links,
+    Libraries.UploadDestinations destinations,
     TimeProvider time)
 {
     public const int MaxWishes = 2000;
@@ -150,6 +155,7 @@ public sealed class WishListService(
     {
         var wish = new WishListItem { UserId = access.UserId, Title = "", Artist = "", CreatedAt = Now() };
         Apply(wish, input);
+        wish.TargetLibraryId = await TargetAsync(access, input.TargetLibraryId, cancellationToken);
         wish.ArtworkId = await ArtworkAsync(input.ArtworkId, cancellationToken);
         if (await db.WishListItems.CountAsync(w => w.UserId == access.UserId, cancellationToken) >= MaxWishes)
             throw ArcanistException.Field("title", ErrorCodes.TooMany);
@@ -172,6 +178,7 @@ public sealed class WishListService(
         var wish = await db.WishListItems.SingleOrDefaultAsync(w => w.Id == id && w.UserId == access.UserId, cancellationToken)
                    ?? throw new ArcanistException.NotFound();
         Apply(wish, input);
+        wish.TargetLibraryId = await TargetAsync(access, input.TargetLibraryId, cancellationToken);
         wish.ArtworkId = await ArtworkAsync(input.ArtworkId, cancellationToken);
         if (wish.ObtainedAt is null && await MatchAsync(catalog, access, [wish], Now(), cancellationToken) > 0)
         {
@@ -301,6 +308,12 @@ public sealed class WishListService(
         }
     }
 
+    /// <summary>A library the user can upload to, or none (the server's rule).</summary>
+    private async Task<Guid?> TargetAsync(UserAccess access, Guid? libraryId, CancellationToken cancellationToken) =>
+        libraryId is not { } id ? null
+        : await destinations.CanTargetAsync(access, id, cancellationToken) ? id
+        : throw ArcanistException.Field("targetLibraryId", ErrorCodes.NotFound);
+
     /// <summary>A cover the wish may use: one in the artwork cache, else none.</summary>
     private async Task<Guid?> ArtworkAsync(Guid? id, CancellationToken cancellationToken) =>
         id is { } artwork && await db.Artworks.AnyAsync(a => a.Id == artwork, cancellationToken) ? artwork : null;
@@ -324,7 +337,7 @@ public sealed class WishListService(
                     WishMatch.Tags => TrackMatchKind.Tags,
                     _ => null,
                 },
-                w.FoundWhenAdded, w.Seen, w.SourceUrl, w.SourceService, w.ArtworkId, owners.GetValueOrDefault(w.UserId)))
+                w.FoundWhenAdded, w.Seen, w.SourceUrl, w.SourceService, w.ArtworkId, owners.GetValueOrDefault(w.UserId), w.TargetLibraryId))
             .ToList();
     }
 

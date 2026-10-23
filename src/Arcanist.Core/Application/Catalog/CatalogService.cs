@@ -365,9 +365,14 @@ public sealed class CatalogService(
         var lyrics = await db.Lyrics.AsNoTracking().SingleOrDefaultAsync(l => l.TrackId == trackId, cancellationToken)
                      ?? throw new ArcanistException.NotFound();
 
-        var synced = lyrics.Synced is { } lrc ? Core.Scanning.Lrc.Parse(lrc).Select(l => new LyricsLine(l.TimeMs, l.Text)).ToList() : null;
+        // LRC kept as plain lyrics (read before it was recognised as such) is synchronized too.
+        var timing = lyrics.Synced ?? (lyrics.Plain is { } text && Core.Scanning.Lrc.LooksTimed(text) ? text : null);
+        if (lyrics.Synced is null && timing is not null)
+            lyrics.Plain = null;
+        var synced = timing is { } lrc ? Core.Scanning.Lrc.Parse(lrc).Select(l => new LyricsLine(l.TimeMs, l.Text)).ToList() : null;
         var plain = lyrics.Plain ?? (synced is { Count: > 0 } ? string.Join('\n', synced.Select(l => l.Text)) : null);
-        return new TrackLyrics(trackId, plain, synced is { Count: > 0 } ? synced : null, lyrics.Source, lyrics.Instrumental);
+        return new TrackLyrics(trackId, plain, synced is { Count: > 0 } ? synced : null, lyrics.Source, lyrics.Instrumental,
+            synced is { Count: > 0 } ? lyrics.SyncedSource ?? lyrics.Source : null);
     }
 
     /// <summary>Best quality first: the order of <see cref="Track.Files"/> and of playback.</summary>

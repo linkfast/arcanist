@@ -41,6 +41,21 @@ public static partial class Lrc
         return lines.OrderBy(l => l.Item1).ToList();
     }
 
+    /// <summary>
+    /// Whether text is LRC rather than plain lyrics: most of its lines with words start with a time.
+    /// </summary>
+    public static bool LooksTimed(string text)
+    {
+        var lines = text.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0 && !Metadata().IsMatch(l)).ToList();
+        if (lines.Count == 0)
+            return false;
+        var timed = lines.Count(l => Stamp().Match(l) is { Success: true, Index: 0 });
+        return timed >= 2 && timed * 2 >= lines.Count;
+    }
+
+    [GeneratedRegex(@"^\[[a-z]+:[^\]]*\]$", RegexOptions.IgnoreCase)]
+    private static partial Regex Metadata();
+
     [GeneratedRegex(@"\[(?<m>\d{1,3}):(?<s>\d{1,2}(?:\.\d{1,3})?)\]")]
     private static partial Regex Stamp();
 }

@@ -108,6 +108,12 @@ public enum ApiFeature
     /// administrators see in the panel's Import page.
     /// </summary>
     UploadLog,
+
+    /// <summary>
+    /// <c>uploadSettings</c> (the library uploads go to when they name none), <c>POST /rest/v1/uploads</c> (an upload
+    /// without a library, optionally for a wish) and <c>targetLibraryId</c> on wishes.
+    /// </summary>
+    UploadDestination,
 }
 
 public sealed class ServerInfoService(

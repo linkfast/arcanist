@@ -1208,6 +1208,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<string>("Synced")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SyncedSource")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -2731,6 +2735,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.Property<string>("SourceUrl")
                         .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("TargetLibraryId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Title")

@@ -260,6 +260,12 @@ public sealed class Lyrics
 
     public LyricsSource Source { get; set; }
 
+    /// <summary>
+    /// Where <see cref="Synced"/> came from when it is not <see cref="Source"/>: a file with plain lyrics gets its timing
+    /// from an online service. Null means the same as <see cref="Source"/>.
+    /// </summary>
+    public LyricsSource? SyncedSource { get; set; }
+
     /// <summary>The track has no lyrics (known from an online service).</summary>
     public bool Instrumental { get; set; }
 

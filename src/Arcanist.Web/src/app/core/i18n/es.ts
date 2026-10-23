@@ -723,6 +723,14 @@ export const es: Dictionary = {
         'Arcanist trae su propia clave. Si prefieres usar la tuya, regístrala gratis en acoustid.org/new-application. Guarda el campo vacío para volver a la de Arcanist.',
     },
     ffmpeg: {
+      outdatedTitle: 'ffmpeg antiguo',
+      outdated:
+        'Este ffmpeg ({version}) es más antiguo que el recomendado ({recommended} o posterior): algunas conversiones pueden fallar o ser más lentas. Descarga el de Arcanist; se usará en lugar del del sistema.',
+      outdatedNoDownload:
+        'Este ffmpeg ({version}) es más antiguo que el recomendado ({recommended} o posterior). Instala una versión más nueva en el sistema o indica su ruta.',
+      remove: 'Borrar el ffmpeg descargado',
+      removeConfirm: '¿Borrar el ffmpeg que descargó Arcanist?',
+      removeHelp: 'Se usará el configurado o el del sistema, si hay.',
       description:
         'Se usa para convertir canciones a formatos más ligeros y para analizar los formatos que Arcanist no lee por sí mismo (Opus, WMA…).',
       available: 'Disponible',
@@ -1034,6 +1042,11 @@ export const es: Dictionary = {
   },
   import: {
     uploads: {
+      defaultLibrary: 'Las subidas sin biblioteca van a',
+      noDefault: 'Ninguna (cada subida elige)',
+      defaultHelp:
+        'Para las apps y extensiones que suben sin elegir biblioteca, y los deseos en automático.',
+      defaultSaved: 'Destino de las subidas guardado.',
       title: 'Subidas',
       description:
         'Todo lo que se sube a las bibliotecas, lo envíe quien lo envíe: desde aquí, Ultimate Desktop, los reproductores web, el móvil o una extensión. Todo pasa por la misma API, se coloca con la plantilla de la biblioteca y se escanea poco después.',
@@ -1710,6 +1723,13 @@ export const es: Dictionary = {
     },
   },
   extensions: {
+    setup: {
+      consent:
+        'Arcanist lo descargará de sus fuentes oficiales y comprobará su firma. Puedes hacerlo más tarde desde la página de la extensión.',
+      later: 'Más tarde',
+      done: 'Listo.',
+      failed: 'No se pudo completar.',
+    },
     blocked: 'Bloqueado: no es open source',
     blockedHelp: 'El modo 100% open source está activado (Ajustes).',
     page: {
@@ -2428,6 +2448,18 @@ export const es: Dictionary = {
     },
   },
   wishes: {
+    target: 'Si se sube, guardarla en',
+    targetAutomatic: 'Automático (según cada subida)',
+    targetAutomaticNamed: 'Automático ({library})',
+    targetHelp:
+      'Cuando la subas tú, un reproductor o una extensión para este deseo. Si llega a cualquier biblioteca que puedas escuchar, también se cumple.',
+    goesTo: 'irá a {library}',
+    foundTitle: 'Ya la tienes',
+    foundHelp: 'Esta canción ya está en una biblioteca que puedes escuchar:',
+    where: 'Dónde',
+    duration: 'Duración',
+    quality: 'Calidad',
+    recognisedBy: 'Reconocida por',
     tabs: {
       mine: 'Mi lista',
       all: 'De todos',
@@ -3105,6 +3137,10 @@ export const es: Dictionary = {
     },
   },
   errors: {
+    ffmpeg_downloading: 'ffmpeg se está descargando: espera a que termine.',
+    ffmpeg_in_use: 'ffmpeg se está usando ahora mismo. Inténtalo en un momento.',
+    upload_library_required:
+      'Elige una biblioteca: este servidor no tiene una predeterminada para las subidas.',
     migration_code_invalid: 'El código de migración no es válido, caducó o fue revocado.',
     migration_source_unreachable:
       'No se pudo llegar al otro servidor. Comprueba su dirección y que esté encendido.',

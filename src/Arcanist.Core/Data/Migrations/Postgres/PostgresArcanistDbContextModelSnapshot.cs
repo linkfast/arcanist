@@ -1213,6 +1213,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<string>("Synced")
                         .HasColumnType("text");
 
+                    b.Property<string>("SyncedSource")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2737,6 +2741,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<string>("SourceUrl")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("TargetLibraryId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Title")
                         .IsRequired()

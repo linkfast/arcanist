@@ -62,6 +62,22 @@ public sealed partial class FfmpegLocator(
 
     public sealed record Resolution(FfmpegInstallation? Installation, string? ConfiguredPath, bool ConfiguredPathWorks);
 
+    /// <summary>The oldest ffmpeg Arcanist is happy with; older ones work, but the panel recommends the download.</summary>
+    public const int RecommendedMajor = 6;
+
+    /// <summary>The downloaded build, whether or not it is the one in use.</summary>
+    public string DownloadedExecutable => Path.Combine(DownloadDirectory, ExecutableName);
+
+    /// <summary>
+    /// A release older than <see cref="RecommendedMajor"/> (<c>4.4.2-0ubuntu0.22.04.1</c>, <c>n5.1</c>). Builds from git
+    /// (<c>N-117…</c>) and anything not read as a version count as recent.
+    /// </summary>
+    public static bool IsOutdated(string? version) =>
+        version is not null
+        && System.Text.RegularExpressions.Regex.Match(version, @"^n?(\d+)\.\d+") is { Success: true } match
+        && int.TryParse(match.Groups[1].Value, out var major)
+        && major < RecommendedMajor;
+
     public async Task<FfmpegInstallation?> GetAsync(CancellationToken cancellationToken) =>
         (await ResolveAsync(cancellationToken)).Installation;
 

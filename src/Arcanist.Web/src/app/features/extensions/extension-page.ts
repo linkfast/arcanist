@@ -1,3 +1,4 @@
+import { ExtensionSetup, runExtensionSetup } from './extension-setup';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
   Component,
@@ -77,6 +78,7 @@ interface Section {
 interface Page {
   sections: Section[];
   refreshSeconds?: number | null;
+  setup?: ExtensionSetup | null;
 }
 interface Result {
   ok: boolean;
@@ -128,6 +130,35 @@ interface Result {
       </header>
 
       @if (page(); as p) {
+        @if (p.setup; as needed) {
+          <div hlmAlert>
+            <p hlmAlertTitle>{{ needed.title }}</p>
+            <div hlmAlertDescription class="grid gap-2">
+              <p>{{ needed.description }}</p>
+              @if (needed.items.length > 0) {
+                <ul class="list-disc space-y-1 pl-5">
+                  @for (item of needed.items; track $index) {
+                    <li>{{ item }}</li>
+                  }
+                </ul>
+              }
+              <div>
+                <button
+                  hlmBtn
+                  size="sm"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="runSetup(needed)"
+                >
+                  @if (busy()) {
+                    <hlm-spinner class="size-4" />
+                  }
+                  {{ needed.actionLabel }}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
         @for (section of p.sections; track section.id) {
           <section hlmCard>
             <div hlmCardHeader>
@@ -524,6 +555,16 @@ export class ExtensionPage implements OnInit, OnDestroy {
         ([key, value]) => editable.has(key) && !(secrets.has(key) && !value),
       ),
     );
+  }
+
+  protected async runSetup(needed: ExtensionSetup): Promise<void> {
+    this.busy.set(true);
+    try {
+      await runExtensionSetup(this.http, this.i18n, this.id(), needed);
+      await this.load(true);
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   private base(): string {

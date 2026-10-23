@@ -21,7 +21,12 @@ import type {
   UploadLogQuery as UploadLogResult,
   UploadOrigin,
 } from '../../graphql/generated/graphql';
-import { UploadLibrariesQuery, UploadLogQuery } from '../../graphql/operations';
+import {
+  SetUploadSettingsMutation,
+  UploadLibrariesQuery,
+  UploadLogQuery,
+  UploadTargetsQuery,
+} from '../../graphql/operations';
 import { BytesPipe, RelativeTimePipe } from '../../shared/format';
 
 type Entry = UploadLogResult['uploads']['items'][number];
@@ -88,6 +93,25 @@ const IdleMs = 30000;
         </div>
       </div>
       <div hlmCardContent class="grid gap-3">
+        @if (auth.can('MANAGE_LIBRARIES') && writable().length > 0) {
+          <label class="flex flex-wrap items-center gap-2 text-sm">
+            <span>{{ 'import.uploads.defaultLibrary' | t }}</span>
+            <select
+              hlmNativeSelect
+              class="h-8 text-xs"
+              [ngModel]="defaultLibrary() ?? ''"
+              (ngModelChange)="setDefaultLibrary($event || null)"
+            >
+              <option value="">{{ 'import.uploads.noDefault' | t }}</option>
+              @for (option of writable(); track option.id) {
+                <option [value]="option.id">{{ option.name }}</option>
+              }
+            </select>
+            <span class="w-full text-xs text-muted-foreground">{{
+              'import.uploads.defaultHelp' | t
+            }}</span>
+          </label>
+        }
         <div class="flex flex-wrap gap-2">
           <select
             hlmNativeSelect
@@ -315,10 +339,32 @@ export class UploadsCard implements OnInit, OnDestroy {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private destroyed = false;
 
+  /** Where uploads that name no library go (and wishes with no target of their own). */
+  protected readonly defaultLibrary = signal<string | null>(null);
+
   async ngOnInit(): Promise<void> {
     const result = await this.gql.query(UploadLibrariesQuery);
     this.libraries.set(result.libraries.filter((l) => !l.virtual));
+    try {
+      this.defaultLibrary.set(
+        (await this.gql.query(UploadTargetsQuery)).uploadSettings.defaultLibraryId ?? null,
+      );
+    } catch {
+      // Shown as none.
+    }
     await this.load();
+  }
+
+  protected async setDefaultLibrary(id: string | null): Promise<void> {
+    try {
+      const { setUploadSettings } = await this.gql.mutate(SetUploadSettingsMutation, {
+        input: { defaultLibraryId: id },
+      });
+      this.defaultLibrary.set(setUploadSettings.defaultLibraryId ?? null);
+      toast.success(this.i18n.t('import.uploads.defaultSaved'));
+    } catch (error) {
+      toast.error(this.i18n.error(ApiError.from(error).code));
+    }
   }
 
   ngOnDestroy(): void {

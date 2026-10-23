@@ -712,6 +712,14 @@ export const en: Dictionary = {
         'Arcanist comes with its own key. To use yours, register one for free at acoustid.org/new-application. Save the field empty to go back to the Arcanist key.',
     },
     ffmpeg: {
+      outdatedTitle: 'Old ffmpeg',
+      outdated:
+        'This ffmpeg ({version}) is older than recommended ({recommended} or later): some conversions may fail or be slower. Download Arcanist’s; it is used instead of the system’s.',
+      outdatedNoDownload:
+        'This ffmpeg ({version}) is older than recommended ({recommended} or later). Install a newer one on the system or give its path.',
+      remove: 'Delete the downloaded ffmpeg',
+      removeConfirm: 'Delete the ffmpeg Arcanist downloaded?',
+      removeHelp: 'The configured one or the system’s is used, if any.',
       description:
         'Used to convert songs to lighter formats and to analyze the formats Arcanist cannot read by itself (Opus, WMA…).',
       available: 'Available',
@@ -1020,6 +1028,11 @@ export const en: Dictionary = {
   },
   import: {
     uploads: {
+      defaultLibrary: 'Uploads with no library go to',
+      noDefault: 'None (each upload chooses)',
+      defaultHelp:
+        'For apps and extensions that upload without choosing a library, and wishes set to automatic.',
+      defaultSaved: 'Where uploads go was saved.',
       title: 'Uploads',
       description:
         "Everything uploaded to the libraries, whoever sends it: from here, Ultimate Desktop, web players, phones or an extension. It all goes through the same API, is placed with the library's template and is scanned shortly after.",
@@ -1691,6 +1704,13 @@ export const en: Dictionary = {
     },
   },
   extensions: {
+    setup: {
+      consent:
+        'Arcanist downloads it from its official sources and checks it. You can do it later from the extension’s page.',
+      later: 'Later',
+      done: 'Done.',
+      failed: 'It could not be completed.',
+    },
     blocked: 'Blocked: not open source',
     blockedHelp: 'The 100% open source mode is on (Settings).',
     page: {
@@ -2397,6 +2417,18 @@ export const en: Dictionary = {
     },
   },
   wishes: {
+    target: 'If uploaded, keep it in',
+    targetAutomatic: 'Automatic (each upload decides)',
+    targetAutomaticNamed: 'Automatic ({library})',
+    targetHelp:
+      'When you, a player or an extension upload it for this wish. If it reaches any library you can play, it comes true too.',
+    goesTo: 'goes to {library}',
+    foundTitle: 'You have it already',
+    foundHelp: 'This song is already in a library you can play:',
+    where: 'Where',
+    duration: 'Duration',
+    quality: 'Quality',
+    recognisedBy: 'Recognised by',
     tabs: {
       mine: 'My list',
       all: "Everyone's",
@@ -3069,6 +3101,9 @@ export const en: Dictionary = {
     },
   },
   errors: {
+    ffmpeg_downloading: 'ffmpeg is being downloaded: wait until it ends.',
+    ffmpeg_in_use: 'ffmpeg is in use right now. Try again in a moment.',
+    upload_library_required: 'Choose a library: this server has no default one for uploads.',
     migration_code_invalid: 'The migration code is not valid, expired or was revoked.',
     migration_source_unreachable:
       'The other server could not be reached. Check its address and that it is on.',

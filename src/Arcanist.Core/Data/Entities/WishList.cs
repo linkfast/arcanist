@@ -47,6 +47,12 @@ public sealed class WishListItem : Entity
 
     /// <summary>Its cover: the Cover Art Archive's, or the service's when that has none. Kept in the artwork cache.</summary>
     public Guid? ArtworkId { get; set; }
+
+    /// <summary>
+    /// Where the song goes when it is uploaded for this wish (by the user, a player or an extension); null follows
+    /// the server's rule for uploads.
+    /// </summary>
+    public Guid? TargetLibraryId { get; set; }
 }
 
 /// <summary>The services a wish can be added from by its link. Part of the API contract.</summary>

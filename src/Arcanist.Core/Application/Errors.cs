@@ -37,6 +37,8 @@ public static class ErrorCodes
     public const string NotFfmpeg = "not_ffmpeg";
     /// <summary>No ffmpeg build can be downloaded for this operating system or processor.</summary>
     public const string FfmpegPlatformUnsupported = "ffmpeg_platform_unsupported";
+    public const string FfmpegDownloading = "ffmpeg_downloading";
+    public const string FfmpegInUse = "ffmpeg_in_use";
     public const string FfmpegDownloadFailed = "ffmpeg_download_failed";
     /// <summary>The downloaded ffmpeg did not match its published checksum and was discarded.</summary>
     public const string FfmpegChecksumMismatch = "ffmpeg_checksum_mismatch";
@@ -125,6 +127,7 @@ public static class ErrorCodes
     public const string LibraryDisabled = "library_disabled";
     public const string LibraryManaged = "library_managed";
     public const string LibraryReadOnly = "library_read_only";
+    public const string UploadLibraryRequired = "upload_library_required";
     public const string ClosedSourceDisabled = "closed_source_disabled";
     public const string S3WrongKey = "s3_wrong_key";
     /// <summary>The library is a view of others ("All"): nothing can be uploaded to it or changed in it.</summary>

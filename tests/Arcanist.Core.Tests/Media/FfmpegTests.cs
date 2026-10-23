@@ -171,6 +171,27 @@ public sealed class FfmpegIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_downloaded_build_can_be_removed()
+    {
+        var factory = Create(null, searchSystem: false);
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+        // Something left by a download (not a working ffmpeg: the status still sees it).
+        var folder = Path.Combine(factory.DataPath, "tools", "ffmpeg");
+        Directory.CreateDirectory(folder);
+        await File.WriteAllTextAsync(Path.Combine(folder, OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg"), "not ffmpeg", Cancel);
+
+        var status = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/ffmpeg", ArcanistFactory.Json, Cancel);
+        Assert.True(status.GetProperty("downloaded").GetBoolean());
+        Assert.Equal("6.0", status.GetProperty("recommendedVersion").GetString());
+
+        var removed = await admin.DeleteAsync("/rest/v1/ffmpeg/download", Cancel);
+        removed.EnsureSuccessStatusCode();
+        Assert.False((await removed.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("downloaded").GetBoolean());
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Fact]
     public async Task The_setup_wizard_follows_a_download_until_setup_is_done()
     {
         var factory = Create(null);

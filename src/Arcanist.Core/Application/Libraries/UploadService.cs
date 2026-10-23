@@ -63,6 +63,7 @@ public sealed class UploadService(
     ArcanistDbContext db,
     AccessGuard guard,
     ILibraryStorageResolver storages,
+    UploadDestinations destinations,
     LibraryLocks locks,
     UploadScans scans,
     ArcanistPaths paths,
@@ -72,6 +73,17 @@ public sealed class UploadService(
     /// <param name="client">The kind of client sending it (the admin panel, Ultimate Desktop, a web player, a phone), for the log of uploads.</param>
     public Task<UploadResult> UploadAsync(Guid libraryId, string fileName, Stream body, UploadClient? client, CancellationToken cancellationToken) =>
         UploadAsync(guard.Permission(Permissions.Upload), libraryId, fileName, body, null, client, cancellationToken);
+
+    /// <summary>
+    /// A file into the library the server chooses: the target of the user's wish <paramref name="wishId"/> when it has
+    /// one, else the server's default for uploads (<c>upload_library_required</c> without one).
+    /// </summary>
+    public async Task<UploadResult> UploadAsync(Guid? wishId, string fileName, Stream body, UploadClient? client, CancellationToken cancellationToken)
+    {
+        var access = guard.Permission(Permissions.Upload);
+        return await UploadAsync(access, await destinations.ResolveAsync(access, wishId, cancellationToken), fileName, body, null, client,
+            cancellationToken);
+    }
 
     /// <summary>
     /// A file into a library on behalf of a user, as if they had uploaded it (for extensions, also from background

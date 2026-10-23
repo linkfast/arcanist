@@ -15,6 +15,7 @@ import type { FfmpegStatusFieldsFragment } from '../../graphql/generated/graphql
 import {
   FfmpegQuery,
   InstallFfmpegMutation,
+  RemoveDownloadedFfmpegMutation,
   SetFfmpegPathMutation,
 } from '../../graphql/operations';
 import { BytesPipe } from '../../shared/format';
@@ -52,6 +53,20 @@ import { BytesPipe } from '../../shared/format';
               </span>
             }
           </div>
+
+          @if (s.available && s.outdated && s.source !== 'DOWNLOADED') {
+            <div hlmAlert>
+              <p hlmAlertTitle>{{ 'settings.ffmpeg.outdatedTitle' | t }}</p>
+              <p hlmAlertDescription>
+                {{
+                  (s.canDownload
+                    ? 'settings.ffmpeg.outdated'
+                    : 'settings.ffmpeg.outdatedNoDownload'
+                  ) | t: { version: s.version ?? '', recommended: s.recommendedVersion }
+                }}
+              </p>
+            </div>
+          }
 
           @if (s.configuredPath && !s.configuredPathWorks) {
             <div hlmAlert variant="destructive">
@@ -122,6 +137,46 @@ import { BytesPipe } from '../../shared/format';
                 </p>
               </div>
             }
+            @if (s.downloaded && !downloading()) {
+              <div class="flex flex-wrap items-center gap-3">
+                @if (confirmingRemove()) {
+                  <span class="text-sm">{{ 'settings.ffmpeg.removeConfirm' | t }}</span>
+                  <button
+                    hlmBtn
+                    variant="destructive"
+                    size="sm"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="remove()"
+                  >
+                    {{ 'settings.ffmpeg.remove' | t }}
+                  </button>
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    (click)="confirmingRemove.set(false)"
+                  >
+                    {{ 'common.cancel' | t }}
+                  </button>
+                } @else {
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    [disabled]="busy()"
+                    (click)="confirmingRemove.set(true)"
+                  >
+                    {{ 'settings.ffmpeg.remove' | t }}
+                  </button>
+                  <p class="text-xs text-muted-foreground">
+                    {{ 'settings.ffmpeg.removeHelp' | t }}
+                  </p>
+                }
+              </div>
+            }
             @if (s.download.state === 'FAILED' && s.download.error) {
               <p class="text-sm text-destructive">{{ i18n.error(s.download.error) }}</p>
             }
@@ -177,6 +232,18 @@ export class FfmpegCard implements OnInit {
         path: this.path.trim() || null,
       });
       this.status.set(result.setFfmpegPath);
+    });
+  }
+
+  protected readonly confirmingRemove = signal(false);
+
+  /** Deletes the downloaded build; the system's (or the configured one) takes its place. */
+  protected async remove(): Promise<void> {
+    this.confirmingRemove.set(false);
+    await this.run(async () => {
+      this.status.set(
+        (await this.gql.mutate(RemoveDownloadedFfmpegMutation, {})).removeDownloadedFfmpeg,
+      );
     });
   }
 

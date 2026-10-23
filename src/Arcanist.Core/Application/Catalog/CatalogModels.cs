@@ -74,7 +74,10 @@ public sealed record LyricsLine(int TimeMs, string Text);
 /// <param name="Plain">The whole text (also available when only synchronized lyrics exist).</param>
 /// <param name="Synced">Time-synchronized lines, when known.</param>
 /// <param name="Instrumental">The track has no lyrics.</param>
-public sealed record TrackLyrics(Guid TrackId, string? Plain, IReadOnlyList<LyricsLine>? Synced, LyricsSource Source, bool Instrumental);
+/// <param name="SyncedSource">Where the timing of <paramref name="Synced"/> came from (a file's plain lyrics may be timed
+/// with an online service's).</param>
+public sealed record TrackLyrics(
+    Guid TrackId, string? Plain, IReadOnlyList<LyricsLine>? Synced, LyricsSource Source, bool Instrumental, LyricsSource? SyncedSource = null);
 
 /// <summary>Overview of a copy's audio for seek bars: peak amplitudes from start to end.</summary>
 /// <param name="Peaks">1000 values from 0 (silence) to 255 (full scale), evenly spread over the duration.</param>

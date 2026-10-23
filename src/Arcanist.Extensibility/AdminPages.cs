@@ -33,7 +33,23 @@ public sealed record AdminPageContext(string Language, Guid UserId, IServiceProv
 /// <summary>An extension's settings page.</summary>
 /// <param name="Sections">Its sections, in order.</param>
 /// <param name="RefreshSeconds">Read the page again this often while it is open (to follow a progress); null never.</param>
-public sealed record AdminPage(IReadOnlyList<AdminSection> Sections, int? RefreshSeconds = null);
+public sealed record AdminPage(IReadOnlyList<AdminSection> Sections, int? RefreshSeconds = null)
+{
+    /// <summary>
+    /// What the extension still needs before it works (tools to download, an account to set…), or null when nothing.
+    /// The panel offers it right after the extension is installed and starts, and at the top of the page, asking the
+    /// administrator's consent before running it.
+    /// </summary>
+    public AdminSetup? Setup { get; init; }
+}
+
+/// <summary>Something an extension needs before it works, run with the administrator's consent.</summary>
+/// <param name="Title">What it is («Install the tools»).</param>
+/// <param name="Description">Why it is needed and what it does (downloads, from where, how big).</param>
+/// <param name="Items">What will be installed or done, one line each.</param>
+/// <param name="Action">The page's action that does it (<see cref="IExtensionAdminPage.RunAsync"/>).</param>
+/// <param name="ActionLabel">Its button.</param>
+public sealed record AdminSetup(string Title, string Description, IReadOnlyList<string> Items, string Action, string ActionLabel);
 
 /// <summary>A card of the page.</summary>
 /// <param name="Id">Stable among the page's sections.</param>

@@ -1460,6 +1460,120 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Adds an audio file as \u0060uploadToLibrary\u0060 does, into the library the server chooses: the target of the user\u0027s wish \u0060wishId\u0060 when it has one, else the server\u0027s default for uploads (\u0060uploadSettings\u0060); \u0060upload_library_required\u0060 without one. Requires UPLOAD.",
+        "operationId": "Upload",
+        "parameters": [
+          {
+            "name": "fileName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "wishId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "client",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/uploads/settings": {
+      "get": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "The library uploads go to when they name none (and wishes with no target of their own), or none.",
+        "operationId": "UploadSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Sets the library uploads go to when they name none; null leaves the choice to each upload. Requires MANAGE_LIBRARIES.",
+        "operationId": "SetUploadSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUploadSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSettings"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/rest/v1/me/uploads": {
@@ -3599,6 +3713,27 @@
         ],
         "summary": "Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Poll the status to follow it. Administrators only, with a recent password.",
         "operationId": "InstallFfmpeg",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FfmpegStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/ffmpeg/download": {
+      "delete": {
+        "tags": [
+          "Media tools"
+        ],
+        "summary": "Deletes the ffmpeg Arcanist downloaded; the next one found (the configured one, the system\u0027s) takes its place. Administrators only, with a recent password.",
+        "operationId": "RemoveDownloadedFfmpeg",
         "responses": {
           "200": {
             "description": "OK",
@@ -9976,6 +10111,17 @@
             ],
             "description": "Read the page again this often while it is open (to follow a progress); null never.",
             "format": "int32"
+          },
+          "setup": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "What the extension still needs before it works (tools to download, an account to set\u2026), or null when nothing.\r\nThe panel offers it right after the extension is installed and starts, and at the top of the page, asking the\r\nadministrator\u0027s consent before running it.",
+                "$ref": "#/components/schemas/AdminSetup"
+              }
+            ]
           }
         },
         "description": "An extension\u0027s settings page."
@@ -10054,6 +10200,42 @@
           }
         },
         "description": "A card of the page."
+      },
+      "AdminSetup": {
+        "required": [
+          "title",
+          "description",
+          "items",
+          "action",
+          "actionLabel"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "What it is (\u00ABInstall the tools\u00BB)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Why it is needed and what it does (downloads, from where, how big)."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What will be installed or done, one line each."
+          },
+          "action": {
+            "type": "string",
+            "description": "The page\u0027s action that does it (Task\u0026lt;AdminPageResult\u0026gt; IExtensionAdminPage.RunAsync(AdminPageContext context, string action, IReadOnlyDictionary\u0026lt;string, JsonElement\u0026gt; values, CancellationToken cancellationToken))."
+          },
+          "actionLabel": {
+            "type": "string",
+            "description": "Its button."
+          }
+        },
+        "description": "Something an extension needs before it works, run with the administrator\u0027s consent."
       },
       "AdminTone": {
         "enum": [
@@ -10861,7 +11043,8 @@
           "VIRTUAL_LIBRARIES",
           "WISH_LIST",
           "STREAMING_DEFAULTS",
-          "UPLOAD_LOG"
+          "UPLOAD_LOG",
+          "UPLOAD_DESTINATION"
         ]
       },
       "AppPassword": {
@@ -14603,7 +14786,10 @@
           "configuredPath",
           "configuredPathWorks",
           "canDownload",
-          "download"
+          "download",
+          "outdated",
+          "recommendedVersion",
+          "downloaded"
         ],
         "type": "object",
         "properties": {
@@ -14646,6 +14832,15 @@
           },
           "download": {
             "$ref": "#/components/schemas/FfmpegDownloadProgress"
+          },
+          "outdated": {
+            "type": "boolean"
+          },
+          "recommendedVersion": {
+            "type": "string"
+          },
+          "downloaded": {
+            "type": "boolean"
           }
         }
       },
@@ -21365,6 +21560,21 @@
           }
         }
       },
+      "SetUploadSettingsInput": {
+        "required": [
+          "defaultLibraryId"
+        ],
+        "type": "object",
+        "properties": {
+          "defaultLibraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "SetupMstreamImport": {
         "required": [
           "folder",
@@ -23310,6 +23520,16 @@
           },
           "instrumental": {
             "type": "boolean"
+          },
+          "syncedSource": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LyricsSource"
+              }
+            ]
           }
         }
       },
@@ -24430,6 +24650,28 @@
           }
         }
       },
+      "UploadSettings": {
+        "required": [
+          "defaultLibraryId",
+          "defaultLibraryName"
+        ],
+        "type": "object",
+        "properties": {
+          "defaultLibraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "defaultLibraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "UploadStatus": {
         "enum": [
           "IMPORTED",
@@ -24773,6 +25015,13 @@
                 "$ref": "#/components/schemas/WishOwner"
               }
             ]
+          },
+          "targetLibraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -24830,6 +25079,13 @@
             ]
           },
           "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "targetLibraryId": {
             "type": [
               "null",
               "string"

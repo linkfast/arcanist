@@ -1,3 +1,4 @@
+import { ExtensionSetupDialog } from './extension-setup';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -85,6 +86,7 @@ interface PendingInstall {
     HlmSwitchImports,
     TranslatePipe,
     HostHelp,
+    ExtensionSetupDialog,
   ],
   template: `
     <header class="mb-6">
@@ -416,6 +418,8 @@ interface PendingInstall {
       </hlm-alert-dialog-content>
     </hlm-alert-dialog>
 
+    <app-extension-setup [ids]="setupIds()" (finished)="setupIds.set([])" />
+
     <hlm-dialog [state]="justInstalled() ? 'open' : 'closed'" (closed)="justInstalled.set(null)">
       <hlm-dialog-content class="sm:max-w-md" *brnDialogContent="let ctx">
         <hlm-dialog-header>
@@ -543,12 +547,18 @@ export class ExtensionsPage implements OnInit {
   /** An installed extension that needs switching on or a restart to run: offer both now. */
   protected readonly justInstalled = signal<Extension | null>(null);
 
+  /** Extensions to ask, once they run, about what they still need (tools to download…). */
+  protected readonly setupIds = signal<string[]>([]);
+  private readonly awaitingStart = new Set<string>();
+
   protected afterInstall(extension: Extension): void {
     void this.reload();
     if (extension.enabled && !extension.restartRequired) {
       toast.success(this.i18n.t('extensions.installedDialog.ready', { name: extension.name }));
+      this.setupIds.set([extension.id]);
       return;
     }
+    this.awaitingStart.add(extension.id);
     this.justInstalled.set(extension);
   }
 
@@ -634,6 +644,8 @@ export class ExtensionsPage implements OnInit {
       this.busy.set(false);
       return;
     }
+    for (const extension of this.extensions())
+      if (extension.restartRequired) this.awaitingStart.add(extension.id);
     this.restartPhase.set('stopping');
     this.restartSeconds.set(0);
     this.restarting.set(true);
@@ -658,6 +670,9 @@ export class ExtensionsPage implements OnInit {
       await this.reload();
       await this.enabledExtensions.refresh();
       toast.success(this.i18n.t('extensions.list.restartDone'));
+      // What they still need, now that they run.
+      this.setupIds.set([...this.awaitingStart]);
+      this.awaitingStart.clear();
     } catch {
       this.restartFailed.set(true);
       toast.error(this.i18n.t('extensions.list.restartUnreachable'));

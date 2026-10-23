@@ -49,4 +49,9 @@ public sealed partial class Mutation
     [Description("Downloads ffmpeg (a static GPL build from BtbN/FFmpeg-Builds) into the data directory in the background. Administrators only, with a recent password.")]
     public static Task<FfmpegStatus> InstallFfmpeg([FromServices] FfmpegService ffmpeg, CancellationToken cancellationToken) =>
         ffmpeg.InstallAsync(cancellationToken);
+
+    [Name("removeDownloadedFfmpeg")]
+    [Description("Deletes the ffmpeg Arcanist downloaded; the next one found (the configured one, the system's) takes its place. Administrators only, with a recent password.")]
+    public static Task<FfmpegStatus> RemoveDownloadedFfmpeg([FromServices] FfmpegService ffmpeg, CancellationToken cancellationToken) =>
+        ffmpeg.RemoveDownloadedAsync(cancellationToken);
 }

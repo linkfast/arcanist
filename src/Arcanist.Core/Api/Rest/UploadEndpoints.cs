@@ -22,6 +22,40 @@ public static class UploadEndpoints
             .WithName("Uploads")
             .WithSummary("Every upload into the server's libraries, by any user and from any client (the admin panel, Ultimate Desktop, web players, phones, extensions), newest first, with optional filters. Requires MANAGE_LIBRARIES (only libraries the caller can access, unless administrator).");
 
+        rest.MapPost("/uploads", async (string fileName, Guid? wishId, string? client, HttpContext context, Application.Libraries.UploadService service,
+                Microsoft.Extensions.Options.IOptionsMonitor<Application.Libraries.UploadOptions> options, CancellationToken ct) =>
+            {
+                Application.Libraries.UploadClient? kind = null;
+                if (!string.IsNullOrEmpty(client))
+                {
+                    if (!Enum.TryParse<Application.Libraries.UploadClient>(client, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+                        throw ArcanistException.Field("client", ErrorCodes.InvalidFormat);
+                    kind = parsed;
+                }
+
+                if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+                    limit.MaxRequestBodySize = options.CurrentValue.MaxBytes;
+                var result = await service.UploadAsync(wishId, fileName, context.Request.Body, kind, ct);
+                return result.Status == Application.Libraries.UploadStatus.Imported ? Results.Created((string?)null, result) : Results.Ok(result);
+            })
+            .WithTags("Uploads")
+            .WithName("Upload")
+            .WithSummary("Adds an audio file as `uploadToLibrary` does, into the library the server chooses: the target of the user's wish `wishId` when it has one, else the server's default for uploads (`uploadSettings`); `upload_library_required` without one. Requires UPLOAD.")
+            .Accepts<Stream>("application/octet-stream")
+            .Produces<Application.Libraries.UploadResult>(StatusCodes.Status201Created)
+            .Produces<Application.Libraries.UploadResult>();
+
+        rest.MapGet("/uploads/settings", (Application.Libraries.UploadDestinations service, CancellationToken ct) => service.GetAsync(ct))
+            .WithTags("Uploads")
+            .WithName("UploadSettings")
+            .WithSummary("The library uploads go to when they name none (and wishes with no target of their own), or none.");
+
+        rest.MapPut("/uploads/settings", (Application.Libraries.SetUploadSettingsInput input, Application.Libraries.UploadDestinations service,
+                CancellationToken ct) => service.SetAsync(input, ct))
+            .WithTags("Uploads")
+            .WithName("SetUploadSettings")
+            .WithSummary("Sets the library uploads go to when they name none; null leaves the choice to each upload. Requires MANAGE_LIBRARIES.");
+
         rest.MapGet("/me/uploads", (string? after, int? first, MyUploadService service, CancellationToken ct) => service.UploadsAsync(first, after, ct))
             .WithTags("Uploads")
             .WithName("MyUploads")

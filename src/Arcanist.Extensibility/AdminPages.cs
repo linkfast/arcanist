@@ -35,11 +35,7 @@ public sealed record AdminPageContext(string Language, Guid UserId, IServiceProv
 /// <param name="RefreshSeconds">Read the page again this often while it is open (to follow a progress); null never.</param>
 public sealed record AdminPage(IReadOnlyList<AdminSection> Sections, int? RefreshSeconds = null)
 {
-    /// <summary>
-    /// What the extension still needs before it works (tools to download, an account to set…), or null when nothing.
-    /// The panel offers it right after the extension is installed and starts, and at the top of the page, asking the
-    /// administrator's consent before running it.
-    /// </summary>
+    /// <summary>What the extension still needs before it works (tools to download, an account to set…), or null when nothing: the panel offers it right after the extension starts, and at the top of the page, with the administrator's consent.</summary>
     public AdminSetup? Setup { get; init; }
 }
 

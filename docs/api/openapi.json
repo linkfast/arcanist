@@ -10118,7 +10118,7 @@
                 "type": "null"
               },
               {
-                "description": "What the extension still needs before it works (tools to download, an account to set\u2026), or null when nothing.\r\nThe panel offers it right after the extension is installed and starts, and at the top of the page, asking the\r\nadministrator\u0027s consent before running it.",
+                "description": "What the extension still needs before it works (tools to download, an account to set\u2026), or null when nothing: the panel offers it right after the extension starts, and at the top of the page, with the administrator\u0027s consent.",
                 "$ref": "#/components/schemas/AdminSetup"
               }
             ]

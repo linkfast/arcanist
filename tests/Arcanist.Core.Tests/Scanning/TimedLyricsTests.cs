@@ -5,6 +5,7 @@ using Arcanist.Core.Media;
 using Arcanist.Core.Scanning;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Online;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.Scanning;
@@ -143,14 +144,17 @@ public sealed class TimedLyricsTests : IAsyncLifetime
         Assert.Equal("New words\nSecond words", Assert.Single(await timing.PendingAsync(null, 10, Cancel)).Plain);
 
         // With LRCLib on, only what it did not find is timed here (its answers written here, and not due again: the
-        // test does not wait for LRCLib's worker).
-        var lookup = new Core.Data.Entities.OnlineLookup
-        {
-            Service = OnlineService.Lyrics, Subject = id.ToString(), Outcome = Core.Data.Entities.LookupOutcome.Failed,
-            CheckedAt = DateTime.UtcNow, RetryAfter = DateTime.UtcNow.AddDays(1),
-        };
+        // test does not wait for LRCLib's worker). The subject is the track id as the database writes it, as the
+        // worker records it (SQLite keeps Guids in upper case).
+        Core.Data.Entities.OnlineLookup lookup;
         await using (var db = _factory.Services.GetRequiredService<Core.Data.IArcanistDbContextFactory>().CreateDbContext())
         {
+            var subject = await db.Tracks.Where(t => t.Id == id).Select(t => t.Id.ToString()).SingleAsync(Cancel);
+            lookup = new Core.Data.Entities.OnlineLookup
+            {
+                Service = OnlineService.Lyrics, Subject = subject, Outcome = Core.Data.Entities.LookupOutcome.Failed,
+                CheckedAt = DateTime.UtcNow, RetryAfter = DateTime.UtcNow.AddDays(1),
+            };
             db.OnlineLookups.Add(lookup);
             await db.SaveChangesAsync(Cancel);
         }

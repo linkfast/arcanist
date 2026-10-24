@@ -10,6 +10,11 @@ public sealed partial class Query
     [Description("The DLNA media server: whether it is on, what it publishes and the addresses devices find. Administrators only.")]
     public static Task<DlnaStatus> Dlna([FromServices] DlnaService dlna, CancellationToken cancellationToken) => dlna.StatusAsync(cancellationToken);
 
+    [Name("myDlnaStarTracks")]
+    [Description("Whether the caller's StarTracks are shown to the devices of the local network (DLNA), and whether DLNA is on.")]
+    public static Task<MyDlnaStarTracks> MyDlnaStarTracks([FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
+        dlna.MyStarTracksAsync(cancellationToken);
+
     [Name("dlnaRenderers")]
     [Description("Devices on the local network Arcanist can play to (DLNA renderers); empty while DLNA is off.")]
     public static IReadOnlyList<DlnaRenderer> DlnaRenderers([FromServices] DlnaService dlna) => dlna.Renderers();
@@ -26,6 +31,11 @@ public sealed partial class Mutation
     [Description("Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication.")]
     public static Task<DlnaStatus> SetDlnaSettings(DlnaSettingsInput input, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
         dlna.SetSettingsAsync(input, cancellationToken);
+
+    [Name("setMyDlnaStarTracks")]
+    [Description("Shows (true) or stops showing (false) the caller's StarTracks to the devices of the local network, as a folder of DLNA's StarTracks: only songs of the published libraries, to anyone there without signing in.")]
+    public static Task<MyDlnaStarTracks> SetMyDlnaStarTracks(bool shown, [FromServices] DlnaService dlna, CancellationToken cancellationToken) =>
+        dlna.SetMyStarTracksAsync(shown, cancellationToken);
 
     [Name("setDlnaRecordPlays")]
     [Description("Pauses (false) or resumes (true) counting the plays of \"play to\" in users' statistics; renderers keep playing. Administrators only.")]

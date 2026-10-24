@@ -695,10 +695,12 @@ export const es: Dictionary = {
     subtitle: 'Herramientas y servicios del servidor.',
     lyricsTiming: {
       title: 'Letras con tiempos',
-      description: 'Las letras con el momento de cada línea, para seguirlas mientras suena la canción.',
+      description:
+        'Las letras con el momento de cada línea, para seguirlas mientras suena la canción.',
       counts: '{timed} de {all} letras tienen tiempos ({aligned} calculados en este servidor).',
       left: '{count} letras siguen sin tiempos.',
-      offer: 'La extensión oficial Lyrics Sync los calcula en este servidor a partir de la propia canción (separa la voz y la reconoce con Whisper). Descarga unos 340 MB y trabaja en segundo plano con prioridad baja.',
+      offer:
+        'La extensión oficial Lyrics Sync los calcula en este servidor a partir de la propia canción (separa la voz y la reconoce con Whisper). Descarga unos 340 MB y trabaja en segundo plano con prioridad baja.',
       install: 'Instalar Lyrics Sync',
       installed: 'Lyrics Sync está instalada pero apagada o esperando un reinicio:',
       open: 'Abrir Lyrics Sync',
@@ -960,6 +962,8 @@ export const es: Dictionary = {
     UPLOAD: 'Subir música',
     PLAY_ON_SERVER: 'Reproducir en el servidor',
     VIEW_ALL_WISHES: 'Ver la lista de deseos de todos',
+    EDIT_METADATA: 'Editar etiquetas y carátulas',
+    DELETE_TRACKS: 'Eliminar canciones',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Crear, editar y eliminar las bibliotecas a las que tiene acceso.',
@@ -974,8 +978,18 @@ export const es: Dictionary = {
       'Reproducir en el dispositivo de audio del servidor (Audio del servidor) desde los reproductores y Ultimate Connect.',
     VIEW_ALL_WISHES:
       'Ver las canciones que quieren todos los usuarios (la lista de deseos del servidor), por ejemplo para conseguirlas.',
+    EDIT_METADATA:
+      'Cambiar las etiquetas (título, artistas, álbum…) y las carátulas de las canciones de las bibliotecas a las que sube música, desde apps como Ultimate Desktop. Se escriben en los propios archivos; el original va a la papelera de la carpeta.',
+    DELETE_TRACKS:
+      'Eliminar canciones de las bibliotecas a las que sube música, desde las apps. Sus archivos van a la papelera de la carpeta (30 días).',
   },
   account: {
+    dlna: {
+      title: 'Red local (DLNA)',
+      description:
+        'Los televisores, altavoces y apps de la red local ven «{name}» sin iniciar sesión, con las bibliotecas que publica el administrador.',
+      show: 'Mostrar mis StarTracks en la red local (solo canciones de las bibliotecas publicadas)',
+    },
     cloud: {
       title: 'Mi Ultimate Cloud',
       description: 'Vincula tu propia cuenta de Ultimate Cloud con este servidor.',
@@ -1964,12 +1978,18 @@ export const es: Dictionary = {
         GENRES: 'Géneros',
         DECADES: 'Décadas',
         FOLDERS: 'Carpetas',
+        LIBRARIES: 'Bibliotecas, cada una por separado',
         PLAYLISTS: 'Playlists públicas',
         RECENTLY_ADDED: 'Añadido recientemente',
         MIXES: 'Mixes por género y década',
         STARRED: 'StarTracks',
         RATED: 'Valoradas, por estrellas',
       },
+    },
+    starTracks: {
+      title: 'StarTracks por usuario',
+      description:
+        'Los StarTracks de cada usuario elegido aparecen como una carpeta dentro de StarTracks (solo canciones de las bibliotecas publicadas, para cualquiera de la red local). Cada usuario también puede mostrar u ocultar los suyos en Mi cuenta. Sin ninguno, StarTracks muestra los del usuario de abajo.',
     },
     renderers: {
       title: 'Reproducir en',
@@ -3232,6 +3252,9 @@ export const es: Dictionary = {
       'Algunos usuarios de ese servidor mStream aún no han iniciado sesión, y su primer inicio de sesión lo necesita.',
     import_failed:
       'La importación se detuvo por un error inesperado. Revisa el registro del servidor.',
+    tags_unsupported: 'No se pueden escribir las etiquetas del formato de ese archivo.',
+    cue_sheet_track:
+      'Esa canción es parte de un álbum en un solo archivo con hoja CUE: sus etiquetas vienen de la hoja y el archivo tiene otras canciones.',
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',
     network: 'No se puede contactar con el servidor.',
     unauthorized: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',

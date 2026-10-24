@@ -32,6 +32,9 @@ public enum DlnaSection
 
     /// <summary>Tracks by rating, five stars to one. Only with the five-star rating mode.</summary>
     Rated,
+
+    /// <summary>Each published library on its own: its artists, albums and folders.</summary>
+    Libraries,
 }
 
 /// <summary>DLNA settings, kept in the database.</summary>
@@ -40,8 +43,11 @@ public enum DlnaSection
 /// <param name="RatingsUserId">Whose stars and ratings the StarTracks and rated sections show (DLNA has no sign-in); the
 /// first administrator when null.</param>
 /// <param name="RecordPlays">"Play to" counts the plays for their users; paused while Arcanist is, for example, the source of a migration.</param>
+/// <param name="StarTracksUserIds">Users whose StarTracks the StarTracks section shows, one folder each (chosen by an
+/// administrator, or by each user for themselves); when none, it shows those of <paramref name="RatingsUserId"/>.</param>
 internal sealed record DlnaConfig(
-    string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null, bool RecordPlays = true)
+    string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null, bool RecordPlays = true,
+    IReadOnlyList<Guid>? StarTracksUserIds = null)
 {
     public static readonly DlnaConfig Default = new(null, [],
         [DlnaSection.Artists, DlnaSection.Albums, DlnaSection.Genres, DlnaSection.Folders, DlnaSection.Playlists, DlnaSection.Starred]);

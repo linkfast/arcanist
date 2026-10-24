@@ -684,7 +684,8 @@ export const en: Dictionary = {
       description: 'Lyrics with the moment of each line, to follow them while the song plays.',
       counts: '{timed} of {all} lyrics are timed ({aligned} worked out on this server).',
       left: '{count} lyrics have no timing yet.',
-      offer: 'The official Lyrics Sync extension works it out on this server from the song itself (it separates the voice and recognizes it with Whisper). It downloads about 340 MB and works in the background at low priority.',
+      offer:
+        'The official Lyrics Sync extension works it out on this server from the song itself (it separates the voice and recognizes it with Whisper). It downloads about 340 MB and works in the background at low priority.',
       install: 'Install Lyrics Sync',
       installed: 'Lyrics Sync is installed but off or waiting for a restart:',
       open: 'Open Lyrics Sync',
@@ -948,6 +949,8 @@ export const en: Dictionary = {
     UPLOAD: 'Upload music',
     PLAY_ON_SERVER: 'Play on the server',
     VIEW_ALL_WISHES: "View everyone's wish lists",
+    EDIT_METADATA: 'Edit tags and covers',
+    DELETE_TRACKS: 'Delete songs',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Create, edit and delete the libraries they can access.',
@@ -962,8 +965,18 @@ export const en: Dictionary = {
       'Play on the server’s audio device (Server audio) from players and Ultimate Connect.',
     VIEW_ALL_WISHES:
       'See the songs every user wants (the server’s wish list), for example to get them.',
+    EDIT_METADATA:
+      'Change the tags (title, artists, album…) and covers of songs in the libraries they add to, from apps such as Ultimate Desktop. They are written to the files themselves; the original goes to the folder’s trash.',
+    DELETE_TRACKS:
+      'Delete songs from the libraries they add to, from apps. Their files go to the folder’s trash (kept 30 days).',
   },
   account: {
+    dlna: {
+      title: 'Local network (DLNA)',
+      description:
+        'TVs, speakers and apps on the local network see “{name}” without signing in, with the libraries the administrator publishes.',
+      show: 'Show my StarTracks on the local network (only songs of the published libraries)',
+    },
     cloud: {
       title: 'My Ultimate Cloud',
       description: 'Link your own Ultimate Cloud account with this server.',
@@ -1942,12 +1955,18 @@ export const en: Dictionary = {
         GENRES: 'Genres',
         DECADES: 'Decades',
         FOLDERS: 'Folders',
+        LIBRARIES: 'Libraries, each on its own',
         PLAYLISTS: 'Public playlists',
         RECENTLY_ADDED: 'Recently added',
         MIXES: 'Genre and decade mixes',
         STARRED: 'StarTracks',
         RATED: 'Rated, by stars',
       },
+    },
+    starTracks: {
+      title: 'StarTracks per user',
+      description:
+        'The StarTracks of each chosen user appear as a folder inside StarTracks (only songs of the published libraries, to anyone on the local network). Each user can also show or hide their own in My account. With none, StarTracks shows those of the user below.',
     },
     renderers: {
       title: 'Play to',
@@ -3189,6 +3208,9 @@ export const en: Dictionary = {
     import_in_use:
       'Some users of that mStream server have not signed in yet, and their first sign-in needs it.',
     import_failed: 'The import stopped because of an unexpected error. Check the server log.',
+    tags_unsupported: 'The tags of that file’s format cannot be written.',
+    cue_sheet_track:
+      'That song is part of an album in one file with a cue sheet: its tags come from the sheet, and the file has other songs.',
     unexpected: 'Something went wrong. Please try again.',
     network: 'Cannot reach the server.',
     unauthorized: 'Your session has expired. Please sign in again.',

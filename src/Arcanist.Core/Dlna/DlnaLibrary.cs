@@ -28,7 +28,8 @@ internal sealed class DlnaLibrary(
     string baseUrl,
     bool spanish,
     Guid? ratingsUser,
-    RatingMode ratingMode)
+    RatingMode ratingMode,
+    IReadOnlyList<(Guid Id, string Name)> starTracksUsers)
 {
     public const string Root = "0";
 
@@ -50,17 +51,7 @@ internal sealed class DlnaLibrary(
                 return (sections.Skip(start).Take(count).ToList(), sections.Count);
             }
             case "artists":
-            {
-                var artists = db.Artists.Where(a => Albums.Any(al => al.AlbumArtistId == a.Id)).OrderBy(a => a.NormalizedName).ThenBy(a => a.Id);
-                var total = await artists.CountAsync(cancellationToken);
-                var page = await artists.Skip(start).Take(count).Select(a => new { a.Id, a.Name }).ToListAsync(cancellationToken);
-                var ids = page.Select(a => a.Id).ToList();
-                var stats = await Albums.Where(a => ids.Contains(a.AlbumArtistId)).GroupBy(a => a.AlbumArtistId)
-                    .Select(g => new { ArtistId = g.Key, Count = g.Count(), Artwork = g.Max(a => a.ArtworkId) })
-                    .ToDictionaryAsync(g => g.ArtistId, cancellationToken);
-                return (page.Select(a => (DidlObject)new DidlContainer($"artist/{a.Id:N}", id, a.Name, "object.container.person.musicArtist",
-                    stats.GetValueOrDefault(a.Id)?.Count ?? 0, ArtUrl: Art(stats.GetValueOrDefault(a.Id)?.Artwork))).ToList(), total);
-            }
+                return await ArtistPageAsync(id, Albums, a => $"artist/{a:N}", start, count, cancellationToken);
             case "artist":
                 if (!await db.Artists.AnyAsync(a => a.Id == ParseId(rest) && Albums.Any(al => al.AlbumArtistId == a.Id), cancellationToken))
                     throw new UpnpException(701, "No such object");
@@ -140,8 +131,67 @@ internal sealed class DlnaLibrary(
                 var tracks = (await discovery.MixAsync(rest, cancellationToken)).Tracks;
                 return (await ItemsAsync(id, tracks.Skip(start).Take(count).ToList(), cancellationToken), tracks.Count);
             }
+            case "starred" when rest.Length == 0:
+            {
+                // One folder per user who shows their StarTracks; without any, those of the ratings' user.
+                if (starTracksUsers.Count == 0)
+                    return await RatedPageAsync(id, 5, start, count, cancellationToken, ratingsUser);
+                var folders = new List<DidlObject>();
+                foreach (var (user, name) in starTracksUsers.Skip(start).Take(count))
+                {
+                    var (_, total) = await RatedPageAsync($"starred/{user:N}", 5, 0, 0, cancellationToken, user);
+                    folders.Add(new DidlContainer($"starred/{user:N}", id, StarTracksOf(name), "object.container.playlistContainer", total));
+                }
+
+                return (folders, starTracksUsers.Count);
+            }
             case "starred":
-                return await RatedPageAsync(id, 5, start, count, cancellationToken);
+                return await RatedPageAsync(id, 5, start, count, cancellationToken, StarTracksUser(rest).Id);
+            case "libraries":
+            {
+                var libraries = await PublishedLibraries().Select(l => new { l.Id, l.Name }).ToListAsync(cancellationToken);
+                return (libraries.Skip(start).Take(count)
+                    .Select(l => (DidlObject)new DidlContainer($"library/{l.Id:N}", id, l.Name, "object.container.storageFolder", 3)).ToList(), libraries.Count);
+            }
+            case "library":
+            {
+                var library = await PublishedLibraryAsync(rest, cancellationToken);
+                var views = new List<DidlObject>
+                {
+                    new DidlContainer($"libartists/{library:N}", id, SectionTitle(DlnaSection.Artists), "object.container.storageFolder",
+                        (await ArtistPageAsync(id, LibraryAlbums(library), a => "", 0, 0, cancellationToken)).Total),
+                    new DidlContainer($"libalbums/{library:N}", id, SectionTitle(DlnaSection.Albums), "object.container.storageFolder",
+                        await LibraryAlbums(library).CountAsync(cancellationToken)),
+                    new DidlContainer($"libfolders/{library:N}", id, SectionTitle(DlnaSection.Folders), "object.container.storageFolder",
+                        (await FolderRootsAsync(cancellationToken, library)).Count),
+                };
+                return (views.Skip(start).Take(count).ToList(), views.Count);
+            }
+            case "libartists":
+            {
+                var library = await PublishedLibraryAsync(rest, cancellationToken);
+                return await ArtistPageAsync(id, LibraryAlbums(library), a => $"libartist/{library:N}/{a:N}", start, count, cancellationToken);
+            }
+            case "libartist":
+            {
+                var (library, artist) = LibraryAndId(rest);
+                await PublishedLibraryAsync($"{library:N}", cancellationToken);
+                if (!await LibraryAlbums(library).AnyAsync(a => a.AlbumArtistId == artist, cancellationToken))
+                    throw new UpnpException(701, "No such object");
+                return await AlbumPageAsync(id, LibraryAlbums(library).Where(a => a.AlbumArtistId == artist)
+                    .OrderBy(a => a.Year).ThenBy(a => a.NormalizedTitle).ThenBy(a => a.Id), start, count, cancellationToken);
+            }
+            case "libalbums":
+            {
+                var library = await PublishedLibraryAsync(rest, cancellationToken);
+                return await AlbumPageAsync(id, LibraryAlbums(library).OrderBy(a => a.NormalizedTitle).ThenBy(a => a.Id), start, count, cancellationToken);
+            }
+            case "libfolders":
+            {
+                var library = await PublishedLibraryAsync(rest, cancellationToken);
+                var roots = await FolderRootsAsync(cancellationToken, library);
+                return (roots.Skip(start).Take(count).Cast<DidlObject>().ToList(), roots.Count);
+            }
             case "rated" when rest.Length == 0:
             {
                 if (ratingMode != RatingMode.Stars)
@@ -218,6 +268,13 @@ internal sealed class DlnaLibrary(
                     "playlist" => ("playlists", (await playlists.GetAsync(ParseId(rest), cancellationToken)).Name),
                     "mix" => ("mixes", MixTitle((await discovery.MixAsync(rest, cancellationToken)).Mix)),
                     "rated" => ("rated", int.TryParse(rest, out var stars) && stars is >= 1 and <= 5 ? Stars(stars) : null),
+                    "starred" => ("starred", StarTracksOf(StarTracksUser(rest).Name)),
+                    "library" => ("libraries", await PublishedLibraries().Where(l => l.Id == ParseId(rest)).Select(l => l.Name).FirstOrDefaultAsync(cancellationToken)),
+                    "libartists" => ($"library/{rest}", SectionTitle(DlnaSection.Artists)),
+                    "libalbums" => ($"library/{rest}", SectionTitle(DlnaSection.Albums)),
+                    "libfolders" => ($"library/{rest}", SectionTitle(DlnaSection.Folders)),
+                    "libartist" => ($"libartists/{LibraryAndId(rest).Library:N}",
+                        await db.Artists.Where(a => a.Id == LibraryAndId(rest).Id).Select(a => a.Name).FirstOrDefaultAsync(cancellationToken)),
                     _ => (Root, null),
                 };
                 if (title is null)
@@ -225,7 +282,7 @@ internal sealed class DlnaLibrary(
                 var (_, total) = await ChildrenAsync(id, 0, 1, cancellationToken);
                 return new DidlContainer(id, parent, title, kind == "artist" ? "object.container.person.musicArtist"
                     : kind == "genre" ? "object.container.genre.musicGenre"
-                    : kind is "playlist" or "mix" ? "object.container.playlistContainer"
+                    : kind is "playlist" or "mix" or "starred" ? "object.container.playlistContainer"
                     : "object.container.storageFolder", total);
             }
         }
@@ -245,7 +302,8 @@ internal sealed class DlnaLibrary(
     private static string? SectionOf(string id) => id switch
     {
         "recent" => nameof(DlnaSection.RecentlyAdded),
-        "artists" or "albums" or "genres" or "decades" or "folders" or "playlists" or "mixes" or "starred" or "rated" => char.ToUpperInvariant(id[0]) + id[1..],
+        "artists" or "albums" or "genres" or "decades" or "folders" or "playlists" or "mixes" or "starred" or "rated" or "libraries"
+            => char.ToUpperInvariant(id[0]) + id[1..],
         _ => null,
     };
 
@@ -253,17 +311,19 @@ internal sealed class DlnaLibrary(
     private IEnumerable<DlnaSection> Sections() =>
         config.Sections.Distinct().Where(s => s != DlnaSection.Rated || ratingMode == RatingMode.Stars);
 
-    /// <summary>The ratings DLNA shows: those of one user, as DLNA has no sign-in.</summary>
-    private IQueryable<TrackRating> Ratings() =>
-        ratingsUser is { } user ? db.TrackRatings.Where(r => r.UserId == user) : db.TrackRatings.Where(_ => false);
+    /// <summary>The ratings DLNA shows: those of one user, as DLNA has no sign-in (by default, the ratings' user).</summary>
+    private IQueryable<TrackRating> Ratings(Guid? of = null) =>
+        (of ?? ratingsUser) is { } user ? db.TrackRatings.Where(r => r.UserId == user) : db.TrackRatings.Where(_ => false);
 
-    /// <summary>The tracks rated <paramref name="rating"/> (5: StarTracks), most recently rated first.</summary>
+    /// <summary>The tracks <paramref name="user"/> rated <paramref name="rating"/> (5: StarTracks), most recently rated first.</summary>
     private async Task<(IReadOnlyList<DidlObject> Children, int Total)> RatedPageAsync(
-        string parent, int rating, int start, int count, CancellationToken cancellationToken)
+        string parent, int rating, int start, int count, CancellationToken cancellationToken, Guid? user = null)
     {
         var visible = catalog.Visible(access);
-        var rated = Ratings().Where(r => r.Rating == rating && visible.Any(t => t.Id == r.TrackId));
+        var rated = Ratings(user).Where(r => r.Rating == rating && visible.Any(t => t.Id == r.TrackId));
         var total = await rated.CountAsync(cancellationToken);
+        if (count <= 0)
+            return ([], total);
         var ids = await rated.OrderByDescending(r => r.RatedAt).ThenBy(r => r.TrackId).Skip(start).Take(count)
             .Select(r => r.TrackId).ToListAsync(cancellationToken);
         var tracks = await catalog.VisibleTracksAsync(access, ids, cancellationToken);
@@ -281,10 +341,58 @@ internal sealed class DlnaLibrary(
             a.TrackCount, a.Artist.Name, Art(a.ArtworkId))).ToList(), total);
     }
 
-    /// <summary>The libraries' folders: one per library folder, named after the library.</summary>
-    private async Task<List<DidlContainer>> FolderRootsAsync(CancellationToken cancellationToken)
+    /// <summary>The user of a StarTracks folder, while they show them.</summary>
+    private (Guid Id, string Name) StarTracksUser(string id)
+    {
+        var user = ParseId(id);
+        return starTracksUsers.FirstOrDefault(u => u.Id == user) is { Name: not null } found ? found : throw new UpnpException(701, "No such object");
+    }
+
+    private string StarTracksOf(string name) => spanish ? $"StarTracks de {name}" : $"{name}'s StarTracks";
+
+    private IQueryable<Library> PublishedLibraries()
     {
         var ids = config.LibraryIds.ToList();
+        return db.Libraries.AsNoTracking().Where(l => ids.Contains(l.Id)).OrderBy(l => l.Number);
+    }
+
+    private async Task<Guid> PublishedLibraryAsync(string id, CancellationToken cancellationToken)
+    {
+        var library = ParseId(id);
+        return await PublishedLibraries().AnyAsync(l => l.Id == library, cancellationToken) ? library : throw new UpnpException(701, "No such object");
+    }
+
+    /// <summary>The albums with music present in a library.</summary>
+    private IQueryable<AlbumEntity> LibraryAlbums(Guid library) =>
+        Albums.Where(a => a.Tracks.Any(t => t.Files.Any(f => f.MissingSince == null && f.LibrarySource.LibraryId == library)));
+
+    private static (Guid Library, Guid Id) LibraryAndId(string rest)
+    {
+        var slash = rest.IndexOf('/');
+        return slash < 0 ? throw new UpnpException(701, "No such object") : (ParseId(rest[..slash]), ParseId(rest[(slash + 1)..]));
+    }
+
+    /// <summary>The album artists of these albums, in name order, each a container with the given id.</summary>
+    private async Task<(IReadOnlyList<DidlObject> Children, int Total)> ArtistPageAsync(
+        string parent, IQueryable<AlbumEntity> albums, Func<Guid, string> idOf, int start, int count, CancellationToken cancellationToken)
+    {
+        var artists = db.Artists.Where(a => albums.Any(al => al.AlbumArtistId == a.Id)).OrderBy(a => a.NormalizedName).ThenBy(a => a.Id);
+        var total = await artists.CountAsync(cancellationToken);
+        if (count <= 0)
+            return ([], total);
+        var page = await artists.Skip(start).Take(count).Select(a => new { a.Id, a.Name }).ToListAsync(cancellationToken);
+        var ids = page.Select(a => a.Id).ToList();
+        var stats = await albums.Where(a => ids.Contains(a.AlbumArtistId)).GroupBy(a => a.AlbumArtistId)
+            .Select(g => new { ArtistId = g.Key, Count = g.Count(), Artwork = g.Max(a => a.ArtworkId) })
+            .ToDictionaryAsync(g => g.ArtistId, cancellationToken);
+        return (page.Select(a => (DidlObject)new DidlContainer(idOf(a.Id), parent, a.Name, "object.container.person.musicArtist",
+            stats.GetValueOrDefault(a.Id)?.Count ?? 0, ArtUrl: Art(stats.GetValueOrDefault(a.Id)?.Artwork))).ToList(), total);
+    }
+
+    /// <summary>The libraries' folders: one per library folder, named after the library (only one library's, when given).</summary>
+    private async Task<List<DidlContainer>> FolderRootsAsync(CancellationToken cancellationToken, Guid? only = null)
+    {
+        var ids = only is { } one ? [one] : config.LibraryIds.ToList();
         var sources = await db.LibrarySources.AsNoTracking().Where(s => ids.Contains(s.LibraryId))
             .OrderBy(s => s.Library.Name).ThenBy(s => s.Id)
             .Select(s => new { s.Id, s.LibraryId, Library = s.Library.Name, s.Location })
@@ -297,7 +405,8 @@ internal sealed class DlnaLibrary(
                 ? $"{source.Library} — {Path.GetFileName(Path.TrimEndingDirectorySeparator(source.Location))}"
                 : source.Library;
             var (_, total) = await FolderAsync(FolderId(source.Id, ""), $"{source.Id:N}", 0, 0, cancellationToken);
-            roots.Add(new DidlContainer(FolderId(source.Id, ""), "folders", title, "object.container.storageFolder", total));
+            roots.Add(new DidlContainer(FolderId(source.Id, ""), only is { } library ? $"libfolders/{library:N}" : "folders", title,
+                "object.container.storageFolder", total));
         }
 
         return roots;
@@ -484,6 +593,7 @@ internal sealed class DlnaLibrary(
         (DlnaSection.Starred, _) => "StarTracks",
         (DlnaSection.Rated, true) => "Valoradas",
         (DlnaSection.Rated, false) => "Rated",
+        (DlnaSection.Libraries, true) => "Bibliotecas",
         (DlnaSection.RecentlyAdded, false) => "Recently added",
         _ => section.ToString(),
     };

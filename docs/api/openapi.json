@@ -2237,6 +2237,56 @@
         }
       }
     },
+    "/rest/v1/me/dlna-star-tracks": {
+      "get": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Whether the caller\u0027s StarTracks are shown to the devices of the local network (DLNA), and whether DLNA is on.",
+        "operationId": "MyDlnaStarTracks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyDlnaStarTracks"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "DLNA"
+        ],
+        "summary": "Shows (true) or stops showing (false) the caller\u0027s StarTracks to the devices of the local network, as a folder of DLNA\u0027s StarTracks: only songs of the published libraries, to anyone there without signing in.",
+        "operationId": "SetMyDlnaStarTracks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMyDlnaStarTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyDlnaStarTracks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/maintenance": {
       "get": {
         "tags": [
@@ -14154,7 +14204,8 @@
           "RECENTLY_ADDED",
           "MIXES",
           "STARRED",
-          "RATED"
+          "RATED",
+          "LIBRARIES"
         ]
       },
       "DlnaSettingsInput": {
@@ -14190,6 +14241,16 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "starTracksUserIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -14203,7 +14264,8 @@
           "ratingsUserId",
           "addresses",
           "convertsFormats",
-          "recordPlays"
+          "recordPlays",
+          "starTracksUserIds"
         ],
         "type": "object",
         "properties": {
@@ -14250,6 +14312,13 @@
           },
           "recordPlays": {
             "type": "boolean"
+          },
+          "starTracksUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -17844,6 +17913,25 @@
           }
         }
       },
+      "MyDlnaStarTracks": {
+        "required": [
+          "available",
+          "shown",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "shown": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "MyUltimateCloudStatus": {
         "required": [
           "enabled",
@@ -21288,6 +21376,17 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "SetMyDlnaStarTracksInput": {
+        "required": [
+          "shown"
+        ],
+        "type": "object",
+        "properties": {
+          "shown": {
+            "type": "boolean"
           }
         }
       },
@@ -25500,6 +25599,9 @@
       "name": "Extensions"
     },
     {
+      "name": "DLNA"
+    },
+    {
       "name": "Database"
     },
     {
@@ -25534,9 +25636,6 @@
     },
     {
       "name": "Account"
-    },
-    {
-      "name": "DLNA"
     },
     {
       "name": "Server audio"

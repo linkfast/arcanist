@@ -66,6 +66,8 @@ type Query {
   dlnaImports: [DlnaImportJob!]!
   "The DLNA media server: whether it is on, what it publishes and the addresses devices find. Administrators only."
   dlna: DlnaStatus!
+  "Whether the caller's StarTracks are shown to the devices of the local network (DLNA), and whether DLNA is on."
+  myDlnaStarTracks: MyDlnaStarTracks!
   "Devices on the local network Arcanist can play to (DLNA renderers); empty while DLNA is off."
   dlnaRenderers: [DlnaRenderer!]!
   "What a renderer is doing: its state, position, volume and Arcanist's queue on it."
@@ -1022,6 +1024,7 @@ type DlnaStatus {
   addresses: [String!]!
   convertsFormats: Boolean!
   recordPlays: Boolean!
+  starTracksUserIds: [ID!]!
 }
 
 enum DlnaSection {
@@ -1035,6 +1038,13 @@ enum DlnaSection {
   MIXES
   STARRED
   RATED
+  LIBRARIES
+}
+
+type MyDlnaStarTracks {
+  available: Boolean!
+  shown: Boolean!
+  name: String!
 }
 
 type DlnaRenderer {
@@ -2785,6 +2795,8 @@ type Mutation {
   retryDlnaImport(id: ID!): DlnaImportJob!
   "Sets the name devices show, the libraries published on the local network (to anyone there, without signing in) and the folders of the tree. Administrators only, with a recent authentication."
   setDlnaSettings(input: DlnaSettingsInput!): DlnaStatus!
+  "Shows (true) or stops showing (false) the caller's StarTracks to the devices of the local network, as a folder of DLNA's StarTracks: only songs of the published libraries, to anyone there without signing in."
+  setMyDlnaStarTracks(shown: Boolean!): MyDlnaStarTracks!
   "Pauses (false) or resumes (true) counting the plays of \"play to\" in users' statistics; renderers keep playing. Administrators only."
   setDlnaRecordPlays(record: Boolean!): DlnaStatus!
   "Adds a renderer by the URL of its UPnP description, for networks where it is not found by itself. Administrators only."
@@ -3169,6 +3181,7 @@ input DlnaSettingsInput {
   libraryIds: [ID!]!
   sections: [DlnaSection!]!
   ratingsUserId: ID
+  starTracksUserIds: [ID!]
 }
 
 input PlayOnDlnaRendererInput {

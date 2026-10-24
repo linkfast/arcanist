@@ -136,7 +136,9 @@ type Documents = {
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": typeof types.AnalyzeMstreamServerDocument,
     "\n  mutation RetryMstreamImport($id: ID!) {\n    retryMstreamImport(id: $id) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.RetryMstreamImportDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": typeof types.ImportMstreamDocument,
-    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n": typeof types.DlnaStatusFieldsFragmentDoc,
+    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n    starTracksUserIds\n  }\n": typeof types.DlnaStatusFieldsFragmentDoc,
+    "\n  query MyDlnaStarTracks {\n    myDlnaStarTracks {\n      available\n      shown\n      name\n    }\n  }\n": typeof types.MyDlnaStarTracksDocument,
+    "\n  mutation SetMyDlnaStarTracks($shown: Boolean!) {\n    setMyDlnaStarTracks(shown: $shown) {\n      available\n      shown\n      name\n    }\n  }\n": typeof types.SetMyDlnaStarTracksDocument,
     "\n  fragment MstreamStatusFields on MstreamStatus {\n    enabled\n    starThreshold\n    passwordSignIn\n    features\n    quickConnect\n    p2pEnabled\n    pairingCode\n  }\n": typeof types.MstreamStatusFieldsFragmentDoc,
     "\n  query Mstream {\n    mstream {\n      ...MstreamStatusFields\n    }\n    serverInfo {\n      ratingMode\n    }\n  }\n": typeof types.MstreamDocument,
     "\n  mutation SetMstreamSettings($input: MstreamSettingsInput!) {\n    setMstreamSettings(input: $input) {\n      ...MstreamStatusFields\n    }\n  }\n": typeof types.SetMstreamSettingsDocument,
@@ -396,7 +398,9 @@ const documents: Documents = {
     "\n  mutation AnalyzeMstreamServer($input: MstreamServerInput!) {\n    analyzeMstreamServer(input: $input) {\n      ...MstreamAnalysisFields\n    }\n  }\n": types.AnalyzeMstreamServerDocument,
     "\n  mutation RetryMstreamImport($id: ID!) {\n    retryMstreamImport(id: $id) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.RetryMstreamImportDocument,
     "\n  mutation ImportMstream($input: ImportMstreamInput!) {\n    importMstream(input: $input) {\n      ...MstreamImportJobFields\n    }\n  }\n": types.ImportMstreamDocument,
-    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n": types.DlnaStatusFieldsFragmentDoc,
+    "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n    starTracksUserIds\n  }\n": types.DlnaStatusFieldsFragmentDoc,
+    "\n  query MyDlnaStarTracks {\n    myDlnaStarTracks {\n      available\n      shown\n      name\n    }\n  }\n": types.MyDlnaStarTracksDocument,
+    "\n  mutation SetMyDlnaStarTracks($shown: Boolean!) {\n    setMyDlnaStarTracks(shown: $shown) {\n      available\n      shown\n      name\n    }\n  }\n": types.SetMyDlnaStarTracksDocument,
     "\n  fragment MstreamStatusFields on MstreamStatus {\n    enabled\n    starThreshold\n    passwordSignIn\n    features\n    quickConnect\n    p2pEnabled\n    pairingCode\n  }\n": types.MstreamStatusFieldsFragmentDoc,
     "\n  query Mstream {\n    mstream {\n      ...MstreamStatusFields\n    }\n    serverInfo {\n      ratingMode\n    }\n  }\n": types.MstreamDocument,
     "\n  mutation SetMstreamSettings($input: MstreamSettingsInput!) {\n    setMstreamSettings(input: $input) {\n      ...MstreamStatusFields\n    }\n  }\n": types.SetMstreamSettingsDocument,
@@ -1039,7 +1043,15 @@ export function graphql(source: "\n  mutation ImportMstream($input: ImportMstrea
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n"): (typeof documents)["\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n  }\n"];
+export function graphql(source: "\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n    starTracksUserIds\n  }\n"): (typeof documents)["\n  fragment DlnaStatusFields on DlnaStatus {\n    enabled\n    name\n    friendlyName\n    libraryIds\n    sections\n    ratingsUserId\n    addresses\n    convertsFormats\n    recordPlays\n    starTracksUserIds\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MyDlnaStarTracks {\n    myDlnaStarTracks {\n      available\n      shown\n      name\n    }\n  }\n"): (typeof documents)["\n  query MyDlnaStarTracks {\n    myDlnaStarTracks {\n      available\n      shown\n      name\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetMyDlnaStarTracks($shown: Boolean!) {\n    setMyDlnaStarTracks(shown: $shown) {\n      available\n      shown\n      name\n    }\n  }\n"): (typeof documents)["\n  mutation SetMyDlnaStarTracks($shown: Boolean!) {\n    setMyDlnaStarTracks(shown: $shown) {\n      available\n      shown\n      name\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

@@ -99,7 +99,8 @@ internal sealed class DlnaExtension : IBuiltInExtension
                         DlnaFormats.Convertible(services.GetRequiredService<FfmpegLocator>().Current),
                         $"{context.Request.Scheme}://{context.Request.Host}", language?.StartsWith("es", StringComparison.OrdinalIgnoreCase) == true,
                         await Application.Dlna.DlnaService.RatingsUserAsync(db, config, cancellationToken),
-                        await services.GetRequiredService<Application.Listening.RatingSettings>().GetAsync(cancellationToken));
+                        await services.GetRequiredService<Application.Listening.RatingSettings>().GetAsync(cancellationToken),
+                        await Application.Dlna.DlnaService.StarTracksUsersAsync(db, config, cancellationToken));
                     var id = action.Argument("ObjectID") is { Length: > 0 } objectId ? objectId : DlnaLibrary.Root;
                     _ = int.TryParse(action.Argument("StartingIndex"), out var start);
                     _ = int.TryParse(action.Argument("RequestedCount"), out var count);

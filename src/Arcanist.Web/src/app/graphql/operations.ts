@@ -1479,6 +1479,27 @@ export const DlnaStatusFields = graphql(`
     addresses
     convertsFormats
     recordPlays
+    starTracksUserIds
+  }
+`);
+
+export const MyDlnaStarTracksQuery = graphql(`
+  query MyDlnaStarTracks {
+    myDlnaStarTracks {
+      available
+      shown
+      name
+    }
+  }
+`);
+
+export const SetMyDlnaStarTracksMutation = graphql(`
+  mutation SetMyDlnaStarTracks($shown: Boolean!) {
+    setMyDlnaStarTracks(shown: $shown) {
+      available
+      shown
+      name
+    }
   }
 `);
 

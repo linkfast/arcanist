@@ -57,6 +57,7 @@ const AllSections: DlnaSection[] = [
   'GENRES',
   'DECADES',
   'FOLDERS',
+  'LIBRARIES',
   'PLAYLISTS',
   'RECENTLY_ADDED',
   'MIXES',
@@ -234,6 +235,21 @@ const AllSections: DlnaSection[] = [
               </ul>
             </div>
           </div>
+          @if (sections().includes('STARRED')) {
+            <div class="grid gap-2 px-6 pb-2">
+              <h3 class="text-sm font-medium">{{ 'dlna.starTracks.title' | t }}</h3>
+              <p class="text-xs text-muted-foreground">{{ 'dlna.starTracks.description' | t }}</p>
+              @for (user of users(); track user.id) {
+                <label class="flex items-center gap-2 text-sm">
+                  <hlm-checkbox
+                    [checked]="starTracksUsers().includes(user.id)"
+                    (checkedChange)="toggleStarTracksUser(user.id, $event)"
+                  />
+                  {{ user.displayName || user.userName }}
+                </label>
+              }
+            </div>
+          }
           @if (sections().includes('STARRED') || sections().includes('RATED')) {
             <hlm-field class="px-6 pb-2">
               <label hlmFieldLabel for="dlnaRatingsUser">{{
@@ -466,6 +482,8 @@ export class DlnaPage implements OnInit, OnDestroy {
   >([]);
   /** Whose stars and ratings the StarTracks and rated folders show. */
   protected readonly ratingsUser = signal<string | null>(null);
+  /** Users whose StarTracks devices see, a folder each. */
+  protected readonly starTracksUsers = signal<string[]>([]);
   protected readonly fiveStars = signal(false);
   protected readonly sections = signal<DlnaSection[]>([]);
   protected readonly renderers = signal<Renderer[]>([]);
@@ -507,6 +525,11 @@ export class DlnaPage implements OnInit, OnDestroy {
     this.published.set([...status.libraryIds]);
     this.sections.set([...status.sections]);
     this.ratingsUser.set(status.ratingsUserId ?? null);
+    this.starTracksUsers.set([...status.starTracksUserIds]);
+  }
+
+  protected toggleStarTracksUser(id: string, checked: boolean): void {
+    this.starTracksUsers.update((ids) => (checked ? [...ids, id] : ids.filter((i) => i !== id)));
   }
 
   protected async setEnabled(enabled: boolean): Promise<void> {
@@ -557,6 +580,9 @@ export class DlnaPage implements OnInit, OnDestroy {
           libraryIds: this.published().filter((id) => this.libraries().some((l) => l.id === id)),
           sections: this.sections(),
           ratingsUserId: this.ratingsUser(),
+          starTracksUserIds: this.starTracksUsers().filter((id) =>
+            this.users().some((u) => u.id === id),
+          ),
         },
       });
       this.apply(result.setDlnaSettings);

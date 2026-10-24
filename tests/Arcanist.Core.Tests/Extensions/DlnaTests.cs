@@ -429,6 +429,86 @@ public sealed class DlnaTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Each_chosen_user_s_StarTracks_are_a_folder_and_users_can_show_their_own()
+    {
+        await PublishAsync("STARRED");
+        var tracks = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel)).GetProperty("items").EnumerateArray()
+            .ToDictionary(t => t.GetProperty("title").GetString()!, t => t.GetProperty("id").GetString()!);
+        var listener = await _factory.CreateUserAsync("listener");
+        var ana = await _factory.CreateUserAsync("ana");
+        await _admin.PutAsJsonAsync($"/rest/v1/users/{listener.Id}/libraries", new { libraryIds = new[] { _libraryId } }, ArcanistFactory.Json, Cancel);
+        await _admin.PutAsJsonAsync($"/rest/v1/users/{ana.Id}/libraries", new { libraryIds = new[] { _libraryId } }, ArcanistFactory.Json, Cancel);
+        var listenerClient = await _factory.CreateAuthenticatedClientAsync("listener");
+        var anaClient = await _factory.CreateAuthenticatedClientAsync("ana");
+        await _admin.PutAsJsonAsync($"/rest/v1/tracks/{tracks["Closing"]}/star", new { starred = true }, ArcanistFactory.Json, Cancel);
+        (await listenerClient.PutAsJsonAsync($"/rest/v1/tracks/{tracks["Alone"]}/star", new { starred = true }, ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+        (await anaClient.PutAsJsonAsync($"/rest/v1/tracks/{tracks["Opening"]}/star", new { starred = true }, ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+
+        // The administrator picks whose StarTracks devices see: a folder each.
+        var saved = await _admin.PutAsJsonAsync("/rest/v1/dlna/settings", new
+        {
+            friendlyName = (string?)null, libraryIds = new[] { _libraryId }, sections = new[] { "STARRED" }, starTracksUserIds = new[] { listener.Id },
+        }, ArcanistFactory.Json, Cancel);
+        Assert.Equal([listener.Id.ToString()], (await saved.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel))
+            .GetProperty("starTracksUserIds").EnumerateArray().Select(u => u.GetString()));
+        var (folders, _) = await BrowseAsync("starred");
+        Assert.Equal(["listener's StarTracks"], Titles(folders));
+        var folderId = folders.Elements().Single().Attribute("id")!.Value;
+        Assert.Equal(["Alone"], Titles((await BrowseAsync(folderId)).Didl));
+        Assert.Equal(["listener's StarTracks"], Titles((await BrowseAsync(folderId, "BrowseMetadata")).Didl));
+
+        // A user shows (and hides) their own; saving the settings without the list keeps it.
+        var mine = await anaClient.GetFromJsonAsync<JsonElement>("/rest/v1/me/dlna-star-tracks", ArcanistFactory.Json, Cancel);
+        Assert.Equal((true, false), (mine.GetProperty("available").GetBoolean(), mine.GetProperty("shown").GetBoolean()));
+        mine = await (await anaClient.PutAsJsonAsync("/rest/v1/me/dlna-star-tracks", new { shown = true }, ArcanistFactory.Json, Cancel))
+            .Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel);
+        Assert.True(mine.GetProperty("shown").GetBoolean());
+        await PublishAsync("STARRED");
+        Assert.Equal(["listener's StarTracks", "ana's StarTracks"], Titles((await BrowseAsync("starred")).Didl));
+        await listenerClient.PutAsJsonAsync("/rest/v1/me/dlna-star-tracks", new { shown = false }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(["ana's StarTracks"], Titles((await BrowseAsync("starred")).Didl));
+        Assert.Equal(701, await FaultAsync($"starred/{listener.Id:N}"));
+    }
+
+    [Fact]
+    public async Task Each_published_library_is_browsed_on_its_own()
+    {
+        var other = Directory.CreateTempSubdirectory("arcanist-dlna-other-").FullName;
+        AudioFixtures.WriteWav(Path.Combine(other, "Other", "01.wav"), 4, new FixtureTags("Elsewhere", "Other", "Away", "Other", TrackNumber: 1));
+        var created = await _admin.PostAsJsonAsync("/rest/v1/libraries", new Core.Application.Libraries.CreateLibraryInput("Second", false, null, [new Core.Application.Libraries.LibrarySourceInput(other)]), ArcanistFactory.Json, Cancel);
+        var secondId = (await created.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("id").GetString()!;
+        await _factory.WaitForScansAsync(_admin);
+        await _admin.PutAsJsonAsync("/rest/v1/dlna/settings",
+            new { friendlyName = (string?)null, libraryIds = new[] { _libraryId, secondId }, sections = new[] { "LIBRARIES" } }, ArcanistFactory.Json, Cancel);
+
+        Assert.Equal(["Libraries"], Titles((await BrowseAsync("0")).Didl));
+        var (libraries, _) = await BrowseAsync("libraries");
+        Assert.Equal(["Music", "Second"], Titles(libraries));
+        var second = libraries.Elements().Last().Attribute("id")!.Value;
+        var (views, _) = await BrowseAsync(second);
+        Assert.Equal(["Artists", "Albums", "Folders"], Titles(views));
+        var ids = views.Elements().Select(e => e.Attribute("id")!.Value).ToList();
+
+        var (artists, _) = await BrowseAsync(ids[0]);
+        Assert.Equal(["Other"], Titles(artists));
+        Assert.Equal(["Away"], Titles((await BrowseAsync(artists.Elements().Single().Attribute("id")!.Value)).Didl));
+        Assert.Equal(["Away"], Titles((await BrowseAsync(ids[1])).Didl));
+        var (roots, _) = await BrowseAsync(ids[2]);
+        Assert.Equal(["Second"], Titles(roots));
+        Assert.Equal(["Other"], Titles((await BrowseAsync(roots.Elements().Single().Attribute("id")!.Value)).Didl));
+        // The first library's albums are not the second's.
+        var first = libraries.Elements().First().Attribute("id")!.Value;
+        Assert.Equal(["First Album", "Solo"], Titles((await BrowseAsync($"libalbums/{first["library/".Length..]}")).Didl));
+        Assert.Equal(["Second"], Titles((await BrowseAsync(second, "BrowseMetadata")).Didl));
+
+        // Libraries that are not published are not there.
+        await _admin.PutAsJsonAsync("/rest/v1/dlna/settings",
+            new { friendlyName = (string?)null, libraryIds = new[] { _libraryId }, sections = new[] { "LIBRARIES" } }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(701, await FaultAsync(second));
+        Directory.Delete(other, recursive: true);
+    }
+
+    [Fact]
     public async Task A_deleted_library_is_no_longer_published_and_saving_still_works()
     {
         var other = Directory.CreateDirectory(Path.Combine(_music + "-other")).FullName;

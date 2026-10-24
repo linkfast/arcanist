@@ -24,6 +24,7 @@ namespace Arcanist.Core.Application.Dlna;
 /// <param name="Addresses">The description URLs devices find through SSDP, one per local network.</param>
 /// <param name="ConvertsFormats">ffmpeg is available, so devices that do not play a format get it converted.</param>
 /// <param name="RecordPlays">Plays on renderers ("play to") count in their users' statistics; false while paused.</param>
+/// <param name="StarTracksUserIds">Users whose StarTracks devices see, a folder each in StarTracks (when none, those of <paramref name="RatingsUserId"/>).</param>
 public sealed record DlnaStatus(
     bool Enabled,
     string Name,
@@ -33,10 +34,20 @@ public sealed record DlnaStatus(
     Guid? RatingsUserId,
     IReadOnlyList<string> Addresses,
     bool ConvertsFormats,
-    bool RecordPlays);
+    bool RecordPlays,
+    IReadOnlyList<Guid> StarTracksUserIds);
 
 /// <param name="RatingsUserId">Whose stars and ratings the StarTracks and rated sections show; the first administrator when null.</param>
-public sealed record DlnaSettingsInput(string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null);
+/// <param name="StarTracksUserIds">Users whose StarTracks devices see, a folder each; null keeps those chosen.</param>
+public sealed record DlnaSettingsInput(
+    string? FriendlyName, IReadOnlyList<Guid> LibraryIds, IReadOnlyList<DlnaSection> Sections, Guid? RatingsUserId = null,
+    IReadOnlyList<Guid>? StarTracksUserIds = null);
+
+/// <summary>Whether a user's StarTracks are shown to the devices of the local network (DLNA).</summary>
+/// <param name="Available">The DLNA media server is on.</param>
+/// <param name="Shown">Devices see a folder with the user's StarTracks (of the published libraries).</param>
+/// <param name="Name">The name devices show for the server.</param>
+public sealed record MyDlnaStarTracks(bool Available, bool Shown, string Name);
 
 /// <summary>A device on the local network Arcanist can play to (a DLNA media renderer).</summary>
 /// <param name="Manual">Added by an administrator from its address rather than found on the network.</param>
@@ -134,7 +145,8 @@ public sealed class DlnaService(
         var libraryIds = await db.Libraries.Where(l => config.LibraryIds.Contains(l.Id)).Select(l => l.Id).ToListAsync(cancellationToken);
         return new DlnaStatus(Enabled, config.Name, config.FriendlyName, config.LibraryIds.Where(libraryIds.Contains).ToList(), config.Sections,
             await RatingsUserAsync(config, cancellationToken),
-            Enabled ? Endpoint.DescriptionUrls() : [], DlnaFormats.Convertible(ffmpeg.Current).Count > 0, config.RecordPlays);
+            Enabled ? Endpoint.DescriptionUrls() : [], DlnaFormats.Convertible(ffmpeg.Current).Count > 0, config.RecordPlays,
+            (await StarTracksUsersAsync(db, config, cancellationToken)).Select(u => u.Id).ToList());
     }
 
     public async Task<DlnaStatus> SetSettingsAsync(DlnaSettingsInput input, CancellationToken cancellationToken)
@@ -154,12 +166,41 @@ public sealed class DlnaService(
             errors.Add("sections", ErrorCodes.InvalidFormat);
         if (input.RatingsUserId is { } user && !await db.Users.AnyAsync(u => u.Id == user, cancellationToken))
             errors.Add("ratingsUserId", ErrorCodes.NotFound);
+        var starTracks = input.StarTracksUserIds?.Distinct().ToList();
+        if (starTracks is not null && await db.Users.CountAsync(u => starTracks.Contains(u.Id), cancellationToken) != starTracks.Count)
+            errors.Add("starTracksUserIds", ErrorCodes.NotFound);
         errors.ThrowIfAny();
 
         var config = await Settings.GetAsync(cancellationToken);
-        await Settings.SetAsync(config with { FriendlyName = name, LibraryIds = libraries, Sections = sections, RatingsUserId = input.RatingsUserId },
-            cancellationToken);
+        await Settings.SetAsync(config with
+        {
+            FriendlyName = name, LibraryIds = libraries, Sections = sections, RatingsUserId = input.RatingsUserId,
+            StarTracksUserIds = starTracks ?? config.StarTracksUserIds,
+        }, cancellationToken);
         return await StatusAsync(cancellationToken);
+    }
+
+    /// <summary>Whether the caller's StarTracks are shown to DLNA devices.</summary>
+    public async Task<MyDlnaStarTracks> MyStarTracksAsync(CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var config = await Settings.GetAsync(cancellationToken);
+        return new MyDlnaStarTracks(Enabled, config.StarTracksUserIds?.Contains(access.UserId) == true, config.Name);
+    }
+
+    /// <summary>
+    /// Shows (or stops showing) the caller's StarTracks to the devices of the local network, as a folder of the
+    /// StarTracks section: only songs of the published libraries, to anyone there. Any user, for themselves.
+    /// </summary>
+    public async Task<MyDlnaStarTracks> SetMyStarTracksAsync(bool shown, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var config = await Settings.GetAsync(cancellationToken);
+        var users = (config.StarTracksUserIds ?? []).Where(u => u != access.UserId).ToList();
+        if (shown)
+            users.Add(access.UserId);
+        await Settings.SetAsync(config with { StarTracksUserIds = users }, cancellationToken);
+        return await MyStarTracksAsync(cancellationToken);
     }
 
     /// <summary>
@@ -452,6 +493,17 @@ public sealed class DlnaService(
     }
 
     private Task<Guid?> RatingsUserAsync(DlnaConfig config, CancellationToken cancellationToken) => RatingsUserAsync(db, config, cancellationToken);
+
+    /// <summary>The users whose StarTracks DLNA shows, in the order chosen, with the name devices show (deleted and disabled ones left out).</summary>
+    internal static async Task<IReadOnlyList<(Guid Id, string Name)>> StarTracksUsersAsync(ArcanistDbContext db, DlnaConfig config,
+        CancellationToken cancellationToken)
+    {
+        if (config.StarTracksUserIds is not { Count: > 0 } ids)
+            return [];
+        var users = await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id) && !u.IsDisabled)
+            .Select(u => new { u.Id, Name = u.DisplayName ?? u.UserName }).ToDictionaryAsync(u => u.Id, u => u.Name, cancellationToken);
+        return ids.Where(users.ContainsKey).Select(id => (id, users[id])).ToList();
+    }
 
     private void RequireEnabled()
     {

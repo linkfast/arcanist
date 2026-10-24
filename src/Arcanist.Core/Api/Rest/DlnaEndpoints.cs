@@ -8,6 +8,8 @@ public sealed record SetDlnaRendererVolumeInput(int Volume);
 
 public sealed record SetDlnaRecordPlaysInput(bool Record);
 
+public sealed record SetMyDlnaStarTracksInput(bool Shown);
+
 public static class DlnaEndpoints
 {
     public static IEndpointRouteBuilder MapDlnaEndpoints(this IEndpointRouteBuilder rest)
@@ -26,6 +28,17 @@ public static class DlnaEndpoints
         dlna.MapPut("/record-plays", (SetDlnaRecordPlaysInput input, DlnaService service, CancellationToken ct) => service.SetRecordPlaysAsync(input.Record, ct))
             .WithName("SetDlnaRecordPlays")
             .WithSummary("Pauses (false) or resumes (true) counting the plays of \"play to\" in users' statistics; renderers keep playing. Administrators only.");
+
+        rest.MapGet("/me/dlna-star-tracks", (DlnaService service, CancellationToken ct) => service.MyStarTracksAsync(ct))
+            .WithTags("DLNA")
+            .WithName("MyDlnaStarTracks")
+            .WithSummary("Whether the caller's StarTracks are shown to the devices of the local network (DLNA), and whether DLNA is on.");
+
+        rest.MapPut("/me/dlna-star-tracks", (SetMyDlnaStarTracksInput input, DlnaService service, CancellationToken ct) => service.SetMyStarTracksAsync(input.Shown, ct))
+            .WithTags("DLNA")
+            .WithName("SetMyDlnaStarTracks")
+            .WithSummary("Shows (true) or stops showing (false) the caller's StarTracks to the devices of the local network, as a folder of " +
+                         "DLNA's StarTracks: only songs of the published libraries, to anyone there without signing in.");
 
         dlna.MapGet("/renderers", (DlnaService service) => service.Renderers())
             .WithName("DlnaRenderers")

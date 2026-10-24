@@ -37,6 +37,11 @@ public sealed record AudioMetadata
     public int? Channels { get; init; }
     public int DurationMs { get; init; }
 
+    public string? Comment { get; init; }
+
+    /// <summary>The tempo written in the tags (not measured).</summary>
+    public double? Bpm { get; init; }
+
     /// <summary>Unsynchronized lyrics from the tags, or the text of a sidecar .lrc file.</summary>
     public string? Lyrics { get; init; }
 
@@ -105,6 +110,8 @@ public static partial class TagReader
             BitDepth = Positive(track.BitDepth),
             Channels = Positive(track.ChannelsArrangement?.NbChannels ?? 0),
             DurationMs = (int)Math.Min(int.MaxValue, Math.Max(0, track.DurationMs)),
+            Comment = Clean(track.Comment),
+            Bpm = track.BPM is > 0 and < 1000 ? Math.Round((double)track.BPM, 2) : null,
             AudioDataOffset = track.TechnicalInformation?.AudioDataOffset ?? 0,
             AudioDataSize = track.TechnicalInformation?.AudioDataSize ?? 0,
             EmbeddedPicture = Picture(track),

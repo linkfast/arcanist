@@ -142,6 +142,28 @@ internal sealed class LocalStorage(TimeProvider? time = null) : ILibraryStorage
         return Task.FromResult(File.Exists(path) || Directory.Exists(path));
     }
 
+    public Task<StorageEntry?> StatAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken)
+    {
+        var file = new FileInfo(Resolve(location, relativePath));
+        return Task.FromResult(file.Exists ? new StorageEntry(relativePath, file.Length, file.LastWriteTimeUtc) : null);
+    }
+
+    public StorageSpace? Space(StorageLocation location)
+    {
+        try
+        {
+            var root = Path.GetFullPath(location.Location);
+            var drive = DriveInfo.GetDrives()
+                .Where(d => d.IsReady && root.StartsWith(d.RootDirectory.FullName, PathComparison))
+                .MaxBy(d => d.RootDirectory.FullName.Length);
+            return drive is null ? null : new StorageSpace(drive.TotalSize, drive.AvailableFreeSpace);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     public Task MoveAsync(StorageLocation location, string from, string to, CancellationToken cancellationToken)
     {
         var source = Resolve(location, from);

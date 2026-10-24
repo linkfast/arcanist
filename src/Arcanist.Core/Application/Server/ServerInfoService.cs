@@ -114,6 +114,48 @@ public enum ApiFeature
     /// without a library, optionally for a wish) and <c>targetLibraryId</c> on wishes.
     /// </summary>
     UploadDestination,
+
+    /// <summary>
+    /// Editing tracks' tags, written to their files: <c>editTrack</c> (<c>PATCH /rest/v1/tracks/{id}</c>) and
+    /// <c>editTracks</c>; permission EDIT_METADATA; <c>Track.canEdit</c>.
+    /// </summary>
+    TrackEditing,
+
+    /// <summary>
+    /// Deleting tracks (their files go to the trash): <c>deleteTrack</c> (<c>DELETE /rest/v1/tracks/{id}</c>) and
+    /// <c>deleteTracks</c>; permission DELETE_TRACKS; <c>Track.canDelete</c>.
+    /// </summary>
+    TrackDeletion,
+
+    /// <summary>
+    /// Replacing and removing covers, embedded in the files: <c>PUT|DELETE /rest/v1/tracks/{id}/artwork</c> and
+    /// <c>/rest/v1/albums/{id}/artwork</c> (permission EDIT_METADATA).
+    /// </summary>
+    ArtworkEditing,
+
+    /// <summary>
+    /// What a properties dialog shows: <c>TrackFile</c> has its library, path, hash and dates, and <c>Track</c> its album
+    /// artist, release, comment, tagged tempo and <c>updatedAt</c>.
+    /// </summary>
+    TrackProperties,
+
+    /// <summary><c>myStorage</c>: the music of each library the user can access, and the free space of its disk.</summary>
+    StorageUsage,
+
+    /// <summary>
+    /// Choosing where uploads go: <c>libraryId</c> on <c>POST /rest/v1/uploads</c>, and each user's own default
+    /// (<c>myUploadSettings</c>/<c>setMyUploadSettings</c>), for apps that use the whole server as one library.
+    /// </summary>
+    UploadTarget,
+
+    /// <summary>
+    /// Incremental refresh: <c>changedSince</c> on <c>tracks</c> and <c>playlists</c>, <c>TrackPage.serverTime</c>, and
+    /// <c>trackIds</c> to see which tracks left.
+    /// </summary>
+    ChangesSince,
+
+    /// <summary><c>renameLibrary</c> (<c>PUT /rest/v1/libraries/{id}/name</c>): only the name, for managers and owners.</summary>
+    LibraryRename,
 }
 
 public sealed class ServerInfoService(

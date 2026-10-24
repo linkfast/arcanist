@@ -551,7 +551,9 @@ export type PeerRulesInput = {
 };
 
 export type Permission =
+  | 'DELETE_TRACKS'
   | 'DOWNLOAD'
+  | 'EDIT_METADATA'
   | 'MANAGE_LIBRARIES'
   | 'MANAGE_SETTINGS'
   | 'MANAGE_USERS'

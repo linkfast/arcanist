@@ -1502,7 +1502,7 @@
         "tags": [
           "Uploads"
         ],
-        "summary": "Adds an audio file as \u0060uploadToLibrary\u0060 does, into the library the server chooses: the target of the user\u0027s wish \u0060wishId\u0060 when it has one, else the server\u0027s default for uploads (\u0060uploadSettings\u0060); \u0060upload_library_required\u0060 without one. Requires UPLOAD.",
+        "summary": "Adds an audio file as \u0060uploadToLibrary\u0060 does: into \u0060libraryId\u0060 when given, else the target of the user\u0027s wish \u0060wishId\u0060 when it has one, else the user\u0027s own choice (\u0060myUploadSettings\u0060), else the server\u0027s default for uploads (\u0060uploadSettings\u0060); \u0060upload_library_required\u0060 without one. Requires UPLOAD.",
         "operationId": "Upload",
         "parameters": [
           {
@@ -1515,6 +1515,14 @@
           },
           {
             "name": "wishId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "libraryId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -1606,6 +1614,77 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UploadSettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/upload-settings": {
+      "get": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "The library the user chose for their uploads that name none, and where such an upload goes now (their choice, else the server\u0027s default).",
+        "operationId": "MyUploadSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUploadSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Chooses the library the user\u0027s uploads go to when they name none (one they can upload to: libraryId not_found otherwise); null goes back to the server\u0027s default. For apps that use the whole server as one library.",
+        "operationId": "SetMyUploadSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMyUploadSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyUploadSettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/storage": {
+      "get": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "How much music each library the user can access holds (files, tracks, bytes) and the free space of its disk when known, with the totals and the free space where the user\u0027s uploads go.",
+        "operationId": "MyStorage",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyStorage"
                 }
               }
             }
@@ -2946,6 +3025,77 @@
         }
       }
     },
+    "/rest/v1/me/export/files": {
+      "get": {
+        "tags": [
+          "Migration"
+        ],
+        "summary": "A user\u0027s own copy of the music they can play (a local backup, without being an administrator): the original files, page by page, with library, path, size, audio hash and a resumable download URL. Requires DOWNLOAD.",
+        "operationId": "MyExportFiles",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportableFilePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/export/data": {
+      "get": {
+        "tags": [
+          "Migration"
+        ],
+        "summary": "The user\u0027s own data (ratings, StarTracks, play counts, plays, playlists) in the backups\u0027 format (docs/backups.md): \u0060{ catalog, userData }\u0060.",
+        "operationId": "MyExportData",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/me": {
       "get": {
         "tags": [
@@ -3554,6 +3704,48 @@
         "responses": {
           "201": {
             "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Library"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/libraries/{id}/name": {
+      "put": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Renames a library (only its name). Requires MANAGE_LIBRARIES, or to own it (a personal library). duplicate when another library has that name.",
+        "operationId": "RenameLibrary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameLibraryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
@@ -4580,8 +4772,18 @@
         "tags": [
           "Playlists"
         ],
-        "summary": "The user\u0027s playlists, those they collaborate on and public ones, most recently changed first.",
+        "summary": "The user\u0027s playlists, those they collaborate on and public ones, most recently changed first. With \u0060changedSince\u0060, only those changed after it (deleted ones are not listed: the whole list says which are left).",
         "operationId": "Playlists",
+        "parameters": [
+          {
+            "name": "changedSince",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -9426,7 +9628,7 @@
         "tags": [
           "Catalog"
         ],
-        "summary": "Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album\u0027s tracks in disc and track order, without paging.",
+        "summary": "Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album\u0027s tracks in disc and track order, without paging. With \u0060changedSince\u0060 (an earlier page\u0027s \u0060serverTime\u0060), only the tracks the catalog changed after it (tags, copies) or the user rated or played after it; the ones that left are found with trackIds.",
         "operationId": "Tracks",
         "parameters": [
           {
@@ -9478,6 +9680,14 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "changedSince",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
           }
         ],
         "responses": {
@@ -9487,6 +9697,105 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TrackPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/ids": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "The ids of every track the user can play (optionally of one library), at once and sorted: what a client compares with its own to see which tracks left the server.",
+        "operationId": "TrackIds",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackIdList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/edit": {
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Applies the same tag changes to several tracks (at most 1000), as editTrack does. Returns them as they are now, in the order asked. Requires EDIT_METADATA.",
+        "operationId": "EditTracks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Track"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/delete": {
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Deletes tracks (at most 1000), or only their copies in \u0060libraryId\u0060: their files go to the trash of their locations (purged after 30 days) and they leave the catalog with their ratings, plays and playlist entries. One outcome per track. Requires DELETE_TRACKS.",
+        "operationId": "DeleteTracks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrackDeletion"
+                  }
                 }
               }
             }
@@ -9533,6 +9842,7 @@
         "tags": [
           "Catalog"
         ],
+        "summary": "A track with everything a properties dialog shows: its tags, its copies (library, path, size, format, quality, hash, dates), the user\u0027s rating and plays, and the analysis (tempo, key, loudness) when done.",
         "operationId": "Track",
         "parameters": [
           {
@@ -9552,6 +9862,251 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Changes a track\u0027s tags: fields left out stay, empty ones (\u0022\u0022, [], 0, the nil UUID) are cleared. Written to every copy\u0027s file (the original goes to the trash) and read back into the catalog. Returns the track as it is now: its id changes only when the new tags make it the same song as another track of its album, which it joins. Requires EDIT_METADATA and libraries the user adds to; read_only where the server cannot write, cue_sheet_track for tracks of a file split by a cue sheet, tags_unsupported for formats without tags, busy while a scan keeps the library.",
+        "operationId": "EditTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackEditInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Deletes a track (or only its copies in \u0060libraryId\u0060) as deleteTracks does. Requires DELETE_TRACKS.",
+        "operationId": "DeleteTrack",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/{id}/artwork": {
+      "put": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Makes the image (the request body: JPEG or PNG, other formats are converted to JPEG; at most 20 MB) the track\u0027s cover: embedded in its files as the front cover, replacing their pictures. An album without a cover takes it too. Requires EDIT_METADATA.",
+        "operationId": "SetTrackArtwork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            },
+            "application/octet-stream": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Removes the pictures of the track\u0027s files and its own image; it shows its album\u0027s cover, if the album has one. Requires EDIT_METADATA.",
+        "operationId": "RemoveTrackArtwork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Track"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/albums/{id}/artwork": {
+      "put": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Makes the image (the request body, as for setTrackArtwork) the album\u0027s cover, embedded in every file of its tracks. Requires EDIT_METADATA.",
+        "operationId": "SetAlbumArtwork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            },
+            "application/octet-stream": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Album"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Removes the album\u0027s cover and the pictures of every file of its tracks (a cover image in its folder may bring it back at the next full scan). Requires EDIT_METADATA.",
+        "operationId": "RemoveAlbumArtwork",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Album"
                 }
               }
             }
@@ -11152,7 +11707,15 @@
           "WISH_LIST",
           "STREAMING_DEFAULTS",
           "UPLOAD_LOG",
-          "UPLOAD_DESTINATION"
+          "UPLOAD_DESTINATION",
+          "TRACK_EDITING",
+          "TRACK_DELETION",
+          "ARTWORK_EDITING",
+          "TRACK_PROPERTIES",
+          "STORAGE_USAGE",
+          "UPLOAD_TARGET",
+          "CHANGES_SINCE",
+          "LIBRARY_RENAME"
         ]
       },
       "AppPassword": {
@@ -12199,6 +12762,21 @@
               "string"
             ],
             "format": "int32"
+          },
+          "comment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           },
           "lyrics": {
             "type": [
@@ -13786,6 +14364,28 @@
           null
         ]
       },
+      "DeleteTracksInput": {
+        "required": [
+          "trackIds"
+        ],
+        "type": "object",
+        "properties": {
+          "trackIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "DiskUsage": {
         "required": [
           "totalBytes",
@@ -14589,6 +15189,119 @@
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "EditTracksInput": {
+        "required": [
+          "trackIds",
+          "changes"
+        ],
+        "type": "object",
+        "properties": {
+          "trackIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "changes": {
+            "$ref": "#/components/schemas/TrackEditInput"
+          }
+        }
+      },
+      "ExportableFile": {
+        "required": [
+          "trackId",
+          "fileId",
+          "libraryId",
+          "path",
+          "size",
+          "contentHash",
+          "format",
+          "modifiedAt",
+          "cueTrack",
+          "downloadUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "contentHash": {
+            "type": "string"
+          },
+          "format": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cueTrack": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "downloadUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "ExportableFilePage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExportableFile"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
               "integer",
               "string"
             ],
@@ -16307,6 +17020,77 @@
           }
         }
       },
+      "LibraryStorageUsage": {
+        "required": [
+          "libraryId",
+          "name",
+          "kind",
+          "files",
+          "tracks",
+          "bytes",
+          "freeBytes",
+          "totalBytes",
+          "canUpload"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LibrarySourceKind"
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tracks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "freeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "totalBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "canUpload": {
+            "type": "boolean"
+          }
+        }
+      },
       "LibrarySummary": {
         "required": [
           "libraryId",
@@ -17932,6 +18716,56 @@
           }
         }
       },
+      "MyStorage": {
+        "required": [
+          "libraries",
+          "files",
+          "bytes",
+          "uploadLibraryId",
+          "uploadFreeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryStorageUsage"
+            }
+          },
+          "files": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "uploadLibraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "uploadFreeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "MyUltimateCloudStatus": {
         "required": [
           "enabled",
@@ -18139,6 +18973,43 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "MyUploadSettings": {
+        "required": [
+          "libraryId",
+          "libraryName",
+          "effectiveLibraryId",
+          "effectiveLibraryName"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "libraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effectiveLibraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "effectiveLibraryName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -19470,7 +20341,9 @@
           "VIEW_ALL_STATS",
           "UPLOAD",
           "PLAY_ON_SERVER",
-          "VIEW_ALL_WISHES"
+          "VIEW_ALL_WISHES",
+          "EDIT_METADATA",
+          "DELETE_TRACKS"
         ]
       },
       "PlannedMove": {
@@ -20246,6 +21119,17 @@
           "HERE",
           "OWNER"
         ]
+      },
+      "RenameLibraryInput": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
       },
       "RenameReceivedShareInput": {
         "required": [
@@ -21387,6 +22271,21 @@
         "properties": {
           "shown": {
             "type": "boolean"
+          }
+        }
+      },
+      "SetMyUploadSettingsInput": {
+        "required": [
+          "libraryId"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -23053,7 +23952,14 @@
           "libraryIds",
           "year",
           "musicBrainzRecordingId",
-          "acoustId"
+          "acoustId",
+          "albumArtist",
+          "musicBrainzReleaseId",
+          "comment",
+          "taggedBpm",
+          "updatedAt",
+          "canEdit",
+          "canDelete"
         ],
         "type": "object",
         "properties": {
@@ -23203,6 +24109,41 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "albumArtist": {
+            "$ref": "#/components/schemas/ArtistReference"
+          },
+          "musicBrainzReleaseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "comment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taggedBpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "canDelete": {
+            "type": "boolean"
           }
         }
       },
@@ -23603,6 +24544,165 @@
           }
         }
       },
+      "TrackDeletion": {
+        "required": [
+          "trackId",
+          "status",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TrackDeletionStatus"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TrackDeletionStatus": {
+        "enum": [
+          "DELETED",
+          "NOT_FOUND",
+          "FORBIDDEN",
+          "NOT_DELETABLE",
+          "FAILED"
+        ]
+      },
+      "TrackEditInput": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artists": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "albumArtist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "genres": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "trackNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "discNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "composers": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "lyricists": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "conductor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "comment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "lyrics": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "musicBrainzRecordingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "musicBrainzReleaseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "TrackFile": {
         "required": [
           "id",
@@ -23616,7 +24716,13 @@
           "replayGainTrackGain",
           "replayGainAlbumGain",
           "loudness",
-          "streamUrl"
+          "streamUrl",
+          "libraryId",
+          "path",
+          "contentHash",
+          "addedAt",
+          "modifiedAt",
+          "cueTrack"
         ],
         "type": "object",
         "properties": {
@@ -23712,6 +24818,52 @@
           },
           "streamUrl": {
             "type": "string"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": "string"
+          },
+          "contentHash": {
+            "type": "string"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cueTrack": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "TrackIdList": {
+        "required": [
+          "ids",
+          "serverTime"
+        ],
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -23888,7 +25040,8 @@
         "required": [
           "items",
           "nextCursor",
-          "totalCount"
+          "totalCount",
+          "serverTime"
         ],
         "type": "object",
         "properties": {
@@ -23911,6 +25064,10 @@
               "string"
             ],
             "format": "int32"
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -25609,6 +26766,9 @@
     },
     {
       "name": "Media"
+    },
+    {
+      "name": "Migration"
     },
     {
       "name": "Me"

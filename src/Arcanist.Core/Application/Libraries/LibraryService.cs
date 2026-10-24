@@ -151,6 +151,33 @@ public sealed class LibraryService(
         return library.ToModel(includeSources: true, guard.Authenticated(), cloud);
     }
 
+    /// <summary>
+    /// Renames a library, nothing else: for apps that show the server's libraries as their own. Needs MANAGE_LIBRARIES
+    /// (and a library the manager can access), or to be the owner of a personal library (their own Ultimate Cloud).
+    /// </summary>
+    public async Task<Library> RenameAsync(Guid id, RenameLibraryInput input, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        if (VirtualLibraries.IsVirtual(id))
+            throw new ArcanistException.Conflict(ErrorCodes.LibraryVirtual);
+        var library = await Visible(access).Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == id, cancellationToken)
+                      ?? throw new ArcanistException.NotFound();
+        if (library.OwnerUserId != access.UserId && !access.Has(Permissions.ManageLibraries))
+            throw new ArcanistException.Forbidden();
+        if (library.ManagedBy is not null)
+            throw new ArcanistException.Conflict(ErrorCodes.LibraryManaged);
+
+        var errors = new ValidationErrors();
+        LibraryRules.ValidateName(input.Name, "name", errors);
+        await EnsureUniqueNameAsync(input.Name, exceptId: id, errors, cancellationToken);
+        errors.ThrowIfAny();
+
+        library.Name = input.Name.Trim();
+        await db.SaveChangesAsync(cancellationToken);
+        return library.ToModel(access.Has(Permissions.ManageLibraries), access, cloud)
+            with { SharedBy = (await SharingServersAsync(cancellationToken)).GetValueOrDefault(library.Id) };
+    }
+
     /// <summary>Removes the library and its files from the catalog. Files on disk are never touched.</summary>
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
     {

@@ -45,6 +45,9 @@ public static class SettingKeys
     /// <summary>Where uploads that name no library go (<c>StoredUploadSettings</c>).</summary>
     public const string Uploads = "uploads.settings";
 
+    /// <summary>The library a user's uploads go to when they name none: <c>uploads.user.&lt;id&gt;</c>.</summary>
+    public static string UserUploads(Guid userId) => $"uploads.user.{userId:N}";
+
     /// <summary>The terms accepted while setting the server up (<c>LegalAcceptance</c>).</summary>
     public const string LegalAcceptance = "legal.acceptance";
 

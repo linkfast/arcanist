@@ -96,6 +96,12 @@ public sealed class Track : Entity
 
     public Artwork? Artwork { get; set; }
 
+    /// <summary>The comment in the files' tags.</summary>
+    public string? Comment { get; set; }
+
+    /// <summary>The tempo the files' tags say (BPM), which may differ from the one measured by the analysis.</summary>
+    public double? TaggedBpm { get; set; }
+
     public DateTime AddedAt { get; init; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

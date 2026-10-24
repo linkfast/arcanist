@@ -67,6 +67,11 @@ public static class LibraryEndpoints
             .WithName("UpdateLibrary")
             .WithSummary("Requires MANAGE_LIBRARIES.");
 
+        libraries.MapPut("/{id:guid}/name", (Guid id, RenameLibraryInput input, LibraryService service, CancellationToken ct) =>
+                service.RenameAsync(id, input, ct))
+            .WithName("RenameLibrary")
+            .WithSummary("Renames a library (only its name). Requires MANAGE_LIBRARIES, or to own it (a personal library). duplicate when another library has that name.");
+
         libraries.MapDelete("/{id:guid}", async (Guid id, LibraryService service, CancellationToken ct) =>
             {
                 await service.DeleteAsync(id, ct);

@@ -49,6 +49,8 @@ const allPermissions: Permission[] = [
   'UPLOAD',
   'PLAY_ON_SERVER',
   'VIEW_ALL_WISHES',
+  'EDIT_METADATA',
+  'DELETE_TRACKS',
 ];
 
 interface UserForm {

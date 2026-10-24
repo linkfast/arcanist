@@ -29,6 +29,7 @@ public sealed class LibraryScanner(
     ScanProgressTracker progress,
     ScanEvents events,
     LibraryLocks locks,
+    Application.Catalog.CatalogSignals catalogSignals,
     IOptions<ScannerOptions> options,
     TimeProvider time,
     ILogger<LibraryScanner> logger)
@@ -88,6 +89,8 @@ public sealed class LibraryScanner(
             }
 
             job.Status = ScanStatus.Completed;
+            if (job.FilesAdded + job.FilesUpdated + job.FilesMissing > 0)
+                catalogSignals.Publish([library.Id], [], [], scanned: true);
             await db.Libraries.Where(l => l.Id == library.Id)
                 .ExecuteUpdateAsync(s => s.SetProperty(l => l.LastScanAt, Now()), CancellationToken.None);
         }

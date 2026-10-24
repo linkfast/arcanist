@@ -14,7 +14,9 @@ export type Permission =
   | 'VIEW_ALL_STATS'
   | 'UPLOAD'
   | 'PLAY_ON_SERVER'
-  | 'VIEW_ALL_WISHES';
+  | 'VIEW_ALL_WISHES'
+  | 'EDIT_METADATA'
+  | 'DELETE_TRACKS';
 export type DatabaseProvider = 'SQLITE' | 'POSTGRES';
 
 export interface UserAccount {

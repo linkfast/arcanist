@@ -270,6 +270,10 @@ public static class ErrorCodes
     public const string ImportRunning = "import_running";
     /// <summary>Users of that mStream server have not signed in yet, and their first sign-in asks that server through this import.</summary>
     public const string ImportInUse = "import_in_use";
+    /// <summary>The format of the file does not let its tags be written.</summary>
+    public const string TagsUnsupported = "tags_unsupported";
+    /// <summary>The track is part of a file split by a cue sheet: its tags are the sheet's, and the file holds other tracks.</summary>
+    public const string CueSheetTrack = "cue_sheet_track";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

@@ -34,6 +34,12 @@ public sealed record UserAccess(
     public bool CanUploadTo(Guid libraryId) =>
         !IsDisabled && Has(Permissions.Upload) && CanAccessLibrary(libraryId) && (IsAdmin || ReadOnlyLibraryIds?.Contains(libraryId) != true);
 
+    /// <summary>
+    /// May change what is in the library (edit tags, delete tracks, with their own permissions): access to it and not
+    /// being only a listener there. Administrators always may.
+    /// </summary>
+    public bool CanChange(Guid libraryId) => !IsDisabled && CanAccessLibrary(libraryId) && !IsReadOnlyIn(libraryId);
+
     /// <summary>Listens to the library but adds nothing to it.</summary>
     public bool IsReadOnlyIn(Guid libraryId) => !IsAdmin && ReadOnlyLibraryIds?.Contains(libraryId) == true;
 }

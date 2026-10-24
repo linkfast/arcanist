@@ -2305,6 +2305,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<Guid?>("ArtworkId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Comment")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("DiscNumber")
                         .HasColumnType("INTEGER");
 
@@ -2322,6 +2325,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<string>("SearchText")
                         .HasMaxLength(2000)
                         .HasColumnType("TEXT");
+
+                    b.Property<double?>("TaggedBpm")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("Title")
                         .IsRequired()

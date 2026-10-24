@@ -53,7 +53,8 @@ public sealed record ExportComponent(string Id, string Name, string Version, boo
 /// <summary>A user's password, as this server keeps it (ASP.NET Core Identity's hash, or empty).</summary>
 public sealed record ExportCredential(Guid UserId, string PasswordHash);
 
-public sealed record ExportFile(string Path, long Size, DateTime ModifiedAt);
+/// <param name="ContentHash">The audio hash of a catalogued audio file (tags excluded), null for the rest (covers, lyrics…).</param>
+public sealed record ExportFile(string Path, long Size, DateTime ModifiedAt, string? ContentHash = null);
 
 public sealed record ExportWish(
     Guid UserId,
@@ -199,7 +200,9 @@ internal static class ExportApi
     }
 
     /// <summary>Every file of the library's folders (audio and the rest: covers, lyrics, cue sheets), as stored.</summary>
-    private static async Task<IResult> FilesAsync(Guid id, ArcanistDbContext db, ILibraryStorageResolver storages, CancellationToken ct)
+    /// <param name="after">Only the paths after this one (ordinal order), for paging with <paramref name="first"/>; without
+    /// both, the whole list.</param>
+    private static async Task<IResult> FilesAsync(Guid id, string? after, int? first, ArcanistDbContext db, ILibraryStorageResolver storages, CancellationToken ct)
     {
         var library = await Exportable(db).AsNoTracking().Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == id, ct);
         if (library is null)
@@ -212,7 +215,29 @@ internal static class ExportApi
                 files.Add(new ExportFile(entry.RelativePath, entry.Size, entry.ModifiedAt));
         }
 
-        return Results.Json(files.DistinctBy(f => f.Path).OrderBy(f => f.Path, StringComparer.Ordinal).ToList());
+        IEnumerable<ExportFile> listed = files.DistinctBy(f => f.Path).OrderBy(f => f.Path, StringComparer.Ordinal);
+        if (after is not null)
+            listed = listed.Where(f => string.CompareOrdinal(f.Path, after) > 0);
+        if (first is { } count)
+            listed = listed.Take(Math.Clamp(count, 1, 10_000));
+        var page = listed.ToList();
+
+        var sourceIds = library.Sources.Select(s => s.Id).ToList();
+        var paths = page.Select(f => f.Path).ToList();
+        var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var chunk in paths.Chunk(500))
+        {
+            foreach (var row in await db.MediaFiles.AsNoTracking()
+                         .Where(f => sourceIds.Contains(f.LibrarySourceId) && chunk.Contains(f.RelativePath) && f.CueTrack <= 1 && f.MissingSince == null)
+                         .Select(f => new { f.RelativePath, f.ContentHash, f.CueTrack }).ToListAsync(ct))
+            {
+                // A file split by a cue sheet: the hash of its first track's range is not the file's; leave it out.
+                if (row.CueTrack == 0)
+                    hashes.TryAdd(row.RelativePath, row.ContentHash);
+            }
+        }
+
+        return Results.Json(page.Select(f => f with { ContentHash = hashes.GetValueOrDefault(f.Path) }).ToList());
     }
 
     /// <summary>One file as stored (with ranges, so a copy resumes). Never a play: nothing is recorded.</summary>

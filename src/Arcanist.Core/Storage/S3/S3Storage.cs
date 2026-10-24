@@ -258,6 +258,16 @@ internal sealed class S3Storage(
                || (await client.ListAsync(key + "/", null, 1, cancellationToken)).Objects.Count > 0;
     }
 
+    public async Task<StorageEntry?> StatAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken)
+    {
+        var source = Required(location);
+        var head = await source.Client.HeadAsync(Key(source, relativePath), cancellationToken);
+        if (head is null)
+            return null;
+        var size = source.Encryption is null ? head.Size : S3Encryption.PlainLength(head.Size) ?? head.Size;
+        return new StorageEntry(relativePath, size, head.LastModified);
+    }
+
     public async Task MoveAsync(StorageLocation location, string from, string to, CancellationToken cancellationToken)
     {
         var opened = Required(location);

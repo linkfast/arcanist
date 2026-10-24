@@ -14,9 +14,9 @@ public static class PlaylistEndpoints
     {
         var playlists = rest.MapGroup("/playlists").WithTags("Playlists");
 
-        playlists.MapGet("", (PlaylistService service, CancellationToken ct) => service.ListAsync(ct))
+        playlists.MapGet("", (DateTime? changedSince, PlaylistService service, CancellationToken ct) => service.ListAsync(ct, changedSince))
             .WithName("Playlists")
-            .WithSummary("The user's playlists, those they collaborate on and public ones, most recently changed first.");
+            .WithSummary("The user's playlists, those they collaborate on and public ones, most recently changed first. With `changedSince`, only those changed after it (deleted ones are not listed: the whole list says which are left).");
 
         playlists.MapGet("/{id:guid}", (Guid id, PlaylistService service, CancellationToken ct) => service.GetAsync(id, ct))
             .WithName("Playlist")

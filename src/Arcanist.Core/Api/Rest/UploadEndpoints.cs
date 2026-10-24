@@ -22,7 +22,7 @@ public static class UploadEndpoints
             .WithName("Uploads")
             .WithSummary("Every upload into the server's libraries, by any user and from any client (the admin panel, Ultimate Desktop, web players, phones, extensions), newest first, with optional filters. Requires MANAGE_LIBRARIES (only libraries the caller can access, unless administrator).");
 
-        rest.MapPost("/uploads", async (string fileName, Guid? wishId, string? client, HttpContext context, Application.Libraries.UploadService service,
+        rest.MapPost("/uploads", async (string fileName, Guid? wishId, Guid? libraryId, string? client, HttpContext context, Application.Libraries.UploadService service,
                 Microsoft.Extensions.Options.IOptionsMonitor<Application.Libraries.UploadOptions> options, CancellationToken ct) =>
             {
                 Application.Libraries.UploadClient? kind = null;
@@ -35,12 +35,14 @@ public static class UploadEndpoints
 
                 if (context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
                     limit.MaxRequestBodySize = options.CurrentValue.MaxBytes;
-                var result = await service.UploadAsync(wishId, fileName, context.Request.Body, kind, ct);
+                var result = libraryId is { } target
+                    ? await service.UploadAsync(target, fileName, context.Request.Body, kind, ct)
+                    : await service.UploadAsync(wishId, fileName, context.Request.Body, kind, ct);
                 return result.Status == Application.Libraries.UploadStatus.Imported ? Results.Created((string?)null, result) : Results.Ok(result);
             })
             .WithTags("Uploads")
             .WithName("Upload")
-            .WithSummary("Adds an audio file as `uploadToLibrary` does, into the library the server chooses: the target of the user's wish `wishId` when it has one, else the server's default for uploads (`uploadSettings`); `upload_library_required` without one. Requires UPLOAD.")
+            .WithSummary("Adds an audio file as `uploadToLibrary` does: into `libraryId` when given, else the target of the user's wish `wishId` when it has one, else the user's own choice (`myUploadSettings`), else the server's default for uploads (`uploadSettings`); `upload_library_required` without one. Requires UPLOAD.")
             .Accepts<Stream>("application/octet-stream")
             .Produces<Application.Libraries.UploadResult>(StatusCodes.Status201Created)
             .Produces<Application.Libraries.UploadResult>();
@@ -55,6 +57,22 @@ public static class UploadEndpoints
             .WithTags("Uploads")
             .WithName("SetUploadSettings")
             .WithSummary("Sets the library uploads go to when they name none; null leaves the choice to each upload. Requires MANAGE_LIBRARIES.");
+
+        rest.MapGet("/me/upload-settings", (Application.Libraries.UploadDestinations service, CancellationToken ct) => service.MyAsync(ct))
+            .WithTags("Uploads")
+            .WithName("MyUploadSettings")
+            .WithSummary("The library the user chose for their uploads that name none, and where such an upload goes now (their choice, else the server's default).");
+
+        rest.MapPut("/me/upload-settings", (Application.Libraries.SetMyUploadSettingsInput input, Application.Libraries.UploadDestinations service,
+                CancellationToken ct) => service.SetMyAsync(input, ct))
+            .WithTags("Uploads")
+            .WithName("SetMyUploadSettings")
+            .WithSummary("Chooses the library the user's uploads go to when they name none (one they can upload to: libraryId not_found otherwise); null goes back to the server's default. For apps that use the whole server as one library.");
+
+        rest.MapGet("/me/storage", (Application.Libraries.MyStorageService service, CancellationToken ct) => service.UsageAsync(ct))
+            .WithTags("Libraries")
+            .WithName("MyStorage")
+            .WithSummary("How much music each library the user can access holds (files, tracks, bytes) and the free space of its disk when known, with the totals and the free space where the user's uploads go.");
 
         rest.MapGet("/me/uploads", (string? after, int? first, MyUploadService service, CancellationToken ct) => service.UploadsAsync(first, after, ct))
             .WithTags("Uploads")

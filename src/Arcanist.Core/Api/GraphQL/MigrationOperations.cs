@@ -22,6 +22,17 @@ public sealed partial class Query
         ArcanistSourceInput input, [FromServices] ArcanistImportService import, CancellationToken cancellationToken) =>
         import.AnalyzeAsync(input, cancellationToken);
 
+    [Name("myExportFiles")]
+    [Description("A user's own copy of the music they can play (a local backup, without being an administrator): the original files, page by page (`first`, default 500, at most 2000, after the `after` cursor), with library, path, size, audio hash and a resumable download URL. Optionally one library. Requires DOWNLOAD (forbidden otherwise). Nothing counts as a play.")]
+    public static Task<ExportableFilePage> MyExportFiles([Id] Guid? libraryId, string? after, int? first, [FromServices] PersonalExportService export,
+        CancellationToken cancellationToken) =>
+        export.FilesAsync(libraryId, after, first, cancellationToken);
+
+    [Name("myExportData")]
+    [Description("The user's own data (ratings, StarTracks, play counts, plays and the playlists they own) with what recognises its tracks elsewhere, as a JSON document in the backups' format (docs/backups.md): `{ catalog, userData }`. Any signed-in user.")]
+    public static Task<string> MyExportData([FromServices] PersonalExportService export, CancellationToken cancellationToken) =>
+        export.DataAsync(cancellationToken);
+
     [Name("arcanistImports")]
     [Description("The latest migrations from other Arcanist servers and how far they got. Administrators only.")]
     public static Task<IReadOnlyList<ArcanistImportJob>> ArcanistImports([FromServices] ArcanistImportService import, CancellationToken cancellationToken) =>

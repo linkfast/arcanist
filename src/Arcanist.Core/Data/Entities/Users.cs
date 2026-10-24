@@ -22,6 +22,10 @@ public enum Permissions : long
     PlayOnServer = 1 << 7,
     /// <summary>Sees everyone's wish lists (the server's), not only their own.</summary>
     ViewAllWishes = 1 << 8,
+    /// <summary>Changes tracks' tags and covers: in the files themselves and in the catalog.</summary>
+    EditMetadata = 1 << 9,
+    /// <summary>Removes tracks from the libraries, their files going to the location's trash.</summary>
+    DeleteTracks = 1 << 10,
 }
 
 public sealed class User : Entity

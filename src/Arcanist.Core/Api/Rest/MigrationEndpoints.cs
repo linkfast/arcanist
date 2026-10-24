@@ -8,6 +8,19 @@ public static class MigrationEndpoints
     {
         var codes = rest.MapGroup("/migration-codes").WithTags("Import");
 
+        rest.MapGet("/me/export/files", (Guid? libraryId, string? after, int? first, PersonalExportService service, CancellationToken ct) =>
+                service.FilesAsync(libraryId, after, first, ct))
+            .WithTags("Migration")
+            .WithName("MyExportFiles")
+            .WithSummary("A user's own copy of the music they can play (a local backup, without being an administrator): the original files, page by page, with library, path, size, audio hash and a resumable download URL. Requires DOWNLOAD.");
+
+        rest.MapGet("/me/export/data", async (PersonalExportService service, CancellationToken ct) =>
+                Results.Text(await service.DataAsync(ct), "application/json"))
+            .WithTags("Migration")
+            .WithName("MyExportData")
+            .WithSummary("The user's own data (ratings, StarTracks, play counts, plays, playlists) in the backups' format (docs/backups.md): `{ catalog, userData }`.")
+            .Produces<string>(StatusCodes.Status200OK, "application/json");
+
         codes.MapGet("", (MigrationCodeService service, CancellationToken ct) => service.ListAsync(ct))
             .WithName("MigrationCodes")
             .WithSummary("The latest migration codes of this server, active or not. Administrators only.");

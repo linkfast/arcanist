@@ -115,11 +115,23 @@ public sealed class CatalogService(
 
     /// <param name="albumId">When set, all of the album's tracks are returned at once, in disc and track order.</param>
     /// <param name="libraryId">Only tracks with a copy in this library.</param>
+    /// <param name="changedSince">Only tracks the catalog changed after this (tags, copies), or that the user rated or played
+    /// after it: what a client refreshes. Tracks that left are found with <see cref="TrackIdsAsync"/>.</param>
     public async Task<TrackPage> TracksAsync(
-        string? search, Guid? albumId, Guid? artistId, string? after, int? first, CancellationToken cancellationToken, Guid? libraryId = null)
+        string? search, Guid? albumId, Guid? artistId, string? after, int? first, CancellationToken cancellationToken, Guid? libraryId = null,
+        DateTime? changedSince = null)
     {
         var access = guard.Authenticated();
+        var serverTime = time.GetUtcNow().UtcDateTime;
         var tracks = VisibleTracks(access, libraryId);
+        if (changedSince is { } since)
+        {
+            since = since.ToUniversalTime();
+            var user = access.UserId;
+            tracks = tracks.Where(t => t.UpdatedAt > since
+                                       || db.TrackRatings.Any(r => r.TrackId == t.Id && r.UserId == user && r.RatedAt > since)
+                                       || db.TrackPlayStats.Any(p => p.TrackId == t.Id && p.UserId == user && p.LastPlayedAt > since));
+        }
 
         if (artistId is { } artist)
             tracks = tracks.Where(t => t.Artists.Any(ta => ta.ArtistId == artist));
@@ -133,11 +145,23 @@ public sealed class CatalogService(
                 .OrderBy(t => t.DiscNumber ?? 1).ThenBy(t => t.TrackNumber).ThenBy(t => t.NormalizedTitle)
                 .ToListAsync(cancellationToken);
 
-            return new TrackPage(await ToModelsAsync(albumTracks, access, cancellationToken), null, albumTracks.Count);
+            return new TrackPage(await ToModelsAsync(albumTracks, access, cancellationToken), null, albumTracks.Count, serverTime);
         }
 
         var (page, next, total) = await Keyset.PageAsync(tracks, t => t.NormalizedTitle, after, first, cancellationToken);
-        return new TrackPage(await ToModelsAsync(page, access, cancellationToken), next, total);
+        return new TrackPage(await ToModelsAsync(page, access, cancellationToken), next, total, serverTime);
+    }
+
+    /// <summary>
+    /// The ids of every track the user can play (of one library, or all), at once: with them a client finds the tracks
+    /// that left the server since it last looked (deleted, gone from disk, no longer shared with the user).
+    /// </summary>
+    public async Task<TrackIdList> TrackIdsAsync(Guid? libraryId, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var serverTime = time.GetUtcNow().UtcDateTime;
+        var ids = await VisibleTracks(access, libraryId).Select(t => t.Id).OrderBy(id => id).ToListAsync(cancellationToken);
+        return new TrackIdList(ids, serverTime);
     }
 
     /// <summary>The tracks with these ids that <paramref name="access"/> can see, by id.</summary>
@@ -258,7 +282,7 @@ public sealed class CatalogService(
         var albumIds = tracks.Select(t => t.AlbumId).Distinct().ToList();
 
         var albums = await db.Albums.AsNoTracking().Where(a => albumIds.Contains(a.Id))
-            .Select(a => new { a.Id, a.Title, a.ArtworkId, a.Loudness, a.TruePeak, a.Year })
+            .Select(a => new { a.Id, a.Title, a.ArtworkId, a.Loudness, a.TruePeak, a.Year, a.AlbumArtistId, AlbumArtistName = a.AlbumArtist.Name, a.MusicBrainzReleaseId })
             .ToDictionaryAsync(a => a.Id, cancellationToken);
 
         var credits = (await db.TrackArtists.AsNoTracking().Where(ta => ids.Contains(ta.TrackId))
@@ -279,8 +303,14 @@ public sealed class CatalogService(
         var visibleFiles = await VisibleFiles(access).AsNoTracking().Where(f => ids.Contains(f.TrackId)).ToListAsync(cancellationToken);
         var files = visibleFiles.ToLookup(f => f.TrackId);
         var sourceIds = visibleFiles.Select(f => f.LibrarySourceId).Distinct().ToList();
-        var libraryOf = await db.LibrarySources.AsNoTracking().Where(s => sourceIds.Contains(s.Id))
-            .ToDictionaryAsync(s => s.Id, s => s.LibraryId, cancellationToken);
+        var sources = await db.LibrarySources.AsNoTracking().Where(s => sourceIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => new { s.LibraryId, s.Kind }, cancellationToken);
+        var libraryOf = sources.ToDictionary(s => s.Key, s => s.Value.LibraryId);
+        // Hints for the client's menus; the edit itself checks again (the folder may be read-only).
+        bool Writable(MediaFile f) => sources[f.LibrarySourceId].Kind is LibrarySourceKind.Local or LibrarySourceKind.S3;
+        bool Changeable(MediaFile f) => Writable(f) && f.CueTrack == 0 && access.CanChange(libraryOf[f.LibrarySourceId]);
+        var canEdit = access.Has(Permissions.EditMetadata);
+        var canDelete = access.Has(Permissions.DeleteTracks);
 
         var withLyrics = (await db.Lyrics.AsNoTracking().Where(l => ids.Contains(l.TrackId)).Select(l => l.TrackId).ToListAsync(cancellationToken)).ToHashSet();
 
@@ -324,7 +354,8 @@ public sealed class CatalogService(
                     .Select(f => new TrackFile(f.Id, f.Format, f.BitRate, f.SampleRate, f.BitDepth, f.Channels, f.Size, f.DurationMs,
                         f.ReplayGainTrackGain, f.ReplayGainAlbumGain,
                         LoudnessOf(analyses.GetValueOrDefault(f.ContentHash), album.Loudness, album.TruePeak),
-                        StreamUrls.For(t.Id, streamToken, f.Id)))
+                        StreamUrls.For(t.Id, streamToken, f.Id),
+                        libraryOf[f.LibrarySourceId], f.RelativePath, f.ContentHash, f.AddedAt, f.ModifiedAt, f.CueTrack))
                     .ToList(),
                 StreamUrls.For(t.Id, streamToken),
                 userRatings.TryGetValue(t.Id, out var rating) && (!singleStar || rating == 5) ? rating : null,
@@ -334,7 +365,14 @@ public sealed class CatalogService(
                 copies.Select(f => libraryOf[f.LibrarySourceId]).Distinct().ToList(),
                 album.Year,
                 recordings.GetValueOrDefault(t.RecordingId)?.MusicBrainzId,
-                recordings.GetValueOrDefault(t.RecordingId)?.AcoustId);
+                recordings.GetValueOrDefault(t.RecordingId)?.AcoustId,
+                new ArtistReference(album.AlbumArtistId, album.AlbumArtistName),
+                album.MusicBrainzReleaseId,
+                t.Comment,
+                t.TaggedBpm,
+                t.UpdatedAt,
+                canEdit && copies.Any(Writable) && copies.Where(Writable).All(Changeable),
+                canDelete && copies.Count > 0 && copies.All(Changeable));
         }).ToList();
     }
 

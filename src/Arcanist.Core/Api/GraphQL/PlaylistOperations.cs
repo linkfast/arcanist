@@ -7,9 +7,9 @@ namespace Arcanist.Core.Api.GraphQL;
 public sealed partial class Query
 {
     [Name("playlists")]
-    [Description("The user's playlists, those they collaborate on and public ones, most recently changed first.")]
-    public static Task<IReadOnlyList<Playlist>> Playlists([FromServices] PlaylistService playlists, CancellationToken cancellationToken) =>
-        playlists.ListAsync(cancellationToken);
+    [Description("The user's playlists, those they collaborate on and public ones, most recently changed first. With `changedSince`, only those changed after it (deleted ones are not listed: the whole list says which are left).")]
+    public static Task<IReadOnlyList<Playlist>> Playlists([FromServices] PlaylistService playlists, CancellationToken cancellationToken, DateTime? changedSince = null) =>
+        playlists.ListAsync(cancellationToken, changedSince);
 
     [Name("playlist")]
     [Description("A playlist by id. Playlists the user cannot see are reported as not found.")]

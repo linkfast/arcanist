@@ -2310,6 +2310,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<Guid?>("ArtworkId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Comment")
+                        .HasColumnType("text");
+
                     b.Property<int?>("DiscNumber")
                         .HasColumnType("integer");
 
@@ -2327,6 +2330,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<string>("SearchText")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<double?>("TaggedBpm")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("Title")
                         .IsRequired()

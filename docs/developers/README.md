@@ -419,6 +419,10 @@ An app that keeps its own library (Ultimate Desktop, for one) can use the server
   (1–5; a star is 5) and `playCounts` (`playCount`, `lastPlayedAt`) per call. Ratings only fill gaps and play counts
   keep the highest, so sending them twice changes nothing. Unknown tracks are counted as `ignored`.
 - **Playlists:** `createPlaylist` with the matched `trackIds` (up to 10,000 per playlist).
+- **The server as the app's only library:** editing tags and covers (written to the files), deleting tracks, track
+  properties, renaming libraries, storage used, the user's upload library, incremental refresh (`changedSince`,
+  `trackIds`, the `catalogChanged` subscription), a user's own copy of their music and data, and backups: see
+  [main-library.md](main-library.md).
 
 ## Home page, mixes and artist pages
 

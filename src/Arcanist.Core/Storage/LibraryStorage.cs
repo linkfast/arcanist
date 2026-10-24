@@ -75,6 +75,14 @@ public interface ILibraryStorage
 
     Task<bool> ExistsAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken);
 
+    /// <summary>The size and modification time of a file, as listing would report them; null when it is not there or
+    /// the storage cannot tell.</summary>
+    Task<StorageEntry?> StatAsync(StorageLocation location, string relativePath, CancellationToken cancellationToken) =>
+        Task.FromResult<StorageEntry?>(null);
+
+    /// <summary>The size and free space of the disk the location is on; null when unknown (remote storage).</summary>
+    StorageSpace? Space(StorageLocation location) => null;
+
     /// <summary>Moves a file within the location, creating the folders it needs.</summary>
     /// <exception cref="StorageConflictException">Something already exists at <paramref name="to"/>.</exception>
     Task MoveAsync(StorageLocation location, string from, string to, CancellationToken cancellationToken);
@@ -104,6 +112,9 @@ public interface ILibraryStorage
     /// </summary>
     IDisposable? Watch(StorageLocation location, Action changed);
 }
+
+/// <summary>How big the disk of a location is, and how much of it is free.</summary>
+public sealed record StorageSpace(long TotalBytes, long FreeBytes);
 
 /// <summary>A write would overwrite something that already exists.</summary>
 public sealed class StorageConflictException(string relativePath) : IOException($"'{relativePath}' already exists.")

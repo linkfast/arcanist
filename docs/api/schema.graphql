@@ -37,10 +37,11 @@ type Query {
   "Albums with music the user can play, by title (or the most recently added first, or at random: the same order all day for the user and `seed`); optionally only those of an artist, or with music in a library."
   albums(search: String, artistId: ID, after: String, first: Int, libraryId: ID, sort: AlbumSort, seed: Int): AlbumPage!
   album(id: ID!): Album!
-  "Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album's tracks in disc and track order, without paging."
-  tracks(search: String, albumId: ID, artistId: ID, after: String, first: Int, libraryId: ID): TrackPage!
+  "Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album's tracks in disc and track order, without paging. With `changedSince` (an earlier page's `serverTime`), only the tracks the catalog changed after it (tags, copies) or the user rated or played after it; the ones that left are found with trackIds."
+  tracks(search: String, albumId: ID, artistId: ID, after: String, first: Int, libraryId: ID, changedSince: DateTime): TrackPage!
   "Finds the server's tracks for an app's own (at most 1000 per call): by audio hash, MusicBrainz recording, AcoustID, and last by title, artist and album."
   matchTracks(input: MatchTracksInput!): [TrackMatch!]!
+  "A track with everything a properties dialog shows: its tags, its copies (library, path, size, format, quality, hash, dates), the user's rating and plays, and the analysis (tempo, key, loudness) when done."
   track(id: ID!): Track!
   "A track's lyrics, with synchronized lines when known. not_found when it has none."
   trackLyrics(trackId: ID!): TrackLyrics!
@@ -118,6 +119,10 @@ type Query {
   arcanistServers: [ArcanistServer!]!
   "What another Arcanist holds (libraries, users, extensions, players), read with its migration code. Administrators only."
   analyzeArcanistServer(input: ArcanistSourceInput!): ArcanistSourceAnalysis!
+  "A user's own copy of the music they can play (a local backup, without being an administrator): the original files, page by page (`first`, default 500, at most 2000, after the `after` cursor), with library, path, size, audio hash and a resumable download URL. Optionally one library. Requires DOWNLOAD (forbidden otherwise). Nothing counts as a play."
+  myExportFiles(libraryId: ID, after: String, first: Int): ExportableFilePage!
+  "The user's own data (ratings, StarTracks, play counts, plays and the playlists they own) with what recognises its tracks elsewhere, as a JSON document in the backups' format (docs/backups.md): `{ catalog, userData }`. Any signed-in user."
+  myExportData: String!
   "The latest migrations from other Arcanist servers and how far they got. Administrators only."
   arcanistImports: [ArcanistImportJob!]!
   "The latest imports from mStream, newest first. Administrators only."
@@ -148,8 +153,8 @@ type Query {
   p2pActivityLog(input: P2PActivityQuery!): P2PActivityPage!
   "What happened in the P2P network, newest first: pairings, connections, streams, refusals and revocations. Administrators only."
   p2pActivity(peerId: ID, limit: Int): [P2PActivityEntry!]!
-  "The user's playlists, those they collaborate on and public ones, most recently changed first."
-  playlists: [Playlist!]!
+  "The user's playlists, those they collaborate on and public ones, most recently changed first. With `changedSince`, only those changed after it (deleted ones are not listed: the whole list says which are left)."
+  playlists(changedSince: DateTime): [Playlist!]!
   "A playlist by id. Playlists the user cannot see are reported as not found."
   playlist(id: ID!): Playlist!
   "A playlist's tracks in order, page by page (100 by default, at most 1000)."
@@ -178,6 +183,12 @@ type Query {
   serverAudio: ServerAudioStatus!
   "How much space Arcanist takes, part by part (the database too), its database's tables, how much is in the catalog and the music of each library. Measured at most every five minutes unless refresh is true. Administrators only."
   storageUsage(refresh: Boolean! = false): StorageUsage!
+  "The ids of every track the user can play (optionally of one library), at once and sorted: what a client compares with its own to see which tracks left the server."
+  trackIds(libraryId: ID): TrackIdList!
+  "How much music each library the user can access holds (files, tracks, bytes) and the free space of its disk when known, with the totals and the free space where the user's uploads go."
+  myStorage: MyStorage!
+  "The library the user chose for their uploads that name none, and where such an upload goes now (their choice, else the server's default)."
+  myUploadSettings: MyUploadSettings!
   "The linked Ultimate Cloud account, its plan and what it enables. Administrators only."
   ultimateCloud: UltimateCloudStatus!
   "The Ultimate Cloud accounts linked to this server, for choosing where uploads go. Administrators only."
@@ -684,6 +695,7 @@ type TrackPage {
   items: [Track!]!
   nextCursor: String
   totalCount: Int!
+  serverTime: DateTime!
 }
 
 type Track {
@@ -710,6 +722,13 @@ type Track {
   year: Int
   musicBrainzRecordingId: ID
   acoustId: ID
+  albumArtist: ArtistReference!
+  musicBrainzReleaseId: ID
+  comment: String
+  taggedBpm: Float
+  updatedAt: DateTime!
+  canEdit: Boolean!
+  canDelete: Boolean!
 }
 
 type AlbumReference {
@@ -759,6 +778,12 @@ type TrackFile {
   replayGainAlbumGain: Float
   loudness: Loudness
   streamUrl: String!
+  libraryId: ID!
+  path: String!
+  contentHash: String!
+  addedAt: DateTime!
+  modifiedAt: DateTime!
+  cueTrack: Int!
 }
 
 type Loudness {
@@ -1621,6 +1646,25 @@ input ArcanistSourceInput {
   code: String
 }
 
+type ExportableFilePage {
+  items: [ExportableFile!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type ExportableFile {
+  trackId: ID!
+  fileId: ID!
+  libraryId: ID!
+  path: String!
+  size: Long!
+  contentHash: String!
+  format: String
+  modifiedAt: DateTime!
+  cueTrack: Int!
+  downloadUrl: String!
+}
+
 type ArcanistImportJob {
   id: ID!
   sourceName: String!
@@ -2319,6 +2363,38 @@ type DiskUsage {
   freeBytes: Long!
 }
 
+type TrackIdList {
+  ids: [ID!]!
+  serverTime: DateTime!
+}
+
+type MyStorage {
+  libraries: [LibraryStorageUsage!]!
+  files: Int!
+  bytes: Long!
+  uploadLibraryId: ID
+  uploadFreeBytes: Long
+}
+
+type LibraryStorageUsage {
+  libraryId: ID!
+  name: String!
+  kind: LibrarySourceKind!
+  files: Int!
+  tracks: Int!
+  bytes: Long!
+  freeBytes: Long
+  totalBytes: Long
+  canUpload: Boolean!
+}
+
+type MyUploadSettings {
+  libraryId: ID
+  libraryName: String
+  effectiveLibraryId: ID
+  effectiveLibraryName: String
+}
+
 type UltimateCloudStatus {
   state: UltimateCloudLinkState!
   account: String
@@ -2619,6 +2695,14 @@ enum ApiFeature {
   STREAMING_DEFAULTS
   UPLOAD_LOG
   UPLOAD_DESTINATION
+  TRACK_EDITING
+  TRACK_DELETION
+  ARTWORK_EDITING
+  TRACK_PROPERTIES
+  STORAGE_USAGE
+  UPLOAD_TARGET
+  CHANGES_SINCE
+  LIBRARY_RENAME
 }
 
 type LegalTerms {
@@ -2672,6 +2756,8 @@ enum Permission {
   UPLOAD
   PLAY_ON_SERVER
   VIEW_ALL_WISHES
+  EDIT_METADATA
+  DELETE_TRACKS
 }
 
 type Session {
@@ -2992,6 +3078,26 @@ type Mutation {
   setServerAudioSettings(input: ServerAudioSettingsInput!): ServerAudioStatus!
   "Plays a short tone on the server's device, to check it; refused while a queue plays. Administrators only."
   testServerAudio: Boolean!
+  "Changes a track's tags: fields left out stay, empty ones (\"\", [], 0, the nil UUID) are cleared. Written to every copy's file (the original goes to the trash) and read back into the catalog. Returns the track as it is now: its id changes only when the new tags make it the same song as another track of its album, which it joins. Requires EDIT_METADATA and libraries the user adds to; read_only where the server cannot write, cue_sheet_track for tracks of a file split by a cue sheet, tags_unsupported for formats without tags, busy while a scan keeps the library."
+  editTrack(id: ID!, input: TrackEditInput!): Track!
+  "Applies the same tag changes to several tracks (at most 1000), as editTrack does. Returns them as they are now, in the order asked. Requires EDIT_METADATA."
+  editTracks(input: EditTracksInput!): [Track!]!
+  "Deletes a track (or only its copies in `libraryId`) as deleteTracks does. Requires DELETE_TRACKS."
+  deleteTrack(id: ID!, libraryId: ID): Boolean!
+  "Deletes tracks (at most 1000), or only their copies in `libraryId`: their files go to the trash of their locations (purged after 30 days) and they leave the catalog with their ratings, plays and playlist entries. One outcome per track. Requires DELETE_TRACKS."
+  deleteTracks(input: DeleteTracksInput!): [TrackDeletion!]!
+  "Makes an image (base64, or a data URL; JPEG or PNG, other formats are converted to JPEG; at most 20 MB) the track's cover: embedded in its files as the front cover, replacing their pictures. An album without a cover takes it too. Requires EDIT_METADATA. REST takes the bytes as they are: PUT /rest/v1/tracks/{id}/artwork."
+  setTrackArtwork(id: ID!, image: String!): Track!
+  "Makes an image (as for setTrackArtwork) the album's cover, embedded in every file of its tracks. Requires EDIT_METADATA."
+  setAlbumArtwork(id: ID!, image: String!): Album!
+  "Removes the pictures of the track's files and its own image; it shows its album's cover, if the album has one. Requires EDIT_METADATA."
+  removeTrackArtwork(id: ID!): Track!
+  "Removes the album's cover and the pictures of every file of its tracks (a cover image in its folder may bring it back at the next full scan). Requires EDIT_METADATA."
+  removeAlbumArtwork(id: ID!): Album!
+  "Renames a library (only its name). Requires MANAGE_LIBRARIES, or to own it (a personal library). duplicate when another library has that name."
+  renameLibrary(id: ID!, input: RenameLibraryInput!): Library!
+  "Chooses the library the user's uploads go to when they name none (one they can upload to: libraryId not_found otherwise); null goes back to the server's default. For apps that use the whole server as one library."
+  setMyUploadSettings(input: SetMyUploadSettingsInput!): MyUploadSettings!
   "Asks Ultimate Cloud for a code to approve on its site; the server waits for the approval. Administrators only, with a recent authentication."
   startUltimateCloudLink: UltimateCloudStatus!
   "Stops waiting for a code's approval. Administrators only."
@@ -3588,6 +3694,57 @@ input ServerAudioSettingsInput {
   name: String
 }
 
+input TrackEditInput {
+  title: String
+  artists: [String!]
+  albumArtist: String
+  album: String
+  genres: [String!]
+  year: Int
+  trackNumber: Int
+  discNumber: Int
+  composers: [String!]
+  lyricists: [String!]
+  conductor: String
+  comment: String
+  bpm: Float
+  lyrics: String
+  musicBrainzRecordingId: ID
+  musicBrainzReleaseId: ID
+}
+
+input EditTracksInput {
+  trackIds: [ID!]!
+  changes: TrackEditInput!
+}
+
+type TrackDeletion {
+  trackId: ID!
+  status: TrackDeletionStatus!
+  code: String
+}
+
+enum TrackDeletionStatus {
+  DELETED
+  NOT_FOUND
+  FORBIDDEN
+  NOT_DELETABLE
+  FAILED
+}
+
+input DeleteTracksInput {
+  trackIds: [ID!]!
+  libraryId: ID
+}
+
+input RenameLibraryInput {
+  name: String!
+}
+
+input SetMyUploadSettingsInput {
+  libraryId: ID
+}
+
 input AddUltimateCloudLibraryInput {
   collection: UltimateCloudCollection!
   name: String
@@ -3692,6 +3849,8 @@ type Subscription {
   starTracksChanged: StarTracksChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobUpdated(libraryId: ID): ScanJob!
+  "The catalog changed in libraries the user can access: tracks edited or deleted (with their ids), or a scan that added, updated or lost files (`scanned`). Refresh with tracks(changedSince:) and trackIds."
+  catalogChanged: CatalogChange!
   "A song of the user's wish list arrived in a library they can play (after a scan, an upload, an import or a sync)."
   wishObtained: WishObtained!
 }
@@ -3702,6 +3861,14 @@ type TrackAnalysisReady {
 }
 
 type StarTracksChange {
+  changedAt: DateTime!
+}
+
+type CatalogChange {
+  libraryIds: [ID!]!
+  updatedTrackIds: [ID!]!
+  removedTrackIds: [ID!]!
+  scanned: Boolean!
   changedAt: DateTime!
 }
 

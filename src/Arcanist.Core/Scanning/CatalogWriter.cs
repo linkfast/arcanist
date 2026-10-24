@@ -133,6 +133,10 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
 
         var existingTracksToRelink = new HashSet<Guid>();
         var links = new Dictionary<Guid, (List<TrackArtist> Artists, List<TrackGenre> Genres)>();
+        // How many of each track's files this batch re-reads, and the tracks files of this batch already went to: when
+        // every copy of a track is re-tagged at once (an edit of its tags), the first keeps the track and the rest join it.
+        var inBatch = existingFiles.Values.GroupBy(f => f.TrackId).ToDictionary(g => g.Key, g => g.Count());
+        var claimed = new HashSet<Guid>();
 
         foreach (var (file, album) in resolved)
         {
@@ -158,9 +162,11 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
 
             var track = Match(albumTracks, meta, normalizedTitle);
 
-            // Re-tagged file that is alone on its track: keep the track, so what users attached to it follows.
+            // Re-tagged file that is alone on its track, or whose track has all its files in this batch and no other
+            // took it yet: keep the track, so what users attached to it follows.
             if (track is null && mediaFile is not null && tracksById.TryGetValue(mediaFile.TrackId, out var current)
-                && fileCounts.GetValueOrDefault(current.Id) <= 1)
+                && (fileCounts.GetValueOrDefault(current.Id) <= 1
+                    || (!claimed.Contains(current.Id) && inBatch.GetValueOrDefault(current.Id) >= fileCounts.GetValueOrDefault(current.Id))))
             {
                 track = current;
             }
@@ -192,12 +198,15 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
 
             if (!albumTracks.Contains(track))
                 albumTracks.Add(track);
+            claimed.Add(track.Id);
 
             track.Title = title;
             track.NormalizedTitle = normalizedTitle;
             track.DiscNumber = meta.DiscNumber;
             track.TrackNumber = meta.TrackNumber;
             track.DurationMs = meta.DurationMs;
+            track.Comment = meta.Comment;
+            track.TaggedBpm = meta.Bpm;
             track.UpdatedAt = now;
             track.SearchText = null;
             if (meta.RecordingMbid is { } recordingMbid && _mbidByRecording.GetValueOrDefault(track.RecordingId) != recordingMbid)

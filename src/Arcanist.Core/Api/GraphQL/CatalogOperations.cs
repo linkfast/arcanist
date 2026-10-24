@@ -26,10 +26,10 @@ public sealed partial class Query
         catalog.AlbumAsync(id, cancellationToken);
 
     [Name("tracks")]
-    [Description("Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album's tracks in disc and track order, without paging.")]
+    [Description("Tracks the user can play, by title; optionally only those with a copy in a library. With albumId, all of the album's tracks in disc and track order, without paging. With `changedSince` (an earlier page's `serverTime`), only the tracks the catalog changed after it (tags, copies) or the user rated or played after it; the ones that left are found with trackIds.")]
     public static Task<TrackPage> Tracks(string? search, [Id] Guid? albumId, [Id] Guid? artistId, string? after, int? first, [Id] Guid? libraryId,
-        [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>
-        catalog.TracksAsync(search, albumId, artistId, after, first, cancellationToken, libraryId);
+        DateTime? changedSince, [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>
+        catalog.TracksAsync(search, albumId, artistId, after, first, cancellationToken, libraryId, changedSince);
 
     [Name("matchTracks")]
     [Description("Finds the server's tracks for an app's own (at most 1000 per call): by audio hash, MusicBrainz recording, AcoustID, and last by title, artist and album.")]
@@ -37,6 +37,7 @@ public sealed partial class Query
         matches.MatchAsync(input, cancellationToken);
 
     [Name("track")]
+    [Description("A track with everything a properties dialog shows: its tags, its copies (library, path, size, format, quality, hash, dates), the user's rating and plays, and the analysis (tempo, key, loudness) when done.")]
     public static Task<Track> Track([Id] Guid id, [FromServices] CatalogService catalog, CancellationToken cancellationToken) =>
         catalog.TrackAsync(id, cancellationToken);
 

@@ -55,6 +55,9 @@ public sealed record CreateLibraryInput(
 /// about its own. Libraries shared by another server or in S3 cannot (<c>watch_unsupported</c>).</param>
 public sealed record UpdateLibraryInput(string Name, bool VisibleToAll, int? ScanIntervalMinutes, bool WatchForChanges);
 
+/// <summary>A library's new name (unique on the server, ignoring case and accents).</summary>
+public sealed record RenameLibraryInput(string Name);
+
 /// <param name="Location">For local sources, an absolute folder path on the server. Only a library without a
 /// folder (its folder was removed) can get one.</param>
 public sealed record LibrarySourceInput(string Location);

@@ -24,10 +24,19 @@ public sealed class PlaylistService(ArcanistDbContext db, AccessGuard guard, Cat
     public const int MaxPageSize = 1000;
 
     /// <summary>The user's playlists, those shared with them and public ones, most recently changed first.</summary>
-    public async Task<IReadOnlyList<Playlist>> ListAsync(CancellationToken cancellationToken)
+    /// <param name="changedSince">Only those changed after this (name, entries, sharing). Deleted ones are not listed:
+    /// the whole list, without it, says which are left.</param>
+    public async Task<IReadOnlyList<Playlist>> ListAsync(CancellationToken cancellationToken, DateTime? changedSince = null)
     {
         var access = guard.Authenticated();
-        var playlists = await Visible(access).AsNoTracking().OrderByDescending(p => p.UpdatedAt).ToListAsync(cancellationToken);
+        var visible = Visible(access).AsNoTracking();
+        if (changedSince is { } since)
+        {
+            since = since.ToUniversalTime();
+            visible = visible.Where(p => p.UpdatedAt > since);
+        }
+
+        var playlists = await visible.OrderByDescending(p => p.UpdatedAt).ToListAsync(cancellationToken);
         return await ToModelsAsync(access, playlists, cancellationToken);
     }
 

@@ -53,6 +53,14 @@ public sealed record Loudness(double Integrated, double Range, double TruePeak, 
 /// <param name="ReplayGainTrackGain">From the file's tags, if it has them.</param>
 /// <param name="Loudness">Measured by Arcanist; null until the copy has been analyzed.</param>
 /// <param name="StreamUrl">Plays this copy. Relative to the server; valid for a few hours for the current session.</param>
+/// <param name="LibraryId">The library it is in.</param>
+/// <param name="Path">Where it is, relative to its library's folder ('/'-separated); for libraries of other servers
+/// and Ultimate Cloud, the name the server gives it.</param>
+/// <param name="ContentHash">Arcanist's hash of its audio (tags excluded): the same audio has the same hash on every
+/// Arcanist, however it is tagged or named, so importers can skip what they have.</param>
+/// <param name="AddedAt">When the server found it.</param>
+/// <param name="ModifiedAt">When the file last changed (its tags too).</param>
+/// <param name="CueTrack">0 for a whole file; for an album in one file split by a cue sheet, the number of this track.</param>
 public sealed record TrackFile(
     Guid Id,
     string? Format,
@@ -65,7 +73,13 @@ public sealed record TrackFile(
     double? ReplayGainTrackGain,
     double? ReplayGainAlbumGain,
     Loudness? Loudness,
-    string StreamUrl);
+    string StreamUrl,
+    Guid LibraryId,
+    string Path,
+    string ContentHash,
+    DateTime AddedAt,
+    DateTime ModifiedAt,
+    int CueTrack);
 
 /// <summary>A line of synchronized lyrics, shown from <paramref name="TimeMs"/> until the next line.</summary>
 public sealed record LyricsLine(int TimeMs, string Text);
@@ -98,6 +112,14 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// <param name="Year">Release year of its album; null when unknown.</param>
 /// <param name="MusicBrainzRecordingId">The recording on MusicBrainz, when identified.</param>
 /// <param name="AcoustId">The recording's AcoustID, when identified.</param>
+/// <param name="AlbumArtist">The artist of its album.</param>
+/// <param name="MusicBrainzReleaseId">Its album's release on MusicBrainz, when identified.</param>
+/// <param name="Comment">The comment in its tags.</param>
+/// <param name="TaggedBpm">The tempo its tags say, which may differ from the measured <paramref name="Bpm"/>.</param>
+/// <param name="UpdatedAt">When the catalog last changed it (its tags, a new copy): what <c>changedSince</c> compares.</param>
+/// <param name="CanEdit">The user may edit its tags and cover (EDIT_METADATA, and copies in libraries they add to and the
+/// server writes). A hint: the server may still answer <c>read_only</c>.</param>
+/// <param name="CanDelete">The user may delete it (DELETE_TRACKS, and every copy where the server can remove files).</param>
 public sealed record Track(
     Guid Id,
     string Title,
@@ -121,7 +143,14 @@ public sealed record Track(
     IReadOnlyList<Guid> LibraryIds,
     int? Year,
     Guid? MusicBrainzRecordingId,
-    Guid? AcoustId);
+    Guid? AcoustId,
+    ArtistReference AlbumArtist,
+    Guid? MusicBrainzReleaseId,
+    string? Comment,
+    double? TaggedBpm,
+    DateTime UpdatedAt,
+    bool CanEdit,
+    bool CanDelete);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);
@@ -139,7 +168,8 @@ public enum AlbumSort
 
 public sealed record AlbumPage(IReadOnlyList<Album> Items, string? NextCursor, int TotalCount);
 
-public sealed record TrackPage(IReadOnlyList<Track> Items, string? NextCursor, int TotalCount);
+/// <param name="ServerTime">When the page was read: pass the first page's as <c>changedSince</c> the next time.</param>
+public sealed record TrackPage(IReadOnlyList<Track> Items, string? NextCursor, int TotalCount, DateTime ServerTime);
 
 /// <summary>Opaque keyset cursor: the sort key and id of the last item of a page.</summary>
 internal static class Cursor

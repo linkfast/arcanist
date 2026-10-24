@@ -15,6 +15,15 @@ public sealed record UploadSettings(Guid? DefaultLibraryId, string? DefaultLibra
 
 public sealed record SetUploadSettingsInput(Guid? DefaultLibraryId);
 
+/// <summary>Where the user's uploads go when they name no library.</summary>
+/// <param name="LibraryId">The library the user chose (null: the server's default).</param>
+/// <param name="EffectiveLibraryId">Where an upload without a library goes now: the user's choice while they can still
+/// upload to it, else the server's default when they can; null means such an upload answers <c>upload_library_required</c>.</param>
+public sealed record MyUploadSettings(Guid? LibraryId, string? LibraryName, Guid? EffectiveLibraryId, string? EffectiveLibraryName);
+
+/// <param name="LibraryId">A library the user can upload to; null goes back to the server's default.</param>
+public sealed record SetMyUploadSettingsInput(Guid? LibraryId);
+
 /// <summary>The stored choice (<see cref="SettingKeys.Uploads"/>).</summary>
 internal sealed record StoredUploadSettings(Guid? DefaultLibraryId);
 
@@ -46,10 +55,58 @@ public sealed class UploadDestinations(ArcanistDbContext db, AccessGuard guard, 
         return await ToModelAsync(stored, cancellationToken);
     }
 
+    /// <summary>The user's own choice for uploads that name no library, and where they go now.</summary>
+    public async Task<MyUploadSettings> MyAsync(CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        return await MyModelAsync(access, await MineAsync(access.UserId, cancellationToken), cancellationToken);
+    }
+
+    /// <summary>Chooses the library the user's uploads go to when they name none (one they can upload to), or none.</summary>
+    public async Task<MyUploadSettings> SetMyAsync(SetMyUploadSettingsInput input, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        if (input.LibraryId is { } id && (!access.Has(Permissions.Upload) || !await CanTargetAsync(access, id, cancellationToken)))
+            throw ArcanistException.Field("libraryId", ErrorCodes.NotFound);
+
+        var stored = new StoredUploadSettings(input.LibraryId);
+        if (input.LibraryId is null)
+            await settings.DeleteAsync(SettingKeys.UserUploads(access.UserId), cancellationToken);
+        else
+            await settings.SetAsync(SettingKeys.UserUploads(access.UserId), stored, cancellationToken);
+        return await MyModelAsync(access, stored, cancellationToken);
+    }
+
+    private Task<StoredUploadSettings> MineAsync(Guid userId, CancellationToken cancellationToken) =>
+        settings.GetAsync(SettingKeys.UserUploads(userId), new StoredUploadSettings(null), cancellationToken);
+
+    private async Task<MyUploadSettings> MyModelAsync(UserAccess access, StoredUploadSettings mine, CancellationToken cancellationToken)
+    {
+        var effective = await EffectiveAsync(access, cancellationToken);
+        var chosenId = mine.DefaultLibraryId ?? Guid.Empty;
+        var names = await db.Libraries.AsNoTracking().Where(l => l.Id == chosenId || l.Id == effective)
+            .ToDictionaryAsync(l => l.Id, l => l.Name, cancellationToken);
+        var chosen = mine.DefaultLibraryId is { } id && names.ContainsKey(id) ? id : (Guid?)null;
+        return new MyUploadSettings(chosen, chosen is { } c ? names[c] : null, effective, effective is { } e ? names.GetValueOrDefault(e) : null);
+    }
+
+    /// <summary>Where an upload of <paramref name="access"/> naming no library goes now, or null.</summary>
+    internal async Task<Guid?> EffectiveAsync(UserAccess access, CancellationToken cancellationToken)
+    {
+        if (!access.Has(Permissions.Upload))
+            return null;
+        if ((await MineAsync(access.UserId, cancellationToken)).DefaultLibraryId is { } mine && await CanTargetAsync(access, mine, cancellationToken))
+            return mine;
+        return (await StoredAsync(cancellationToken)).DefaultLibraryId is { } fallback && access.CanUploadTo(fallback)
+                                                                        && await CanTargetAsync(access, fallback, cancellationToken)
+            ? fallback
+            : null;
+    }
+
     /// <summary>
     /// The library an upload without one goes to for <paramref name="access"/>: the target of their wish
-    /// <paramref name="wishId"/> when it has one, else the server's default. <c>upload_library_required</c> when none
-    /// applies.
+    /// <paramref name="wishId"/> when it has one, else the user's own choice, else the server's default.
+    /// <c>upload_library_required</c> when none applies.
     /// </summary>
     internal async Task<Guid> ResolveAsync(UserAccess access, Guid? wishId, CancellationToken cancellationToken)
     {
@@ -61,6 +118,9 @@ public sealed class UploadDestinations(ArcanistDbContext db, AccessGuard guard, 
             if (target.TargetLibraryId is { } chosen)
                 return chosen;
         }
+
+        if ((await MineAsync(access.UserId, cancellationToken)).DefaultLibraryId is { } mine && await CanTargetAsync(access, mine, cancellationToken))
+            return mine;
 
         return (await StoredAsync(cancellationToken)).DefaultLibraryId is { } fallback && access.CanUploadTo(fallback)
             ? fallback

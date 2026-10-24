@@ -185,6 +185,7 @@ public static class ScanningServiceCollectionExtensions
         services.AddSingleton<ArtworkStore>();
         services.AddSingleton<ScanProgressTracker>();
         services.AddSingleton<ScanEvents>();
+        services.AddSingleton<Application.Catalog.CatalogSignals>();
         services.AddHostedService<ScanScheduler>();
         services.AddSingleton<ScanCoordinator>();
         services.AddSingleton<LibraryScanner>();

@@ -23,6 +23,15 @@ public enum Permission
 
     /// <summary>Sees everyone's wish lists, not only their own.</summary>
     ViewAllWishes,
+
+    /// <summary>
+    /// Edits tracks' tags and covers (title, artists, album…) in the libraries the user can add to: written to the files
+    /// themselves and to the catalog.
+    /// </summary>
+    EditMetadata,
+
+    /// <summary>Removes tracks from the libraries the user can add to; their files go to the location's trash.</summary>
+    DeleteTracks,
 }
 
 /// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed,
@@ -95,6 +104,8 @@ public static class PermissionMapping
         Permission.Upload => Permissions.Upload,
         Permission.PlayOnServer => Permissions.PlayOnServer,
         Permission.ViewAllWishes => Permissions.ViewAllWishes,
+        Permission.EditMetadata => Permissions.EditMetadata,
+        Permission.DeleteTracks => Permissions.DeleteTracks,
         _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null),
     };
 

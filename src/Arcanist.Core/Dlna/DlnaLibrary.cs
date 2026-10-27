@@ -29,7 +29,8 @@ internal sealed class DlnaLibrary(
     bool spanish,
     Guid? ratingsUser,
     RatingMode ratingMode,
-    IReadOnlyList<(Guid Id, string Name)> starTracksUsers)
+    IReadOnlyList<(Guid Id, string Name)> starTracksUsers,
+    Videos.VideoAudioMode videoAudio = Videos.VideoAudioMode.Track)
 {
     public const string Root = "0";
 
@@ -210,6 +211,8 @@ internal sealed class DlnaLibrary(
                     throw new UpnpException(701, "No such object");
                 return await RatedPageAsync(id, rating, start, count, cancellationToken);
             }
+            case "musicvideos":
+                return await VideoPageAsync(id, start, count, cancellationToken);
             case "folders":
             {
                 var sources = await FolderRootsAsync(cancellationToken);
@@ -245,6 +248,11 @@ internal sealed class DlnaLibrary(
 
         switch (kind)
         {
+            case "video":
+            {
+                var video = await catalog.VisibleVideos(access).AsNoTracking().Where(v => v.Id == ParseId(rest)).ToListAsync(cancellationToken);
+                return video.Count > 0 ? VideoItem("musicvideos", video[0]) : throw new UpnpException(701, "No such object");
+            }
             case "album":
             {
                 var page = await AlbumPageAsync("albums", Albums.Where(a => a.Id == ParseId(rest)), 0, 1, cancellationToken);
@@ -302,6 +310,7 @@ internal sealed class DlnaLibrary(
     private static string? SectionOf(string id) => id switch
     {
         "recent" => nameof(DlnaSection.RecentlyAdded),
+        "musicvideos" => nameof(DlnaSection.MusicVideos),
         "artists" or "albums" or "genres" or "decades" or "folders" or "playlists" or "mixes" or "starred" or "rated" or "libraries"
             => char.ToUpperInvariant(id[0]) + id[1..],
         _ => null,
@@ -547,6 +556,30 @@ internal sealed class DlnaLibrary(
         };
     }
 
+    /// <summary>The music videos of the published libraries, by artist and title.</summary>
+    private async Task<(IReadOnlyList<DidlObject> Children, int Total)> VideoPageAsync(string parent, int start, int count, CancellationToken cancellationToken)
+    {
+        var videos = catalog.VisibleVideos(access).AsNoTracking();
+        var total = await videos.CountAsync(cancellationToken);
+        if (count <= 0)
+            return ([], total);
+        var page = await videos.OrderBy(v => v.NormalizedArtist).ThenBy(v => v.NormalizedTitle).ThenBy(v => v.Id)
+            .Skip(start).Take(count).ToListAsync(cancellationToken);
+        return (page.Select(v => (DidlObject)VideoItem(parent, v)).ToList(), total);
+    }
+
+    /// <summary>A music video, first with the audio the server plays by default and then with the other.</summary>
+    private DidlItem VideoItem(string parent, MusicVideo video)
+    {
+        var resolution = video.Width is { } width && video.Height is { } height ? $"{width}x{height}" : null;
+        string[] audios = videoAudio == Videos.VideoAudioMode.Track ? ["track", "video"] : ["video", "track"];
+        var resources = audios.Select(audio => new DidlResource(
+            $"{baseUrl}{Extensions.Dlna.DlnaExtension.BasePath}/video/{video.Id:N}/{audio}.mp4", DlnaFormats.VideoProtocolInfo, video.DurationMs,
+            null, null, null, 2, null, resolution)).ToList();
+        return new DidlItem($"video/{video.Id:N}", parent, video.Title, video.Artist, null, null, null, null, null, Art(video.ArtworkId), resources,
+            "object.item.videoItem.musicVideoClip");
+    }
+
     private string? Art(Guid? artworkId) =>
         artworkId is { } id ? $"{baseUrl}{Extensions.Dlna.DlnaExtension.BasePath}/art/{id:N}.jpg" : null;
 
@@ -595,6 +628,8 @@ internal sealed class DlnaLibrary(
         (DlnaSection.Rated, false) => "Rated",
         (DlnaSection.Libraries, true) => "Bibliotecas",
         (DlnaSection.RecentlyAdded, false) => "Recently added",
+        (DlnaSection.MusicVideos, true) => "Videoclips",
+        (DlnaSection.MusicVideos, false) => "Music videos",
         _ => section.ToString(),
     };
 

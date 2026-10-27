@@ -219,6 +219,14 @@ type Query {
   users: [UserAccount!]!
   "A user by id. Requires the MANAGE_USERS permission."
   user(id: ID!): UserAccount!
+  "The music videos in libraries the user can access, by title, with optional filters (a library, words of the title or artist, linked to a song or not, live or not, those of a track's song). Each says whether it plays with its song's audio and how to play it."
+  musicVideos(input: MusicVideosInput): VideoClipPage!
+  "A music video, with the stretches where its audio and its song's line up (segments)."
+  musicVideo(id: ID!): VideoClip!
+  "How the server handles music videos: whose audio plays by default, the cache of versions made when played, what is prepared ahead of time for adaptive streaming, and how many videos are linked and aligned. Requires MANAGE_SETTINGS."
+  videoSettings: VideoSettingsInfo!
+  "The user's choice of whose audio plays with music videos (null follows the server's default), and the one in effect."
+  myVideoSettings: MyVideoSettings!
   "The user's wish list: songs they want (newest first), then those that arrived (by when). Optionally only the wanted or the obtained ones. With scope ALL, everyone's wishes, each with its owner (requires VIEW_ALL_WISHES)."
   wishList(status: WishStatus, scope: WishListScope): WishListResult!
 }
@@ -729,6 +737,7 @@ type Track {
   updatedAt: DateTime!
   canEdit: Boolean!
   canDelete: Boolean!
+  videos: [VideoClip!]!
 }
 
 type AlbumReference {
@@ -793,6 +802,71 @@ type Loudness {
   trackGain: Float!
   albumGain: Float
   albumPeak: Float
+}
+
+type VideoClip {
+  id: ID!
+  title: String!
+  artist: String
+  durationMs: Int!
+  width: Int
+  height: Int
+  isLive: Boolean!
+  artworkId: ID
+  libraryId: ID!
+  path: String
+  trackId: ID
+  recordingId: ID
+  linkMethod: VideoLinkMethod
+  linkLocked: Boolean!
+  sync: VideoSync!
+  coverage: Float
+  audioMode: VideoAudioMode!
+  streamUrl: String!
+  trackAudioUrl: String!
+  videoAudioUrl: String!
+  hlsUrl: String
+  versions: [VideoVersion!]!
+  segments: [VideoSegment!]
+  addedAt: DateTime!
+  canManage: Boolean!
+}
+
+enum VideoLinkMethod {
+  SIDECAR
+  TAGS
+  FINGERPRINT
+  MANUAL
+}
+
+enum VideoSync {
+  READY
+  NO_MATCH
+  PENDING
+  UNAVAILABLE
+}
+
+enum VideoAudioMode {
+  TRACK
+  VIDEO
+}
+
+type VideoVersion {
+  name: String!
+  height: Int!
+  width: Int!
+  bitRate: Int!
+  codec: String!
+  prepared: Boolean!
+}
+
+type VideoSegment {
+  videoStartMs: Int!
+  videoEndMs: Int!
+  source: VideoAudioMode!
+  trackStartMs: Int
+  rate: Float
+  similarity: Float
 }
 
 type TrackMatch {
@@ -1064,6 +1138,7 @@ enum DlnaSection {
   STARRED
   RATED
   LIBRARIES
+  MUSIC_VIDEOS
 }
 
 type MyDlnaStarTracks {
@@ -1153,6 +1228,14 @@ type ExtensionAppInfo {
   iconUrl: String
   width: Int
   height: Int
+  trackActions: [ExtensionTrackActionInfo!]!
+}
+
+type ExtensionTrackActionInfo {
+  id: String!
+  name: String!
+  url: String!
+  withoutVideoOnly: Boolean!
 }
 
 type ExtensionMarketplaceInfo {
@@ -2703,6 +2786,7 @@ enum ApiFeature {
   UPLOAD_TARGET
   CHANGES_SINCE
   LIBRARY_RENAME
+  MUSIC_VIDEOS
 }
 
 type LegalTerms {
@@ -2771,6 +2855,43 @@ type Session {
   isCurrent: Boolean!
 }
 
+type VideoClipPage {
+  items: [VideoClip!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+input MusicVideosInput {
+  libraryId: ID
+  search: String
+  linked: Boolean
+  live: Boolean
+  trackId: ID
+  after: String
+  first: Int
+}
+
+type VideoSettingsInfo {
+  defaultAudio: VideoAudioMode!
+  cacheMaxBytes: Long!
+  cacheMaxAgeDays: Int!
+  prepareLibraryIds: [ID!]!
+  prepareHeights: [Int!]!
+  prepareWhenPlayed: Boolean!
+  cacheBytes: Long!
+  preparedBytes: Long!
+  videos: Int!
+  linked: Int!
+  aligned: Int!
+  pending: Int!
+}
+
+type MyVideoSettings {
+  audio: VideoAudioMode
+  serverDefault: VideoAudioMode!
+  effective: VideoAudioMode!
+}
+
 type WishListResult {
   items: [Wish!]!
   wanted: Int!
@@ -2798,6 +2919,9 @@ type Wish {
   artworkId: ID
   owner: WishOwner
   targetLibraryId: ID
+  wantsVideo: Boolean!
+  videoObtainedAt: DateTime
+  videoSeen: Boolean!
 }
 
 enum WishStatus {
@@ -3146,6 +3270,20 @@ type Mutation {
   changeMyPassword(input: ChangeMyPasswordInput!): Boolean!
   "Signs out one of the signed-in user's devices."
   revokeMySession(id: ID!): Boolean!
+  "Links a music video to a track's song (or, without trackId, leaves it with no song); scans keep what a person chose. It is aligned again first of all. Requires MANAGE_LIBRARIES or EDIT_METADATA."
+  linkMusicVideo(id: ID!, trackId: ID): VideoClip!
+  "Gives a music video back to automatic linking (by its name next to its song, or its artist and title) and to the live detection of its title. Requires MANAGE_LIBRARIES or EDIT_METADATA."
+  unlockMusicVideo(id: ID!): VideoClip!
+  "Marks a music video as a live performance or not (scans keep it): a live video is only linked to a live track. Requires MANAGE_LIBRARIES or EDIT_METADATA."
+  setMusicVideoLive(id: ID!, live: Boolean!): VideoClip!
+  "Forgets a music video's alignment and aligns it again first of all. Requires MANAGE_LIBRARIES or EDIT_METADATA."
+  realignMusicVideo(id: ID!): VideoClip!
+  "Moves a music video's file to the trash of its location (purged after 30 days) and removes it from the catalog; its song stays. Requires DELETE_TRACKS and a library the user adds to."
+  deleteMusicVideo(id: ID!): Boolean!
+  "Sets how the server handles music videos (heights from 2160, 1440, 1080, 720, 480 and 360). Requires MANAGE_SETTINGS."
+  setVideoSettings(input: VideoSettingsInput!): VideoSettingsInfo!
+  "Chooses whose audio plays with music videos for the user: TRACK (the song from the library where the video plays it), VIDEO (the video's own), or null for the server's default. Players can still switch while playing."
+  setMyVideoSettings(audio: VideoAudioMode): MyVideoSettings!
   "Adds a song to the user's wish list (title and artist; album, duration, MusicBrainz recording or AcoustID narrow it). When a library the user can play has it already, it comes obtained (foundWhenAdded)."
   addWish(input: WishInput!): Wish!
   "Reads a song's link from a streaming service (Spotify, YouTube Music, Deezer, Apple Music, MusicBrainz, Tidal, SoundCloud, Bandcamp…) to fill a wish: title, artist, album, duration, the MusicBrainz recording and a cover (kept in the artwork cache). Adds nothing: pass what it returns to addWish with sourceUrl and artworkId. Needs external services allowed (external_services_disabled); wish_link_not_a_song for albums or playlists, wish_link_unreadable when the page does not say the song."
@@ -3806,6 +3944,15 @@ input ChangeMyPasswordInput {
   newPassword: String!
 }
 
+input VideoSettingsInput {
+  defaultAudio: VideoAudioMode!
+  cacheMaxBytes: Long!
+  cacheMaxAgeDays: Int!
+  prepareLibraryIds: [ID!]!
+  prepareHeights: [Int!]!
+  prepareWhenPlayed: Boolean!
+}
+
 input WishInput {
   title: String!
   artist: String!
@@ -3817,6 +3964,7 @@ input WishInput {
   sourceUrl: String
   artworkId: ID
   targetLibraryId: ID
+  wantsVideo: Boolean
 }
 
 type WishLinkPreview {
@@ -3878,4 +4026,10 @@ type WishObtained {
   artist: String!
   trackId: ID
   obtainedAt: DateTime!
+  part: WishPart!
+}
+
+enum WishPart {
+  AUDIO
+  VIDEO
 }

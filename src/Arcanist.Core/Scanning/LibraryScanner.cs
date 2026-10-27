@@ -30,6 +30,8 @@ public sealed class LibraryScanner(
     ScanEvents events,
     LibraryLocks locks,
     Application.Catalog.CatalogSignals catalogSignals,
+    Videos.VideoScanner videoScanner,
+    Videos.VideoLinker videoLinker,
     IOptions<ScannerOptions> options,
     TimeProvider time,
     ILogger<LibraryScanner> logger)
@@ -86,6 +88,15 @@ public sealed class LibraryScanner(
             {
                 await new CatalogCleaner(cleanerDb, artworkStore, time)
                     .CleanAsync(TimeSpan.FromDays(options.Value.MissingFileRetentionDays), cancellationToken);
+            }
+            try
+            {
+                await videoLinker.LinkAsync(cancellationToken);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // Linking music videos never fails the scan of the music.
+                logger.LogError(e, "Linking music videos failed");
             }
 
             job.Status = ScanStatus.Completed;
@@ -158,6 +169,7 @@ public sealed class LibraryScanner(
         // Sidecar lyrics by the path of their audio without extension ("Album/01 Song.lrc" goes with "Album/01 Song.flac").
         var sidecars = new Dictionary<string, StorageEntry>(StringComparer.Ordinal);
         var cueFiles = new List<StorageEntry>();
+        var videos = new List<StorageEntry>();
         var unchanged = new List<(StorageEntry Entry, List<KnownFile> Known)>();
 
         try
@@ -181,6 +193,12 @@ public sealed class LibraryScanner(
                 if (AudioFormats.IsCueSheet(entry.RelativePath))
                 {
                     cueFiles.Add(entry);
+                    continue;
+                }
+
+                if (VideoFormats.IsVideo(entry.RelativePath))
+                {
+                    videos.Add(entry);
                     continue;
                 }
 
@@ -211,7 +229,7 @@ public sealed class LibraryScanner(
             return;
         }
 
-        if (seen.Count == 0 && known.Count > 0)
+        if (seen.Count == 0 && videos.Count == 0 && (known.Count > 0 || await db.MusicVideos.AnyAsync(v => v.LibrarySourceId == source.Id, cancellationToken)))
         {
             logger.LogWarning("Library source {Location} looks empty but had {Count} files; treated as unavailable", source.Location, known.Count);
             job.ErrorCode = ErrorCodes.SourceUnavailable;
@@ -245,6 +263,12 @@ public sealed class LibraryScanner(
         foreach (var chunk in vanished.Chunk(UpdateChunk))
             await db.MediaFiles.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, now), cancellationToken);
         job.FilesMissing += vanished.Count;
+
+        var videoResult = await videoScanner.ScanAsync(source, location, storage, videos, job.Kind == ScanKind.Full, cancellationToken);
+        job.FilesSeen += videoResult.Seen;
+        job.FilesAdded += videoResult.Added;
+        job.FilesUpdated += videoResult.Updated;
+        job.FilesMissing += videoResult.Missing;
     }
 
     /// <summary>

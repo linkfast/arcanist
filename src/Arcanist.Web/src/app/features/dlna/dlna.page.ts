@@ -63,6 +63,7 @@ const AllSections: DlnaSection[] = [
   'MIXES',
   'STARRED',
   'RATED',
+  'MUSIC_VIDEOS',
 ];
 
 /**

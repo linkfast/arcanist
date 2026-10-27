@@ -137,6 +137,9 @@ internal static class DlnaFormats
 
     /// <summary>What the server can send, for ConnectionManager's source protocols.</summary>
     public static string SourceProtocols() => string.Join(',',
-        new[] { "audio/mpeg", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav", "audio/mp4", "audio/ogg", "audio/opus", "audio/aac", "audio/x-aiff" }
+        new[] { "audio/mpeg", "audio/flac", "audio/L16;rate=44100;channels=2", "audio/wav", "audio/mp4", "audio/ogg", "audio/opus", "audio/aac", "audio/x-aiff", "video/mp4" }
             .Select(type => $"http-get:*:{type}:*"));
+
+    /// <summary>A music video as MP4: byte ranges once it is made (the first time it streams as it is made).</summary>
+    public const string VideoProtocolInfo = "http-get:*:video/mp4:DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000";
 }

@@ -10,6 +10,7 @@ public enum SearchKind
     Albums,
     Tracks,
     Playlists,
+    MusicVideos,
 }
 
 /// <summary>A row that matched a search, with its relevance (higher is better).</summary>
@@ -38,6 +39,7 @@ public static class FullTextSearch
         (SearchKind.Albums, "Albums"),
         (SearchKind.Tracks, "Tracks"),
         (SearchKind.Playlists, "Playlists"),
+        (SearchKind.MusicVideos, "MusicVideos"),
     ];
 
     private const int MaxTerms = 8;

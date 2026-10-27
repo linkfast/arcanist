@@ -115,7 +115,8 @@ internal sealed class WishListMatcher(
         using (await maintenance.WorkAsync(cancellationToken))
         {
             await using var db = databases.CreateDbContext();
-            owners = await db.WishListItems.Where(w => w.ObtainedAt == null).Select(w => w.UserId).Distinct().ToListAsync(cancellationToken);
+            owners = await db.WishListItems.Where(w => w.ObtainedAt == null || (w.WantsVideo && w.VideoObtainedAt == null))
+                .Select(w => w.UserId).Distinct().ToListAsync(cancellationToken);
         }
 
         foreach (var owner in owners)
@@ -128,13 +129,18 @@ internal sealed class WishListMatcher(
             {
                 await using var scope = scopes.CreateAsyncScope();
                 var db = scope.ServiceProvider.GetRequiredService<ArcanistDbContext>();
-                var wanted = await db.WishListItems.Where(w => w.UserId == owner && w.ObtainedAt == null).ToListAsync(cancellationToken);
+                var wanted = await db.WishListItems.Where(w => w.UserId == owner && (w.ObtainedAt == null || (w.WantsVideo && w.VideoObtainedAt == null)))
+                    .ToListAsync(cancellationToken);
                 var now = time.GetUtcNow().UtcDateTime;
-                if (await WishListService.MatchAsync(scope.ServiceProvider.GetRequiredService<CatalogService>(), access, wanted, now, cancellationToken) == 0)
+                var catalog = scope.ServiceProvider.GetRequiredService<CatalogService>();
+                var songs = await WishListService.MatchAsync(catalog, access, wanted, now, cancellationToken);
+                var videos = await WishListService.MatchVideosAsync(catalog, access, wanted, now, cancellationToken);
+                if (songs + videos == 0)
                     continue;
 
                 await db.SaveChangesAsync(cancellationToken);
-                obtained.AddRange(wanted.Where(w => w.ObtainedAt is not null).Select(w => new WishObtained(w.Id, w.Title, w.Artist, w.TrackId, w.ObtainedAt!.Value)));
+                obtained.AddRange(wanted.Where(w => w.ObtainedAt == now).Select(w => new WishObtained(w.Id, w.Title, w.Artist, w.TrackId, now)));
+                obtained.AddRange(wanted.Where(w => w.VideoObtainedAt == now).Select(w => new WishObtained(w.Id, w.Title, w.Artist, w.TrackId, now, WishPart.Video)));
             }
 
             foreach (var wish in obtained)

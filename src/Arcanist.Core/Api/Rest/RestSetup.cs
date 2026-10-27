@@ -88,6 +88,7 @@ public static class RestSetup
         rest.MapOnlineEndpoints();
         rest.MapCatalogEndpoints();
         rest.MapMediaEndpoints();
+        rest.MapVideoEndpoints();
         rest.MapMigrationEndpoints();
         ServerMigration.ExportApi.MapExportApi(rest);
         return app;

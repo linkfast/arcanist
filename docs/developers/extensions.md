@@ -45,6 +45,9 @@ public sealed class HelloExtension : IArcanistExtension
   says without overwriting anything, is scanned shortly after and shows in their history of uploads (`myUploads`)
   with `source` naming your extension. From background work, where there is no request, get the user with
   `UserAccessCache.GetUserAsync(userId, cancellationToken)` (and skip disabled users).
+- To give a track its music video, call `UploadService.UploadVideoAsync(access, trackId, fileName, stream, source:
+  "<your id>", cancellationToken)`: the video goes next to the track's copy in a library the user adds to, named like
+  it, so the next scan links it and the server aligns it with the song (see [music-videos.md](music-videos.md)).
 
 ## Routes
 
@@ -116,6 +119,7 @@ open in a window (an iframe) or a tab of their own. Each app has:
 | `permissions` | No | What a user needs to see it, as the API names permissions (`UPLOAD`, `DOWNLOAD`…). |
 | `adminOnly` | No | Only administrators see it. |
 | `width`, `height` | No | The window's preferred size in CSS pixels. |
+| `trackActions` | No | Actions players offer in a song's menu (at most 8): `id`, `name` (and `names`), a `path` under `/ext/<id>/` with `{trackId}`, and `withoutVideoOnly` to offer it only on songs without a music video. Players open the app at that path with the song's id. |
 
 Only the apps of extensions that are switched on and running are listed, and only to users with their permissions.
 Serve the page and its files from your package (`ExtensionContext.PackageDirectory`). The permission is about
@@ -258,7 +262,8 @@ organizing, drop folders), and administrators cannot delete them or change their
 `IWishLists` (from DI, in the SDK) reads and changes the users' wish lists: one user's (`ListAsync`), everyone's
 (`ListAllAsync`, each entry with its user), `AddAsync` (the song is looked for at once among the libraries that user
 can play), `RemoveAsync`, and `ResolveLinkAsync`, which reads a streaming service's link into a `WishListEntryInput`
-(null when the link is not a song or outside services are not allowed). It checks no permissions: when an extension
+(null when the link is not a song or outside services are not allowed). Entries and inputs have `WantsVideo` (the
+user also wants the song's music video; `VideoObtainedAt` says when one arrived). It checks no permissions: when an extension
 shows someone else's wishes, it decides who may see them (the server's own rule is `VIEW_ALL_WISHES`). For example, a
 downloader can offer what users want:
 

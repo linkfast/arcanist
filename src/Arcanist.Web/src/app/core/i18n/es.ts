@@ -115,6 +115,7 @@ export const es: Dictionary = {
   },
   nav: {
     menu: 'Menú',
+    videos: 'Videoclips',
     transcoding: 'Transcodificación',
     extensionsToggle: 'Mostrar u ocultar las extensiones',
     ai: 'AI',
@@ -985,6 +986,13 @@ export const es: Dictionary = {
       'Eliminar canciones de las bibliotecas a las que sube música, desde las apps. Sus archivos van a la papelera de la carpeta (30 días).',
   },
   account: {
+    videos: {
+      title: 'Videoclips',
+      description:
+        'Qué audio oyes con los videoclips. Los reproductores también permiten cambiarlo mientras suenan.',
+      audio: 'Audio por defecto',
+      server: 'El del servidor ({mode})',
+    },
     dlna: {
       title: 'Red local (DLNA)',
       description:
@@ -1980,6 +1988,7 @@ export const es: Dictionary = {
         DECADES: 'Décadas',
         FOLDERS: 'Carpetas',
         LIBRARIES: 'Bibliotecas, cada una por separado',
+        MUSIC_VIDEOS: 'Videoclips',
         PLAYLISTS: 'Playlists públicas',
         RECENTLY_ADDED: 'Añadido recientemente',
         MIXES: 'Mixes por género y década',
@@ -2486,6 +2495,9 @@ export const es: Dictionary = {
     },
   },
   wishes: {
+    wantsVideo: 'También quiero el videoclip',
+    videoArrived: 'Videoclip: ya está',
+    videoMissing: 'Videoclip: todavía no',
     target: 'Si se sube, guardarla en',
     targetAutomatic: 'Automático (según cada subida)',
     targetAutomaticNamed: 'Automático ({library})',
@@ -3364,5 +3376,79 @@ export const es: Dictionary = {
     download_not_allowed: 'El dueño de esa música no permite descargarla.',
     ffmpeg_checksum_mismatch:
       'El ffmpeg descargado no coincidía con su suma de comprobación y se ha descartado.',
+  },
+  videos: {
+    title: 'Videoclips',
+    subtitle:
+      'Los videoclips de las bibliotecas: junto a su canción, con su nombre o subidos. Con la canción enlazada suenan con su audio de la biblioteca donde coincide.',
+    search: 'Buscar por título o artista',
+    find: 'Buscar',
+    count: '{count} videoclips',
+    none: 'No hay videoclips',
+    noneHelp:
+      'Pon archivos de video (MP4, MKV, WebM, MOV) en una biblioteca, junto a su canción y con el mismo nombre, o con «Artista - Título» en su nombre.',
+    more: 'Ver más',
+    unknownArtist: 'Artista desconocido',
+    liveBadge: 'En vivo',
+    live: 'Actuación en vivo (solo se enlaza con una pista en vivo)',
+    duration: 'Duración',
+    size: 'Tamaño',
+    path: 'Archivo',
+    coverage: 'La canción suena en el {percent} % del video',
+    timelineHelp:
+      'En color, los tramos que suenan con el audio de la canción; en gris, con el del video. Pulsa para saltar.',
+    realign: 'Volver a sincronizar',
+    realigning: 'Se sincronizará de nuevo en unos momentos.',
+    delete: 'Eliminar',
+    deleteConfirm: '¿Mover este videoclip a la papelera de su biblioteca? La canción no se toca.',
+    filters: {
+      all: 'Todos',
+      linked: 'Con canción',
+      unlinked: 'Sin canción',
+      anyPerformance: 'Cualquier versión',
+      live: 'En vivo',
+      studio: 'De estudio',
+    },
+    audio: {
+      label: 'Audio:',
+      TRACK: 'Canción + video',
+      VIDEO: 'Audio del video',
+    },
+    sync: {
+      READY: 'Sincronizado',
+      NO_MATCH: 'Otra versión',
+      PENDING: 'Sincronizando',
+      UNAVAILABLE: 'Sin sincronía',
+    },
+    link: {
+      label: 'Canción',
+      none: 'Sin canción',
+      locked: 'Elegida a mano',
+      search: 'Buscar la canción de este video',
+      find: 'Buscar',
+      remove: 'Quitar la canción',
+      automatic: 'Volver a lo automático',
+      SIDECAR: 'Junto a su archivo',
+      TAGS: 'Por artista y título',
+      FINGERPRINT: 'Por su audio',
+      MANUAL: 'Elegida a mano',
+    },
+    settings: {
+      title: 'Videoclips',
+      description:
+        'Qué audio suena por defecto con los videoclips, la caché de las versiones que se crean al reproducirlos y lo que se prepara antes para el streaming adaptativo.',
+      counts:
+        '{videos} videoclips, {linked} con canción, {aligned} sincronizados, {pending} por sincronizar.',
+      defaultAudio: 'Audio por defecto',
+      defaultAudioHelp:
+        '«Canción + video» pone el audio de la biblioteca donde el video toca la canción y deja el del video en diálogos, intros y escenas. Cada usuario puede elegir otro en Mi cuenta, y los reproductores cambiarlo en vivo.',
+      cache: 'Caché de versiones',
+      usage: 'Caché: {cache}. Preparado: {prepared}.',
+      prepare: 'Versiones preparadas (HLS)',
+      prepareHelp:
+        'Hasta UHD, nunca por encima del original. Con varias alturas, los reproductores eligen según el ancho de banda.',
+      whenPlayed: 'Preparar también cada videoclip que alguien reproduce',
+      libraries: 'Preparar siempre los videoclips de estas bibliotecas:',
+    },
   },
 };

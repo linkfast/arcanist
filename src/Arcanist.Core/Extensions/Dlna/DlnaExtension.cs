@@ -50,6 +50,7 @@ internal sealed class DlnaExtension : IBuiltInExtension
         dlna.MapMethods("/{service}/events", ["SUBSCRIBE", "UNSUBSCRIBE"], Subscribe);
         dlna.MapMethods("/media/{trackId:guid}/{fileId:guid}/{name}", [HttpMethods.Get, HttpMethods.Head], MediaAsync);
         dlna.MapMethods("/play/{token}/{name}", [HttpMethods.Get, HttpMethods.Head], PlayAsync);
+        dlna.MapMethods("/video/{videoId:guid}/{name}", [HttpMethods.Get, HttpMethods.Head], VideoAsync);
         dlna.MapGet("/art/{name}", ArtAsync);
     }
 
@@ -100,7 +101,8 @@ internal sealed class DlnaExtension : IBuiltInExtension
                         $"{context.Request.Scheme}://{context.Request.Host}", language?.StartsWith("es", StringComparison.OrdinalIgnoreCase) == true,
                         await Application.Dlna.DlnaService.RatingsUserAsync(db, config, cancellationToken),
                         await services.GetRequiredService<Application.Listening.RatingSettings>().GetAsync(cancellationToken),
-                        await Application.Dlna.DlnaService.StarTracksUsersAsync(db, config, cancellationToken));
+                        await Application.Dlna.DlnaService.StarTracksUsersAsync(db, config, cancellationToken),
+                        (await services.GetRequiredService<Videos.VideoSettings>().GetAsync(cancellationToken)).DefaultAudio);
                     var id = action.Argument("ObjectID") is { Length: > 0 } objectId ? objectId : DlnaLibrary.Root;
                     _ = int.TryParse(action.Argument("StartingIndex"), out var start);
                     _ = int.TryParse(action.Argument("RequestedCount"), out var count);
@@ -218,6 +220,27 @@ internal sealed class DlnaExtension : IBuiltInExtension
         try
         {
             return await MediaResponses.StreamWithProfileAsync(context, trackId, fileId, false, DlnaFormats.Profile(format), null, offset, cancellationToken);
+        }
+        catch (ArcanistException.NotFound)
+        {
+            return Results.NotFound();
+        }
+    }
+
+    /// <summary>A music video of a published library, with the song's audio (<c>track.mp4</c>) or its own (<c>video.mp4</c>).</summary>
+    private static async Task<IResult> VideoAsync(Guid videoId, string name, HttpContext context, CancellationToken cancellationToken)
+    {
+        await SignInAsync(context, cancellationToken);
+        var audio = name.Split('.')[0];
+        if (audio is not ("track" or "video"))
+            return Results.NotFound();
+        context.Response.Headers["transferMode.dlna.org"] = "Streaming";
+        context.Response.Headers["contentFeatures.dlna.org"] = DlnaFormats.VideoProtocolInfo.Split(':')[3];
+        var offset = TimeSeek(context.Request.Headers["TimeSeekRange.dlna.org"].FirstOrDefault());
+        try
+        {
+            return await context.RequestServices.GetRequiredService<Application.Videos.VideoStreamService>()
+                .StreamAsync(context, videoId, audio, null, null, null, offset, cancellationToken);
         }
         catch (ArcanistException.NotFound)
         {

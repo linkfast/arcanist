@@ -37,6 +37,9 @@ public sealed record WishOwner(Guid Id, string UserName, string? DisplayName);
 /// <param name="MatchedBy">What made that track this song.</param>
 /// <param name="FoundWhenAdded">A library had it already when the wish was made.</param>
 /// <param name="Seen">The user saw that it arrived (<c>markWishesSeen</c>).</param>
+/// <param name="WantsVideo">The user also wants the song's music video.</param>
+/// <param name="VideoObtainedAt">When a music video of the song arrived (or was there); null while it is wanted.</param>
+/// <param name="VideoSeen">The user saw that the video arrived.</param>
 public sealed record Wish(
     Guid Id,
     string Title,
@@ -57,7 +60,10 @@ public sealed record Wish(
     WishLinkService? SourceService = null,
     Guid? ArtworkId = null,
     WishOwner? Owner = null,
-    Guid? TargetLibraryId = null);
+    Guid? TargetLibraryId = null,
+    bool WantsVideo = false,
+    DateTime? VideoObtainedAt = null,
+    bool VideoSeen = false);
 
 /// <param name="Album">Only a copy from this album fulfils it.</param>
 /// <param name="DurationMs">Only a copy this long (give or take three seconds) fulfils it.</param>
@@ -65,6 +71,7 @@ public sealed record Wish(
 /// <param name="ArtworkId">Its cover (from <c>resolveWishLink</c>).</param>
 /// <param name="TargetLibraryId">Where the song goes when it is uploaded for this wish (a library the user can upload
 /// to); null follows the server's rule for uploads (<c>uploadSettings</c>).</param>
+/// <param name="WantsVideo">The user also wants the song's music video: it comes true in two parts, the song and its video. Left out, a new wish does not and a changed one keeps what it had.</param>
 public sealed record WishInput(
     string Title,
     string Artist,
@@ -75,15 +82,26 @@ public sealed record WishInput(
     string? Note = null,
     string? SourceUrl = null,
     Guid? ArtworkId = null,
-    Guid? TargetLibraryId = null);
+    Guid? TargetLibraryId = null,
+    bool? WantsVideo = null);
 
 /// <param name="Items">The wanted ones by the newest wish, then the obtained ones by when they arrived.</param>
 /// <param name="Wanted">How many are still wanted.</param>
 /// <param name="Unseen">How many arrived and the user has not seen yet.</param>
 public sealed record WishListResult(IReadOnlyList<Wish> Items, int Wanted, int Unseen);
 
-/// <summary>A wish of the user came true: the song is in a library they can play.</summary>
-public sealed record WishObtained(Guid WishId, string Title, string Artist, Guid? TrackId, DateTime ObtainedAt);
+/// <summary>What came true of a wish. Part of the API contract.</summary>
+public enum WishPart
+{
+    /// <summary>The song.</summary>
+    Audio,
+
+    /// <summary>Its music video.</summary>
+    Video,
+}
+
+/// <summary>A wish of the user came true: the song (or its music video, <paramref name="Part"/>) is in a library they can play.</summary>
+public sealed record WishObtained(Guid WishId, string Title, string Artist, Guid? TrackId, DateTime ObtainedAt, WishPart Part = WishPart.Audio);
 
 /// <summary>
 /// Each user's wish list: songs they want, recognised as soon as one arrives in a library they can play (after every
@@ -124,7 +142,7 @@ public sealed class WishListService(
     {
         var mine = db.WishListItems.AsNoTracking().Where(w => owner == null || w.UserId == owner);
         var wanted = await mine.CountAsync(w => w.ObtainedAt == null, cancellationToken);
-        var unseen = await mine.CountAsync(w => w.ObtainedAt != null && !w.Seen, cancellationToken);
+        var unseen = await mine.CountAsync(w => (w.ObtainedAt != null && !w.Seen) || (w.VideoObtainedAt != null && !w.VideoSeen), cancellationToken);
 
         var items = status switch
         {
@@ -166,6 +184,8 @@ public sealed class WishListService(
             wish.FoundWhenAdded = true;
             wish.Seen = true;
         }
+        if (await MatchVideosAsync(catalog, access, [wish], Now(), cancellationToken) > 0)
+            wish.VideoSeen = true;
 
         await db.SaveChangesAsync(cancellationToken);
         return (await ToModelsAsync(access, [wish], withOwners: false, cancellationToken))[0];
@@ -185,6 +205,8 @@ public sealed class WishListService(
             wish.FoundWhenAdded = true;
             wish.Seen = true;
         }
+        if (await MatchVideosAsync(catalog, access, [wish], Now(), cancellationToken) > 0)
+            wish.VideoSeen = true;
 
         await db.SaveChangesAsync(cancellationToken);
         return (await ToModelsAsync(access, [wish], withOwners: false, cancellationToken))[0];
@@ -205,7 +227,9 @@ public sealed class WishListService(
     public async Task<int> MarkSeenAsync(CancellationToken cancellationToken)
     {
         var user = guard.Authenticated().UserId;
-        return await db.WishListItems.Where(w => w.UserId == user && w.ObtainedAt != null && !w.Seen)
+        var videos = await db.WishListItems.Where(w => w.UserId == user && w.VideoObtainedAt != null && !w.VideoSeen)
+            .ExecuteUpdateAsync(w => w.SetProperty(x => x.VideoSeen, true), cancellationToken);
+        return videos + await db.WishListItems.Where(w => w.UserId == user && w.ObtainedAt != null && !w.Seen)
             .ExecuteUpdateAsync(w => w.SetProperty(x => x.Seen, true), cancellationToken);
     }
 
@@ -241,6 +265,36 @@ public sealed class WishListService(
         }
 
         return found.Count;
+    }
+
+    /// <summary>
+    /// Marks as obtained the music video of <paramref name="wishes"/> that want one, whose song arrived and has a video
+    /// <paramref name="access"/>'s user can watch (the caller saves). Returns how many were found.
+    /// </summary>
+    internal static async Task<int> MatchVideosAsync(CatalogService catalog, UserAccess access, IReadOnlyList<WishListItem> wishes, DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var waiting = wishes.Where(w => w.WantsVideo && w.VideoObtainedAt is null && w.TrackId is not null).ToList();
+        if (waiting.Count == 0)
+            return 0;
+        var trackIds = waiting.Select(w => w.TrackId!.Value).ToList();
+        var recordings = await catalog.Visible(access, null).Where(t => trackIds.Contains(t.Id)).Select(t => new { t.Id, t.RecordingId })
+            .ToDictionaryAsync(t => t.Id, t => t.RecordingId, cancellationToken);
+        var recordingIds = recordings.Values.Distinct().ToList();
+        var videos = await catalog.VisibleVideos(access)
+            .Where(v => (v.TrackId != null && trackIds.Contains(v.TrackId.Value)) || (v.RecordingId != null && recordingIds.Contains(v.RecordingId.Value)))
+            .Select(v => new { v.TrackId, v.RecordingId })
+            .ToListAsync(cancellationToken);
+        var found = 0;
+        foreach (var wish in waiting)
+        {
+            var recording = recordings.GetValueOrDefault(wish.TrackId!.Value);
+            if (!videos.Any(v => v.TrackId == wish.TrackId || (v.RecordingId is { } r && r == recording)))
+                continue;
+            wish.VideoObtainedAt = now;
+            found++;
+        }
+        return found;
     }
 
     private static void Apply(WishListItem wish, WishInput input)
@@ -297,6 +351,15 @@ public sealed class WishListService(
         wish.Note = note.Length > 0 ? note : null;
         wish.SourceUrl = source?.ToString();
         wish.SourceService = source is null ? null : WishLinkResolver.Identify(source);
+        if (input.WantsVideo is { } wantsVideo)
+        {
+            if (!wantsVideo)
+            {
+                wish.VideoObtainedAt = null;
+                wish.VideoSeen = false;
+            }
+            wish.WantsVideo = wantsVideo;
+        }
         // Another song now: what fulfilled the old one does not count.
         if (changed && wish.ObtainedAt is not null)
         {
@@ -305,6 +368,8 @@ public sealed class WishListService(
             wish.MatchedBy = null;
             wish.FoundWhenAdded = false;
             wish.Seen = false;
+            wish.VideoObtainedAt = null;
+            wish.VideoSeen = false;
         }
     }
 
@@ -337,7 +402,8 @@ public sealed class WishListService(
                     WishMatch.Tags => TrackMatchKind.Tags,
                     _ => null,
                 },
-                w.FoundWhenAdded, w.Seen, w.SourceUrl, w.SourceService, w.ArtworkId, owners.GetValueOrDefault(w.UserId), w.TargetLibraryId))
+                w.FoundWhenAdded, w.Seen, w.SourceUrl, w.SourceService, w.ArtworkId, owners.GetValueOrDefault(w.UserId), w.TargetLibraryId,
+                w.WantsVideo, w.VideoObtainedAt, w.VideoSeen))
             .ToList();
     }
 

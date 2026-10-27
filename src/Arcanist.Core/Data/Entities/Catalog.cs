@@ -228,6 +228,8 @@ public enum ArtworkSource
     Embedded,
     Folder,
     Online,
+    /// <summary>A frame of a music video.</summary>
+    VideoFrame,
 }
 
 /// <summary>Cached image, stored once per content hash under the data directory's cache.</summary>

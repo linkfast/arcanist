@@ -23,6 +23,8 @@ internal static partial class SubsonicMethods
     {
         var parameters = call.Parameters;
         var id = parameters.RequiredId("id");
+        if (await VideoStreamAsync(call, id, download) is { } video)
+            return video;
         if (download)
             return await MediaResponses.StreamAsync(call.Http, id, null, true, null, null, null, call.Cancellation);
 

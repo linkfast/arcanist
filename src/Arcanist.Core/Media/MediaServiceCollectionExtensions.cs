@@ -15,6 +15,12 @@ public static class MediaServiceCollectionExtensions
         services.AddSingleton<PretranscodeWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<PretranscodeWorker>());
         services.AddHostedService<FfmpegWarmup>();
+        services.AddSingleton<Videos.VideoSettings>();
+        services.AddSingleton<Videos.VideoStore>();
+        services.AddSingleton<Videos.VideoTranscoder>();
+        services.AddSingleton<Videos.VideoPlans>();
+        services.AddSingleton<Videos.VideoPrepareWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<Videos.VideoPrepareWorker>());
         services.AddHttpClient(FfmpegDownloader.HttpClientName, client =>
         {
             // The GitHub API rejects requests without a user agent.

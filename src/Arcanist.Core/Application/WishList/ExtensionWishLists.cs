@@ -33,7 +33,7 @@ public sealed class ExtensionWishLists(
         var access = await UserAsync(userId, cancellationToken);
         var wish = await wishes.AddAsync(access,
             new WishInput(input.Title, input.Artist, input.Album, input.MusicBrainzRecordingId, input.AcoustId, input.DurationMs, input.Note,
-                input.SourceUrl, input.ArtworkId),
+                input.SourceUrl, input.ArtworkId, WantsVideo: input.WantsVideo),
             cancellationToken);
         return ToEntry(wish, userId, access.UserName);
     }
@@ -69,5 +69,9 @@ public sealed class ExtensionWishLists(
 
     private static WishListEntry ToEntry(Wish wish, Guid userId, string userName) =>
         new(wish.Id, userId, userName, wish.Title, wish.Artist, wish.Album, wish.DurationMs, wish.MusicBrainzRecordingId, wish.AcoustId, wish.Note,
-            wish.CreatedAt, wish.ObtainedAt, wish.Track?.Id, wish.SourceUrl, wish.ArtworkId);
+            wish.CreatedAt, wish.ObtainedAt, wish.Track?.Id, wish.SourceUrl, wish.ArtworkId)
+        {
+            WantsVideo = wish.WantsVideo,
+            VideoObtainedAt = wish.VideoObtainedAt,
+        };
 }

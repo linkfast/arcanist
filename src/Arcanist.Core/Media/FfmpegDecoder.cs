@@ -36,17 +36,29 @@ public static class FfmpegDecoder
     }
 
     /// <summary>
-    /// Decodes the input to interleaved floats (48 kHz stereo) and hands them to <paramref name="push"/>, which
-    /// returns false to reject them. Returns why it failed, or null.
+    /// Feeds a side of an alignment with audio the native decoder does not read: from <paramref name="localPath"/>
+    /// when there is one (an MP4 with its index at the end cannot be read from a pipe), else from
+    /// <paramref name="input"/>. Synchronous. Returns why it failed, or null.
     /// </summary>
-    private static string? Decode(string ffmpeg, Stream input, PushSamples push, CancellationToken cancellationToken, int? startMs, int? endMs)
+    public static string? Align(string ffmpeg, AudioAligner aligner, int side, string? localPath, Stream? input, CancellationToken cancellationToken, int? startMs = null, int? endMs = null)
+    {
+        if (!aligner.Begin(side, SampleRate, Channels))
+            return "the aligner rejected the format";
+        return Decode(ffmpeg, localPath is null ? input : null, samples => aligner.Push(side, samples), cancellationToken, startMs, endMs, localPath);
+    }
+
+    /// <summary>
+    /// Decodes the input (or the file at <paramref name="localPath"/>) to interleaved floats (48 kHz stereo) and
+    /// hands them to <paramref name="push"/>, which returns false to reject them. Returns why it failed, or null.
+    /// </summary>
+    private static string? Decode(string ffmpeg, Stream? input, PushSamples push, CancellationToken cancellationToken, int? startMs, int? endMs, string? localPath = null)
     {
         var start = new ProcessStartInfo(ffmpeg)
         {
             // First audio stream only (files may embed cover art as a video stream), downmixed and resampled to
             // one fixed format the analyzer is created for; for a cue track, only its part of the file.
-            ArgumentList = { "-hide_banner", "-loglevel", "error", "-i", "pipe:0" },
-            RedirectStandardInput = true,
+            ArgumentList = { "-hide_banner", "-loglevel", "error", "-i", localPath ?? "pipe:0" },
+            RedirectStandardInput = input is not null,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -74,11 +86,11 @@ public static class FfmpegDecoder
             }
         });
 
-        var feeding = Task.Run(() =>
+        var feeding = input is null ? Task.CompletedTask : Task.Run(() =>
         {
             try
             {
-                input.CopyTo(process.StandardInput.BaseStream);
+                input!.CopyTo(process.StandardInput.BaseStream);
             }
             catch (IOException)
             {

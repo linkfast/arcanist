@@ -35,6 +35,9 @@ public enum DlnaSection
 
     /// <summary>Each published library on its own: its artists, albums and folders.</summary>
     Libraries,
+
+    /// <summary>The music videos of the published libraries, with the audio the server plays by default.</summary>
+    MusicVideos,
 }
 
 /// <summary>DLNA settings, kept in the database.</summary>

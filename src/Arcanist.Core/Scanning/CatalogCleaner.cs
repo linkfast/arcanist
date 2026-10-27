@@ -27,9 +27,24 @@ internal sealed class CatalogCleaner(ArcanistDbContext db, ArtworkStore artworkS
         // Analyses belong to the audio, not to a file: kept while any copy of that audio is in the catalog.
         await db.AudioAnalyses.Where(a => !db.MediaFiles.Any(f => f.ContentHash == a.ContentHash)).ExecuteDeleteAsync(cancellationToken);
 
+        // Music videos: missing ones after the same retention; links to songs that left the catalog; alignments
+        // whose video or audio no copy has any more.
+        await db.MusicVideos.Where(v => v.MissingSince != null && v.MissingSince < cutoff).ExecuteDeleteAsync(cancellationToken);
+        await db.MusicVideos.Where(v => v.TrackId != null && !db.Tracks.Any(t => t.Id == v.TrackId))
+            .ExecuteUpdateAsync(s => s.SetProperty(v => v.TrackId, (Guid?)null), cancellationToken);
+        await db.MusicVideos.Where(v => v.RecordingId != null && !db.Recordings.Any(r => r.Id == v.RecordingId))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(v => v.RecordingId, (Guid?)null)
+                .SetProperty(v => v.LinkMethod, (Data.Entities.VideoLinkMethod?)null)
+                .SetProperty(v => v.LinkLocked, false), cancellationToken);
+        await db.VideoAlignments
+            .Where(a => !db.MusicVideos.Any(v => v.ContentHash == a.VideoHash) || !db.MediaFiles.Any(f => f.ContentHash == a.AudioHash))
+            .ExecuteDeleteAsync(cancellationToken);
+        await db.VideoAlignmentRequests.Where(r => !db.MusicVideos.Any(v => v.Id == r.VideoId)).ExecuteDeleteAsync(cancellationToken);
+
         var unusedArtwork = await db.Artworks
             .Where(a => !db.Albums.Any(al => al.ArtworkId == a.Id) && !db.Tracks.Any(t => t.ArtworkId == a.Id)
-                        && !db.WishListItems.Any(w => w.ArtworkId == a.Id))
+                        && !db.WishListItems.Any(w => w.ArtworkId == a.Id) && !db.MusicVideos.Any(v => v.ArtworkId == a.Id))
             .Select(a => new { a.Id, a.Hash, a.MimeType })
             .ToListAsync(cancellationToken);
 

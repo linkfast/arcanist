@@ -13,6 +13,7 @@ import {
   lucideGift,
   lucideChevronDown,
   lucideCloud,
+  lucideClapperboard,
   lucideCopy,
   lucideDatabase,
   lucideExternalLink,
@@ -63,6 +64,7 @@ import { UpdateNotice } from './update-notice';
       lucideGift,
       lucideChevronDown,
       lucideCloud,
+      lucideClapperboard,
       lucideCopy,
       lucideDatabase,
       lucideHouse,
@@ -342,6 +344,12 @@ export class Shell {
         label: 'nav.duplicates',
         icon: 'lucideCopy',
         visible: this.auth.can('MANAGE_LIBRARIES'),
+      },
+      {
+        path: '/videos',
+        label: 'nav.videos',
+        icon: 'lucideClapperboard',
+        visible: this.auth.can('MANAGE_LIBRARIES') || this.auth.can('EDIT_METADATA'),
       },
       {
         path: '/import',

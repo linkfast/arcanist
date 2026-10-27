@@ -48,6 +48,7 @@ public sealed record Extension(
 /// <param name="Url">The page, on this server (a path).</param>
 /// <param name="IconUrl">A square SVG icon (a path); null when it has none.</param>
 /// <param name="Width">The window's preferred width in CSS pixels; null to let the player choose.</param>
+/// <param name="TrackActions">What it offers on a song, for the song's menu in players.</param>
 public sealed record ExtensionAppInfo(
     string ExtensionId,
     string Id,
@@ -56,7 +57,13 @@ public sealed record ExtensionAppInfo(
     string Url,
     string? IconUrl,
     int? Width,
-    int? Height);
+    int? Height,
+    IReadOnlyList<ExtensionTrackActionInfo> TrackActions);
+
+/// <summary>An action an extension app offers on a song. Part of the API contract.</summary>
+/// <param name="Url">The app's page for a song: replace <c>{trackId}</c> with the song's id.</param>
+/// <param name="WithoutVideoOnly">Offer it only on songs without a music video.</param>
+public sealed record ExtensionTrackActionInfo(string Id, string Name, string Url, bool WithoutVideoOnly);
 
 /// <summary>
 /// Installing and switching extensions. Administrators only, with a recent authentication for every change: an
@@ -92,7 +99,9 @@ public sealed class ExtensionService(
             .Select(entry => new ExtensionAppInfo(entry.Extension, entry.App.Id,
                 Localized(entry.App.Names, languages) ?? entry.App.Name,
                 Localized(entry.App.Descriptions, languages) ?? entry.App.Description,
-                entry.App.Path, entry.App.Icon, entry.App.Width, entry.App.Height))
+                entry.App.Path, entry.App.Icon, entry.App.Width, entry.App.Height,
+                (entry.App.TrackActions ?? []).Select(action => new ExtensionTrackActionInfo(action.Id,
+                    Localized(action.Names, languages) ?? action.Name, action.Path, action.WithoutVideoOnly)).ToList()))
             .OrderBy(app => app.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }

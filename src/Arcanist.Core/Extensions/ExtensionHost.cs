@@ -256,7 +256,11 @@ public sealed class ExtensionHost
             && !string.IsNullOrWhiteSpace(app.Name) && app.Name.Length <= 64
             && OwnPath(manifest, app.Path) && (app.Icon is null || OwnPath(manifest, app.Icon))
             && (app.Permissions ?? []).All(name => Application.Extensions.ExtensionService.ParsePermission(name) is not null)
-            && app.Width is null or >= 240 and <= 4096 && app.Height is null or >= 200 and <= 4096);
+            && app.Width is null or >= 240 and <= 4096 && app.Height is null or >= 200 and <= 4096
+            && (app.TrackActions ?? []).Count <= 8
+            && (app.TrackActions ?? []).All(action => PackageArchive.IsValidId(action.Id) && !string.IsNullOrWhiteSpace(action.Name) && action.Name.Length <= 64
+                && action.Path.Contains("{trackId}", StringComparison.Ordinal)
+                && OwnPath(manifest, action.Path.Replace("{trackId}", Guid.Empty.ToString(), StringComparison.Ordinal))));
     }
 
     /// <summary>A page or file of the extension's own: under <c>/ext/&lt;id&gt;/</c>, without climbing out of it.</summary>

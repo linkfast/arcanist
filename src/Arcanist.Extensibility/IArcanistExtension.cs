@@ -104,4 +104,21 @@ public sealed record ExtensionApp(
     IReadOnlyList<string>? Permissions = null,
     bool AdminOnly = false,
     int? Width = null,
-    int? Height = null);
+    int? Height = null)
+{
+    /// <summary>
+    /// Actions players offer on a song (in its menu), opening this app at their path with <c>{trackId}</c> replaced by
+    /// the song's id.
+    /// </summary>
+    public IReadOnlyList<ExtensionTrackAction>? TrackActions { get; init; }
+}
+
+/// <summary>An action a player offers on a song: it opens the app at <paramref name="Path"/> (under <c>/ext/&lt;id&gt;/</c>, with <c>{trackId}</c>).</summary>
+/// <param name="Names">The name in other languages, by language tag.</param>
+/// <param name="WithoutVideoOnly">Offered only on songs without a music video (to look for one).</param>
+public sealed record ExtensionTrackAction(
+    string Id,
+    string Name,
+    string Path,
+    IReadOnlyDictionary<string, string>? Names = null,
+    bool WithoutVideoOnly = false);

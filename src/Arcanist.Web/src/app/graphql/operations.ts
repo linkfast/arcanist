@@ -1920,6 +1920,9 @@ export const WishFields = graphql(`
       displayName
     }
     targetLibraryId
+    wantsVideo
+    videoObtainedAt
+    videoSeen
     track {
       id
       title
@@ -3403,6 +3406,155 @@ export const LyricsTimingQuery = graphql(`
       waiting
       extensionId
       extension
+    }
+  }
+`);
+
+export const VideoClipFields = graphql(`
+  fragment VideoClipFields on VideoClip {
+    id
+    title
+    artist
+    durationMs
+    width
+    height
+    isLive
+    artworkId
+    libraryId
+    path
+    trackId
+    recordingId
+    linkMethod
+    linkLocked
+    sync
+    coverage
+    audioMode
+    streamUrl
+    trackAudioUrl
+    videoAudioUrl
+    hlsUrl
+    versions {
+      name
+      height
+      width
+      bitRate
+      codec
+      prepared
+    }
+    addedAt
+    canManage
+  }
+`);
+
+export const MusicVideosQuery = graphql(`
+  query MusicVideos($input: MusicVideosInput) {
+    musicVideos(input: $input) {
+      items {
+        ...VideoClipFields
+      }
+      nextCursor
+      totalCount
+    }
+  }
+`);
+
+export const MusicVideoQuery = graphql(`
+  query MusicVideo($id: ID!) {
+    musicVideo(id: $id) {
+      ...VideoClipFields
+      segments {
+        videoStartMs
+        videoEndMs
+        source
+        trackStartMs
+        rate
+        similarity
+      }
+    }
+  }
+`);
+
+export const LinkMusicVideoMutation = graphql(`
+  mutation LinkMusicVideo($id: ID!, $trackId: ID) {
+    linkMusicVideo(id: $id, trackId: $trackId) {
+      id
+    }
+  }
+`);
+
+export const UnlockMusicVideoMutation = graphql(`
+  mutation UnlockMusicVideo($id: ID!) {
+    unlockMusicVideo(id: $id) {
+      id
+    }
+  }
+`);
+
+export const SetMusicVideoLiveMutation = graphql(`
+  mutation SetMusicVideoLive($id: ID!, $live: Boolean!) {
+    setMusicVideoLive(id: $id, live: $live) {
+      id
+    }
+  }
+`);
+
+export const RealignMusicVideoMutation = graphql(`
+  mutation RealignMusicVideo($id: ID!) {
+    realignMusicVideo(id: $id) {
+      id
+    }
+  }
+`);
+
+export const DeleteMusicVideoMutation = graphql(`
+  mutation DeleteMusicVideo($id: ID!) {
+    deleteMusicVideo(id: $id)
+  }
+`);
+
+export const VideoSettingsQuery = graphql(`
+  query VideoSettings {
+    videoSettings {
+      defaultAudio
+      cacheMaxBytes
+      cacheMaxAgeDays
+      prepareLibraryIds
+      prepareHeights
+      prepareWhenPlayed
+      cacheBytes
+      preparedBytes
+      videos
+      linked
+      aligned
+      pending
+    }
+  }
+`);
+
+export const SetVideoSettingsMutation = graphql(`
+  mutation SetVideoSettings($input: VideoSettingsInput!) {
+    setVideoSettings(input: $input) {
+      defaultAudio
+    }
+  }
+`);
+
+export const MyVideoSettingsQuery = graphql(`
+  query MyVideoSettings {
+    myVideoSettings {
+      audio
+      serverDefault
+      effective
+    }
+  }
+`);
+
+export const SetMyVideoSettingsMutation = graphql(`
+  mutation SetMyVideoSettings($audio: VideoAudioMode) {
+    setMyVideoSettings(audio: $audio) {
+      audio
+      serverDefault
+      effective
     }
   }
 `);

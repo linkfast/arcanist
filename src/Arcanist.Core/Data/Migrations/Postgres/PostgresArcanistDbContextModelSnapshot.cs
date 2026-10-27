@@ -1477,6 +1477,125 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("MstreamImportFiles");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MusicVideo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Artist")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid?>("ArtworkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AudioCodec")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Container")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsLive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("LibrarySourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("LinkLocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LinkMethod")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("LiveLocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("MissingSince")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedArtist")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("NormalizedTitle")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<bool>("Probed")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("RecordingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RelativePath")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<DateTime>("ScannedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SearchText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VideoCodec")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtworkId");
+
+                    b.HasIndex("ContentHash");
+
+                    b.HasIndex("NormalizedTitle");
+
+                    b.HasIndex("RecordingId");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("LibrarySourceId", "RelativePath")
+                        .IsUnique();
+
+                    b.ToTable("MusicVideos");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OnlineLookup", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2694,6 +2813,77 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("UserUploads");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.VideoAlignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AlignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("AlignerVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AudioHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<double>("Coverage")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Segments")
+                        .HasColumnType("text");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<double>("VideoGainDb")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("VideoHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AudioHash");
+
+                    b.HasIndex("VideoHash", "AudioHash")
+                        .IsUnique();
+
+                    b.ToTable("VideoAlignments");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.VideoAlignmentRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Priority")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("VideoId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoId")
+                        .IsUnique();
+
+                    b.ToTable("VideoAlignmentRequests");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.WishListItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2761,6 +2951,15 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("VideoObtainedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("VideoSeen")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("WantsVideo")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -2992,6 +3191,24 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasForeignKey("ImportId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.MusicVideo", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Artwork", "Artwork")
+                        .WithMany()
+                        .HasForeignKey("ArtworkId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Arcanist.Core.Data.Entities.LibrarySource", "LibrarySource")
+                        .WithMany()
+                        .HasForeignKey("LibrarySourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Artwork");
+
+                    b.Navigation("LibrarySource");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.OrganizeMove", b =>

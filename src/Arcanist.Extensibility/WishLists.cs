@@ -47,7 +47,14 @@ public sealed record WishListEntry(
     DateTime? ObtainedAt,
     Guid? TrackId,
     string? SourceUrl,
-    Guid? ArtworkId);
+    Guid? ArtworkId)
+{
+    /// <summary>The user also wants the song's music video.</summary>
+    public bool WantsVideo { get; init; }
+
+    /// <summary>When a music video of the song arrived (or was there); null while it is wanted (or not wanted).</summary>
+    public DateTime? VideoObtainedAt { get; init; }
+}
 
 /// <summary>A song to wish for: title and artist; the rest narrows it.</summary>
 public sealed record WishListEntryInput(
@@ -59,4 +66,8 @@ public sealed record WishListEntryInput(
     string? AcoustId = null,
     string? Note = null,
     string? SourceUrl = null,
-    Guid? ArtworkId = null);
+    Guid? ArtworkId = null)
+{
+    /// <summary>The user also wants the song's music video.</summary>
+    public bool WantsVideo { get; init; }
+}

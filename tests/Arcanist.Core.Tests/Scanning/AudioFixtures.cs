@@ -105,6 +105,67 @@ public static class AudioFixtures
         return Wav(pcm, sampleRate, channels: 2);
     }
 
+    /// <summary>
+    /// A melody (harmonic notes of 0.2–0.45 s from a scale, picked by <paramref name="seed"/>, with a drum hit on
+    /// each) as mono samples from <paramref name="from"/> seconds: unlike <see cref="Music"/> its fingerprint changes
+    /// all the time, so where a stretch of it lies in a longer recording can be found.
+    /// </summary>
+    public static float[] Melody(int seed, double seconds, double from = 0, int sampleRate = 44100)
+    {
+        var random = new Random(seed);
+        int[] scale = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16];
+        var notes = new List<(double Start, double Length, double Frequency)>();
+        for (var t = 0.0; t < from + seconds + 1;)
+        {
+            var length = 0.2 + 0.25 * random.NextDouble();
+            notes.Add((t, length, 440 * Math.Pow(2, (48 + scale[random.Next(scale.Length)] - 69) / 12.0)));
+            t += length;
+        }
+
+        var samples = new float[(int)(seconds * sampleRate)];
+        var note = 0;
+        for (var i = 0; i < samples.Length; i++)
+        {
+            var t = from + (double)i / sampleRate;
+            while (note + 1 < notes.Count && notes[note + 1].Start <= t)
+                note++;
+            var (start, length, frequency) = notes[note];
+            var local = t - start;
+            var envelope = Math.Min(local * 40, 1) * Math.Exp(-local / length * 2);
+            var value = 0.0;
+            for (var harmonic = 1; harmonic < 5; harmonic++)
+                value += envelope * Math.Sin(2 * Math.PI * frequency * harmonic * t) / harmonic;
+            if (local < 0.03)
+                value += 0.6 * Math.Sin(local * 9871) * (1 - local / 0.03);
+            samples[i] = (float)(0.3 * value);
+        }
+        return samples;
+    }
+
+    /// <summary>Quiet filtered noise, like talking in a scene: something that is not the song.</summary>
+    public static float[] Noise(int seed, double seconds, int sampleRate = 44100)
+    {
+        var random = new Random(seed);
+        var samples = new float[(int)(seconds * sampleRate)];
+        var previous = 0.0;
+        for (var i = 0; i < samples.Length; i++)
+        {
+            var slow = Math.Abs(Math.Sin(2 * Math.PI * 3 * i / sampleRate));
+            previous = 0.7 * previous + 0.3 * (random.NextDouble() - 0.5);
+            samples[i] = (float)(0.3 * slow * previous);
+        }
+        return samples;
+    }
+
+    /// <summary>A stereo 16-bit WAV of mono samples.</summary>
+    public static byte[] Wav(float[] mono, int sampleRate = 44100)
+    {
+        var pcm = new short[mono.Length * 2];
+        for (var i = 0; i < mono.Length; i++)
+            pcm[2 * i] = pcm[2 * i + 1] = (short)(Math.Clamp(mono[i], -1, 1) * 32000);
+        return Wav(pcm, sampleRate, channels: 2);
+    }
+
     /// <summary>Joins WAVs made by <see cref="Music"/> (same format) into one, like a whole album ripped to one file.</summary>
     public static byte[] Concatenate(params byte[][] wavs)
     {

@@ -110,4 +110,10 @@ public static class SettingKeys
 
     /// <summary>The last play sent to the servers that count this server's plays.</summary>
     public const string P2PPlaysCursor = "p2p.playsCursor";
+
+    /// <summary>Music videos: whose audio plays by default, their cache and the versions made ahead of time.</summary>
+    public const string Videos = "videos.settings";
+
+    /// <summary>A user's own choice of whose audio plays with music videos.</summary>
+    public static string UserVideos(Guid userId) => $"videos.user.{userId:N}";
 }

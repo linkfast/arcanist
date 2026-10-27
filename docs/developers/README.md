@@ -282,6 +282,17 @@ the server also works out the timing of what LRCLib does not have from the song 
 reading the lyrics of an untimed song asks for it first, so it may come a minute or two later. Players that show
 lyrics as the song goes (karaoke, visualizers) should use `synced` and fall back to `plain`.
 
+## Music videos
+
+Servers with `MUSIC_VIDEOS` in `serverInfo.features` keep music videos: files next to their songs, named after them,
+or uploaded (`POST /rest/v1/tracks/{id}/video?fileName=`). `Track.videos` lists a song's videos and `musicVideos` all
+of them. The server aligns each video's soundtrack with the song's audio, so a video can play with the **song's
+audio from the library** wherever the video plays it (and its own in intros, dialogue and scenes): `trackAudioUrl`,
+or with its own audio: `videoAudioUrl`. Both have the same timeline, so a player switches between them keeping the
+position. `streamUrl` is the user's choice (`myVideoSettings`), and `hlsUrl`, when there is one, streams adaptively
+with both audios as alternative renditions. The whole contract, with how to report plays, is in
+[music-videos.md](music-videos.md).
+
 ## Ratings and StarTracks
 
 The songs a user loves are their **StarTracks**, as every Ultimate app calls them. `serverInfo.ratingMode` says how

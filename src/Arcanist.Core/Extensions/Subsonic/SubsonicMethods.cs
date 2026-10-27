@@ -82,7 +82,8 @@ internal static partial class SubsonicMethods
             ["getNewestPodcasts"] = call => Empty(call, "newestPodcasts", "episode"),
             ["getInternetRadioStations"] = call => Empty(call, "internetRadioStations", "internetRadioStation"),
             ["getShares"] = call => Empty(call, "shares", "share"),
-            ["getVideos"] = call => Empty(call, "videos", "video"),
+            ["getVideos"] = GetVideosAsync,
+        ["getVideoInfo"] = GetVideoInfoAsync,
             ["getBookmarks"] = call => Empty(call, "bookmarks", "bookmark"),
             ["getChatMessages"] = call => Empty(call, "chatMessages", "chatMessage"),
             ["getPlayQueue"] = call => Task.FromResult(call.Ok()),
@@ -161,7 +162,7 @@ internal static partial class SubsonicMethods
                 .Attr("streamRole", true)
                 .Attr("jukeboxRole", false)
                 .Attr("shareRole", false)
-                .Attr("videoConversionRole", false)
+                .Attr("videoConversionRole", true)
                 .Values("folder", folders.Order().Cast<object>()));
         }
 

@@ -3025,6 +3025,123 @@
         }
       }
     },
+    "/rest/v1/me/video-settings": {
+      "get": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "The user\u0027s choice of whose audio plays with music videos, and the one in effect.",
+        "operationId": "MyVideoSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyVideoSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "Chooses whose audio plays with music videos for the user (TRACK, VIDEO, or null for the server\u0027s default).",
+        "operationId": "SetMyVideoSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMyVideoSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyVideoSettings"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/{id}/video": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Adds a track\u0027s music video (MP4, MKV, WebM, MOV) next to its copy in a library the user uploads to, named like it: the next scan links it and the server aligns it. Requires UPLOAD.",
+        "operationId": "UploadTrackVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fileName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "$ref": "#/components/schemas/Stream"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/me/export/files": {
       "get": {
         "tags": [
@@ -10186,6 +10303,580 @@
         }
       }
     },
+    "/rest/v1/videos": {
+      "get": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "The music videos in libraries the user can access, by title, with optional filters. Each says whether it plays with its song\u0027s audio and how to play it.",
+        "operationId": "MusicVideos",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "linked",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "live",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "trackId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoClipPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/videos/{id}": {
+      "get": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "A music video, with the stretches where its audio and its song\u0027s line up (segments).",
+        "operationId": "MusicVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoClip"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "Moves a music video\u0027s file to the trash of its location and removes it from the catalog. Requires DELETE_TRACKS.",
+        "operationId": "DeleteMusicVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/videos/{id}/link": {
+      "put": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "Links a music video to a track\u0027s song (or, with no trackId, leaves it with no song); scans keep what a person chose. Requires MANAGE_LIBRARIES or EDIT_METADATA.",
+        "operationId": "LinkMusicVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkMusicVideoInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoClip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/videos/{id}/unlock": {
+      "post": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "Gives a music video back to automatic linking and live detection. Requires MANAGE_LIBRARIES or EDIT_METADATA.",
+        "operationId": "UnlockMusicVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoClip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/videos/{id}/live": {
+      "put": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "Marks a music video as a live performance or not. Requires MANAGE_LIBRARIES or EDIT_METADATA.",
+        "operationId": "SetMusicVideoLive",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMusicVideoLiveInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoClip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/videos/{id}/realign": {
+      "post": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "Forgets a music video\u0027s alignment and aligns it again first of all. Requires MANAGE_LIBRARIES or EDIT_METADATA.",
+        "operationId": "RealignMusicVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoClip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/videos/settings": {
+      "get": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "How the server handles music videos. Requires MANAGE_SETTINGS.",
+        "operationId": "VideoSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoSettingsInfo"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "Sets how the server handles music videos. Requires MANAGE_SETTINGS.",
+        "operationId": "SetVideoSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VideoSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoSettingsInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/videos/{id}/stream": {
+      "get": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "A music video as MP4. Authenticate with a Bearer token or the \u0060st\u0060 parameter of its stream URLs. \u0060audio\u0060 is TRACK (the song\u0027s audio from the library where the video plays it, the video\u0027s own elsewhere) or VIDEO (its own); without it, the user\u0027s choice (myVideoSettings). Both have the same timeline: switch keeping the position. \u0060rendition\u0060 (native, 2160p\u2026360p) or \u0060maxHeight\u0060/\u0060maxBitRate\u0060 choose the version. A version not made yet streams while it is made, without ranges (start later with \u0060t\u0060, in seconds); once made, it is served with ranges. X-Arcanist-Video-Audio says whose audio it has (VIDEO until the alignment is ready).",
+        "operationId": "StreamMusicVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "audio",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rendition",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxHeight",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "maxBitRate",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "t",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "video/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/webm": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/x-matroska": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/quicktime": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial Content",
+            "content": {
+              "video/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/webm": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/x-matroska": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/quicktime": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "A music video as MP4. Authenticate with a Bearer token or the \u0060st\u0060 parameter of its stream URLs. \u0060audio\u0060 is TRACK (the song\u0027s audio from the library where the video plays it, the video\u0027s own elsewhere) or VIDEO (its own); without it, the user\u0027s choice (myVideoSettings). Both have the same timeline: switch keeping the position. \u0060rendition\u0060 (native, 2160p\u2026360p) or \u0060maxHeight\u0060/\u0060maxBitRate\u0060 choose the version. A version not made yet streams while it is made, without ranges (start later with \u0060t\u0060, in seconds); once made, it is served with ranges. X-Arcanist-Video-Audio says whose audio it has (VIDEO until the alignment is ready).",
+        "operationId": "StreamMusicVideo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "audio",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rendition",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxHeight",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "maxBitRate",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "t",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "video/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/webm": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/x-matroska": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/quicktime": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial Content",
+            "content": {
+              "video/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/webm": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/x-matroska": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              },
+              "video/quicktime": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/migration-codes": {
       "get": {
         "tags": [
@@ -11715,7 +12406,8 @@
           "STORAGE_USAGE",
           "UPLOAD_TARGET",
           "CHANGES_SINCE",
-          "LIBRARY_RENAME"
+          "LIBRARY_RENAME",
+          "MUSIC_VIDEOS"
         ]
       },
       "AppPassword": {
@@ -14805,7 +15497,8 @@
           "MIXES",
           "STARRED",
           "RATED",
-          "LIBRARIES"
+          "LIBRARIES",
+          "MUSIC_VIDEOS"
         ]
       },
       "DlnaSettingsInput": {
@@ -15437,7 +16130,8 @@
           "url",
           "iconUrl",
           "width",
-          "height"
+          "height",
+          "trackActions"
         ],
         "type": "object",
         "properties": {
@@ -15482,6 +16176,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "trackActions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtensionTrackActionInfo"
+            }
           }
         }
       },
@@ -15537,6 +16237,29 @@
           "RUNNING",
           "FAILED"
         ]
+      },
+      "ExtensionTrackActionInfo": {
+        "required": [
+          "id",
+          "name",
+          "url",
+          "withoutVideoOnly"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "withoutVideoOnly": {
+            "type": "boolean"
+          }
+        }
       },
       "ExternalServices": {
         "enum": [
@@ -17314,6 +18037,21 @@
           }
         }
       },
+      "LinkMusicVideoInput": {
+        "required": [
+          "trackId"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "ListeningBucket": {
         "required": [
           "start",
@@ -19025,6 +19763,32 @@
           "ALREADY_IN_CLOUD",
           "FAILED"
         ]
+      },
+      "MyVideoSettings": {
+        "required": [
+          "audio",
+          "serverDefault",
+          "effective"
+        ],
+        "type": "object",
+        "properties": {
+          "audio": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VideoAudioMode"
+              }
+            ]
+          },
+          "serverDefault": {
+            "$ref": "#/components/schemas/VideoAudioMode"
+          },
+          "effective": {
+            "$ref": "#/components/schemas/VideoAudioMode"
+          }
+        }
       },
       "NetworkPeer": {
         "required": [
@@ -22263,6 +23027,17 @@
           }
         }
       },
+      "SetMusicVideoLiveInput": {
+        "required": [
+          "live"
+        ],
+        "type": "object",
+        "properties": {
+          "live": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetMyDlnaStarTracksInput": {
         "required": [
           "shown"
@@ -22286,6 +23061,24 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "SetMyVideoSettingsInput": {
+        "required": [
+          "audio"
+        ],
+        "type": "object",
+        "properties": {
+          "audio": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VideoAudioMode"
+              }
+            ]
           }
         }
       },
@@ -23959,7 +24752,8 @@
           "taggedBpm",
           "updatedAt",
           "canEdit",
-          "canDelete"
+          "canDelete",
+          "videos"
         ],
         "type": "object",
         "properties": {
@@ -24144,6 +24938,12 @@
           },
           "canDelete": {
             "type": "boolean"
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoClip"
+            }
           }
         }
       },
@@ -26306,6 +27106,494 @@
           "ADMIN"
         ]
       },
+      "VideoAudioMode": {
+        "enum": [
+          "TRACK",
+          "VIDEO"
+        ]
+      },
+      "VideoClip": {
+        "required": [
+          "id",
+          "title",
+          "artist",
+          "durationMs",
+          "width",
+          "height",
+          "isLive",
+          "artworkId",
+          "libraryId",
+          "path",
+          "trackId",
+          "recordingId",
+          "linkMethod",
+          "linkLocked",
+          "sync",
+          "coverage",
+          "audioMode",
+          "streamUrl",
+          "trackAudioUrl",
+          "videoAudioUrl",
+          "hlsUrl",
+          "versions",
+          "segments",
+          "addedAt",
+          "canManage"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isLive": {
+            "type": "boolean"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "libraryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "recordingId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "linkMethod": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VideoLinkMethod"
+              }
+            ]
+          },
+          "linkLocked": {
+            "type": "boolean"
+          },
+          "sync": {
+            "$ref": "#/components/schemas/VideoSync"
+          },
+          "coverage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "audioMode": {
+            "$ref": "#/components/schemas/VideoAudioMode"
+          },
+          "streamUrl": {
+            "type": "string"
+          },
+          "trackAudioUrl": {
+            "type": "string"
+          },
+          "videoAudioUrl": {
+            "type": "string"
+          },
+          "hlsUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoVersion"
+            }
+          },
+          "segments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/VideoSegment"
+            }
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canManage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VideoClipPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoClip"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "VideoLinkMethod": {
+        "enum": [
+          "SIDECAR",
+          "TAGS",
+          "FINGERPRINT",
+          "MANUAL",
+          null
+        ]
+      },
+      "VideoSegment": {
+        "required": [
+          "videoStartMs",
+          "videoEndMs",
+          "source",
+          "trackStartMs",
+          "rate",
+          "similarity"
+        ],
+        "type": "object",
+        "properties": {
+          "videoStartMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "videoEndMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "source": {
+            "$ref": "#/components/schemas/VideoAudioMode"
+          },
+          "trackStartMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "similarity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "VideoSettingsInfo": {
+        "required": [
+          "defaultAudio",
+          "cacheMaxBytes",
+          "cacheMaxAgeDays",
+          "prepareLibraryIds",
+          "prepareHeights",
+          "prepareWhenPlayed",
+          "cacheBytes",
+          "preparedBytes",
+          "videos",
+          "linked",
+          "aligned",
+          "pending"
+        ],
+        "type": "object",
+        "properties": {
+          "defaultAudio": {
+            "$ref": "#/components/schemas/VideoAudioMode"
+          },
+          "cacheMaxBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheMaxAgeDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "prepareLibraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "prepareHeights": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "prepareWhenPlayed": {
+            "type": "boolean"
+          },
+          "cacheBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "preparedBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "videos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "linked": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aligned": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pending": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "VideoSettingsInput": {
+        "required": [
+          "defaultAudio",
+          "cacheMaxBytes",
+          "cacheMaxAgeDays",
+          "prepareLibraryIds",
+          "prepareHeights",
+          "prepareWhenPlayed"
+        ],
+        "type": "object",
+        "properties": {
+          "defaultAudio": {
+            "$ref": "#/components/schemas/VideoAudioMode"
+          },
+          "cacheMaxBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "cacheMaxAgeDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "prepareLibraryIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "prepareHeights": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "prepareWhenPlayed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VideoSync": {
+        "enum": [
+          "READY",
+          "NO_MATCH",
+          "PENDING",
+          "UNAVAILABLE"
+        ]
+      },
+      "VideoVersion": {
+        "required": [
+          "name",
+          "height",
+          "width",
+          "bitRate",
+          "codec",
+          "prepared"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bitRate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "codec": {
+            "type": "string"
+          },
+          "prepared": {
+            "type": "boolean"
+          }
+        }
+      },
       "Waveform": {
         "required": [
           "trackId",
@@ -26487,6 +27775,21 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "wantsVideo": {
+            "type": "boolean",
+            "default": false
+          },
+          "videoObtainedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "videoSeen": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -26556,6 +27859,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "wantsVideo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -26766,6 +28075,9 @@
     },
     {
       "name": "Media"
+    },
+    {
+      "name": "Music videos"
     },
     {
       "name": "Migration"

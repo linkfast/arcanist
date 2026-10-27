@@ -35,6 +35,9 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<Lyrics> Lyrics => Set<Lyrics>();
     public DbSet<Artwork> Artworks => Set<Artwork>();
     public DbSet<AudioAnalysis> AudioAnalyses => Set<AudioAnalysis>();
+    public DbSet<MusicVideo> MusicVideos => Set<MusicVideo>();
+    public DbSet<VideoAlignment> VideoAlignments => Set<VideoAlignment>();
+    public DbSet<VideoAlignmentRequest> VideoAlignmentRequests => Set<VideoAlignmentRequest>();
     public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
     public DbSet<OnlineLookup> OnlineLookups => Set<OnlineLookup>();
     public DbSet<DropFolder> DropFolders => Set<DropFolder>();
@@ -668,6 +671,40 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             analysis.Property(a => a.AcoustIdFingerprint).HasMaxLength(8000);
             analysis.Property(a => a.LoudnessHistogram).HasMaxLength(8000);
         });
+
+        modelBuilder.Entity<MusicVideo>(video =>
+        {
+            video.HasOne(v => v.LibrarySource).WithMany().OnDelete(DeleteBehavior.Cascade);
+            video.HasOne(v => v.Artwork).WithMany().OnDelete(DeleteBehavior.SetNull);
+            video.Property(v => v.RelativePath).HasMaxLength(PathLength);
+            video.Property(v => v.ContentHash).HasMaxLength(64);
+            video.Property(v => v.Title).HasMaxLength(NameLength);
+            video.Property(v => v.NormalizedTitle).HasMaxLength(NameLength);
+            video.Property(v => v.Artist).HasMaxLength(NameLength);
+            video.Property(v => v.NormalizedArtist).HasMaxLength(NameLength);
+            video.Property(v => v.SearchText).HasMaxLength(SearchTextLength);
+            video.Property(v => v.Container).HasMaxLength(64);
+            video.Property(v => v.VideoCodec).HasMaxLength(32);
+            video.Property(v => v.AudioCodec).HasMaxLength(32);
+            video.Property(v => v.LinkMethod).HasConversion<string>().HasMaxLength(EnumLength);
+            video.HasIndex(v => new { v.LibrarySourceId, v.RelativePath }).IsUnique();
+            video.HasIndex(v => v.ContentHash);
+            video.HasIndex(v => v.RecordingId);
+            video.HasIndex(v => v.TrackId);
+            video.HasIndex(v => v.NormalizedTitle);
+        });
+
+        modelBuilder.Entity<VideoAlignment>(alignment =>
+        {
+            alignment.Property(a => a.VideoHash).HasMaxLength(64);
+            alignment.Property(a => a.AudioHash).HasMaxLength(64);
+            alignment.Property(a => a.State).HasConversion<string>().HasMaxLength(EnumLength);
+            alignment.Property(a => a.Error).HasMaxLength(500);
+            alignment.HasIndex(a => new { a.VideoHash, a.AudioHash }).IsUnique();
+            alignment.HasIndex(a => a.AudioHash);
+        });
+
+        modelBuilder.Entity<VideoAlignmentRequest>(request => request.HasIndex(r => r.VideoId).IsUnique());
 
         modelBuilder.Entity<DuplicateCandidate>(candidate =>
         {

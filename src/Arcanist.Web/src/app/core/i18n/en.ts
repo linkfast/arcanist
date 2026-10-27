@@ -112,6 +112,7 @@ export const en: Dictionary = {
   },
   nav: {
     menu: 'Menu',
+    videos: 'Music videos',
     transcoding: 'Transcoding',
     extensionsToggle: 'Show or hide the extensions',
     ai: 'AI',
@@ -972,6 +973,13 @@ export const en: Dictionary = {
       'Delete songs from the libraries they add to, from apps. Their files go to the folder’s trash (kept 30 days).',
   },
   account: {
+    videos: {
+      title: 'Music videos',
+      description:
+        'Which audio you hear with music videos. Players also let you switch it while they play.',
+      audio: 'Default audio',
+      server: "The server's ({mode})",
+    },
     dlna: {
       title: 'Local network (DLNA)',
       description:
@@ -1957,6 +1965,7 @@ export const en: Dictionary = {
         DECADES: 'Decades',
         FOLDERS: 'Folders',
         LIBRARIES: 'Libraries, each on its own',
+        MUSIC_VIDEOS: 'Music videos',
         PLAYLISTS: 'Public playlists',
         RECENTLY_ADDED: 'Recently added',
         MIXES: 'Genre and decade mixes',
@@ -2454,6 +2463,9 @@ export const en: Dictionary = {
     },
   },
   wishes: {
+    wantsVideo: 'I also want the music video',
+    videoArrived: 'Music video: here',
+    videoMissing: 'Music video: not yet',
     target: 'If uploaded, keep it in',
     targetAutomatic: 'Automatic (each upload decides)',
     targetAutomaticNamed: 'Automatic ({library})',
@@ -3318,5 +3330,78 @@ export const en: Dictionary = {
     too_many_streams: 'Too many streams at once through the P2P network.',
     download_not_allowed: 'The owner of that music does not allow downloading it.',
     ffmpeg_checksum_mismatch: 'The downloaded ffmpeg did not match its checksum and was discarded.',
+  },
+  videos: {
+    title: 'Music videos',
+    subtitle:
+      "The libraries' music videos: next to their song, named after it, or uploaded. With their song linked, they play its audio from the library where it matches.",
+    search: 'Search by title or artist',
+    find: 'Search',
+    count: '{count} music videos',
+    none: 'No music videos',
+    noneHelp:
+      'Put video files (MP4, MKV, WebM, MOV) in a library, next to their song with the same name, or with “Artist - Title” in their name.',
+    more: 'Show more',
+    unknownArtist: 'Unknown artist',
+    liveBadge: 'Live',
+    live: 'Live performance (only linked to a live track)',
+    duration: 'Duration',
+    size: 'Size',
+    path: 'File',
+    coverage: 'The song plays in {percent}% of the video',
+    timelineHelp:
+      "In color, the stretches that play the song's audio; in grey, the video's own. Click to jump.",
+    realign: 'Sync again',
+    realigning: 'It will be synced again shortly.',
+    delete: 'Delete',
+    deleteConfirm: "Move this music video to its library's trash? The song is not touched.",
+    filters: {
+      all: 'All',
+      linked: 'With a song',
+      unlinked: 'Without a song',
+      anyPerformance: 'Any performance',
+      live: 'Live',
+      studio: 'Studio',
+    },
+    audio: {
+      label: 'Audio:',
+      TRACK: 'Song + video',
+      VIDEO: "Video's audio",
+    },
+    sync: {
+      READY: 'Synced',
+      NO_MATCH: 'Another performance',
+      PENDING: 'Syncing',
+      UNAVAILABLE: 'Not synced',
+    },
+    link: {
+      label: 'Song',
+      none: 'No song',
+      locked: 'Chosen by hand',
+      search: "Search for this video's song",
+      find: 'Search',
+      remove: 'Remove the song',
+      automatic: 'Back to automatic',
+      SIDECAR: 'Next to its file',
+      TAGS: 'By artist and title',
+      FINGERPRINT: 'By its audio',
+      MANUAL: 'Chosen by hand',
+    },
+    settings: {
+      title: 'Music videos',
+      description:
+        'Which audio plays with music videos by default, the cache of the versions made when they play, and what is prepared ahead of time for adaptive streaming.',
+      counts: '{videos} music videos, {linked} with a song, {aligned} synced, {pending} to sync.',
+      defaultAudio: 'Default audio',
+      defaultAudioHelp:
+        "“Song + video” plays the library's audio where the video plays the song and keeps the video's own in dialogue, intros and scenes. Each user can choose otherwise in My account, and players can switch it live.",
+      cache: 'Cache of versions',
+      usage: 'Cache: {cache}. Prepared: {prepared}.',
+      prepare: 'Prepared versions (HLS)',
+      prepareHelp:
+        'Up to UHD, never above the original. With several heights, players choose by bandwidth.',
+      whenPlayed: 'Also prepare every music video someone plays',
+      libraries: 'Always prepare the music videos of these libraries:',
+    },
   },
 };

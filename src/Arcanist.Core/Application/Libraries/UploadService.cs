@@ -81,6 +81,10 @@ public sealed class UploadService(
     public async Task<UploadResult> UploadAsync(Guid? wishId, string fileName, Stream body, UploadClient? client, CancellationToken cancellationToken)
     {
         var access = guard.Permission(Permissions.Upload);
+        // The music video of a wish whose song arrived goes next to that song.
+        if (wishId is { } wish && VideoFormats.IsVideo(fileName ?? "")
+            && await db.WishListItems.Where(w => w.Id == wish && w.UserId == access.UserId).Select(w => w.TrackId).SingleOrDefaultAsync(cancellationToken) is { } track)
+            return await UploadVideoAsync(access, track, fileName!, body, null, client, cancellationToken);
         return await UploadAsync(access, await destinations.ResolveAsync(access, wishId, cancellationToken), fileName, body, null, client,
             cancellationToken);
     }
@@ -96,8 +100,41 @@ public sealed class UploadService(
         CancellationToken cancellationToken) =>
         UploadAsync(access, libraryId, fileName, body, source, null, cancellationToken);
 
+    /// <summary>
+    /// A music video of a track: it goes next to the track's copy in a library the user uploads to (named like it, so
+    /// scans link them), and the server aligns it with the song.
+    /// </summary>
+    public async Task<UploadResult> UploadVideoAsync(Guid trackId, string fileName, Stream body, UploadClient? client, CancellationToken cancellationToken) =>
+        await UploadVideoAsync(guard.Permission(Permissions.Upload), trackId, fileName, body, null, client, cancellationToken);
+
+    /// <summary>A music video of a track on behalf of a user (for extensions), as <see cref="UploadVideoAsync(Guid,string,Stream,UploadClient?,CancellationToken)"/>.</summary>
+    public Task<UploadResult> UploadVideoAsync(UserAccess access, Guid trackId, string fileName, Stream body, string? source, CancellationToken cancellationToken) =>
+        UploadVideoAsync(access, trackId, fileName, body, source, null, cancellationToken);
+
+    private async Task<UploadResult> UploadVideoAsync(UserAccess access, Guid trackId, string fileName, Stream body, string? source, UploadClient? client,
+        CancellationToken cancellationToken)
+    {
+        if (!VideoFormats.IsVideo(fileName ?? ""))
+            throw ArcanistException.Field("fileName", ErrorCodes.InvalidFormat);
+        // The track's copies this user can add to, local or in S3, best first.
+        var copies = await db.MediaFiles.AsNoTracking()
+            .Where(f => f.TrackId == trackId && f.MissingSince == null && f.CueTrack == 0
+                        && (f.LibrarySource.Kind == LibrarySourceKind.Local || f.LibrarySource.Kind == LibrarySourceKind.S3))
+            .OrderByDescending(f => f.BitDepth ?? 0).ThenByDescending(f => f.SampleRate ?? 0).ThenByDescending(f => f.BitRate ?? 0)
+            .Select(f => new { f.LibrarySource.LibraryId, f.LibrarySourceId, f.RelativePath })
+            .ToListAsync(cancellationToken);
+        if (copies.Count == 0 || !copies.Any(c => access.CanAccessLibrary(c.LibraryId)))
+            throw new ArcanistException.NotFound();
+        var target = copies.FirstOrDefault(c => access.CanUploadTo(c.LibraryId)) ?? throw new ArcanistException.Forbidden(ErrorCodes.LibraryReadOnly);
+        return await UploadAsync(access, target.LibraryId, fileName!, body, source, client, cancellationToken,
+            new VideoTarget(target.LibrarySourceId, AudioFormats.WithoutExtension(target.RelativePath)));
+    }
+
+    /// <summary>Where a music video goes: next to its song's file (without its extension).</summary>
+    private sealed record VideoTarget(Guid SourceId, string Stem);
+
     private async Task<UploadResult> UploadAsync(UserAccess access, Guid libraryId, string fileName, Stream body, string? source,
-        UploadClient? client, CancellationToken cancellationToken)
+        UploadClient? client, CancellationToken cancellationToken, VideoTarget? video = null)
     {
         if (access.IsDisabled || !access.Has(Permissions.Upload))
             throw new ArcanistException.Forbidden();
@@ -113,7 +150,7 @@ public sealed class UploadService(
         long? size = null;
         try
         {
-            var result = await ImportAsync(access, libraryId, fileName, body, length => size = length, cancellationToken);
+            var result = await ImportAsync(access, libraryId, fileName, body, length => size = length, video, cancellationToken);
             await RecordAsync(access.UserId, libraryId, fileName, size, result, null, source, client, cancellationToken);
             return result;
         }
@@ -151,15 +188,17 @@ public sealed class UploadService(
     }
 
     private async Task<UploadResult> ImportAsync(
-        UserAccess access, Guid libraryId, string fileName, Stream body, Action<long> measured, CancellationToken cancellationToken)
+        UserAccess access, Guid libraryId, string fileName, Stream body, Action<long> measured, VideoTarget? video, CancellationToken cancellationToken)
     {
         var extension = Path.GetExtension(fileName ?? "").ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(fileName) || !AudioFormats.IsAudio(fileName))
+        var isVideo = !string.IsNullOrWhiteSpace(fileName) && VideoFormats.IsVideo(fileName);
+        if (string.IsNullOrWhiteSpace(fileName) || (!AudioFormats.IsAudio(fileName) && !isVideo))
             throw ArcanistException.Field("fileName", ErrorCodes.InvalidFormat);
 
         var library = await db.Libraries.AsNoTracking().Include(l => l.Sources).SingleOrDefaultAsync(l => l.Id == libraryId, cancellationToken)
                       ?? throw new ArcanistException.NotFound();
-        var source = library.Sources.Where(s => s.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3).OrderBy(s => s.Id).FirstOrDefault()
+        var source = library.Sources.Where(s => s.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3)
+                         .OrderBy(s => s.Id == video?.SourceId ? 0 : 1).ThenBy(s => s.Id).FirstOrDefault()
                      ?? throw new ArcanistException.Conflict(ErrorCodes.ReadOnly);
         var storage = storages.For(source.Kind);
         var location = StorageLocation.From(source);
@@ -176,6 +215,9 @@ public sealed class UploadService(
                 await body.CopyToAsync(file, cancellationToken);
                 measured(file.Length);
             }
+
+            if (isVideo)
+                return await ImportVideoAsync(access, library, location, storage, fileName, extension, temporary, video, cancellationToken);
 
             AudioMetadata metadata;
             string hash;
@@ -234,6 +276,62 @@ public sealed class UploadService(
         finally
         {
             File.Delete(temporary);
+        }
+    }
+
+    /// <summary>
+    /// A music video into the library: next to its song's file when it has one, else where the template puts the
+    /// artist's music videos (the album being "Music Videos"); skipped when the library has that video already.
+    /// </summary>
+    private async Task<UploadResult> ImportVideoAsync(UserAccess access, Data.Entities.Library library, StorageLocation location, ILibraryStorage storage, string fileName,
+        string extension, string temporary, VideoTarget? video, CancellationToken cancellationToken)
+    {
+        string hash;
+        await using (var stream = File.OpenRead(temporary))
+            hash = await ContentHasher.HashAsync(stream, 0, stream.Length, cancellationToken);
+
+        string wanted;
+        if (video is not null)
+            wanted = video.Stem;
+        else
+        {
+            var parsed = Core.Videos.VideoTitles.Parse(AudioFormats.WithoutExtension(Path.GetFileName(fileName)), null);
+            var template = PathTemplate.TryParse(library.OrganizeTemplate, out var custom, out _) ? custom : PathTemplate.DefaultTemplate;
+            wanted = template.Render(new PathValues(parsed.Artist, parsed.Artist, "Music Videos", null, null, false, null, parsed.Title, null));
+        }
+
+        using (await locks.AcquireForWritingAsync(library.Id, cancellationToken))
+        {
+            var existing = await db.MusicVideos.AsNoTracking()
+                .Where(v => v.ContentHash == hash && v.MissingSince == null && v.LibrarySource.LibraryId == library.Id)
+                .Select(v => new { v.TrackId, v.RelativePath })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existing is not null)
+                return new UploadResult(UploadStatus.Duplicate, hash, existing.RelativePath, existing.TrackId);
+            if (scans.IsPending(library.Id, hash))
+                return new UploadResult(UploadStatus.Duplicate, hash, null, null);
+
+            string destination;
+            for (var copy = 1; ; copy++)
+            {
+                destination = copy == 1 ? wanted + extension : $"{wanted} ({copy}){extension}";
+                if (!await storage.ExistsAsync(location, destination, cancellationToken))
+                    break;
+            }
+
+            try
+            {
+                await storage.ImportAsync(location, destination, temporary, cancellationToken);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(e, "Could not write the uploaded video {File} into {Library}", fileName, library.Name);
+                throw new ArcanistException.Conflict(ErrorCodes.WriteFailed);
+            }
+
+            scans.Uploaded(library.Id, hash, access.UserId);
+            logger.LogInformation("{User} uploaded the video {Path} to {Library}", access.UserName, destination, library.Name);
+            return new UploadResult(UploadStatus.Imported, hash, destination, null);
         }
     }
 }

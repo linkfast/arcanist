@@ -190,6 +190,12 @@ public static class ScanningServiceCollectionExtensions
         services.AddSingleton<ScanCoordinator>();
         services.AddSingleton<LibraryScanner>();
         services.AddHostedService<ScanWorker>();
+        services.AddSingleton<Media.VideoProbe>();
+        services.AddSingleton<Videos.VideoScanner>();
+        services.AddSingleton<Videos.VideoLinker>();
+        services.AddSingleton<Videos.VideoSignals>();
+        services.AddSingleton<Videos.VideoAlignmentWorker>();
+        services.AddHostedService(provider => provider.GetRequiredService<Videos.VideoAlignmentWorker>());
         return services;
     }
 }

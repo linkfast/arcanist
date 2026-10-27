@@ -120,6 +120,7 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// <param name="CanEdit">The user may edit its tags and cover (EDIT_METADATA, and copies in libraries they add to and the
 /// server writes). A hint: the server may still answer <c>read_only</c>.</param>
 /// <param name="CanDelete">The user may delete it (DELETE_TRACKS, and every copy where the server can remove files).</param>
+/// <param name="Videos">Its music videos in libraries the user can access (of this track or another of the same recording).</param>
 public sealed record Track(
     Guid Id,
     string Title,
@@ -150,7 +151,8 @@ public sealed record Track(
     double? TaggedBpm,
     DateTime UpdatedAt,
     bool CanEdit,
-    bool CanDelete);
+    bool CanDelete,
+    IReadOnlyList<Videos.VideoClip> Videos);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);

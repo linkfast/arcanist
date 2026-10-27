@@ -11,7 +11,9 @@ internal sealed record DidlContainer(string Id, string ParentId, string Title, s
     : DidlObject(Id, ParentId, Title);
 
 /// <param name="BitRate">kbit/s.</param>
-internal sealed record DidlResource(string Url, string ProtocolInfo, int DurationMs, long? Size, int? BitRate, int? SampleRate, int? Channels, int? BitDepth);
+/// <param name="Resolution">A video's width×height.</param>
+internal sealed record DidlResource(
+    string Url, string ProtocolInfo, int DurationMs, long? Size, int? BitRate, int? SampleRate, int? Channels, int? BitDepth, string? Resolution = null);
 
 internal sealed record DidlItem(
     string Id,
@@ -24,7 +26,8 @@ internal sealed record DidlItem(
     int? TrackNumber,
     int? Year,
     string? ArtUrl,
-    IReadOnlyList<DidlResource> Resources) : DidlObject(Id, ParentId, Title);
+    IReadOnlyList<DidlResource> Resources,
+    string Class = "object.item.audioItem.musicTrack") : DidlObject(Id, ParentId, Title);
 
 /// <summary>Writes DIDL-Lite, the XML that describes containers and items to UPnP devices.</summary>
 internal static class Didl
@@ -85,7 +88,7 @@ internal static class Didl
         writer.WriteAttributeString("parentID", item.ParentId);
         writer.WriteAttributeString("restricted", "1");
         writer.WriteElementString("title", Dc, Clean(item.Title));
-        writer.WriteElementString("class", Upnp, "object.item.audioItem.musicTrack");
+        writer.WriteElementString("class", Upnp, item.Class);
         if (item.Artist is { } artist)
         {
             writer.WriteElementString("creator", Dc, Clean(artist));
@@ -127,6 +130,8 @@ internal static class Didl
                 writer.WriteAttributeString("nrAudioChannels", channels.ToString(CultureInfo.InvariantCulture));
             if (resource.BitDepth is { } depth)
                 writer.WriteAttributeString("bitsPerSample", depth.ToString(CultureInfo.InvariantCulture));
+            if (resource.Resolution is { } resolution)
+                writer.WriteAttributeString("resolution", resolution);
             writer.WriteString(resource.Url);
             writer.WriteEndElement();
         }

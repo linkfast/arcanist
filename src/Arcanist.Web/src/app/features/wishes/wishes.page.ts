@@ -6,6 +6,7 @@ import { toast } from '@spartan-ng/brain/sonner';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmCheckboxImports } from '@spartan-ng/helm/checkbox';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
@@ -43,6 +44,7 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
 @Component({
   selector: 'app-wishes-page',
   imports: [
+    HlmCheckboxImports,
     FormsModule,
     NgTemplateOutlet,
     HlmBadgeImports,
@@ -195,6 +197,10 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
                   <p hlmFieldDescription>{{ 'wishes.targetHelp' | t }}</p>
                 </hlm-field>
               }
+              <label class="flex items-center gap-2 text-sm">
+                <hlm-checkbox [checked]="wantsVideo()" (checkedChange)="wantsVideo.set($event)" />
+                {{ 'wishes.wantsVideo' | t }}
+              </label>
               <details class="text-sm">
                 <summary class="cursor-pointer text-muted-foreground">
                   {{ 'wishes.ids' | t }}
@@ -310,6 +316,20 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
                     · {{ 'wishes.by.' + wish.matchedBy | t }}
                   }
                 </p>
+                @if (wish.wantsVideo) {
+                  <p class="text-xs">
+                    @if (wish.videoObtainedAt) {
+                      <span class="text-emerald-700 dark:text-emerald-400">{{
+                        'wishes.videoArrived' | t
+                      }}</span>
+                      @if (!wish.videoSeen && scope() === 'MINE') {
+                        <span hlmBadge class="ml-1">{{ 'wishes.new' | t }}</span>
+                      }
+                    } @else {
+                      <span class="text-muted-foreground">{{ 'wishes.videoMissing' | t }}</span>
+                    }
+                  </p>
+                }
                 <ng-container *ngTemplateOutlet="links; context: { $implicit: wish }" />
               </div>
               @if (scope() === 'MINE') {
@@ -423,6 +443,7 @@ export class WishesPage implements OnInit {
   protected artist = '';
   protected album = '';
   protected note = '';
+  protected readonly wantsVideo = signal(false);
   protected mbid = '';
   protected acoustId = '';
   private durationMs: number | null = null;
@@ -572,9 +593,11 @@ export class WishesPage implements OnInit {
           sourceUrl: found?.url ?? null,
           artworkId: found?.artworkId ?? null,
           targetLibraryId: this.target || null,
+          wantsVideo: this.wantsVideo(),
         },
       });
       this.wishes.update((list) => [addWish, ...list]);
+      this.wantsVideo.set(false);
       // Already in a library the user can play: show where, instead of a passing notice.
       if (addWish.status === 'OBTAINED' && addWish.track) this.found.set(addWish);
       else

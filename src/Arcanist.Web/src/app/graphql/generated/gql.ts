@@ -170,7 +170,7 @@ type Documents = {
     "\n  mutation ClearRemoteLibraryCache {\n    clearRemoteLibraryCache {\n      ...RemoteLibrarySettingsFields\n    }\n  }\n": typeof types.ClearRemoteLibraryCacheDocument,
     "\n  mutation SetReceivedSharePlays($input: SetReceivedSharePlaysInput!) {\n    setReceivedSharePlays(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": typeof types.SetReceivedSharePlaysDocument,
     "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": typeof types.NetworkDocument,
-    "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n": typeof types.WishFieldsFragmentDoc,
+    "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    wantsVideo\n    videoObtainedAt\n    videoSeen\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n": typeof types.WishFieldsFragmentDoc,
     "\n  query UploadTargets {\n    libraries {\n      id\n      name\n      canUpload\n      personal\n    }\n    uploadSettings {\n      defaultLibraryId\n      defaultLibraryName\n    }\n  }\n": typeof types.UploadTargetsDocument,
     "\n  mutation SetUploadSettings($input: SetUploadSettingsInput!) {\n    setUploadSettings(input: $input) {\n      defaultLibraryId\n      defaultLibraryName\n    }\n  }\n": typeof types.SetUploadSettingsDocument,
     "\n  query WishList($scope: WishListScope) {\n    wishList(scope: $scope) {\n      wanted\n      unseen\n      items {\n        ...WishFields\n      }\n    }\n  }\n": typeof types.WishListDocument,
@@ -274,6 +274,18 @@ type Documents = {
     "\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": typeof types.RetryArcanistImportDocument,
     "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n": typeof types.DeleteArcanistImportDocument,
     "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n": typeof types.LyricsTimingDocument,
+    "\n  fragment VideoClipFields on VideoClip {\n    id\n    title\n    artist\n    durationMs\n    width\n    height\n    isLive\n    artworkId\n    libraryId\n    path\n    trackId\n    recordingId\n    linkMethod\n    linkLocked\n    sync\n    coverage\n    audioMode\n    streamUrl\n    trackAudioUrl\n    videoAudioUrl\n    hlsUrl\n    versions {\n      name\n      height\n      width\n      bitRate\n      codec\n      prepared\n    }\n    addedAt\n    canManage\n  }\n": typeof types.VideoClipFieldsFragmentDoc,
+    "\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n": typeof types.MusicVideosDocument,
+    "\n  query MusicVideo($id: ID!) {\n    musicVideo(id: $id) {\n      ...VideoClipFields\n      segments {\n        videoStartMs\n        videoEndMs\n        source\n        trackStartMs\n        rate\n        similarity\n      }\n    }\n  }\n": typeof types.MusicVideoDocument,
+    "\n  mutation LinkMusicVideo($id: ID!, $trackId: ID) {\n    linkMusicVideo(id: $id, trackId: $trackId) {\n      id\n    }\n  }\n": typeof types.LinkMusicVideoDocument,
+    "\n  mutation UnlockMusicVideo($id: ID!) {\n    unlockMusicVideo(id: $id) {\n      id\n    }\n  }\n": typeof types.UnlockMusicVideoDocument,
+    "\n  mutation SetMusicVideoLive($id: ID!, $live: Boolean!) {\n    setMusicVideoLive(id: $id, live: $live) {\n      id\n    }\n  }\n": typeof types.SetMusicVideoLiveDocument,
+    "\n  mutation RealignMusicVideo($id: ID!) {\n    realignMusicVideo(id: $id) {\n      id\n    }\n  }\n": typeof types.RealignMusicVideoDocument,
+    "\n  mutation DeleteMusicVideo($id: ID!) {\n    deleteMusicVideo(id: $id)\n  }\n": typeof types.DeleteMusicVideoDocument,
+    "\n  query VideoSettings {\n    videoSettings {\n      defaultAudio\n      cacheMaxBytes\n      cacheMaxAgeDays\n      prepareLibraryIds\n      prepareHeights\n      prepareWhenPlayed\n      cacheBytes\n      preparedBytes\n      videos\n      linked\n      aligned\n      pending\n    }\n  }\n": typeof types.VideoSettingsDocument,
+    "\n  mutation SetVideoSettings($input: VideoSettingsInput!) {\n    setVideoSettings(input: $input) {\n      defaultAudio\n    }\n  }\n": typeof types.SetVideoSettingsDocument,
+    "\n  query MyVideoSettings {\n    myVideoSettings {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": typeof types.MyVideoSettingsDocument,
+    "\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": typeof types.SetMyVideoSettingsDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -432,7 +444,7 @@ const documents: Documents = {
     "\n  mutation ClearRemoteLibraryCache {\n    clearRemoteLibraryCache {\n      ...RemoteLibrarySettingsFields\n    }\n  }\n": types.ClearRemoteLibraryCacheDocument,
     "\n  mutation SetReceivedSharePlays($input: SetReceivedSharePlaysInput!) {\n    setReceivedSharePlays(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": types.SetReceivedSharePlaysDocument,
     "\n  query Network {\n    p2pStatus {\n      ...P2PStatusFields\n    }\n    networkPeers {\n      ...NetworkPeerFields\n    }\n    receivedShares {\n      ...ReceivedShareFields\n    }\n    libraries {\n      id\n      name\n      sources {\n        id\n        kind\n        location\n      }\n    }\n  }\n": types.NetworkDocument,
-    "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n": types.WishFieldsFragmentDoc,
+    "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    wantsVideo\n    videoObtainedAt\n    videoSeen\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n": types.WishFieldsFragmentDoc,
     "\n  query UploadTargets {\n    libraries {\n      id\n      name\n      canUpload\n      personal\n    }\n    uploadSettings {\n      defaultLibraryId\n      defaultLibraryName\n    }\n  }\n": types.UploadTargetsDocument,
     "\n  mutation SetUploadSettings($input: SetUploadSettingsInput!) {\n    setUploadSettings(input: $input) {\n      defaultLibraryId\n      defaultLibraryName\n    }\n  }\n": types.SetUploadSettingsDocument,
     "\n  query WishList($scope: WishListScope) {\n    wishList(scope: $scope) {\n      wanted\n      unseen\n      items {\n        ...WishFields\n      }\n    }\n  }\n": types.WishListDocument,
@@ -536,6 +548,18 @@ const documents: Documents = {
     "\n  mutation RetryArcanistImport($id: ID!) {\n    retryArcanistImport(id: $id) {\n      ...ArcanistImportJobFields\n    }\n  }\n": types.RetryArcanistImportDocument,
     "\n  mutation DeleteArcanistImport($id: ID!) {\n    deleteArcanistImport(id: $id)\n  }\n": types.DeleteArcanistImportDocument,
     "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n": types.LyricsTimingDocument,
+    "\n  fragment VideoClipFields on VideoClip {\n    id\n    title\n    artist\n    durationMs\n    width\n    height\n    isLive\n    artworkId\n    libraryId\n    path\n    trackId\n    recordingId\n    linkMethod\n    linkLocked\n    sync\n    coverage\n    audioMode\n    streamUrl\n    trackAudioUrl\n    videoAudioUrl\n    hlsUrl\n    versions {\n      name\n      height\n      width\n      bitRate\n      codec\n      prepared\n    }\n    addedAt\n    canManage\n  }\n": types.VideoClipFieldsFragmentDoc,
+    "\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n": types.MusicVideosDocument,
+    "\n  query MusicVideo($id: ID!) {\n    musicVideo(id: $id) {\n      ...VideoClipFields\n      segments {\n        videoStartMs\n        videoEndMs\n        source\n        trackStartMs\n        rate\n        similarity\n      }\n    }\n  }\n": types.MusicVideoDocument,
+    "\n  mutation LinkMusicVideo($id: ID!, $trackId: ID) {\n    linkMusicVideo(id: $id, trackId: $trackId) {\n      id\n    }\n  }\n": types.LinkMusicVideoDocument,
+    "\n  mutation UnlockMusicVideo($id: ID!) {\n    unlockMusicVideo(id: $id) {\n      id\n    }\n  }\n": types.UnlockMusicVideoDocument,
+    "\n  mutation SetMusicVideoLive($id: ID!, $live: Boolean!) {\n    setMusicVideoLive(id: $id, live: $live) {\n      id\n    }\n  }\n": types.SetMusicVideoLiveDocument,
+    "\n  mutation RealignMusicVideo($id: ID!) {\n    realignMusicVideo(id: $id) {\n      id\n    }\n  }\n": types.RealignMusicVideoDocument,
+    "\n  mutation DeleteMusicVideo($id: ID!) {\n    deleteMusicVideo(id: $id)\n  }\n": types.DeleteMusicVideoDocument,
+    "\n  query VideoSettings {\n    videoSettings {\n      defaultAudio\n      cacheMaxBytes\n      cacheMaxAgeDays\n      prepareLibraryIds\n      prepareHeights\n      prepareWhenPlayed\n      cacheBytes\n      preparedBytes\n      videos\n      linked\n      aligned\n      pending\n    }\n  }\n": types.VideoSettingsDocument,
+    "\n  mutation SetVideoSettings($input: VideoSettingsInput!) {\n    setVideoSettings(input: $input) {\n      defaultAudio\n    }\n  }\n": types.SetVideoSettingsDocument,
+    "\n  query MyVideoSettings {\n    myVideoSettings {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": types.MyVideoSettingsDocument,
+    "\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": types.SetMyVideoSettingsDocument,
 };
 
 /**
@@ -1179,7 +1203,7 @@ export function graphql(source: "\n  query Network {\n    p2pStatus {\n      ...
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n"): (typeof documents)["\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n"];
+export function graphql(source: "\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    wantsVideo\n    videoObtainedAt\n    videoSeen\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n"): (typeof documents)["\n  fragment WishFields on Wish {\n    id\n    title\n    artist\n    album\n    note\n    status\n    createdAt\n    obtainedAt\n    matchedBy\n    foundWhenAdded\n    seen\n    durationMs\n    musicBrainzRecordingId\n    sourceUrl\n    sourceService\n    artworkId\n    owner {\n      id\n      userName\n      displayName\n    }\n    targetLibraryId\n    wantsVideo\n    videoObtainedAt\n    videoSeen\n    track {\n      id\n      title\n      durationMs\n      libraryIds\n      artists {\n        name\n      }\n      album {\n        id\n        title\n      }\n      files {\n        format\n        bitRate\n        sampleRate\n        bitDepth\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -1592,6 +1616,54 @@ export function graphql(source: "\n  mutation DeleteArcanistImport($id: ID!) {\n
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n"): (typeof documents)["\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment VideoClipFields on VideoClip {\n    id\n    title\n    artist\n    durationMs\n    width\n    height\n    isLive\n    artworkId\n    libraryId\n    path\n    trackId\n    recordingId\n    linkMethod\n    linkLocked\n    sync\n    coverage\n    audioMode\n    streamUrl\n    trackAudioUrl\n    videoAudioUrl\n    hlsUrl\n    versions {\n      name\n      height\n      width\n      bitRate\n      codec\n      prepared\n    }\n    addedAt\n    canManage\n  }\n"): (typeof documents)["\n  fragment VideoClipFields on VideoClip {\n    id\n    title\n    artist\n    durationMs\n    width\n    height\n    isLive\n    artworkId\n    libraryId\n    path\n    trackId\n    recordingId\n    linkMethod\n    linkLocked\n    sync\n    coverage\n    audioMode\n    streamUrl\n    trackAudioUrl\n    videoAudioUrl\n    hlsUrl\n    versions {\n      name\n      height\n      width\n      bitRate\n      codec\n      prepared\n    }\n    addedAt\n    canManage\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n"): (typeof documents)["\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MusicVideo($id: ID!) {\n    musicVideo(id: $id) {\n      ...VideoClipFields\n      segments {\n        videoStartMs\n        videoEndMs\n        source\n        trackStartMs\n        rate\n        similarity\n      }\n    }\n  }\n"): (typeof documents)["\n  query MusicVideo($id: ID!) {\n    musicVideo(id: $id) {\n      ...VideoClipFields\n      segments {\n        videoStartMs\n        videoEndMs\n        source\n        trackStartMs\n        rate\n        similarity\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation LinkMusicVideo($id: ID!, $trackId: ID) {\n    linkMusicVideo(id: $id, trackId: $trackId) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation LinkMusicVideo($id: ID!, $trackId: ID) {\n    linkMusicVideo(id: $id, trackId: $trackId) {\n      id\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UnlockMusicVideo($id: ID!) {\n    unlockMusicVideo(id: $id) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation UnlockMusicVideo($id: ID!) {\n    unlockMusicVideo(id: $id) {\n      id\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetMusicVideoLive($id: ID!, $live: Boolean!) {\n    setMusicVideoLive(id: $id, live: $live) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation SetMusicVideoLive($id: ID!, $live: Boolean!) {\n    setMusicVideoLive(id: $id, live: $live) {\n      id\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RealignMusicVideo($id: ID!) {\n    realignMusicVideo(id: $id) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation RealignMusicVideo($id: ID!) {\n    realignMusicVideo(id: $id) {\n      id\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteMusicVideo($id: ID!) {\n    deleteMusicVideo(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteMusicVideo($id: ID!) {\n    deleteMusicVideo(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query VideoSettings {\n    videoSettings {\n      defaultAudio\n      cacheMaxBytes\n      cacheMaxAgeDays\n      prepareLibraryIds\n      prepareHeights\n      prepareWhenPlayed\n      cacheBytes\n      preparedBytes\n      videos\n      linked\n      aligned\n      pending\n    }\n  }\n"): (typeof documents)["\n  query VideoSettings {\n    videoSettings {\n      defaultAudio\n      cacheMaxBytes\n      cacheMaxAgeDays\n      prepareLibraryIds\n      prepareHeights\n      prepareWhenPlayed\n      cacheBytes\n      preparedBytes\n      videos\n      linked\n      aligned\n      pending\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetVideoSettings($input: VideoSettingsInput!) {\n    setVideoSettings(input: $input) {\n      defaultAudio\n    }\n  }\n"): (typeof documents)["\n  mutation SetVideoSettings($input: VideoSettingsInput!) {\n    setVideoSettings(input: $input) {\n      defaultAudio\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MyVideoSettings {\n    myVideoSettings {\n      audio\n      serverDefault\n      effective\n    }\n  }\n"): (typeof documents)["\n  query MyVideoSettings {\n    myVideoSettings {\n      audio\n      serverDefault\n      effective\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n"): (typeof documents)["\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

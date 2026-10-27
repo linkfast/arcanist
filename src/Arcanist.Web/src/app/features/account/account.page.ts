@@ -1,4 +1,5 @@
 import { MyDlna } from './my-dlna';
+import { MyVideos } from './my-videos';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -46,6 +47,7 @@ type Session = SessionsResult['mySessions'][number];
     MyCloud,
     MyDevices,
     MyDlna,
+    MyVideos,
   ],
   template: `
     <header class="mb-6">
@@ -247,6 +249,7 @@ type Session = SessionsResult['mySessions'][number];
       <app-my-cloud />
       <app-my-devices />
       <app-my-dlna />
+      <app-my-videos />
 
       <section hlmCard>
         <div hlmCardHeader>

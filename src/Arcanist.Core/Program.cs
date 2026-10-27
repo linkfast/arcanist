@@ -116,6 +116,9 @@ builder.Services.AddSingleton<Arcanist.Core.Application.Server.EditionResolver>(
 builder.Services.AddScoped<Arcanist.Core.Application.Server.OpenSourceService>();
 builder.Services.AddScoped<OnlineServicesService>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<Arcanist.Core.Application.Videos.VideoClips>();
+builder.Services.AddScoped<Arcanist.Core.Application.Videos.MusicVideoService>();
+builder.Services.AddScoped<Arcanist.Core.Application.Videos.VideoStreamService>();
 builder.Services.AddSingleton<LyricsTiming>();
 builder.Services.AddScoped<LyricsTimingService>();
 builder.Services.AddScoped<TrackMatchService>();

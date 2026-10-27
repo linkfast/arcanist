@@ -63,6 +63,27 @@ internal static unsafe partial class NativeAudio
     [LibraryImport(Library, EntryPoint = "arcanist_audio_dj_free")]
     public static partial void DjFree(nint analyzer);
 
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_align_version")]
+    public static partial uint AlignVersion();
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_align_new")]
+    public static partial nint AlignNew();
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_align_begin")]
+    public static partial int AlignBegin(nint aligner, uint side, uint rate, uint channels);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_align_push")]
+    public static partial int AlignPush(nint aligner, uint side, float* samples, nuint count);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_align_decode", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int AlignDecode(nint aligner, uint side, Source* source, string? extension, ulong startMs, ulong endMs);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_align_finish")]
+    public static partial int AlignFinish(nint aligner, out nint json);
+
+    [LibraryImport(Library, EntryPoint = "arcanist_audio_align_free")]
+    public static partial void AlignFree(nint aligner);
+
     [LibraryImport(Library, EntryPoint = "arcanist_audio_compare")]
     public static partial double Compare(uint* a, nuint aCount, uint* b, nuint bCount);
 
@@ -101,6 +122,24 @@ internal static unsafe partial class NativeAudio
         try
         {
             DjVersion();
+            return true;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
+    });
+
+    /// <summary>Whether the library can align music videos with tracks (an older build of it cannot).</summary>
+    public static bool HasAlignment => AlignAvailability.Value;
+
+    private static readonly Lazy<bool> AlignAvailability = new(() =>
+    {
+        if (!IsAvailable)
+            return false;
+        try
+        {
+            AlignVersion();
             return true;
         }
         catch (EntryPointNotFoundException)

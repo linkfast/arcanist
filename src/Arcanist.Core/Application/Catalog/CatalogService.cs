@@ -21,6 +21,7 @@ public sealed class CatalogService(
     Listening.RatingSettings ratings,
     Core.Extensions.ExtensionHost extensions,
     LyricsTiming lyricsTiming,
+    Videos.VideoClips videoClips,
     TimeProvider time)
 {
     public const int DefaultPageSize = 50;
@@ -238,6 +239,20 @@ public sealed class CatalogService(
         return files.Where(f => libraries.Contains(f.LibrarySource.LibraryId));
     }
 
+    /// <summary>Music videos present in libraries the user can access, with the rules of <see cref="VisibleFiles"/>.</summary>
+    internal IQueryable<MusicVideo> VisibleVideos(UserAccess access)
+    {
+        var videos = db.MusicVideos.Where(v => v.MissingSince == null
+                                               && (v.LibrarySource.Library.OwnerUserId == null || v.LibrarySource.Library.OwnerUserId == access.UserId));
+        if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id))
+            videos = videos.Where(v => v.LibrarySource.Library.ManagedBy != null || v.LibrarySource.Kind != LibrarySourceKind.S3);
+        if (access.IsAdmin)
+            return videos;
+
+        var libraries = access.LibraryIds.ToList();
+        return videos.Where(v => libraries.Contains(v.LibrarySource.LibraryId));
+    }
+
     private IQueryable<TrackEntity> VisibleTracks(UserAccess access, Guid? libraryId = null)
     {
         var files = VisibleFiles(access);
@@ -330,6 +345,13 @@ public sealed class CatalogService(
         // One token per response; it is not tied to a track.
         var streamToken = streamTokens.Create(access.UserId, guard.SessionId);
 
+        var videoRows = await VisibleVideos(access).AsNoTracking().Include(v => v.LibrarySource)
+            .Where(v => (v.TrackId != null && ids.Contains(v.TrackId.Value)) || (v.RecordingId != null && recordingIds.Contains(v.RecordingId.Value)))
+            .OrderBy(v => v.NormalizedTitle).ThenBy(v => v.Id)
+            .ToListAsync(cancellationToken);
+        var clips = (await videoClips.BuildAsync(videoRows, access, guard.SessionId, VisibleFiles(access), withSegments: false, cancellationToken))
+            .Zip(videoRows).ToList();
+
         return tracks.Select(t =>
         {
             var album = albums[t.AlbumId];
@@ -372,7 +394,8 @@ public sealed class CatalogService(
                 t.TaggedBpm,
                 t.UpdatedAt,
                 canEdit && copies.Any(Writable) && copies.Where(Writable).All(Changeable),
-                canDelete && copies.Count > 0 && copies.All(Changeable));
+                canDelete && copies.Count > 0 && copies.All(Changeable),
+                clips.Where(c => c.Second.TrackId == t.Id || c.Second.RecordingId == t.RecordingId).Select(c => c.First).ToList());
         }).ToList();
     }
 

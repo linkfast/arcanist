@@ -156,6 +156,13 @@ public enum ApiFeature
 
     /// <summary><c>renameLibrary</c> (<c>PUT /rest/v1/libraries/{id}/name</c>): only the name, for managers and owners.</summary>
     LibraryRename,
+
+    /// <summary>
+    /// Music videos: <c>Track.videos</c>, <c>musicVideos</c>, their streams with the song's audio or their own
+    /// (<c>/rest/v1/videos/{id}/stream</c>, HLS when prepared), uploads (<c>POST /rest/v1/tracks/{id}/video</c>) and
+    /// <c>myVideoSettings</c>.
+    /// </summary>
+    MusicVideos,
 }
 
 public sealed class ServerInfoService(

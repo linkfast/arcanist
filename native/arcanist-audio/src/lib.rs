@@ -4,6 +4,7 @@
 //! Memory: strings returned through `out` parameters belong to the caller, who releases them with
 //! `arcanist_audio_free`. Panics never cross the boundary; they become `STATUS_PANIC`.
 
+mod align;
 mod analyzer;
 mod compare;
 mod decode;
@@ -16,6 +17,7 @@ use std::ffi::{CStr, CString, c_char, c_void};
 use std::io::{self, Read, Seek, SeekFrom};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
+pub use align::{ALIGN_VERSION, Aligner, Alignment, FeatureExtractor, Features, Segment, Source};
 pub use analyzer::{ANALYZER_VERSION, Analysis, Analyzer, FLAG_ALL, FLAG_FINGERPRINT, FLAG_KEY, FLAG_LOUDNESS, FLAG_TEMPO, FLAG_WAVEFORM};
 pub use compare::similarity;
 pub use decode::{DecodeFailure, ReaderSource, analyze, decode};
@@ -277,6 +279,125 @@ pub unsafe extern "C" fn arcanist_audio_dj_finish(analyzer: *mut DjAnalyzer, out
 pub unsafe extern "C" fn arcanist_audio_dj_free(analyzer: *mut DjAnalyzer) {
     if !analyzer.is_null() {
         drop(unsafe { Box::from_raw(analyzer) });
+    }
+}
+
+/// Version of the music video alignment; alignments from an older version should be recomputed.
+#[unsafe(no_mangle)]
+pub extern "C" fn arcanist_audio_align_version() -> u32 {
+    ALIGN_VERSION
+}
+
+/// Starts aligning the soundtrack of a music video (side 0) with a track (side 1). Each side is fed either by
+/// `arcanist_audio_align_decode` or, for audio decoded elsewhere, by `_begin` and `_push`.
+#[unsafe(no_mangle)]
+pub extern "C" fn arcanist_audio_align_new() -> *mut Aligner {
+    Box::into_raw(Box::new(Aligner::new()))
+}
+
+/// Starts feeding a side with PCM decoded elsewhere.
+///
+/// # Safety
+/// `aligner` must come from `arcanist_audio_align_new` and not be finished or freed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_align_begin(aligner: *mut Aligner, side: u32, rate: u32, channels: u32) -> i32 {
+    if aligner.is_null() {
+        return STATUS_ARGUMENT;
+    }
+    let aligner = unsafe { &mut *aligner };
+    match catch_unwind(AssertUnwindSafe(|| aligner.begin(side as usize, rate, channels))) {
+        Ok(Ok(())) => STATUS_OK,
+        Ok(Err(_)) => STATUS_ARGUMENT,
+        Err(_) => STATUS_PANIC,
+    }
+}
+
+/// Adds `count` interleaved f32 samples to a side.
+///
+/// # Safety
+/// As `arcanist_audio_align_begin`; `samples` must point to `count` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_align_push(aligner: *mut Aligner, side: u32, samples: *const f32, count: usize) -> i32 {
+    if aligner.is_null() || (samples.is_null() && count > 0) {
+        return STATUS_ARGUMENT;
+    }
+    let (aligner, samples) = unsafe {
+        (&mut *aligner, if count == 0 { &[][..] } else { std::slice::from_raw_parts(samples, count) })
+    };
+    match catch_unwind(AssertUnwindSafe(|| aligner.push(side as usize, samples))) {
+        Ok(Ok(())) => STATUS_OK,
+        Ok(Err(_)) => STATUS_INVALID,
+        Err(_) => STATUS_PANIC,
+    }
+}
+
+/// Decodes a stream into a side: all of it, or from `start_ms` to `end_ms` when `end_ms` is not 0. Returns
+/// `STATUS_UNSUPPORTED` when the format needs ffmpeg (then feed the side with `_begin` and `_push`).
+///
+/// # Safety
+/// As `arcanist_audio_align_begin`, and `source`/`extension` as in `arcanist_audio_analyze`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_align_decode(
+    aligner: *mut Aligner,
+    side: u32,
+    source: *const ArcanistSource,
+    extension: *const c_char,
+    start_ms: u64,
+    end_ms: u64,
+) -> i32 {
+    if aligner.is_null() || source.is_null() || side > 1 || (end_ms != 0 && end_ms <= start_ms) {
+        return STATUS_ARGUMENT;
+    }
+    let (aligner, source, extension) = unsafe {
+        let extension = if extension.is_null() { None } else { CStr::from_ptr(extension).to_str().ok().map(str::to_owned) };
+        (&mut *aligner, &*source, extension)
+    };
+    let reader = CallbackReader { context: source.context, read: source.read, seek: source.seek };
+    let length = (source.length >= 0).then_some(source.length as u64);
+
+    let range = (end_ms != 0).then_some((start_ms, end_ms));
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        decode(ReaderSource::new(reader, length), extension.as_deref(), range, FeatureExtractor::new, |extractor, samples| extractor.push(samples))
+            .and_then(|extractor| extractor.finish().map_err(DecodeFailure::Invalid))
+    }));
+    match result {
+        Ok(Ok(features)) => match aligner.set(side as usize, features) {
+            Ok(()) => STATUS_OK,
+            Err(_) => STATUS_ARGUMENT,
+        },
+        Ok(Err(DecodeFailure::Unsupported(_))) => STATUS_UNSUPPORTED,
+        Ok(Err(DecodeFailure::Invalid(_))) => STATUS_INVALID,
+        Err(_) => STATUS_PANIC,
+    }
+}
+
+/// Aligns both sides and releases the aligner; `out` receives the alignment as JSON, or `{"error": "..."}`.
+///
+/// # Safety
+/// `aligner` must come from `arcanist_audio_align_new` and is invalid afterwards; `out` a valid pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_align_finish(aligner: *mut Aligner, out: *mut *mut c_char) -> i32 {
+    if aligner.is_null() || out.is_null() {
+        return STATUS_ARGUMENT;
+    }
+    let aligner = unsafe { Box::from_raw(aligner) };
+    let (status, json) = match catch_unwind(AssertUnwindSafe(|| aligner.finish())) {
+        Ok(Ok(alignment)) => (STATUS_OK, serde_json::to_string(&alignment).unwrap_or_else(|e| error_json(&e.to_string()))),
+        Ok(Err(message)) => (STATUS_INVALID, error_json(&message)),
+        Err(_) => (STATUS_PANIC, error_json("the aligner panicked")),
+    };
+    unsafe { *out = into_c_string(json) };
+    status
+}
+
+/// Releases an aligner that will not be finished.
+///
+/// # Safety
+/// `aligner` must come from `arcanist_audio_align_new`, or be null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcanist_audio_align_free(aligner: *mut Aligner) {
+    if !aligner.is_null() {
+        drop(unsafe { Box::from_raw(aligner) });
     }
 }
 

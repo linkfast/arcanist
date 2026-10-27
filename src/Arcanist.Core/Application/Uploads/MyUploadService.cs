@@ -245,8 +245,13 @@ public sealed class MyUploadService(
         var hashes = waiting.Select(u => u.ContentHash!).Distinct().ToList();
         var found = await db.MediaFiles.AsNoTracking()
             .Where(f => f.MissingSince == null && hashes.Contains(f.ContentHash) && libraryIds.Contains(f.LibrarySource.LibraryId))
-            .Select(f => new { f.ContentHash, f.LibrarySource.LibraryId, f.TrackId })
+            .Select(f => new { f.ContentHash, f.LibrarySource.LibraryId, TrackId = (Guid?)f.TrackId })
             .ToListAsync(cancellationToken);
+        // Music videos are uploads too: added once the scan has them (with their song when linked).
+        found.AddRange(await db.MusicVideos.AsNoTracking()
+            .Where(v => v.MissingSince == null && hashes.Contains(v.ContentHash) && libraryIds.Contains(v.LibrarySource.LibraryId))
+            .Select(v => new { v.ContentHash, v.LibrarySource.LibraryId, v.TrackId })
+            .ToListAsync(cancellationToken));
         var scanning = (await db.ScanJobs.AsNoTracking()
                 .Where(j => libraryIds.Contains(j.LibraryId) && (j.Status == ScanStatus.Queued || j.Status == ScanStatus.Running))
                 .Select(j => j.LibraryId)

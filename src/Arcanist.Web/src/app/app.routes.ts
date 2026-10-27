@@ -49,6 +49,10 @@ export const routes: Routes = [
           import('./features/duplicates/duplicates.page').then((m) => m.DuplicatesPage),
       },
       {
+        path: 'videos',
+        loadComponent: () => import('./features/videos/videos.page').then((m) => m.VideosPage),
+      },
+      {
         path: 'import',
         canActivate: [permissionGuard('MANAGE_LIBRARIES')],
         loadComponent: () => import('./features/import/import.page').then((m) => m.ImportPage),

@@ -53,6 +53,15 @@ public sealed class WishListItem : Entity
     /// the server's rule for uploads.
     /// </summary>
     public Guid? TargetLibraryId { get; set; }
+
+    /// <summary>The user also wants the song's music video.</summary>
+    public bool WantsVideo { get; set; }
+
+    /// <summary>When a music video of the song arrived (or was already there); null while it is wanted.</summary>
+    public DateTime? VideoObtainedAt { get; set; }
+
+    /// <summary>The user saw that the video arrived.</summary>
+    public bool VideoSeen { get; set; }
 }
 
 /// <summary>The services a wish can be added from by its link. Part of the API contract.</summary>

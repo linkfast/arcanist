@@ -60,7 +60,7 @@ public sealed class UserCloudAccountsTests : IAsyncDisposable
     private async Task<JsonElement> LinkAsync(HttpClient client)
     {
         _cloud.ApprovingAs = "user-2";
-        var started = (await client.GraphQLAsync("mutation { startMyUltimateCloudLink(input: {libraryName: \"Mi Ultimate Cloud\"}) { state pending { userCode } } }"))
+        var started = (await client.GraphQLAsync("mutation { startMyUltimateCloudLink(input: {language: \"es\"}) { state pending { userCode } } }"))
             .GetProperty("data").GetProperty("startMyUltimateCloudLink");
         Assert.Equal("PENDING", started.GetProperty("state").GetString());
         Assert.Equal("WDJB-MJHT", started.GetProperty("pending").GetProperty("userCode").GetString());
@@ -99,6 +99,20 @@ public sealed class UserCloudAccountsTests : IAsyncDisposable
         Assert.Equal("UNLINKED", (await _admin.GraphQLAsync("query { ultimateCloud { state } }"))
             .GetProperty("data").GetProperty("ultimateCloud").GetProperty("state").GetString());
 
+        // Named with the account's first name, in the user's language.
+        var libraryId = status.GetProperty("libraryId").GetString();
+        async Task<string?> NameAsync() => (await bruno.GraphQLAsync($"query {{ library(id: \"{libraryId}\") {{ name }} }}"))
+            .GetProperty("data").GetProperty("library").GetProperty("name").GetString();
+        Assert.Equal("Ultimate Cloud de Bruno", await NameAsync());
+        // Those named generically before take the name too.
+        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
+        {
+            await db.Libraries.Where(l => l.Id == Guid.Parse(libraryId!)).ExecuteUpdateAsync(l => l.SetProperty(x => x.Name, "My Ultimate Cloud"), Cancel);
+            var brunoId = await db.Users.Where(u => u.UserName == "bruno").Select(u => u.Id).SingleAsync(Cancel);
+            await _factory.Services.GetRequiredService<Arcanist.Core.Cloud.UserCloudAccounts>().RefreshAsync(brunoId, Cancel);
+        }
+        Assert.Equal("Bruno's Ultimate Cloud", await NameAsync());
+
         // Their music is a library only they see, administrators included.
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (!(await TitlesAsync(bruno)).Contains("Bruno's Song"))
@@ -109,10 +123,10 @@ public sealed class UserCloudAccountsTests : IAsyncDisposable
 
         var libraries = (await bruno.GraphQLAsync("query { libraries { id name personal } }")).GetProperty("data").GetProperty("libraries").EnumerateArray().ToList();
         var personal = Assert.Single(libraries, l => l.GetProperty("personal").GetBoolean());
-        Assert.Equal("Mi Ultimate Cloud", personal.GetProperty("name").GetString());
+        Assert.Equal("Bruno's Ultimate Cloud", personal.GetProperty("name").GetString());
         Assert.Equal(status.GetProperty("libraryId").GetString(), personal.GetProperty("id").GetString());
         Assert.DoesNotContain("Bruno's Song", await TitlesAsync(_admin));
-        Assert.DoesNotContain("Mi Ultimate Cloud", (await _admin.GraphQLAsync("query { libraries { name } }"))
+        Assert.DoesNotContain("Bruno's Ultimate Cloud", (await _admin.GraphQLAsync("query { libraries { name } }"))
             .GetProperty("data").GetProperty("libraries").EnumerateArray().Select(l => l.GetProperty("name").GetString()));
         Guid songId;
         await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())

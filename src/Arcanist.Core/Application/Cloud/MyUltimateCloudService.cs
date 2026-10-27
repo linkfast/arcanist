@@ -27,8 +27,10 @@ public sealed record MyUltimateCloudStatus(
     Guid? LibraryId,
     UltimateCloudServices Services);
 
-/// <param name="LibraryName">The name of the personal library, in the user's language; "Ana's Ultimate Cloud" by default.</param>
-public sealed record StartMyUltimateCloudLinkInput(string? LibraryName);
+/// <param name="LibraryName">The name of the personal library; by default the account owner's first name with the
+/// product, in <paramref name="Language"/>: "Ana's Ultimate Cloud", "Ultimate Cloud de Ana".</param>
+/// <param name="Language">The user's language (<c>es</c>, <c>en</c>), for the default name; the server's when left out.</param>
+public sealed record StartMyUltimateCloudLinkInput(string? LibraryName, string? Language = null);
 
 /// <summary>
 /// Each user's own Ultimate Cloud account: any user links it from their account page and gets their music as a
@@ -55,7 +57,9 @@ public sealed class MyUltimateCloudService(
         guard.RecentAuthentication();
         if (input.LibraryName is { Length: > 100 })
             throw ArcanistException.Field("libraryName", ErrorCodes.InvalidFormat);
-        await accounts.StartLinkAsync(user, input.LibraryName, cancellationToken);
+        if (input.Language is { Length: > 35 })
+            throw ArcanistException.Field("language", ErrorCodes.InvalidFormat);
+        await accounts.StartLinkAsync(user, input.LibraryName, cancellationToken, input.Language);
         return await CurrentAsync(user, cancellationToken);
     }
 

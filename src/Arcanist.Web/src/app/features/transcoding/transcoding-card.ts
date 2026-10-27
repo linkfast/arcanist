@@ -22,6 +22,7 @@ import {
   TranscodingQuery,
 } from '../../graphql/operations';
 import { BytesPipe, CountPipe } from '../../shared/format';
+import { FfmpegGuide } from './ffmpeg-card';
 
 /** The versions offered: what players usually ask for. */
 const Targets: { format: TranscodeFormat; bitRate: number; label: string }[] = [
@@ -32,6 +33,9 @@ const Targets: { format: TranscodeFormat; bitRate: number; label: string }[] = [
   { format: 'MP3', bitRate: 192, label: 'MP3 192 kbit/s' },
   { format: 'MP3', bitRate: 320, label: 'MP3 320 kbit/s' },
   { format: 'AAC', bitRate: 256, label: 'AAC 256 kbit/s' },
+  // Only with an ffmpeg that encodes HE-AAC (libfdk_aac, or macOS's aac_at).
+  { format: 'HE_AAC', bitRate: 64, label: 'HE-AAC 64 kbit/s' },
+  { format: 'HE_AAC', bitRate: 48, label: 'HE-AAC 48 kbit/s' },
 ];
 
 /** Decimal gigabytes, as sizes are shown everywhere in the panel. */
@@ -155,7 +159,7 @@ const Ages = [7, 30, 90, 365];
             <fieldset class="grid gap-2">
               <legend class="mb-1 font-medium">{{ 'transcoding.pregenerate.formats' | t }}</legend>
               <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                @for (target of targets; track target.label) {
+                @for (target of targets(); track target.label) {
                   <label class="flex items-center gap-2">
                     <hlm-checkbox
                       [checked]="chosen(target)"
@@ -165,6 +169,14 @@ const Ages = [7, 30, 90, 365];
                   </label>
                 }
               </div>
+              @if (s.ffmpegAvailable && !heAac()) {
+                <p class="text-xs text-muted-foreground">
+                  {{ 'transcoding.pregenerate.noHeAac' | t }}
+                  <a class="underline" [href]="guide" target="_blank" rel="noopener">{{
+                    'settings.ffmpeg.features.guide' | t
+                  }}</a>
+                </p>
+              }
             </fieldset>
 
             @if (pregenerate().length) {
@@ -248,8 +260,8 @@ export class TranscodingCard implements OnInit, OnDestroy {
   protected readonly i18n = inject(I18n);
   private readonly gql = inject(Gql);
 
-  protected readonly targets = Targets;
   protected readonly sizes = Sizes;
+  protected readonly guide = FfmpegGuide;
   protected readonly ages = Ages;
 
   protected readonly status = signal<Transcoding | null>(null);
@@ -263,6 +275,12 @@ export class TranscodingCard implements OnInit, OnDestroy {
   protected readonly pregenerate = signal<{ format: TranscodeFormat; bitRate: number }[]>([]);
   protected readonly allLibraries = signal(true);
   protected readonly libraryIds = signal<string[]>([]);
+
+  /** This server's ffmpeg encodes HE-AAC: only then are its versions offered. */
+  protected readonly heAac = computed(() => this.status()?.formats.includes('HE_AAC') ?? false);
+  protected readonly targets = computed(() =>
+    Targets.filter((t) => t.format !== 'HE_AAC' || this.heAac()),
+  );
 
   protected readonly cachePercent = computed(() => {
     const s = this.status();
@@ -322,7 +340,8 @@ export class TranscodingCard implements OnInit, OnDestroy {
           cacheEnabled: this.cacheEnabled,
           cacheMaxBytes: this.cacheMaxBytes,
           cacheMaxAgeDays: this.cacheMaxAgeDays,
-          pregenerate: this.pregenerate(),
+          // HE-AAC versions an ffmpeg without the encoder cannot make: the server refuses them.
+          pregenerate: this.pregenerate().filter((t) => t.format !== 'HE_AAC' || this.heAac()),
           pregenerateLibraries:
             this.allLibraries() || !this.libraryIds().length ? null : this.libraryIds(),
           pregenerateOnlyLossless: this.onlyLossless,

@@ -739,6 +739,12 @@ export const en: Dictionary = {
         'This ffmpeg ({version}) is older than recommended ({recommended} or later). Install a newer one on the system or give its path.',
       remove: 'Delete the downloaded ffmpeg',
       removeConfirm: 'Delete the ffmpeg Arcanist downloaded?',
+      features: {
+        title: 'Additional features on',
+        none: 'None. HE-AAC needs an ffmpeg with libfdk_aac (or macOS’s, with aac_at).',
+        guide: 'How to install one',
+        HE_AAC: 'HE-AAC',
+      },
       removeHelp: 'The configured one or the system’s is used, if any.',
       description:
         'Used to convert songs to lighter formats and to analyze the formats Arcanist cannot read by itself (Opus, WMA…).',
@@ -998,7 +1004,6 @@ export const en: Dictionary = {
       library: 'Library',
       libraryReady: 'My Ultimate Cloud, only for you',
       libraryNone: 'Getting it ready…',
-      libraryName: 'My Ultimate Cloud',
       topSong: 'Most played song: {name} — {by} ({plays})',
       topArtist: 'Most played artist: {name} ({plays})',
       unlinkTitle: 'Unlink your Ultimate Cloud account?',
@@ -1571,6 +1576,8 @@ export const en: Dictionary = {
         'They take space for each format (the estimate is below) · The first time takes long (hours for large libraries) and uses the CPU · They only help if players ask for exactly that format and quality · New songs are converted after each scan',
       formats: 'Formats',
       libraries: 'Libraries',
+      noHeAac:
+        'HE-AAC is not available: this ffmpeg does not encode it. It needs one with libfdk_aac (or macOS’s, with aac_at).',
       allLibraries: 'All (local and S3)',
       onlyLossless:
         'Only from lossless originals (FLAC, WAV…): MP3s and the like are usually small already',

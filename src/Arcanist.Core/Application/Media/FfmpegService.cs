@@ -14,6 +14,8 @@ namespace Arcanist.Core.Application.Media;
 /// <param name="CanDownload">Whether a build can be downloaded for this operating system and processor.</param>
 /// <param name="Outdated">The ffmpeg in use is older than <see cref="RecommendedVersion"/>: downloading Arcanist's is recommended.</param>
 /// <param name="Downloaded">A build downloaded by Arcanist is in the data directory (in use or not); it can be removed.</param>
+/// <param name="Features">What the ffmpeg in use can do beyond the usual builds (Arcanist's download), with the
+/// encoder that does it: HE-AAC with libfdk_aac or AudioToolbox.</param>
 public sealed record FfmpegStatus(
     bool Available,
     string? Path,
@@ -25,7 +27,18 @@ public sealed record FfmpegStatus(
     FfmpegDownloadProgress Download,
     bool Outdated,
     string RecommendedVersion,
-    bool Downloaded);
+    bool Downloaded,
+    IReadOnlyList<FfmpegFeature> Features);
+
+/// <summary>Something an ffmpeg build may do that Arcanist's download does not.</summary>
+public enum FfmpegFeatureKind
+{
+    /// <summary>Converting to HE-AAC (the <c>HE_AAC</c> transcoding format).</summary>
+    HeAac,
+}
+
+/// <param name="Encoder">The ffmpeg encoder that gives it (<c>libfdk_aac</c>, <c>aac_at</c>).</param>
+public sealed record FfmpegFeature(FfmpegFeatureKind Kind, string Encoder);
 
 public sealed class FfmpegService(
     AccessGuard guard,
@@ -110,5 +123,11 @@ public sealed class FfmpegService(
         downloader.Progress,
         FfmpegLocator.IsOutdated(resolution.Installation?.Version),
         $"{FfmpegLocator.RecommendedMajor}.0",
-        File.Exists(locator.DownloadedExecutable));
+        File.Exists(locator.DownloadedExecutable),
+        Features(resolution.Installation));
+
+    public static IReadOnlyList<FfmpegFeature> Features(FfmpegInstallation? installation) =>
+        installation is not null && TranscodeProfile.For(TranscodeFormat.HeAac).EncoderIn(installation.Encoders) is { } encoder
+            ? [new FfmpegFeature(FfmpegFeatureKind.HeAac, encoder)]
+            : [];
 }

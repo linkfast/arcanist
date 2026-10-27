@@ -1568,6 +1568,7 @@ type FfmpegStatus {
   outdated: Boolean!
   recommendedVersion: String!
   downloaded: Boolean!
+  features: [FfmpegFeature!]!
 }
 
 enum FfmpegSource {
@@ -1592,6 +1593,15 @@ enum FfmpegDownloadState {
   FAILED
 }
 
+type FfmpegFeature {
+  kind: FfmpegFeatureKind!
+  encoder: String!
+}
+
+enum FfmpegFeatureKind {
+  HE_AAC
+}
+
 type TranscodingStatus {
   settings: TranscodingConfig!
   cacheBytes: Long!
@@ -1599,6 +1609,7 @@ type TranscodingStatus {
   pregenerated: [PregenerateProgress!]!
   working: Boolean!
   ffmpegAvailable: Boolean!
+  formats: [TranscodeFormat!]!
 }
 
 type TranscodingConfig {
@@ -3904,6 +3915,7 @@ input UltimateCloudServicesInput {
 
 input StartMyUltimateCloudLinkInput {
   libraryName: String
+  language: String
 }
 
 input SetUploadSettingsInput {

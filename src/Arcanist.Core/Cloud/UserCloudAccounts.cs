@@ -67,8 +67,9 @@ public sealed class UserCloudAccounts(
     public CloudTier AdminTier => _admins.Select(id => TierOf(id)).DefaultIfEmpty(CloudTier.None).Max();
 
     /// <summary>Starts linking a user's own account: returns the code to approve, and waits for it in the background.</summary>
-    /// <param name="libraryName">The name of their personal library, in their language; "Ana's Ultimate Cloud" by default.</param>
-    public async Task<CloudLinkRequest> StartLinkAsync(Guid user, string? libraryName, CancellationToken cancellationToken)
+    /// <param name="libraryName">The name of their personal library; by default "Ana's Ultimate Cloud" with the account's
+    /// first name, in <paramref name="language"/> (or the server's).</param>
+    public async Task<CloudLinkRequest> StartLinkAsync(Guid user, string? libraryName, CancellationToken cancellationToken, string? language = null)
     {
         if (!server.Enabled)
             throw new ArcanistException.Conflict(ErrorCodes.CloudDisabled);
@@ -98,7 +99,7 @@ public sealed class UserCloudAccounts(
                 logger.LogInformation("User {User} linked their Ultimate Cloud account {Account}", user, link.UserName ?? link.Email ?? link.Subject);
                 Remove(user, cancel);
                 using (await maintenance.WorkAsync(CancellationToken.None))
-                    await AfterLinkAsync(user, link, libraryName, CancellationToken.None);
+                    await AfterLinkAsync(user, link, libraryName, language, CancellationToken.None);
             }
             catch (UltimateCloudException e)
             {
@@ -160,11 +161,13 @@ public sealed class UserCloudAccounts(
     {
         if (!server.Enabled)
             return;
-        if (await auth.LinkAsync(cancellationToken, user) is null)
+        if (await auth.LinkAsync(cancellationToken, user) is not { } link)
         {
             _plans.TryRemove(user, out _);
             return;
         }
+
+        await RenameGenericLibraryAsync(user, link, cancellationToken);
 
         try
         {
@@ -196,7 +199,7 @@ public sealed class UserCloudAccounts(
     }
 
     /// <summary>Registers the server as a device of the account, reads its plan and adds the personal library.</summary>
-    private async Task AfterLinkAsync(Guid user, StoredCloudLink link, string? libraryName, CancellationToken cancellationToken)
+    private async Task AfterLinkAsync(Guid user, StoredCloudLink link, string? libraryName, string? language, CancellationToken cancellationToken)
     {
         await using (var db = databases.CreateDbContext())
         {
@@ -229,7 +232,7 @@ public sealed class UserCloudAccounts(
         }
 
         await RefreshAsync(user, cancellationToken);
-        await AddLibraryAsync(user, link, libraryName, cancellationToken);
+        await AddLibraryAsync(user, link, libraryName, language, cancellationToken);
         services.GetService<UltimateCloudReporter>()?.StarsChanged();
     }
 
@@ -254,7 +257,7 @@ public sealed class UserCloudAccounts(
     }
 
     /// <summary>The account's music as a library only its owner sees, scanned now and every 6 hours (and on Ultimate Cloud's notices).</summary>
-    private async Task AddLibraryAsync(Guid user, StoredCloudLink link, string? libraryName, CancellationToken cancellationToken)
+    private async Task AddLibraryAsync(Guid user, StoredCloudLink link, string? libraryName, string? language, CancellationToken cancellationToken)
     {
         await using var db = databases.CreateDbContext();
         if (await db.Libraries.AnyAsync(l => l.OwnerUserId == user && l.Sources.Any(s => s.Kind == LibrarySourceKind.UltimateCloud), cancellationToken)
@@ -263,14 +266,11 @@ public sealed class UserCloudAccounts(
 
         var name = string.IsNullOrWhiteSpace(libraryName)
             ? Application.Cloud.UltimateCloudService.DefaultName(UltimateCloudCollection.Library, link.DisplayFirstName,
-                await settings.GetAsync<string?>(SettingKeys.DefaultLanguage, null, cancellationToken))
+                language ?? await settings.GetAsync<string?>(SettingKeys.DefaultLanguage, null, cancellationToken))
             : libraryName.Trim();
         if (name.Length > 100)
             name = name[..100];
-        var taken = (await db.Libraries.Select(l => l.Name).ToListAsync(cancellationToken)).Select(TextNormalizer.Normalize).ToHashSet();
-        var unique = name;
-        for (var i = 2; taken.Contains(TextNormalizer.Normalize(unique)); i++)
-            unique = $"{name} ({i})";
+        var unique = await UniqueNameAsync(db, name, null, cancellationToken);
 
         var library = new Data.Entities.Library
         {
@@ -293,6 +293,41 @@ public sealed class UserCloudAccounts(
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateAll();
         await services.GetRequiredService<ScanCoordinator>().EnqueueAsync(library.Id, ScanKind.Full, user, cancellationToken);
+    }
+
+    /// <summary><paramref name="name"/>, or with " (2)", " (3)"… when another library has it.</summary>
+    private static async Task<string> UniqueNameAsync(ArcanistDbContext db, string name, Guid? except, CancellationToken cancellationToken)
+    {
+        var taken = (await db.Libraries.Where(l => l.Id != except).Select(l => l.Name).ToListAsync(cancellationToken))
+            .Select(TextNormalizer.Normalize).ToHashSet();
+        var unique = name;
+        for (var i = 2; taken.Contains(TextNormalizer.Normalize(unique)); i++)
+            unique = $"{name} ({i})";
+        return unique;
+    }
+
+    /// <summary>
+    /// Before 0.1.0-alpha.13 the panel named personal libraries "My Ultimate Cloud" / "Mi Ultimate Cloud": they take
+    /// their owner's first name ("Ultimate Cloud de Giancarlo") once it is known. Renamed ones are left alone.
+    /// </summary>
+    private async Task RenameGenericLibraryAsync(Guid user, StoredCloudLink link, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(link.DisplayFirstName))
+            return;
+        await using var db = databases.CreateDbContext();
+        var library = await db.Libraries.FirstOrDefaultAsync(l => l.OwnerUserId == user && l.Sources.Any(s => s.Kind == LibrarySourceKind.UltimateCloud),
+            cancellationToken);
+        var language = library?.Name switch
+        {
+            "Mi Ultimate Cloud" => "es",
+            "My Ultimate Cloud" => "en",
+            _ => null,
+        };
+        if (library is null || language is null)
+            return;
+        var name = Application.Cloud.UltimateCloudService.DefaultName(UltimateCloudCollection.Library, link.DisplayFirstName, language);
+        library.Name = await UniqueNameAsync(db, name.Length > 100 ? name[..100] : name, library.Id, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task ConnectAsync(CancellationToken cancellationToken)

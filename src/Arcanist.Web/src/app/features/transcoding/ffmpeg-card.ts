@@ -20,6 +20,8 @@ import {
 } from '../../graphql/operations';
 import { BytesPipe } from '../../shared/format';
 
+export const FfmpegGuide = 'https://github.com/linkfast/arcanist/blob/main/docs/ffmpeg.md';
+
 /** Which ffmpeg Arcanist uses, a different path, or a download into the data directory. */
 @Component({
   selector: 'app-ffmpeg-card',
@@ -53,6 +55,28 @@ import { BytesPipe } from '../../shared/format';
               </span>
             }
           </div>
+
+          @if (s.available) {
+            <div class="grid gap-1 text-sm">
+              <span class="font-medium">{{ 'settings.ffmpeg.features.title' | t }}</span>
+              @if (s.features.length) {
+                <div class="flex flex-wrap gap-2">
+                  @for (feature of s.features; track feature.kind) {
+                    <span hlmBadge variant="secondary">
+                      {{ 'settings.ffmpeg.features.' + feature.kind | t }} · {{ feature.encoder }}
+                    </span>
+                  }
+                </div>
+              } @else {
+                <p class="text-xs text-muted-foreground">
+                  {{ 'settings.ffmpeg.features.none' | t }}
+                  <a class="underline" [href]="guide" target="_blank" rel="noopener">{{
+                    'settings.ffmpeg.features.guide' | t
+                  }}</a>
+                </p>
+              }
+            </div>
+          }
 
           @if (s.available && s.outdated && s.source !== 'DOWNLOADED') {
             <div hlmAlert>
@@ -201,6 +225,8 @@ export class FfmpegCard implements OnInit {
   private readonly gql = inject(Gql);
 
   protected readonly status = signal<FfmpegStatusFieldsFragment | null>(null);
+  /** How to install an ffmpeg with the features Arcanist's download lacks (HE-AAC). */
+  protected readonly guide = FfmpegGuide;
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected path = '';

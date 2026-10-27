@@ -118,12 +118,13 @@ public sealed class PretranscodeWorker(
         store.Pregenerated.RemoveWhere(key => !wanted.Contains(key));
         Report(config, work);
 
-        if (await ffmpeg.GetAsync(cancellationToken) is null)
+        if (await ffmpeg.GetAsync(cancellationToken) is not { } installation)
             return;
         var failed = 0;
         foreach (var (target, song) in work)
         {
-            if (store.Pregenerated.Contains(KeyOf(song, target)))
+            // A format this ffmpeg cannot make (HE-AAC after switching to another build) waits; what was made stays.
+            if (store.Pregenerated.Contains(KeyOf(song, target)) || TranscodeProfile.For(target.Format).EncoderIn(installation.Encoders) is null)
                 continue;
             // Listeners first: it waits while anyone is playing music.
             while (streams.Active > 0)

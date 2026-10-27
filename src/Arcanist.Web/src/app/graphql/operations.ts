@@ -353,6 +353,10 @@ export const FfmpegStatusFields = graphql(`
     outdated
     recommendedVersion
     downloaded
+    features {
+      kind
+      encoder
+    }
     download {
       state
       bytesReceived
@@ -1075,6 +1079,7 @@ export const TranscodingFields = graphql(`
     cacheFiles
     working
     ffmpegAvailable
+    formats
     settings {
       cacheEnabled
       cacheMaxBytes

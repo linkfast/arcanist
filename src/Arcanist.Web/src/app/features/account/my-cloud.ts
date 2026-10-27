@@ -327,11 +327,11 @@ export class MyCloud implements OnInit {
   }
 
   protected async start(): Promise<void> {
-    // The personal library is named in the user's language once the account says whose it is; until then, generic.
-    const libraryName = this.i18n.t('account.cloud.libraryName');
+    // The server names the personal library with the account's first name ("Ultimate Cloud de Ana"), in our language.
+    const input = { libraryName: null, language: this.i18n.language() };
     await this.run(async () =>
       this.show(
-        (await this.gql.mutate(StartMyUltimateCloudLinkMutation, { input: { libraryName } }))
+        (await this.gql.mutate(StartMyUltimateCloudLinkMutation, { input }))
           .startMyUltimateCloudLink,
       ),
     );

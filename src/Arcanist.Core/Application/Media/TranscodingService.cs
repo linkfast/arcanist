@@ -9,13 +9,15 @@ namespace Arcanist.Core.Application.Media;
 /// <param name="CacheBytes">What the cache takes now.</param>
 /// <param name="Working">Making versions right now.</param>
 /// <param name="FfmpegAvailable">Without ffmpeg nothing is converted.</param>
+/// <param name="Formats">The formats the ffmpeg in use can make (HE-AAC only with an encoder for it).</param>
 public sealed record TranscodingStatus(
     TranscodingConfig Settings,
     long CacheBytes,
     int CacheFiles,
     IReadOnlyList<PregenerateProgress> Pregenerated,
     bool Working,
-    bool FfmpegAvailable);
+    bool FfmpegAvailable,
+    IReadOnlyList<TranscodeFormat> Formats);
 
 public sealed record TranscodeTargetInput(TranscodeFormat Format, int BitRate);
 
@@ -66,14 +68,16 @@ public sealed class TranscodingService(
     TranscodingSettings settings,
     TranscodeStore store,
     PretranscodeWorker worker,
-    FfmpegLocator ffmpeg)
+    FfmpegLocator ffmpeg,
+    Transcoder transcoder)
 {
     public async Task<TranscodingStatus> StatusAsync(CancellationToken cancellationToken)
     {
         guard.Permission(Permissions.ManageSettings);
         var (bytes, files) = store.Cache.Usage();
+        var installation = await ffmpeg.GetAsync(cancellationToken);
         return new TranscodingStatus(await settings.GetAsync(cancellationToken), bytes, files, worker.Progress, worker.Working,
-            await ffmpeg.GetAsync(cancellationToken) is not null);
+            installation is not null, transcoder.Formats(installation));
     }
 
     public async Task<TranscodingStatus> SetAsync(SetTranscodingSettingsInput input, CancellationToken cancellationToken)
@@ -86,6 +90,11 @@ public sealed class TranscodingService(
             errors.Add("cacheMaxAgeDays", ErrorCodes.InvalidFormat);
         if (input.Pregenerate.Count > 6)
             errors.Add("pregenerate", ErrorCodes.TooMany);
+        // HE-AAC only with an encoder for it: most ffmpeg builds have none, and versions it cannot make never come.
+        var installation = await ffmpeg.GetAsync(cancellationToken);
+        if (input.Pregenerate.Any(t => t.Format == TranscodeFormat.HeAac
+                                       && (installation is null || TranscodeProfile.For(t.Format).EncoderIn(installation.Encoders) is null)))
+            errors.Add("pregenerate", ErrorCodes.TranscodingUnavailable);
         if (input.PregenerateLibraries is { Count: > 0 } libraries
             && await db.Libraries.CountAsync(l => libraries.Contains(l.Id), cancellationToken) != libraries.Distinct().Count())
             errors.Add("pregenerateLibraries", ErrorCodes.NotFound);

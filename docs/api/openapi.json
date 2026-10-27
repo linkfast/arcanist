@@ -16332,6 +16332,26 @@
           "FAILED"
         ]
       },
+      "FfmpegFeature": {
+        "required": [
+          "kind",
+          "encoder"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/FfmpegFeatureKind"
+          },
+          "encoder": {
+            "type": "string"
+          }
+        }
+      },
+      "FfmpegFeatureKind": {
+        "enum": [
+          "HE_AAC"
+        ]
+      },
       "FfmpegSource": {
         "enum": [
           "CONFIGURED",
@@ -16352,7 +16372,8 @@
           "download",
           "outdated",
           "recommendedVersion",
-          "downloaded"
+          "downloaded",
+          "features"
         ],
         "type": "object",
         "properties": {
@@ -16404,6 +16425,12 @@
           },
           "downloaded": {
             "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FfmpegFeature"
+            }
           }
         }
       },
@@ -24243,6 +24270,12 @@
               "null",
               "string"
             ]
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -26019,7 +26052,8 @@
           "cacheFiles",
           "pregenerated",
           "working",
-          "ffmpegAvailable"
+          "ffmpegAvailable",
+          "formats"
         ],
         "type": "object",
         "properties": {
@@ -26053,6 +26087,12 @@
           },
           "ffmpegAvailable": {
             "type": "boolean"
+          },
+          "formats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscodeFormat"
+            }
           }
         }
       },

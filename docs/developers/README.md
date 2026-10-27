@@ -132,12 +132,13 @@ signed `st` parameter, so they work where headers cannot be sent, such as an HTM
 ### Transcoding
 
 When ffmpeg is available, the server converts audio for playback on slow connections or devices that cannot play
-the original. `serverInfo.transcodingFormats` lists what it can produce (`OPUS`, `MP3`, `AAC`, `FLAC`; empty
-without ffmpeg). Add parameters to a stream URL:
+the original. `serverInfo.transcodingFormats` lists what it can produce (`OPUS`, `MP3`, `AAC`, `FLAC`, and `HE_AAC`
+when its ffmpeg has an HE-AAC encoder, see [ffmpeg.md](../ffmpeg.md); empty without ffmpeg). Add parameters to a
+stream URL:
 
 | Parameter | Effect |
 |---|---|
-| `format=opus\|mp3\|aac\|flac` | Convert to that format (Opus in Ogg, MP3, AAC in ADTS, lossless FLAC). |
+| `format=opus\|mp3\|aac\|flac\|he_aac` | Convert to that format (Opus in Ogg, MP3, AAC-LC in ADTS, lossless FLAC, HE-AAC in ADTS at 24–96 kbit/s). Asked for `he_aac` without an HE-AAC encoder, the server sends AAC-LC. |
 | `maxBitRate=128` | Bit rate in kbit/s (clamped to the format's range). Alone, it converts to MP3 only if the original exceeds it. |
 | `timeOffset=93.5` | Start that many seconds in. |
 | `client=desktop\|web\|mobile` | An Ultimate client: without `format`, `maxBitRate` or `download`, the quality the server sets for that kind of client (below). |

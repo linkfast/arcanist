@@ -1819,6 +1819,9 @@ export const StreamingDefaultsQuery = graphql(`
     streamingDefaults {
       ...StreamingDefaultsFields
     }
+    serverInfo {
+      transcodingFormats
+    }
   }
 `);
 

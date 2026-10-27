@@ -35,6 +35,7 @@ internal static partial class SubsonicMethods
             "flac" => TranscodeFormat.Flac,
             "opus" or "ogg" => TranscodeFormat.Opus,
             "aac" or "m4a" => TranscodeFormat.Aac,
+            "heaac" or "he-aac" or "he_aac" or "aac_he" => TranscodeFormat.HeAac,
             // MP3, or a format Arcanist does not convert to: MP3 plays everywhere.
             _ => TranscodeFormat.Mp3,
         };
@@ -54,7 +55,8 @@ internal static partial class SubsonicMethods
         if (available.Count == 0)
             (format, maxBitRate, offset) = (null, null, null);
         else if (format is { } chosen && !available.Contains(chosen))
-            format = available.Contains(TranscodeFormat.Mp3) ? TranscodeFormat.Mp3 : available[0];
+            format = chosen == TranscodeFormat.HeAac && available.Contains(TranscodeFormat.Aac) ? TranscodeFormat.Aac
+                : available.Contains(TranscodeFormat.Mp3) ? TranscodeFormat.Mp3 : available[0];
 
         return await MediaResponses.StreamAsync(call.Http, id, null, false, format, maxBitRate, offset, call.Cancellation);
 

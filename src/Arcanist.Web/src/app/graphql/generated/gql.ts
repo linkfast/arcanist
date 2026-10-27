@@ -162,7 +162,7 @@ type Documents = {
     "\n  query P2PActivityLog($input: P2PActivityQuery!) {\n    p2pActivityLog(input: $input) {\n      totalCount\n      offset\n      items {\n        id\n        at\n        kind\n        peerId\n        peerName\n        detail\n      }\n    }\n  }\n": typeof types.P2PActivityLogDocument,
     "\n  mutation RenameReceivedShare($input: RenameReceivedShareInput!) {\n    renameReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": typeof types.RenameReceivedShareDocument,
     "\n  fragment StreamingDefaultsFields on StreamingDefaults {\n    desktop {\n      format\n      maxBitRate\n    }\n    web {\n      format\n      maxBitRate\n    }\n    mobile {\n      format\n      maxBitRate\n    }\n  }\n": typeof types.StreamingDefaultsFieldsFragmentDoc,
-    "\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n  }\n": typeof types.StreamingDefaultsDocument,
+    "\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n    serverInfo {\n      transcodingFormats\n    }\n  }\n": typeof types.StreamingDefaultsDocument,
     "\n  mutation SetStreamingDefaults($input: SetStreamingDefaultsInput!) {\n    setStreamingDefaults(input: $input) {\n      ...StreamingDefaultsFields\n    }\n  }\n": typeof types.SetStreamingDefaultsDocument,
     "\n  fragment RemoteLibrarySettingsFields on RemoteLibrarySettings {\n    cacheEnabled\n    cacheMaxBytes\n    cacheMaxAgeDays\n    transcoding\n    cacheBytes\n    cacheFiles\n  }\n": typeof types.RemoteLibrarySettingsFieldsFragmentDoc,
     "\n  query RemoteLibrarySettings {\n    remoteLibrarySettings {\n      ...RemoteLibrarySettingsFields\n    }\n  }\n": typeof types.RemoteLibrarySettingsDocument,
@@ -436,7 +436,7 @@ const documents: Documents = {
     "\n  query P2PActivityLog($input: P2PActivityQuery!) {\n    p2pActivityLog(input: $input) {\n      totalCount\n      offset\n      items {\n        id\n        at\n        kind\n        peerId\n        peerName\n        detail\n      }\n    }\n  }\n": types.P2PActivityLogDocument,
     "\n  mutation RenameReceivedShare($input: RenameReceivedShareInput!) {\n    renameReceivedShare(input: $input) {\n      ...ReceivedShareFields\n    }\n  }\n": types.RenameReceivedShareDocument,
     "\n  fragment StreamingDefaultsFields on StreamingDefaults {\n    desktop {\n      format\n      maxBitRate\n    }\n    web {\n      format\n      maxBitRate\n    }\n    mobile {\n      format\n      maxBitRate\n    }\n  }\n": types.StreamingDefaultsFieldsFragmentDoc,
-    "\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n  }\n": types.StreamingDefaultsDocument,
+    "\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n    serverInfo {\n      transcodingFormats\n    }\n  }\n": types.StreamingDefaultsDocument,
     "\n  mutation SetStreamingDefaults($input: SetStreamingDefaultsInput!) {\n    setStreamingDefaults(input: $input) {\n      ...StreamingDefaultsFields\n    }\n  }\n": types.SetStreamingDefaultsDocument,
     "\n  fragment RemoteLibrarySettingsFields on RemoteLibrarySettings {\n    cacheEnabled\n    cacheMaxBytes\n    cacheMaxAgeDays\n    transcoding\n    cacheBytes\n    cacheFiles\n  }\n": types.RemoteLibrarySettingsFieldsFragmentDoc,
     "\n  query RemoteLibrarySettings {\n    remoteLibrarySettings {\n      ...RemoteLibrarySettingsFields\n    }\n  }\n": types.RemoteLibrarySettingsDocument,
@@ -1171,7 +1171,7 @@ export function graphql(source: "\n  fragment StreamingDefaultsFields on Streami
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n  }\n"): (typeof documents)["\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n  }\n"];
+export function graphql(source: "\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n    serverInfo {\n      transcodingFormats\n    }\n  }\n"): (typeof documents)["\n  query StreamingDefaults {\n    streamingDefaults {\n      ...StreamingDefaultsFields\n    }\n    serverInfo {\n      transcodingFormats\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

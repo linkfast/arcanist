@@ -25917,7 +25917,8 @@
           "OPUS",
           "MP3",
           "AAC",
-          "FLAC"
+          "FLAC",
+          "HE_AAC"
         ]
       },
       "TranscodeTarget": {

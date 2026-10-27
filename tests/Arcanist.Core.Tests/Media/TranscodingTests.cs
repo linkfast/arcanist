@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Arcanist.Core.Media;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Scanning;
 
@@ -59,6 +60,51 @@ public sealed class TranscodingTests : IAsyncLifetime
             if (magic is not null)
                 Assert.Equal(magic, body[..magic.Length]);
         }
+    }
+
+    [Fact]
+    public async Task HE_AAC_comes_from_an_encoder_that_makes_it_or_as_AAC_without_one()
+    {
+        var ffmpeg = TestFfmpeg.Require();
+        await StartAsync(ffmpeg);
+
+        var info = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, Cancel);
+        var formats = info.GetProperty("transcodingFormats").EnumerateArray().Select(f => f.GetString()).ToList();
+        if (!formats.Contains("AAC"))
+            Assert.Skip("This ffmpeg has no AAC encoder.");
+
+        // As the API spells it, as clients may spell it.
+        foreach (var spelling in new[] { "HE_AAC", "he-aac" })
+        {
+            var response = await _admin.GetAsync($"/rest/v1/stream/{_trackId}?format={spelling}&maxBitRate=64", Cancel);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("audio/aac", response.Content.Headers.ContentType?.MediaType);
+            var body = await response.Content.ReadAsByteArrayAsync(Cancel);
+            Assert.Equal(0xFF, body[0]);
+
+            // ADTS gives the core's sample rate: half the song's (44.1 kHz) with SBR, the song's own with AAC-LC.
+            var rateIndex = (body[2] >> 2) & 0x0F;
+            Assert.Equal(formats.Contains("HE_AAC") ? 7 : 4, rateIndex);
+        }
+    }
+
+    [Fact]
+    public void Formats_are_read_as_clients_spell_them()
+    {
+        foreach (var (text, format) in new[] { ("mp3", TranscodeFormat.Mp3), ("OPUS", TranscodeFormat.Opus), ("HE_AAC", TranscodeFormat.HeAac),
+                     ("he-aac", TranscodeFormat.HeAac), ("heaac", TranscodeFormat.HeAac), ("aac", TranscodeFormat.Aac) })
+        {
+            Assert.True(TranscodeProfile.TryParse(text, out var parsed), text);
+            Assert.Equal(format, parsed);
+        }
+
+        Assert.False(TranscodeProfile.TryParse("2", out _));
+        Assert.False(TranscodeProfile.TryParse("wma", out _));
+        // libfdk_aac first; AudioToolbox on macOS.
+        var heAac = TranscodeProfile.For(TranscodeFormat.HeAac);
+        Assert.Equal("aac_at", heAac.EncoderIn(new HashSet<string> { "aac", "aac_at" }));
+        Assert.Equal("libfdk_aac", heAac.EncoderIn(new HashSet<string> { "aac_at", "libfdk_aac" }));
+        Assert.Null(heAac.EncoderIn(new HashSet<string> { "aac" }));
     }
 
     [Fact]

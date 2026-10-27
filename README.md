@@ -93,6 +93,7 @@ wizard shows the setup code.
 Requirements: .NET SDK 10, Node.js 24 (pinned in `mise.toml`) and Rust 1.85+ for the audio analysis library in
 `native/arcanist-audio` (the server builds without it, but then analyzes nothing). ffmpeg is optional at runtime:
 it converts streams and decodes the formats the built-in decoder does not read, and the admin panel can download it.
+[docs/ffmpeg.md](docs/ffmpeg.md) explains which ffmpeg Arcanist uses and how to install one that encodes HE-AAC.
 
 ```bash
 dotnet build Arcanist.slnx

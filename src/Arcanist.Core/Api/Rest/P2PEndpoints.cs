@@ -145,7 +145,7 @@ public static class P2PEndpoints
                     profile = TranscodeProfile.Lpcm;
                 else if (format is not null)
                 {
-                    if (!Enum.TryParse<TranscodeFormat>(format, ignoreCase: true, out var parsed))
+                    if (!TranscodeProfile.TryParse(format, out var parsed))
                         return Problems.Create(StatusCodes.Status400BadRequest, ErrorCodes.InvalidFormat);
                     profile = TranscodeProfile.For(parsed);
                 }

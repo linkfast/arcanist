@@ -14,10 +14,15 @@ public enum TranscodeFormat
     Aac,
     /// <summary>FLAC: lossless, for players that want the original quality of a converted part (a cue track).</summary>
     Flac,
+    /// <summary>
+    /// HE-AAC (AAC with SBR) in ADTS: good sound at low bit rates, for mobile data. Only with an ffmpeg that has
+    /// libfdk_aac, or AudioToolbox on macOS: ffmpeg's own AAC encoder makes AAC-LC only.
+    /// </summary>
+    HeAac,
 }
 
 /// <param name="Format">Its format for clients; null for <see cref="Lpcm"/>, which only DLNA devices get.</param>
-/// <param name="Encoder">The ffmpeg encoder that must be available.</param>
+/// <param name="Encoder">The ffmpeg encoder that must be available (or one of <see cref="Alternatives"/>).</param>
 /// <param name="BitRate">Default bit rate, kbit/s; 0 for lossless formats, which ignore it.</param>
 /// <param name="SampleRate">Hz to resample to, when the format needs a fixed rate.</param>
 public sealed record TranscodeProfile(
@@ -30,6 +35,16 @@ public sealed record TranscodeProfile(
     int MaxBitRate,
     int? SampleRate = null)
 {
+    /// <summary>Other encoders that make this format, used when <see cref="Encoder"/> is missing.</summary>
+    public IReadOnlyList<string> Alternatives { get; init; } = [];
+
+    /// <summary>Options the encoder needs after <c>-c:a</c> (the HE-AAC profile, say).</summary>
+    public IReadOnlyList<string> EncoderOptions { get; init; } = [];
+
+    /// <summary>The encoder of this format that <paramref name="available"/> has; null when none.</summary>
+    public string? EncoderIn(IReadOnlySet<string> available) =>
+        available.Contains(Encoder) ? Encoder : Alternatives.FirstOrDefault(available.Contains);
+
     /// <summary>
     /// Uncompressed 16-bit stereo at 44.1 kHz, big-endian (DLNA's LPCM): the lossless format every DLNA renderer
     /// plays, for those that take no FLAC.
@@ -45,11 +60,26 @@ public sealed record TranscodeProfile(
         new(TranscodeFormat.Mp3, "libmp3lame", "mp3", "audio/mpeg", 192, 64, 320),
         new(TranscodeFormat.Aac, "aac", "adts", "audio/aac", 160, 48, 320),
         new(TranscodeFormat.Flac, "flac", "flac", "audio/flac", 0, 0, 0),
+        // SBR doubles the bandwidth of a low bit rate; above about 96 kbit/s AAC-LC sounds better.
+        new(TranscodeFormat.HeAac, "libfdk_aac", "adts", "audio/aac", 64, 24, 96)
+        {
+            Alternatives = ["aac_at"],
+            EncoderOptions = ["-profile:a", "aac_he"],
+        },
     ];
 
     public bool IsLossless => BitRate == 0;
 
     public static TranscodeProfile For(TranscodeFormat format) => All.Single(p => p.Format == format);
+
+    /// <summary>A format as clients spell it: <c>mp3</c>, <c>OPUS</c>, <c>HE_AAC</c>, <c>he-aac</c>, <c>heaac</c>…</summary>
+    public static bool TryParse(string? text, out TranscodeFormat format)
+    {
+        format = default;
+        // Enum.TryParse also takes numbers ("2"), which are no format's name.
+        return !string.IsNullOrWhiteSpace(text) && !text.All(char.IsDigit)
+               && Enum.TryParse(text.Replace("_", "").Replace("-", ""), ignoreCase: true, out format) && Enum.IsDefined(format);
+    }
 
     /// <summary>The requested bit rate within the profile's range, or its default.</summary>
     public int Clamp(int? bitRate) => Math.Clamp(bitRate ?? BitRate, MinBitRate, MaxBitRate);
@@ -71,7 +101,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
 
     /// <summary>Formats the available ffmpeg can produce (empty without ffmpeg).</summary>
     public IReadOnlyList<TranscodeFormat> Formats(FfmpegInstallation? ffmpeg) =>
-        ffmpeg is null ? [] : TranscodeProfile.All.Where(p => ffmpeg.Encoders.Contains(p.Encoder)).Select(p => p.Format!.Value).ToList();
+        ffmpeg is null ? [] : TranscodeProfile.All.Where(p => p.EncoderIn(ffmpeg.Encoders) is not null).Select(p => p.Format!.Value).ToList();
 
     /// <summary>
     /// Starts converting. <paramref name="localPath"/> lets ffmpeg open and seek the file directly; otherwise the
@@ -87,7 +117,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
         double? durationSeconds = null)
     {
         var ffmpeg = await locator.GetAsync(cancellationToken);
-        if (ffmpeg is null || !ffmpeg.Encoders.Contains(profile.Encoder))
+        if (ffmpeg is null || profile.EncoderIn(ffmpeg.Encoders) is not { } encoder)
             return null;
 
         if (!await _slots.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken))
@@ -126,7 +156,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
                 arguments.Add(duration.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
             }
 
-            foreach (var argument in new[] { "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-ac", "2", "-c:a", profile.Encoder })
+            foreach (var argument in new[] { "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-ac", "2", "-c:a", encoder }.Concat(profile.EncoderOptions))
                 arguments.Add(argument);
             if (profile.SampleRate is { } rate)
             {
@@ -196,7 +226,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
         TranscodeFormat.Opus => ("ogg", ".opus"),
         TranscodeFormat.Mp3 => ("mp3", ".mp3"),
         // ADTS cannot hold tags; MP4 can.
-        TranscodeFormat.Aac => ("ipod", ".m4a"),
+        TranscodeFormat.Aac or TranscodeFormat.HeAac => ("ipod", ".m4a"),
         _ => ("flac", ".flac"),
     };
 
@@ -208,7 +238,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
         string inputPath, string outputPath, TranscodeProfile profile, int bitRate, CancellationToken cancellationToken)
     {
         var ffmpeg = await locator.GetAsync(cancellationToken);
-        if (ffmpeg is null || !ffmpeg.Encoders.Contains(profile.Encoder))
+        if (ffmpeg is null || profile.EncoderIn(ffmpeg.Encoders) is not { } encoder)
             return new ConversionResult(false, Available: false, null);
 
         await _slots.WaitAsync(cancellationToken);
@@ -222,7 +252,7 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
                 CreateNoWindow = true,
             };
             foreach (var argument in new[] { "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", inputPath,
-                         "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-c:a", profile.Encoder })
+                         "-map", "0:a:0", "-vn", "-map_metadata", "-1", "-c:a", encoder }.Concat(profile.EncoderOptions))
             {
                 start.ArgumentList.Add(argument);
             }
@@ -233,8 +263,8 @@ public sealed class Transcoder(FfmpegLocator locator, IOptions<TranscodingOption
                 start.ArgumentList.Add($"{bitRate}k");
             }
 
-            // MP3 holds at most two channels.
-            if (profile.Format == TranscodeFormat.Mp3)
+            // MP3 holds at most two channels; HE-AAC's SBR is for stereo (more channels need far more bits).
+            if (profile.Format is TranscodeFormat.Mp3 or TranscodeFormat.HeAac)
             {
                 start.ArgumentList.Add("-ac");
                 start.ArgumentList.Add("2");

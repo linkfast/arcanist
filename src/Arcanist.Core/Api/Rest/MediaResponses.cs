@@ -122,6 +122,10 @@ public static class MediaResponses
             var profile = requested ?? TranscodeProfile.For(segment && maxBitRate is null && AudioFormats.IsLossless(target.RelativePath)
                 ? TranscodeFormat.Flac
                 : TranscodeFormat.Mp3);
+            // HE-AAC needs an encoder most ffmpeg builds lack (a default chosen with one, say): AAC-LC plays the same.
+            if (profile.Format == TranscodeFormat.HeAac
+                && context.RequestServices.GetRequiredService<FfmpegLocator>().Current is { } ffmpeg && profile.EncoderIn(ffmpeg.Encoders) is null)
+                profile = TranscodeProfile.For(TranscodeFormat.Aac);
             var remaining = Math.Max(0, target.DurationMs / 1000.0 - offset);
             var rate = profile.Clamp(maxBitRate ?? (segment ? 320 : null));
 

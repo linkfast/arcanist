@@ -30,6 +30,8 @@ const Qualities: Quality[] = [
   })),
   ...[256, 192, 128].map((rate) => ({ format: 'AAC' as TranscodeFormat, maxBitRate: rate })),
   ...[320, 256, 192, 128].map((rate) => ({ format: 'MP3' as TranscodeFormat, maxBitRate: rate })),
+  // Only with an ffmpeg that encodes it (libfdk_aac, or macOS): otherwise the server sends AAC.
+  ...[96, 64, 48].map((rate) => ({ format: 'HE_AAC' as TranscodeFormat, maxBitRate: rate })),
 ];
 
 const key = (quality: Quality): string =>
@@ -85,9 +87,13 @@ export class ClientQualityCard implements OnInit {
   protected readonly loaded = signal(false);
   protected readonly busy = signal(false);
   protected readonly chosen: Record<Client, string> = { desktop: '', web: '', mobile: '' };
+  /** This server's ffmpeg encodes HE-AAC (most builds do not). */
+  protected readonly heAac = signal(false);
 
   async ngOnInit(): Promise<void> {
-    this.show((await this.gql.query(StreamingDefaultsQuery)).streamingDefaults);
+    const result = await this.gql.query(StreamingDefaultsQuery);
+    this.heAac.set(result.serverInfo.transcodingFormats.includes('HE_AAC'));
+    this.show(result.streamingDefaults);
   }
 
   protected label(quality: Quality): string {
@@ -97,8 +103,13 @@ export class ClientQualityCard implements OnInit {
   protected describe(quality: Quality): string {
     if (!quality.format) return this.i18n.t('transcoding.clients.original');
     if (quality.format === 'FLAC') return this.i18n.t('transcoding.clients.flac');
-    const name = quality.format === 'OPUS' ? 'Opus' : quality.format;
-    return `${name} ${quality.maxBitRate} kbit/s`;
+    const name =
+      quality.format === 'OPUS' ? 'Opus' : quality.format === 'HE_AAC' ? 'HE-AAC' : quality.format;
+    const missing =
+      quality.format === 'HE_AAC' && !this.heAac()
+        ? ` (${this.i18n.t('transcoding.clients.heAacMissing')})`
+        : '';
+    return `${name} ${quality.maxBitRate} kbit/s${missing}`;
   }
 
   protected async save(): Promise<void> {

@@ -1621,6 +1621,7 @@ enum TranscodeFormat {
   MP3
   AAC
   FLAC
+  HE_AAC
 }
 
 type PregenerateProgress {

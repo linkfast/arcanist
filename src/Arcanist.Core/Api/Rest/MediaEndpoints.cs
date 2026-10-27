@@ -69,7 +69,7 @@ public static class MediaEndpoints
         TranscodeFormat? requested = null;
         if (!string.IsNullOrEmpty(format))
         {
-            if (!Enum.TryParse<TranscodeFormat>(format, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+            if (!TranscodeProfile.TryParse(format, out var parsed))
                 throw Application.ArcanistException.Field("format", Application.ErrorCodes.InvalidFormat);
             requested = parsed;
         }

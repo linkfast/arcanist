@@ -44,8 +44,16 @@ import {
       }
       @for (user of existing(); track user.userName) {
         <li class="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-3 text-sm">
-          <span class="font-medium">{{ user.displayName || user.userName }}</span>
+          <span class="font-medium">{{ user.userName }}</span>
+          @if (user.displayName && user.displayName !== user.userName) {
+            <span class="text-xs text-muted-foreground">{{ user.displayName }}</span>
+          }
           <span hlmBadge variant="outline">{{ 'users.roles.' + user.role | t }}</span>
+          @if (user.origin) {
+            <span hlmBadge variant="secondary">{{
+              'setup.users.migratedFrom' | t: { server: user.origin }
+            }}</span>
+          }
         </li>
       }
     </ul>
@@ -153,7 +161,10 @@ import {
 export class SetupUsersStep {
   readonly draft = input.required<SetupExtrasDraft>();
   readonly adminName = input<string | null>(null);
-  readonly existing = input<{ userName: string; displayName?: string | null; role: string }[]>([]);
+  /** Users already on the server, and those an import brings (with `origin`: the server they come from). */
+  readonly existing = input<
+    { userName: string; displayName?: string | null; role: string; origin?: string }[]
+  >([]);
   /** Libraries not visible to everyone: new users see them only when given. */
   readonly restricted = input<string[]>([]);
 

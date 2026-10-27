@@ -359,10 +359,17 @@ export class SetupPage implements OnInit {
   }
 
   protected usersSummary(): string {
-    return this.extras
+    const created = this.extras
       .users()
       .map((u) => u.userName.trim())
-      .join(', ');
+      .filter((name) => name);
+    const imported = this.importedUsers();
+    const migrated = imported.length
+      ? [
+          `${imported.map((u) => u.userName).join(', ')} (${this.i18n.t('setup.users.migratedFrom', { server: imported[0].origin })})`,
+        ]
+      : [];
+    return [...created, ...migrated].join(', ');
   }
 
   /** The P2P, extension and player choices, for the review step. */
@@ -490,16 +497,23 @@ export class SetupPage implements OnInit {
   }
 
   /** The users the import brings (one named like the administrator is the administrator). */
-  protected importedUsers(): { userName: string; displayName?: string | null; role: string }[] {
+  protected importedUsers(): {
+    userName: string;
+    displayName?: string | null;
+    role: string;
+    origin: string;
+  }[] {
     const admin = this.userName.trim().toLowerCase();
     if (this.migrateFrom === 'arcanist') {
+      const analysis = this.arcanist.analysis();
       const chosen = new Set(this.arcanist.users());
-      return (this.arcanist.analysis()?.users ?? [])
+      return (analysis?.users ?? [])
         .filter((u) => chosen.has(u.id) && u.userName.toLowerCase() !== admin && !u.exists)
         .map((u) => ({
           userName: u.userName,
-          displayName: this.arcanist.analysis()?.serverName,
+          displayName: u.displayName,
           role: this.arcanist.permissions ? u.role : 'USER',
+          origin: analysis?.serverName || 'Arcanist',
         }));
     }
     if (this.migrateFrom !== 'mstream' || !this.mstream.importUsers) return [];
@@ -507,8 +521,8 @@ export class SetupPage implements OnInit {
       .filter((u) => u.userName.toLowerCase() !== admin && !u.exists)
       .map((u) => ({
         userName: u.userName,
-        displayName: 'mStream',
         role: u.isAdmin ? 'ADMIN' : 'USER',
+        origin: 'mStream',
       }));
   }
 
@@ -1065,27 +1079,36 @@ export class SetupPage implements OnInit {
           : [];
       }
       case 'arcanist': {
-        const server = this.arcanist.analysis()?.serverName ?? '';
+        const server = this.arcanist.analysis()?.serverName || 'Arcanist';
         const byFolder = new Map<
           string,
-          { key: string; name: string; folder: string; visibleToAll: boolean; label: string }
+          { key: string; name: string; folder: string; visibleToAll: boolean; sources: string[] }
         >();
         for (const library of this.arcanist
           .libraries()
           .filter((l) => l.include && l.newPath.trim())) {
           const folder = library.newPath.trim();
           const same = byFolder.get(folder);
-          if (same) same.visibleToAll &&= library.visibleToAll;
-          else
+          if (same) {
+            same.visibleToAll &&= library.visibleToAll;
+            same.sources.push(library.sourceName);
+          } else
             byFolder.set(folder, {
               key: 'arcanist:' + folder,
               name: library.newName.trim() || library.sourceName,
               folder,
               visibleToAll: library.visibleToAll,
-              label: this.i18n.t('setup.libraries.fromArcanist', { server }),
+              sources: [library.sourceName],
             });
         }
-        return [...byFolder.values()];
+        // Several libraries of the other server may go into one folder: the label names them all.
+        return [...byFolder.values()].map(({ sources, ...l }) => ({
+          ...l,
+          label: this.i18n.t('setup.libraries.fromArcanist', {
+            library: sources.map((s) => `«${s}»`).join(', '),
+            server,
+          }),
+        }));
       }
       default:
         return [];
@@ -1103,12 +1126,12 @@ export class SetupPage implements OnInit {
         .filter((l) => !l.origin || chosen.some((c) => c.key === l.origin!.key))
         .map((l) => {
           const choice = l.origin && chosen.find((c) => c.key === l.origin!.key);
-          if (!choice || choice.folder === l.origin!.folder) return l;
-          return {
-            ...l,
-            folders: [choice.folder],
-            origin: { key: choice.key, folder: choice.folder, label: choice.label },
-          };
+          if (!choice) return l;
+          // The label always follows the import (its server's name may arrive later, the language may change).
+          const origin = { key: choice.key, folder: choice.folder, label: choice.label };
+          return choice.folder === l.origin!.folder
+            ? { ...l, origin }
+            : { ...l, folders: [choice.folder], origin };
         });
       const added = chosen
         .filter((c) => !kept.some((l) => l.origin?.key === c.key || l.folders.includes(c.folder)))

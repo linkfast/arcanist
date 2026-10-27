@@ -239,6 +239,7 @@ export const es: Dictionary = {
     users: {
       explanation:
         'La cuenta de administrador ya existe. Añade a quien vaya a usar este servidor: cada uno tendrá sus valoraciones, playlists y estadísticas.',
+      migratedFrom: 'Se migrará desde {server}',
       userName: 'Nombre de usuario',
       displayName: 'Nombre visible',
       password: 'Contraseña',
@@ -475,9 +476,9 @@ export const es: Dictionary = {
       currentHelp:
         'Se quedan como están; para cambiarlas o quitarlas, ve a Bibliotecas. Aquí puedes añadir otras.',
       add: 'Añadir una biblioteca',
-      fromMstream: 'De mStream: {vpath}',
-      fromDlna: 'De {server} (DLNA)',
-      fromArcanist: 'De {server}',
+      fromMstream: 'Se importará desde mStream ({vpath})',
+      fromDlna: 'Se copiará desde {server} (DLNA)',
+      fromArcanist: 'Se migrará desde {library} de {server}',
       namePlaceholder: 'Música, Audiolibros…',
       nameRequired: 'Pon un nombre a cada biblioteca con carpetas.',
       another: 'Otra biblioteca',

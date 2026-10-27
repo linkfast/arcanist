@@ -235,6 +235,7 @@ export const en: Dictionary = {
     users: {
       explanation:
         'The administrator account is there already. Add whoever will use this server: each gets their own ratings, playlists and statistics.',
+      migratedFrom: 'Will be migrated from {server}',
       userName: 'User name',
       displayName: 'Display name',
       password: 'Password',
@@ -460,9 +461,9 @@ export const en: Dictionary = {
       currentHelp:
         'They stay as they are; to change or remove them, go to Libraries. You can add others here.',
       add: 'Add a library',
-      fromMstream: 'From mStream: {vpath}',
-      fromDlna: 'From {server} (DLNA)',
-      fromArcanist: 'From {server}',
+      fromMstream: 'Will be imported from mStream ({vpath})',
+      fromDlna: 'Will be copied from {server} (DLNA)',
+      fromArcanist: 'Will be migrated from {library} on {server}',
       namePlaceholder: 'Music, Audiobooks…',
       nameRequired: 'Name every library that has folders.',
       another: 'Another library',

@@ -3372,6 +3372,11 @@ export const en: Dictionary = {
       'Put video files (MP4, MKV, WebM, MOV) in a library, next to their song with the same name, or with “Artist - Title” in their name.',
     more: 'Show more',
     unknownArtist: 'Unknown artist',
+    song: {
+      label: 'Song',
+      none: 'Not linked to a song yet: link it below to play it with the song’s audio.',
+      file: 'The file says',
+    },
     liveBadge: 'Live',
     live: 'Live performance (only linked to a live track)',
     duration: 'Duration',

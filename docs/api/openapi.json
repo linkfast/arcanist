@@ -27465,6 +27465,16 @@
           },
           "canManage": {
             "type": "boolean"
+          },
+          "song": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VideoClipSong"
+              }
+            ]
           }
         }
       },
@@ -27489,6 +27499,65 @@
             ]
           },
           "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "VideoClipSong": {
+        "required": [
+          "id",
+          "title",
+          "artist",
+          "albumId",
+          "album",
+          "year",
+          "artworkId",
+          "durationMs"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "albumId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "album": {
+            "type": "string"
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "durationMs": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

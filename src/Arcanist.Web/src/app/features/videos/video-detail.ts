@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -110,7 +111,44 @@ type Song = SearchResult['tracks']['items'][number];
           </div>
         }
 
+        <div class="flex items-center gap-3 rounded-lg border p-3">
+          @if (v.song; as song) {
+            @if (song.artworkId) {
+              <img
+                class="size-14 shrink-0 rounded object-cover"
+                [src]="'/rest/v1/artwork/' + song.artworkId + '?size=128'"
+                alt=""
+              />
+            } @else {
+              <div class="size-14 shrink-0 rounded bg-muted"></div>
+            }
+            <div class="grid min-w-0 gap-0.5 text-sm">
+              <span class="text-xs text-muted-foreground">{{ 'videos.song.label' | t }}</span>
+              <span class="truncate font-medium">{{ song.title }}</span>
+              <span class="truncate text-muted-foreground">
+                {{ song.artist ?? ('videos.unknownArtist' | t) }} · {{ song.album }}
+                @if (song.year) {
+                  ({{ song.year }})
+                }
+                · {{ song.durationMs | duration }}
+              </span>
+            </div>
+          } @else {
+            <div class="grid gap-0.5 text-sm">
+              <span class="text-xs text-muted-foreground">{{ 'videos.song.label' | t }}</span>
+              <span class="text-muted-foreground">{{ 'videos.song.none' | t }}</span>
+            </div>
+          }
+        </div>
+
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+          <dt class="text-muted-foreground">{{ 'videos.song.file' | t }}</dt>
+          <dd class="min-w-0">
+            {{ v.title }}
+            @if (v.artist) {
+              · {{ v.artist }}
+            }
+          </dd>
           <dt class="text-muted-foreground">{{ 'videos.duration' | t }}</dt>
           <dd>{{ v.durationMs | duration }}</dd>
           @if (v.width && v.height) {
@@ -199,14 +237,25 @@ type Song = SearchResult['tracks']['items'][number];
     }
   `,
 })
-export class VideoDetail implements OnInit {
+export class VideoDetail implements OnInit, OnDestroy {
   private readonly gql = inject(Gql);
   private readonly i18n = inject(I18n);
   private readonly auth = inject(AuthService);
 
   readonly videoId = input.required<string>();
-  readonly changed = output<void>();
+  /** The video as it is now, after a change or when its alignment finished. */
+  readonly changed = output<Video>();
   readonly deleted = output<void>();
+
+  /** While it is waiting to be aligned, it is read again every few seconds. */
+  private poll: ReturnType<typeof setInterval> | null = null;
+  /**
+   * The URLs played, kept while the song is the same: every read signs them again, and a new address would restart
+   * the video.
+   */
+  private readonly streams = signal<{ track: string; video: string; song: string | null } | null>(
+    null,
+  );
 
   private readonly player = viewChild<ElementRef<HTMLVideoElement>>('player');
 
@@ -220,15 +269,19 @@ export class VideoDetail implements OnInit {
   protected readonly canDelete = computed(() => this.auth.can('DELETE_TRACKS'));
 
   protected readonly source = computed(() => {
-    const v = this.video();
-    if (!v) return '';
-    return this.audio() === 'TRACK' ? v.trackAudioUrl : v.videoAudioUrl;
+    const streams = this.streams();
+    if (!streams) return '';
+    return this.audio() === 'TRACK' ? streams.track : streams.video;
   });
 
   async ngOnInit(): Promise<void> {
     await this.load();
     const v = this.video();
     if (v) this.audio.set(v.sync === 'READY' ? v.audioMode : 'VIDEO');
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
   }
 
   protected percent(value: number): number {
@@ -313,13 +366,30 @@ export class VideoDetail implements OnInit {
       this.songs.set([]);
       this.query = '';
       await this.load();
-      this.changed.emit();
     } catch (error) {
       toast.error(this.i18n.error(ApiError.from(error).code));
     }
   }
 
   private async load(): Promise<void> {
-    this.video.set((await this.gql.query(VideoQuery, { id: this.videoId() })).musicVideo);
+    const before = this.video();
+    const v = (await this.gql.query(VideoQuery, { id: this.videoId() })).musicVideo;
+    this.video.set(v);
+    const song = v.song?.id ?? null;
+    if (!this.streams() || this.streams()!.song !== song)
+      this.streams.set({ track: v.trackAudioUrl, video: v.videoAudioUrl, song });
+    if (before) this.changed.emit(v);
+
+    if (v.sync === 'PENDING') this.startPolling();
+    else this.stopPolling();
+  }
+
+  private startPolling(): void {
+    this.poll ??= setInterval(() => void this.load().catch(() => undefined), 4000);
+  }
+
+  private stopPolling(): void {
+    if (this.poll) clearInterval(this.poll);
+    this.poll = null;
   }
 }

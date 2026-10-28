@@ -123,7 +123,13 @@ public sealed class VideoTests : IAsyncLifetime
         Assert.True(live.GetProperty("isLive").GetBoolean());
         Assert.Equal(JsonValueKind.Null, live.GetProperty("trackId").ValueKind);
         Assert.Equal(JsonValueKind.Null, nothing.GetProperty("trackId").ValueKind);
+        Assert.Equal(JsonValueKind.Null, nothing.GetProperty("song").ValueKind);
         Assert.Equal("UNAVAILABLE", nothing.GetProperty("sync").GetString());
+        // A linked one says which song it is, as the catalog has it.
+        var linkedSong = named.GetProperty("song");
+        Assert.Equal(named.GetProperty("trackId").GetString(), linkedSong.GetProperty("id").GetString());
+        Assert.Equal(("Song", "Band"), (linkedSong.GetProperty("title").GetString(), linkedSong.GetProperty("artist").GetString()));
+        Assert.False(string.IsNullOrEmpty(linkedSong.GetProperty("album").GetString()));
         Assert.Equal(320, sidecar.GetProperty("width").GetInt32());
         Assert.NotEqual(JsonValueKind.Null, sidecar.GetProperty("artworkId").ValueKind);
 

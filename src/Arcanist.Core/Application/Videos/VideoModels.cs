@@ -27,6 +27,11 @@ public sealed record VideoVersion(string Name, int Height, int Width, int BitRat
 /// <param name="Similarity">How alike the two audios are there (TRACK stretches), 0–1.</param>
 public sealed record VideoSegment(int VideoStartMs, int VideoEndMs, VideoAudioMode Source, int? TrackStartMs, double? Rate, double? Similarity);
 
+/// <summary>The song a music video shows, as the catalog has it (the copy the user can play).</summary>
+/// <param name="Artist">Its primary artists, joined ("A, B"); the album's artist when it names none.</param>
+/// <param name="ArtworkId">The song's cover, or its album's.</param>
+public sealed record VideoClipSong(Guid Id, string Title, string? Artist, Guid AlbumId, string Album, int? Year, Guid? ArtworkId, int DurationMs);
+
 /// <summary>A music video of the libraries, with how to play it.</summary>
 /// <param name="LibraryId">The library its file is in.</param>
 /// <param name="Path">Its path in the library; only for users who manage libraries.</param>
@@ -40,6 +45,8 @@ public sealed record VideoSegment(int VideoStartMs, int VideoEndMs, VideoAudioMo
 /// <param name="HlsUrl">Adaptive streaming (HLS) when some version is prepared: its audio has two renditions, the song's (default per the user's choice) and the video's, to switch while playing.</param>
 /// <param name="Segments">Where its audio and the track's line up; only in <c>musicVideo</c>.</param>
 /// <param name="CanManage">The user can link it, mark it live, align it again or delete it.</param>
+/// <param name="Song">The song of <paramref name="TrackId"/>: its title, artists, album and cover (<paramref name="Title"/> and
+/// <paramref name="Artist"/> are what the video's own file says).</param>
 public sealed record VideoClip(
     Guid Id,
     string Title,
@@ -65,7 +72,8 @@ public sealed record VideoClip(
     IReadOnlyList<VideoVersion> Versions,
     IReadOnlyList<VideoSegment>? Segments,
     DateTime AddedAt,
-    bool CanManage);
+    bool CanManage,
+    VideoClipSong? Song = null);
 
 /// <summary>A page of music videos.</summary>
 public sealed record VideoClipPage(IReadOnlyList<VideoClip> Items, string? NextCursor, int TotalCount);

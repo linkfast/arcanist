@@ -3418,6 +3418,11 @@ export const es: Dictionary = {
       'Pon archivos de video (MP4, MKV, WebM, MOV) en una biblioteca, junto a su canción y con el mismo nombre, o con «Artista - Título» en su nombre.',
     more: 'Ver más',
     unknownArtist: 'Artista desconocido',
+    song: {
+      label: 'Canción',
+      none: 'Aún no está enlazado a una canción: enlázalo abajo para verlo con el audio de la canción.',
+      file: 'El archivo dice',
+    },
     liveBadge: 'En vivo',
     live: 'Actuación en vivo (solo se enlaza con una pista en vivo)',
     duration: 'Duración',

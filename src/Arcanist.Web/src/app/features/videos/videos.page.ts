@@ -90,10 +90,18 @@ import { VideoDetail } from './video-detail';
               </span>
             </div>
             <div class="grid min-w-0 gap-1 px-3 pb-3">
-              <p class="truncate font-medium">{{ video.title }}</p>
+              <p class="truncate font-medium">{{ video.song?.title ?? video.title }}</p>
               <p class="truncate text-sm text-muted-foreground">
-                {{ video.artist ?? ('videos.unknownArtist' | t) }}
+                {{ video.song?.artist ?? video.artist ?? ('videos.unknownArtist' | t) }}
               </p>
+              @if (video.song; as song) {
+                <p class="truncate text-xs text-muted-foreground">
+                  ♪ {{ song.album }}
+                  @if (song.year) {
+                    ({{ song.year }})
+                  }
+                </p>
+              }
               <div class="flex flex-wrap gap-1">
                 <span hlmBadge [variant]="video.sync === 'READY' ? 'default' : 'secondary'">
                   {{ 'videos.sync.' + video.sync | t }}
@@ -131,12 +139,14 @@ import { VideoDetail } from './video-detail';
       <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(56rem,calc(100vw-2rem))]">
         @if (selected(); as video) {
           <hlm-dialog-header>
-            <h3 hlmDialogTitle>{{ video.title }}</h3>
-            <p hlmDialogDescription>{{ video.artist ?? ('videos.unknownArtist' | t) }}</p>
+            <h3 hlmDialogTitle>{{ video.song?.title ?? video.title }}</h3>
+            <p hlmDialogDescription>
+              {{ video.song?.artist ?? video.artist ?? ('videos.unknownArtist' | t) }}
+            </p>
           </hlm-dialog-header>
           <app-video-detail
             [videoId]="video.id"
-            (changed)="reload()"
+            (changed)="updated($event)"
             (deleted)="selected.set(null); reload()"
           />
         }
@@ -162,6 +172,12 @@ export class VideosPage implements OnInit {
 
   protected open(video: Video): void {
     this.selected.set(video);
+  }
+
+  /** The open video changed (linked, aligned, marked live): its card and the dialog's header show it now. */
+  protected updated(video: Video): void {
+    this.videos.update((list) => list?.map((v) => (v.id === video.id ? video : v)) ?? null);
+    if (this.selected()?.id === video.id) this.selected.set(video);
   }
 
   protected async reload(): Promise<void> {

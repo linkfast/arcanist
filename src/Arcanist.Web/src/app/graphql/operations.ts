@@ -3484,6 +3484,16 @@ export const VideoClipFields = graphql(`
     }
     addedAt
     canManage
+    song {
+      id
+      title
+      artist
+      albumId
+      album
+      year
+      artworkId
+      durationMs
+    }
   }
 `);
 

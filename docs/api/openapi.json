@@ -4400,6 +4400,56 @@
         }
       }
     },
+    "/rest/v1/duplicates/libraries": {
+      "get": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Songs with copies in more than one library (personal libraries aside), by track id with a cursor; with \u0060libraryId\u0060, those that library has among others. Each library says whether the caller can delete its copies (DELETE /rest/v1/tracks/{id}?libraryId=) and the users who would stop having the song if it did. Requires MANAGE_LIBRARIES.",
+        "operationId": "LibraryDuplicates",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryDuplicatePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/libraries/{libraryId}/organization": {
       "put": {
         "tags": [
@@ -15791,6 +15841,37 @@
           "COPY"
         ]
       },
+      "DuplicateLibrary": {
+        "required": [
+          "id",
+          "name",
+          "visibleToAll",
+          "canDelete",
+          "losingUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "visibleToAll": {
+            "type": "boolean"
+          },
+          "canDelete": {
+            "type": "boolean"
+          },
+          "losingUsers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateUser"
+            }
+          }
+        }
+      },
       "DuplicatePair": {
         "required": [
           "id",
@@ -15842,6 +15923,22 @@
           "MERGED",
           "DISMISSED"
         ]
+      },
+      "DuplicateUser": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
       },
       "EditDlnaQueueInput": {
         "required": [
@@ -17603,6 +17700,54 @@
             "items": {
               "$ref": "#/components/schemas/CloudSyncFailure"
             }
+          }
+        }
+      },
+      "LibraryDuplicate": {
+        "required": [
+          "track",
+          "libraries"
+        ],
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "libraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateLibrary"
+            }
+          }
+        }
+      },
+      "LibraryDuplicatePage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryDuplicate"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

@@ -529,7 +529,40 @@ export const DuplicateTrackFields = graphql(`
       bitRate
       sampleRate
       bitDepth
+      libraryId
+      path
+      size
     }
+  }
+`);
+
+export const LibraryDuplicatesQuery = graphql(`
+  query LibraryDuplicates($input: LibraryDuplicatesInput) {
+    libraryDuplicates(input: $input) {
+      totalCount
+      nextCursor
+      items {
+        track {
+          ...DuplicateTrackFields
+        }
+        libraries {
+          id
+          name
+          visibleToAll
+          canDelete
+          losingUsers {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+`);
+
+export const DeleteTrackCopiesMutation = graphql(`
+  mutation DeleteTrackCopies($id: ID!, $libraryId: ID) {
+    deleteTrack(id: $id, libraryId: $libraryId)
   }
 `);
 

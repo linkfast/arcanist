@@ -75,6 +75,8 @@ type Query {
   dlnaRenderer(id: String!): DlnaRendererState!
   "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
   duplicateCandidates(status: DuplicateStatus, first: Int): [DuplicatePair!]!
+  "Songs with copies in more than one library (personal libraries aside), by track id with a cursor; with `libraryId`, those that library has among others. Each library says whether the caller can delete its copies (deleteTrack with libraryId) and the users who would stop having the song if it did. Requires MANAGE_LIBRARIES."
+  libraryDuplicates(input: LibraryDuplicatesInput): LibraryDuplicatePage!
   "Built-in and installed extensions, with what happened to them at startup. Administrators only."
   extensions: [Extension!]!
   "Pages of the running extensions the user may open from a player, in a window (an iframe) or a tab of its own, named in `language` (or the request's Accept-Language). They get the session and the player's theme with the host protocol of docs/developers/extensions.md."
@@ -1189,6 +1191,36 @@ enum DuplicateStatus {
   OPEN
   MERGED
   DISMISSED
+}
+
+type LibraryDuplicatePage {
+  items: [LibraryDuplicate!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type LibraryDuplicate {
+  track: Track!
+  libraries: [DuplicateLibrary!]!
+}
+
+type DuplicateLibrary {
+  id: ID!
+  name: String!
+  visibleToAll: Boolean!
+  canDelete: Boolean!
+  losingUsers: [DuplicateUser!]!
+}
+
+type DuplicateUser {
+  id: ID!
+  name: String!
+}
+
+input LibraryDuplicatesInput {
+  libraryId: ID
+  after: String
+  first: Int
 }
 
 type Extension {

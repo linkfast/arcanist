@@ -323,6 +323,7 @@ Servidor de música self-hosted y open source: un "Spotify personal/familiar". *
     - Similitud ≥ 0,85 en el mismo álbum, con la misma duración (±3 s) y sin números de pista distintos: se fusionan (`TrackMerger`, que fija los archivos con `TrackLocked`).
     - Similitud ≥ 0,85 en otros álbumes: comparten `Recording`, salvo que tengan MBIDs distintos.
     - Similitud ≥ 0,7: van a `DuplicateCandidate` para el admin (página Duplicados). Los descartados no se vuelven a proponer.
+    - **Entre bibliotecas** (pedido por el usuario; `Application/Catalog/LibraryDuplicateService.cs`, `libraryDuplicates` / `GET /rest/v1/duplicates/libraries`, MANAGE_LIBRARIES; pestaña de la página Duplicados, `features/duplicates/library-duplicates.ts`): las pistas con copias presentes en dos o más bibliotecas visibles (sin las personales), por id con cursor y filtro `libraryId`. Cada biblioteca dice si el que pregunta puede borrar sus copias (`canDelete`: DELETE_TRACKS, no solo escucha, local/S3) y `losingUsers`: los usuarios no admin y activos que escuchan esa biblioteca (concedida o visible para todos) pero ninguna de las otras que la tienen. Borrar usa `deleteTrack(id, libraryId)` (a la papelera) tras un diálogo que nombra a los afectados. Los pares por huella muestran también la biblioteca de cada pista. Tests: `LibraryDuplicateTests`.
     - Las señales sintéticas de los tests se parecen entre sí más que la música real; los umbrales se eligieron con eso en cuenta.
 - **ffmpeg (implementado):** `Media/`. `FfmpegLocator` busca, por orden:
   1. `Arcanist:Ffmpeg:Path`.

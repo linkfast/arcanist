@@ -598,7 +598,28 @@ export const es: Dictionary = {
     madeBy: 'Un producto open source de LinkFast.',
   },
   duplicates: {
-    title: 'Posibles duplicados',
+    title: 'Duplicados',
+    tabs: { possible: 'Posibles duplicados', libraries: 'Entre bibliotecas' },
+    libraries: {
+      subtitle:
+        'Canciones que están en más de una biblioteca. Borrar la copia de una biblioteca libera espacio; la canción sigue en las demás. Las bibliotecas personales no cuentan.',
+      all: 'Todas las bibliotecas',
+      count: '{count} canciones en varias bibliotecas',
+      delete: 'Borrar de {library}',
+      readOnly: 'No se puede borrar aquí (solo lectura u otro servidor)',
+      everyone: 'Visible para todos',
+      safe: 'Nadie la pierde: quien escucha {library} también tiene otra copia.',
+      losing: 'La perderían: {users}. No tienen acceso a las otras bibliotecas que la tienen.',
+      confirmTitle: '¿Borrar la copia de {library}?',
+      confirmSafe:
+        'Sus archivos van a la papelera de la biblioteca (30 días). La canción sigue en {others}.',
+      confirmLosing:
+        'Sus archivos van a la papelera de la biblioteca (30 días). {users} dejarán de tener esta canción: no tienen acceso a {others}.',
+      deleted: 'Copia borrada de {library}.',
+      more: 'Ver más',
+      none: 'Ninguna canción está en varias bibliotecas',
+      noneHelp: 'Cuando la misma canción esté en dos bibliotecas o más, aparecerá aquí.',
+    },
     subtitle:
       'Canciones que suenan igual pero no son claramente la misma. Conserva una para unir sus copias en una sola canción, o mantén ambas.',
     similarity: '{percent} % de parecido',

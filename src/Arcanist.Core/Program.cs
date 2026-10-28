@@ -152,6 +152,7 @@ builder.Services.AddSingleton<Arcanist.Core.Application.WishList.WishListSignals
 builder.Services.AddSingleton<Arcanist.Core.Application.WishList.WishListMatcher>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<Arcanist.Core.Application.WishList.WishListMatcher>());
 builder.Services.AddScoped<DuplicateService>();
+builder.Services.AddScoped<LibraryDuplicateService>();
 builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<ListeningService>();

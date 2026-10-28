@@ -31,6 +31,13 @@ public static class DuplicateEndpoints
             .WithName("DismissDuplicate")
             .WithSummary("Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES.");
 
+        duplicates.MapGet("/libraries", (Guid? libraryId, string? after, int? first, LibraryDuplicateService service, CancellationToken ct) =>
+                service.ListAsync(new LibraryDuplicatesInput(libraryId, after, first), ct))
+            .WithName("LibraryDuplicates")
+            .WithSummary("Songs with copies in more than one library (personal libraries aside), by track id with a cursor; with `libraryId`, " +
+                         "those that library has among others. Each library says whether the caller can delete its copies " +
+                         "(DELETE /rest/v1/tracks/{id}?libraryId=) and the users who would stop having the song if it did. Requires MANAGE_LIBRARIES.");
+
         return rest;
     }
 

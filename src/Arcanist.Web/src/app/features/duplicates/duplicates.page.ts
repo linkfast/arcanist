@@ -14,9 +14,12 @@ import type {
 import {
   DismissDuplicateMutation,
   DuplicateCandidatesQuery,
+  LibrariesQuery,
   MergeDuplicateMutation,
 } from '../../graphql/operations';
 import { DurationPipe } from '../../shared/format';
+import { HlmTabsImports } from '@spartan-ng/helm/tabs';
+import { LibraryDuplicates } from './library-duplicates';
 
 type Pair = Candidates['duplicateCandidates'][number];
 
@@ -28,77 +31,93 @@ type Pair = Candidates['duplicateCandidates'][number];
     HlmButtonImports,
     HlmBadgeImports,
     HlmSkeletonImports,
+    HlmTabsImports,
     TranslatePipe,
     DurationPipe,
+    LibraryDuplicates,
   ],
   template: `
-    <header class="mb-6">
+    <header class="mb-4">
       <h1 class="text-2xl font-semibold">{{ 'duplicates.title' | t }}</h1>
-      <p class="text-sm text-muted-foreground">{{ 'duplicates.subtitle' | t }}</p>
     </header>
 
-    @if (pairs(); as list) {
-      <div class="grid gap-4">
-        @for (pair of list; track pair.id) {
-          <section hlmCard>
-            <div hlmCardHeader>
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <span hlmBadge variant="secondary">
-                  {{ 'duplicates.similarity' | t: { percent: percent(pair.similarity) } }}
-                </span>
-                <button
-                  hlmBtn
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  [disabled]="busy() === pair.id"
-                  (click)="dismiss(pair)"
-                >
-                  {{ 'duplicates.keepBoth' | t }}
-                </button>
-              </div>
-            </div>
-            <div hlmCardContent class="grid gap-3 sm:grid-cols-2">
-              @for (track of [pair.trackA, pair.trackB]; track track.id) {
-                <div class="grid min-w-0 gap-2 rounded-lg border p-3 text-sm">
-                  <div class="min-w-0">
-                    <p class="truncate font-medium">{{ track.title }}</p>
-                    <p class="truncate text-muted-foreground">
-                      {{ artists(track) }} · {{ track.album.title }}
-                    </p>
-                  </div>
-                  <p class="text-xs text-muted-foreground">
-                    @if (track.trackNumber) {
-                      {{ 'duplicates.number' | t: { number: track.trackNumber } }} ·
-                    }
-                    {{ track.durationMs | duration }} · {{ formats(track) }}
-                  </p>
+    <hlm-tabs class="mb-4" [tab]="tab()" (tabActivated)="tab.set($any($event))">
+      <hlm-tabs-list>
+        <button hlmTabsTrigger="possible">{{ 'duplicates.tabs.possible' | t }}</button>
+        <button hlmTabsTrigger="libraries">{{ 'duplicates.tabs.libraries' | t }}</button>
+      </hlm-tabs-list>
+    </hlm-tabs>
+
+    @if (tab() === 'libraries') {
+      <app-library-duplicates [libraries]="libraries()" />
+    } @else {
+      <p class="mb-4 text-sm text-muted-foreground">{{ 'duplicates.subtitle' | t }}</p>
+      @if (pairs(); as list) {
+        <div class="grid gap-4">
+          @for (pair of list; track pair.id) {
+            <section hlmCard>
+              <div hlmCardHeader>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span hlmBadge variant="secondary">
+                    {{ 'duplicates.similarity' | t: { percent: percent(pair.similarity) } }}
+                  </span>
                   <button
                     hlmBtn
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     type="button"
-                    class="justify-self-start"
                     [disabled]="busy() === pair.id"
-                    (click)="merge(pair, track.id)"
+                    (click)="dismiss(pair)"
                   >
-                    {{ 'duplicates.keepThis' | t }}
+                    {{ 'duplicates.keepBoth' | t }}
                   </button>
                 </div>
-              }
-            </div>
-          </section>
-        } @empty {
-          <section hlmCard>
-            <div hlmCardHeader>
-              <h2 hlmCardTitle>{{ 'duplicates.none' | t }}</h2>
-              <p hlmCardDescription>{{ 'duplicates.noneHelp' | t }}</p>
-            </div>
-          </section>
-        }
-      </div>
-    } @else {
-      <hlm-skeleton class="h-40 w-full" />
+              </div>
+              <div hlmCardContent class="grid gap-3 sm:grid-cols-2">
+                @for (track of [pair.trackA, pair.trackB]; track track.id) {
+                  <div class="grid min-w-0 gap-2 rounded-lg border p-3 text-sm">
+                    <div class="min-w-0">
+                      <p class="truncate font-medium">{{ track.title }}</p>
+                      <p class="truncate text-muted-foreground">
+                        {{ artists(track) }} · {{ track.album.title }}
+                      </p>
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                      @if (track.trackNumber) {
+                        {{ 'duplicates.number' | t: { number: track.trackNumber } }} ·
+                      }
+                      {{ track.durationMs | duration }} · {{ formats(track) }}
+                    </p>
+                    @if (libraryNames(track); as names) {
+                      <p class="text-xs text-muted-foreground">{{ names }}</p>
+                    }
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      class="justify-self-start"
+                      [disabled]="busy() === pair.id"
+                      (click)="merge(pair, track.id)"
+                    >
+                      {{ 'duplicates.keepThis' | t }}
+                    </button>
+                  </div>
+                }
+              </div>
+            </section>
+          } @empty {
+            <section hlmCard>
+              <div hlmCardHeader>
+                <h2 hlmCardTitle>{{ 'duplicates.none' | t }}</h2>
+                <p hlmCardDescription>{{ 'duplicates.noneHelp' | t }}</p>
+              </div>
+            </section>
+          }
+        </div>
+      } @else {
+        <hlm-skeleton class="h-40 w-full" />
+      }
     }
   `,
 })
@@ -108,9 +127,21 @@ export class DuplicatesPage implements OnInit {
 
   protected readonly pairs = signal<Pair[] | null>(null);
   protected readonly busy = signal<string | null>(null);
+  protected readonly tab = signal<'possible' | 'libraries'>('possible');
+  protected readonly libraries = signal<{ id: string; name: string }[]>([]);
 
   async ngOnInit(): Promise<void> {
-    await this.load();
+    const [, libraries] = await Promise.all([this.load(), this.gql.query(LibrariesQuery)]);
+    this.libraries.set(libraries.libraries.filter((l) => !l.personal));
+  }
+
+  /** The libraries a track's copies are in (for pairs whose tracks live in different libraries). */
+  protected libraryNames(track: DuplicateTrack): string {
+    const ids = new Set(track.files.map((f) => f.libraryId));
+    return this.libraries()
+      .filter((l) => ids.has(l.id))
+      .map((l) => l.name)
+      .join(' · ');
   }
 
   protected percent(similarity: number): number {

@@ -585,7 +585,28 @@ export const en: Dictionary = {
     madeBy: 'An open source product of LinkFast.',
   },
   duplicates: {
-    title: 'Possible duplicates',
+    title: 'Duplicates',
+    tabs: { possible: 'Possible duplicates', libraries: 'Across libraries' },
+    libraries: {
+      subtitle:
+        'Songs that more than one library has. Deleting one library’s copy frees space; the song stays in the others. Personal libraries do not count.',
+      all: 'All libraries',
+      count: '{count} songs in several libraries',
+      delete: 'Delete from {library}',
+      readOnly: 'Cannot be deleted here (read-only, or another server)',
+      everyone: 'Visible to everyone',
+      safe: 'Nobody loses it: whoever listens to {library} has another copy too.',
+      losing:
+        'They would lose it: {users}. They have no access to the other libraries that have it.',
+      confirmTitle: 'Delete the copy in {library}?',
+      confirmSafe: 'Its files go to the library’s trash (30 days). The song stays in {others}.',
+      confirmLosing:
+        'Its files go to the library’s trash (30 days). {users} will no longer have this song: they have no access to {others}.',
+      deleted: 'Copy deleted from {library}.',
+      more: 'Show more',
+      none: 'No song is in several libraries',
+      noneHelp: 'When the same song is in two libraries or more, it shows up here.',
+    },
     subtitle:
       'Songs that sound the same but are not clearly the same song. Keep one to join their copies into a single song, or keep both.',
     similarity: '{percent}% alike',

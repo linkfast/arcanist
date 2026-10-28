@@ -12,6 +12,12 @@ public sealed partial class Query
     public static Task<IReadOnlyList<DuplicatePair>> DuplicateCandidates(DuplicateStatus? status, int? first,
         [FromServices] DuplicateService duplicates, CancellationToken cancellationToken) =>
         duplicates.ListAsync(status, first, cancellationToken);
+
+    [Name("libraryDuplicates")]
+    [Description("Songs with copies in more than one library (personal libraries aside), by track id with a cursor; with `libraryId`, those that library has among others. Each library says whether the caller can delete its copies (deleteTrack with libraryId) and the users who would stop having the song if it did. Requires MANAGE_LIBRARIES.")]
+    public static Task<LibraryDuplicatePage> LibraryDuplicates(LibraryDuplicatesInput? input, [FromServices] LibraryDuplicateService duplicates,
+        CancellationToken cancellationToken) =>
+        duplicates.ListAsync(input ?? new LibraryDuplicatesInput(null, null, null), cancellationToken);
 }
 
 public sealed partial class Mutation

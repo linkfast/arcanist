@@ -40,10 +40,18 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
+        # The notes are .github/release-notes.md (which file to download), with a warning on pre-releases; GitHub
+        # appends what changed since the previous release.
         run: |
           prerelease=""
-          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
-          gh release create "$TAG" --draft --verify-tag --title "Arcanist $VERSION" --generate-notes $prerelease
+          : > notes.md
+          case "$VERSION" in *-*)
+            prerelease="--prerelease"
+            printf '%s\n\n' '> **Pre-release.** Expect rough edges, and keep a backup of what matters to you.' > notes.md
+            ;;
+          esac
+          sed "s/{{VERSION}}/$VERSION/g" .github/release-notes.md >> notes.md
+          gh release create "$TAG" --draft --verify-tag --title "Arcanist $VERSION" --notes-file notes.md --generate-notes $prerelease
 
   packages:
     needs: draft

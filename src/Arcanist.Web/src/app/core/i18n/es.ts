@@ -3297,6 +3297,10 @@ export const es: Dictionary = {
     tags_unsupported: 'No se pueden escribir las etiquetas del formato de ese archivo.',
     cue_sheet_track:
       'Esa canción es parte de un álbum en un solo archivo con hoja CUE: sus etiquetas vienen de la hoja y el archivo tiene otras canciones.',
+    lyrics_sync_unavailable:
+      'La extensión Lyrics Sync, que calcula los tiempos de las letras, no está instalada o no está activa.',
+    no_lyrics: 'Esa canción no tiene letra que sincronizar.',
+    no_local_copy: 'Esa canción no tiene una copia en los discos del servidor que escuchar.',
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',
     network: 'No se puede contactar con el servidor.',
     unauthorized: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',

@@ -3253,6 +3253,10 @@ export const en: Dictionary = {
     tags_unsupported: 'The tags of that file’s format cannot be written.',
     cue_sheet_track:
       'That song is part of an album in one file with a cue sheet: its tags come from the sheet, and the file has other songs.',
+    lyrics_sync_unavailable:
+      'The Lyrics Sync extension, which works out the timing of lyrics, is not installed or not running.',
+    no_lyrics: 'That song has no lyrics to sync.',
+    no_local_copy: 'That song has no copy on the server’s disks to listen to.',
     unexpected: 'Something went wrong. Please try again.',
     network: 'Cannot reach the server.',
     unauthorized: 'Your session has expired. Please sign in again.',

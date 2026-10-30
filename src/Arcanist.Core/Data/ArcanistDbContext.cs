@@ -721,6 +721,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             lyrics.HasOne(l => l.Track).WithOne().HasForeignKey<Lyrics>(l => l.TrackId).OnDelete(DeleteBehavior.Cascade);
             lyrics.Property(l => l.Source).HasConversion<string>().HasMaxLength(EnumLength);
             lyrics.Property(l => l.SyncedSource).HasConversion<string>().HasMaxLength(EnumLength);
+            lyrics.Property(l => l.ReplacedTimingHash).HasMaxLength(64);
         });
 
         modelBuilder.Entity<OnlineLookup>(lookup =>

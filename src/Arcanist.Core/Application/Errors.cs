@@ -274,6 +274,12 @@ public static class ErrorCodes
     public const string TagsUnsupported = "tags_unsupported";
     /// <summary>The track is part of a file split by a cue sheet: its tags are the sheet's, and the file holds other tracks.</summary>
     public const string CueSheetTrack = "cue_sheet_track";
+    /// <summary>The extension that times lyrics on this server (Lyrics Sync) is not installed, or is off or not loaded.</summary>
+    public const string LyricsSyncUnavailable = "lyrics_sync_unavailable";
+    /// <summary>The song has no lyrics with words to time (none, or it is instrumental).</summary>
+    public const string NoLyrics = "no_lyrics";
+    /// <summary>The song has no copy on this server's disks to listen to (only in Ultimate Cloud, S3 or another server).</summary>
+    public const string NoLocalCopy = "no_local_copy";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

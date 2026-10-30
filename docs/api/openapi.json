@@ -10313,6 +10313,38 @@
         }
       }
     },
+    "/rest/v1/tracks/{trackId}/lyrics/resync": {
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Asks the Lyrics Sync extension to work out the timing of the song\u0027s lyrics again from its audio, whatever timing they have. Returns the lyrics as they are now, with resyncPending; the timing stays until the new one is saved (syncedSource ALIGNED). Requires EDIT_METADATA. 409 with lyrics_sync_unavailable, no_lyrics, library_read_only or no_local_copy.",
+        "operationId": "ResyncTrackLyrics",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackLyrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/tracks/{trackId}/waveform": {
       "get": {
         "tags": [
@@ -25968,6 +26000,14 @@
                 "$ref": "#/components/schemas/LyricsSource"
               }
             ]
+          },
+          "canResync": {
+            "type": "boolean",
+            "default": false
+          },
+          "resyncPending": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

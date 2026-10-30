@@ -280,6 +280,13 @@ public sealed class Lyrics
     /// </summary>
     public LyricsSource? SyncedSource { get; set; }
 
+    /// <summary>
+    /// When <see cref="Synced"/> was worked out here in place of the timing the track's file brings (a re-sync asked
+    /// for by a user), the hash of that file timing (<c>LyricsTiming.TimingHashOf</c>): a rescan that reads the very
+    /// same timing from the file keeps the one worked out here; other timing in the file (edited since) wins.
+    /// </summary>
+    public string? ReplacedTimingHash { get; set; }
+
     /// <summary>The track has no lyrics (known from an online service).</summary>
     public bool Instrumental { get; set; }
 

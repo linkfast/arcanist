@@ -1200,6 +1200,10 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<string>("Plain")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ReplacedTimingHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(32)

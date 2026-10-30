@@ -283,6 +283,14 @@ the server also works out the timing of what LRCLib does not have from the song 
 reading the lyrics of an untimed song asks for it first, so it may come a minute or two later. Players that show
 lyrics as the song goes (karaoke, visualizers) should use `synced` and fall back to `plain`.
 
+When the timing is off, a user with `EDIT_METADATA` can have it worked out again from the song with
+`resyncTrackLyrics(trackId)` / `POST /rest/v1/tracks/{trackId}/lyrics/resync` (offer it when `canResync` is true). It
+answers at once with `resyncPending: true` and the timing as it was, which stays until the new one is saved; poll
+`trackLyrics` until `resyncPending` is false: `syncedSource` is then `ALIGNED` with the new timing, or unchanged if the
+words could not be matched to the singing. The extension waits while the server scans or streams, and takes about as
+long as the song on a modest CPU. Errors: `lyrics_sync_unavailable` (the extension is not installed or not running),
+`no_lyrics`, `library_read_only` and `no_local_copy` (no copy on the server's disks to listen to).
+
 ## Music videos
 
 Servers with `MUSIC_VIDEOS` in `serverInfo.features` keep music videos: files next to their songs, named after them,

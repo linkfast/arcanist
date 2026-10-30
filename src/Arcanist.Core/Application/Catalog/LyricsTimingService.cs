@@ -31,12 +31,14 @@ public sealed class LyricsTimingService(AccessGuard guard, LyricsTiming timing, 
     {
         guard.Admin();
         var counts = await timing.CountAsync(cancellationToken);
-        var extension = extensions.Find(ExtensionId) switch
-        {
-            null => LyricsTimingExtension.NotInstalled,
-            { Status: ExtensionStatus.Running } when extensions.IsEnabled(ExtensionId) => LyricsTimingExtension.Running,
-            _ => LyricsTimingExtension.Installed,
-        };
-        return new LyricsTimingStatus(counts.WithLyrics, counts.Timed, counts.Aligned, counts.Untimed, counts.Waiting, ExtensionId, extension);
+        return new LyricsTimingStatus(counts.WithLyrics, counts.Timed, counts.Aligned, counts.Untimed, counts.Waiting, ExtensionId, StateOf(extensions));
     }
+
+    /// <summary>Whether the extension that times lyrics is installed and running.</summary>
+    public static LyricsTimingExtension StateOf(ExtensionHost extensions) => extensions.Find(ExtensionId) switch
+    {
+        null => LyricsTimingExtension.NotInstalled,
+        { Status: ExtensionStatus.Running } when extensions.IsEnabled(ExtensionId) => LyricsTimingExtension.Running,
+        _ => LyricsTimingExtension.Installed,
+    };
 }

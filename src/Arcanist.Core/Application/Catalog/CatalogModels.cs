@@ -90,8 +90,13 @@ public sealed record LyricsLine(int TimeMs, string Text);
 /// <param name="Instrumental">The track has no lyrics.</param>
 /// <param name="SyncedSource">Where the timing of <paramref name="Synced"/> came from (a file's plain lyrics may be timed
 /// with an online service's).</param>
+/// <param name="CanResync">The user can ask for the timing to be worked out again from the song (resyncTrackLyrics):
+/// the Lyrics Sync extension runs, they have EDIT_METADATA, and the song has words and a copy on this server's disks.</param>
+/// <param name="ResyncPending">A re-sync asked for is waiting for the extension or being worked on; the timing shown is
+/// still the previous one.</param>
 public sealed record TrackLyrics(
-    Guid TrackId, string? Plain, IReadOnlyList<LyricsLine>? Synced, LyricsSource Source, bool Instrumental, LyricsSource? SyncedSource = null);
+    Guid TrackId, string? Plain, IReadOnlyList<LyricsLine>? Synced, LyricsSource Source, bool Instrumental, LyricsSource? SyncedSource = null,
+    bool CanResync = false, bool ResyncPending = false);
 
 /// <summary>Overview of a copy's audio for seek bars: peak amplitudes from start to end.</summary>
 /// <param name="Peaks">1000 values from 0 (silence) to 255 (full scale), evenly spread over the duration.</param>

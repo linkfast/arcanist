@@ -426,6 +426,9 @@ public sealed class CatalogService(
 
         var lyrics = await db.Lyrics.AsNoTracking().SingleOrDefaultAsync(l => l.TrackId == trackId, cancellationToken)
                      ?? throw new ArcanistException.NotFound();
+        // Only those who may ask for it pay for the check (trackLyrics is read often).
+        var canResync = access.Has(Permissions.EditMetadata) && await ResyncBlockerAsync(access, trackId, lyrics, cancellationToken) is null;
+        var resyncPending = lyricsTiming.IsResyncPending(trackId) && LyricsTimingService.StateOf(extensions) == LyricsTimingExtension.Running;
 
         // LRC kept as plain lyrics (read before it was recognised as such) is synchronized too.
         var timing = lyrics.Synced ?? (lyrics.Plain is { } text && Core.Scanning.Lrc.LooksTimed(text) ? text : null);
@@ -437,7 +440,44 @@ public sealed class CatalogService(
         if (synced is not { Count: > 0 } && plain is not null && !lyrics.Instrumental)
             lyricsTiming.Request(trackId);
         return new TrackLyrics(trackId, plain, synced is { Count: > 0 } ? synced : null, lyrics.Source, lyrics.Instrumental,
-            synced is { Count: > 0 } ? lyrics.SyncedSource ?? lyrics.Source : null);
+            synced is { Count: > 0 } ? lyrics.SyncedSource ?? lyrics.Source : null, canResync, resyncPending);
+    }
+
+    /// <summary>
+    /// Asks the extension that times lyrics (Lyrics Sync) to time the song's lyrics again, from its audio, whatever
+    /// timing they have. The timing it has stays until the new one is saved (as <see cref="LyricsSource.Aligned"/>);
+    /// if the extension cannot time it, it keeps it. Requires EDIT_METADATA (the timing is everyone's).
+    /// </summary>
+    public async Task<TrackLyrics> ResyncLyricsAsync(Guid trackId, CancellationToken cancellationToken)
+    {
+        var access = guard.Permission(Permissions.EditMetadata);
+        if (!await VisibleTracks(access).AnyAsync(t => t.Id == trackId, cancellationToken))
+            throw new ArcanistException.NotFound();
+        var lyrics = await db.Lyrics.AsNoTracking().SingleOrDefaultAsync(l => l.TrackId == trackId, cancellationToken);
+        if (await ResyncBlockerAsync(access, trackId, lyrics, cancellationToken) is { } code)
+            throw new ArcanistException.Conflict(code);
+
+        lyricsTiming.Resync(trackId);
+        return await LyricsAsync(trackId, cancellationToken);
+    }
+
+    /// <summary>Why the caller (with EDIT_METADATA) cannot have the song's lyrics timed again; null when they can.</summary>
+    private async Task<string?> ResyncBlockerAsync(UserAccess access, Guid trackId, Lyrics? lyrics, CancellationToken cancellationToken)
+    {
+        if (LyricsTimingService.StateOf(extensions) != LyricsTimingExtension.Running)
+            return ErrorCodes.LyricsSyncUnavailable;
+        if (lyrics is null || lyrics.Instrumental || LyricsTiming.TextOf(lyrics.Plain, lyrics.Synced) is null)
+            return ErrorCodes.NoLyrics;
+        // As for editing its tags: not for a song the caller only listens to.
+        var libraries = await VisibleFiles(access).Where(f => f.TrackId == trackId).Select(f => f.LibrarySource.LibraryId).Distinct()
+            .ToListAsync(cancellationToken);
+        if (!libraries.Any(access.CanChange))
+            return ErrorCodes.LibraryReadOnly;
+        // The extension listens to a copy on this server's disks (any, also one in a library the caller does not see).
+        if (!await db.MediaFiles.AnyAsync(f => f.TrackId == trackId && f.MissingSince == null && f.LibrarySource.Kind == LibrarySourceKind.Local,
+                cancellationToken))
+            return ErrorCodes.NoLocalCopy;
+        return null;
     }
 
     /// <summary>Best quality first: the order of <see cref="Track.Files"/> and of playback.</summary>

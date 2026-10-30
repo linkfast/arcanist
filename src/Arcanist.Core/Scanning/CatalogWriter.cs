@@ -290,15 +290,19 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         }
 
         // Timing found online for the file's plain lyrics stays until the file brings its own; timing worked out here,
-        // also while the words are the same.
-        var keepsTiming = meta.SyncedLyrics is null && (current.SyncedSource is LyricsSource.Online
+        // also while the words are the same. Timing worked out here in place of the file's own (a re-sync) stays while
+        // the file brings the very timing it replaced.
+        var keepsReplaced = meta.SyncedLyrics is { } fileTiming && current.SyncedSource is LyricsSource.Aligned
+            && current.ReplacedTimingHash is { } replaced && Application.Catalog.LyricsTiming.TimingHashOf(fileTiming) == replaced;
+        var keepsTiming = keepsReplaced || (meta.SyncedLyrics is null && (current.SyncedSource is LyricsSource.Online
             || (current.SyncedSource is LyricsSource.Aligned && current.Plain is { } before && meta.Lyrics is { } after
-                && Application.Catalog.LyricsTiming.HashOf(before) == Application.Catalog.LyricsTiming.HashOf(after)));
-        current.Plain = meta.Lyrics;
+                && Application.Catalog.LyricsTiming.HashOf(before) == Application.Catalog.LyricsTiming.HashOf(after))));
+        current.Plain = keepsReplaced ? meta.Lyrics ?? current.Plain : meta.Lyrics;
         if (!keepsTiming)
         {
             current.Synced = meta.SyncedLyrics;
             current.SyncedSource = null;
+            current.ReplacedTimingHash = null;
         }
 
         current.Source = source;

@@ -922,6 +922,8 @@ type TrackLyrics {
   source: LyricsSource!
   instrumental: Boolean!
   syncedSource: LyricsSource
+  canResync: Boolean!
+  resyncPending: Boolean!
 }
 
 type LyricsLine {
@@ -3125,6 +3127,8 @@ type Mutation {
   recordPlay(input: RecordPlayInput!): RecordedPlay!
   "Chooses how users rate tracks: STARS (one to five, five being a StarTrack) or STAR (the StarTrack alone, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS."
   setRatingMode(mode: RatingMode!): RatingMode!
+  "Asks the Lyrics Sync extension to work out the timing of a song's lyrics again from its audio, whatever timing they have (from the file, LRCLib or worked out here). The lyrics as they are now come back with resyncPending; their current timing stays until the new one is saved (syncedSource ALIGNED, resyncPending false), and is kept if the extension cannot match the words to the singing (resyncPending false, nothing changed). Requires EDIT_METADATA. Errors: not_found, lyrics_sync_unavailable (the extension is not installed or not running), no_lyrics (none, or instrumental), library_read_only, no_local_copy (no copy on this server's disks to listen to)."
+  resyncTrackLyrics(trackId: ID!): TrackLyrics!
   "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password."
   setFfmpegPath(path: String): FfmpegStatus!
   "The conversion cache (on or off, size, age) and the versions to make ahead of time, of which libraries. Versions nobody asks for any more are removed. Requires MANAGE_SETTINGS."

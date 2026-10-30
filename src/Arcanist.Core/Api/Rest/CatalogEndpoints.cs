@@ -93,6 +93,11 @@ public static class CatalogEndpoints
             .WithName("TrackLyrics")
             .WithSummary("A track's lyrics, with synchronized lines when known. not_found when it has none.");
 
+        catalog.MapPost("/tracks/{trackId:guid}/lyrics/resync", (Guid trackId, CatalogService service, CancellationToken ct) =>
+                service.ResyncLyricsAsync(trackId, ct))
+            .WithName("ResyncTrackLyrics")
+            .WithSummary("Asks the Lyrics Sync extension to work out the timing of the song's lyrics again from its audio, whatever timing they have. Returns the lyrics as they are now, with resyncPending; the timing stays until the new one is saved (syncedSource ALIGNED). Requires EDIT_METADATA. 409 with lyrics_sync_unavailable, no_lyrics, library_read_only or no_local_copy.");
+
         catalog.MapGet("/tracks/{trackId:guid}/waveform", (Guid trackId, Guid? fileId, CatalogService service, CancellationToken ct) =>
                 service.WaveformAsync(trackId, fileId, ct))
             .WithName("TrackWaveform")

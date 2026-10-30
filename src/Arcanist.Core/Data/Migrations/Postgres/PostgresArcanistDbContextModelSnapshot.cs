@@ -1205,6 +1205,10 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<string>("Plain")
                         .HasColumnType("text");
 
+                    b.Property<string>("ReplacedTimingHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(32)

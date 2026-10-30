@@ -22,6 +22,7 @@ import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   AiTrackSearchQuery as SearchResult,
+  MusicVideoLyricsQuery as LyricsResult,
   MusicVideoQuery,
   VideoAudioMode,
 } from '../../graphql/generated/graphql';
@@ -29,6 +30,7 @@ import {
   AiTrackSearchQuery,
   DeleteMusicVideoMutation,
   LinkMusicVideoMutation,
+  MusicVideoLyricsQuery,
   MusicVideoQuery as VideoQuery,
   RealignMusicVideoMutation,
   SetMusicVideoLiveMutation,
@@ -60,15 +62,25 @@ type Song = SearchResult['tracks']['items'][number];
   template: `
     @if (video(); as v) {
       <div class="grid gap-4">
-        <video
-          #player
-          class="aspect-video w-full rounded-lg bg-black"
-          controls
-          preload="metadata"
-          [src]="source()"
-          (timeupdate)="position.set(player.currentTime * 1000)"
-          (loadedmetadata)="resume()"
-        ></video>
+        <div class="relative">
+          <video
+            #player
+            class="aspect-video w-full rounded-lg bg-black"
+            controls
+            preload="metadata"
+            [src]="source()"
+            (timeupdate)="position.set(player.currentTime * 1000)"
+            (loadedmetadata)="resume()"
+          ></video>
+          @if (showLyrics() && currentLine(); as line) {
+            <p
+              class="pointer-events-none absolute inset-x-4 bottom-14 mx-auto w-fit rounded-md bg-black/65 px-3 py-1 text-center text-lg font-semibold text-white"
+              aria-live="polite"
+            >
+              {{ line }}
+            </p>
+          }
+        </div>
 
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-sm text-muted-foreground">{{ 'videos.audio.label' | t }}</span>
@@ -105,9 +117,26 @@ type Song = SearchResult['tracks']['items'][number];
               [segments]="v.segments!"
               [durationMs]="v.durationMs"
               [positionMs]="position()"
+              [lyricsMs]="lyricsStarts()"
               (seek)="seekTo($event)"
             />
             <p class="text-xs text-muted-foreground">{{ 'videos.timelineHelp' | t }}</p>
+          </div>
+        }
+
+        @if (lyrics(); as l) {
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="text-muted-foreground">{{ 'videos.lyrics.label' | t }}</span>
+            <span>{{ 'videos.lyrics.' + l.sync | t }}</span>
+            @if (!l.lines && l.pending) {
+              <span class="text-xs text-muted-foreground">{{ 'videos.lyrics.pending' | t }}</span>
+            }
+            @if (l.lines) {
+              <label class="ml-auto flex items-center gap-2 text-xs">
+                <hlm-switch [checked]="showLyrics()" (checkedChange)="showLyrics.set($event)" />
+                {{ 'videos.lyrics.show' | t }}
+              </label>
+            }
           </div>
         }
 
@@ -268,6 +297,22 @@ export class VideoDetail implements OnInit, OnDestroy {
 
   protected readonly canDelete = computed(() => this.auth.can('DELETE_TRACKS'));
 
+  /** Its lyrics on its own timeline (servers with VIDEO_LYRICS), read again while their timing is worked out. */
+  protected readonly lyrics = signal<LyricsResult['musicVideoLyrics'] | null>(null);
+  protected readonly showLyrics = signal(true);
+  private lyricsPoll: ReturnType<typeof setTimeout> | null = null;
+  protected readonly lyricsStarts = computed(
+    () =>
+      this.lyrics()
+        ?.lines?.filter((l) => l.text)
+        .map((l) => l.startMs) ?? [],
+  );
+  /** The line being sung, if any (nothing over the scenes without the song). */
+  protected readonly currentLine = computed(() => {
+    const ms = this.position();
+    return this.lyrics()?.lines?.find((l) => ms >= l.startMs && ms < l.endMs)?.text || null;
+  });
+
   protected readonly source = computed(() => {
     const streams = this.streams();
     if (!streams) return '';
@@ -282,6 +327,22 @@ export class VideoDetail implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+    if (this.lyricsPoll) clearTimeout(this.lyricsPoll);
+  }
+
+  private async loadLyrics(tries = 0): Promise<void> {
+    if (this.lyricsPoll) clearTimeout(this.lyricsPoll);
+    this.lyricsPoll = null;
+    try {
+      const result = (await this.gql.query(MusicVideoLyricsQuery, { id: this.videoId() }))
+        .musicVideoLyrics;
+      this.lyrics.set(result);
+      if (!result.lines && result.pending && tries < 30)
+        this.lyricsPoll = setTimeout(() => void this.loadLyrics(tries + 1), 20_000);
+    } catch {
+      // A server without them (or a video without a song): no lyrics.
+      this.lyrics.set(null);
+    }
   }
 
   protected percent(value: number): number {
@@ -379,6 +440,7 @@ export class VideoDetail implements OnInit, OnDestroy {
     if (!this.streams() || this.streams()!.song !== song)
       this.streams.set({ track: v.trackAudioUrl, video: v.videoAudioUrl, song });
     if (before) this.changed.emit(v);
+    if (!before || before.sync !== v.sync || before.trackId !== v.trackId) void this.loadLyrics();
 
     if (v.sync === 'PENDING') this.startPolling();
     else this.stopPolling();

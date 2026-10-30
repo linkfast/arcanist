@@ -73,6 +73,22 @@ the playlists carries the token.
 audio on: `TRACK` stretches give `trackStartMs` (where the song is when the stretch starts), `rate` (song seconds per
 video second, 1 unless the video runs a little faster or slower) and `similarity`. Players can draw them on a seek bar.
 
+## Lyrics
+
+Do not show the song's timed lyrics (`trackLyrics`) against the video's clock: a video is not its song. It can open with
+a scene, stop the song for a dialogue, cut a verse or repeat a chorus. `musicVideoLyrics(id)` (REST
+`GET /rest/v1/videos/{id}/lyrics`, servers with `VIDEO_LYRICS`) gives the lines on the **video's** timeline, each with
+`startMs` and `endMs` (an empty `text` is a break); show a line while `currentTime` is in its range and nothing
+otherwise. Both audios share the video's timeline, so the lines are the same with the song's audio or the video's.
+
+- `sync: SONG`: the song's timing, carried through the segments. Lines go wherever the video plays their part of the
+  song (twice if it repeats it, never if it cuts it) and nothing shows over `VIDEO` stretches; a line cut by a scene
+  ends there (`songTimeMs` says where it starts in the song).
+- `sync: VIDEO`: the video does not play its song's recording (`NO_MATCH`: live, another edit), so the song's timing
+  does not fit; the lines were timed on the video's own audio by the Lyrics Sync extension.
+- `sync: NONE`: no timing (yet); `plain` has the words. With `pending`, it is being worked out (the alignment, or
+  Lyrics Sync, which is asked for it when the lyrics are read): ask again in a while.
+
 ## Reporting plays
 
 A music video played with the song's audio is the song played: report it with `recordPlay` for its `trackId`, with the

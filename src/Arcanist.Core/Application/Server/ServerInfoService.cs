@@ -163,6 +163,12 @@ public enum ApiFeature
     /// <c>myVideoSettings</c>.
     /// </summary>
     MusicVideos,
+
+    /// <summary>
+    /// <c>musicVideoLyrics</c> (<c>GET /rest/v1/videos/{id}/lyrics</c>): a music video's lyrics on its own timeline,
+    /// following where the video plays its song and leaving its other scenes without lyrics.
+    /// </summary>
+    VideoLyrics,
 }
 
 public sealed class ServerInfoService(

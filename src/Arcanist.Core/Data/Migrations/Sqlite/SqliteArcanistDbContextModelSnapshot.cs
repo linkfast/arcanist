@@ -2883,6 +2883,36 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("VideoAlignmentRequests");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.VideoLyricsTiming", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AlignedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Lrc")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlainHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VideoHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoHash")
+                        .IsUnique();
+
+                    b.ToTable("VideoLyricsTimings");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.WishListItem", b =>
                 {
                     b.Property<Guid>("Id")

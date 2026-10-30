@@ -133,6 +133,22 @@ public sealed class VideoAlignment : Entity
     public DateTime AlignedAt { get; set; }
 }
 
+/// <summary>
+/// Lyrics timed on a video's own audio, by content: for videos whose audio is not their song's (a live video,
+/// another edit), where the song's timing cannot be carried over. Worked out by a timing extension (Lyrics Sync).
+/// </summary>
+public sealed class VideoLyricsTiming : Entity
+{
+    public required string VideoHash { get; init; }
+
+    /// <summary>The song's words it was timed for (<c>LyricsTiming.HashOf</c>): other words need timing again.</summary>
+    public required string PlainHash { get; set; }
+
+    public required string Lrc { get; set; }
+
+    public DateTime AlignedAt { get; set; }
+}
+
 /// <summary>A video someone wants aligned before the background order would reach it.</summary>
 public sealed class VideoAlignmentRequest : Entity
 {

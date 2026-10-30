@@ -3435,6 +3435,14 @@ export const es: Dictionary = {
     coverage: 'La canción suena en el {percent} % del video',
     timelineHelp:
       'En color, los tramos que suenan con el audio de la canción; en gris, con el del video. Pulsa para saltar.',
+    lyrics: {
+      label: 'Letra',
+      SONG: 'Con los tiempos de la canción, donde el video la toca (las marcas bajo los tramos)',
+      VIDEO: 'Sincronizada con el audio del video (Lyrics Sync)',
+      NONE: 'Sin tiempos',
+      pending: 'Calculando sus tiempos…',
+      show: 'Ver la letra sobre el video',
+    },
     realign: 'Volver a sincronizar',
     realigning: 'Se sincronizará de nuevo en unos momentos.',
     delete: 'Eliminar',

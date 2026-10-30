@@ -2888,6 +2888,36 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("VideoAlignmentRequests");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.VideoLyricsTiming", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AlignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Lrc")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlainHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("VideoHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VideoHash")
+                        .IsUnique();
+
+                    b.ToTable("VideoLyricsTimings");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.WishListItem", b =>
                 {
                     b.Property<Guid>("Id")

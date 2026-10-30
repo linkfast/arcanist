@@ -119,6 +119,8 @@ builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<Arcanist.Core.Application.Videos.VideoClips>();
 builder.Services.AddScoped<Arcanist.Core.Application.Videos.MusicVideoService>();
 builder.Services.AddScoped<Arcanist.Core.Application.Videos.VideoStreamService>();
+builder.Services.AddScoped<Arcanist.Core.Application.Videos.VideoLyricsService>();
+builder.Services.AddSingleton<Arcanist.Core.Application.Videos.VideoLyricsTimings>();
 builder.Services.AddSingleton<LyricsTiming>();
 builder.Services.AddScoped<LyricsTimingService>();
 builder.Services.AddScoped<TrackMatchService>();

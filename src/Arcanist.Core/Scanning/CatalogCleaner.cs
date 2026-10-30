@@ -41,6 +41,7 @@ internal sealed class CatalogCleaner(ArcanistDbContext db, ArtworkStore artworkS
             .Where(a => !db.MusicVideos.Any(v => v.ContentHash == a.VideoHash) || !db.MediaFiles.Any(f => f.ContentHash == a.AudioHash))
             .ExecuteDeleteAsync(cancellationToken);
         await db.VideoAlignmentRequests.Where(r => !db.MusicVideos.Any(v => v.Id == r.VideoId)).ExecuteDeleteAsync(cancellationToken);
+        await db.VideoLyricsTimings.Where(t => !db.MusicVideos.Any(v => v.ContentHash == t.VideoHash)).ExecuteDeleteAsync(cancellationToken);
 
         var unusedArtwork = await db.Artworks
             .Where(a => !db.Albums.Any(al => al.ArtworkId == a.Id) && !db.Tracks.Any(t => t.ArtworkId == a.Id)

@@ -10519,6 +10519,38 @@
         }
       }
     },
+    "/rest/v1/videos/{id}/lyrics": {
+      "get": {
+        "tags": [
+          "Music videos"
+        ],
+        "summary": "A music video\u0027s lyrics on the video\u0027s timeline: its song\u0027s timing carried over to where the video plays the song (nothing over scenes that are not the song; parts it cuts left out, parts it repeats shown again), or timed on the video\u0027s own audio when it is not the song\u0027s recording. pending: the timing is being worked out; ask again later.",
+        "operationId": "MusicVideoLyrics",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MusicVideoLyrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/videos/{id}/link": {
       "put": {
         "tags": [
@@ -12489,7 +12521,8 @@
           "UPLOAD_TARGET",
           "CHANGES_SINCE",
           "LIBRARY_RENAME",
-          "MUSIC_VIDEOS"
+          "MUSIC_VIDEOS",
+          "VIDEO_LYRICS"
         ]
       },
       "AppPassword": {
@@ -19636,6 +19669,55 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "MusicVideoLyrics": {
+        "required": [
+          "videoId",
+          "trackId",
+          "sync",
+          "lines",
+          "plain",
+          "instrumental",
+          "pending"
+        ],
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "sync": {
+            "$ref": "#/components/schemas/VideoLyricsSync"
+          },
+          "lines": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/VideoLyricsLine"
+            }
+          },
+          "plain": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instrumental": {
+            "type": "boolean"
+          },
+          "pending": {
+            "type": "boolean"
           }
         }
       },
@@ -27614,6 +27696,52 @@
           "FINGERPRINT",
           "MANUAL",
           null
+        ]
+      },
+      "VideoLyricsLine": {
+        "required": [
+          "startMs",
+          "endMs",
+          "text",
+          "songTimeMs"
+        ],
+        "type": "object",
+        "properties": {
+          "startMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "endMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          },
+          "songTimeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "VideoLyricsSync": {
+        "enum": [
+          "SONG",
+          "VIDEO",
+          "NONE"
         ]
       },
       "VideoSegment": {

@@ -278,6 +278,7 @@ type Documents = {
     "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n": typeof types.LyricsTimingDocument,
     "\n  fragment VideoClipFields on VideoClip {\n    id\n    title\n    artist\n    durationMs\n    width\n    height\n    isLive\n    artworkId\n    libraryId\n    path\n    trackId\n    recordingId\n    linkMethod\n    linkLocked\n    sync\n    coverage\n    audioMode\n    streamUrl\n    trackAudioUrl\n    videoAudioUrl\n    hlsUrl\n    versions {\n      name\n      height\n      width\n      bitRate\n      codec\n      prepared\n    }\n    addedAt\n    canManage\n    song {\n      id\n      title\n      artist\n      albumId\n      album\n      year\n      artworkId\n      durationMs\n    }\n  }\n": typeof types.VideoClipFieldsFragmentDoc,
     "\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n": typeof types.MusicVideosDocument,
+    "\n  query MusicVideoLyrics($id: ID!) {\n    musicVideoLyrics(id: $id) {\n      sync\n      pending\n      lines {\n        startMs\n        endMs\n        text\n      }\n    }\n  }\n": typeof types.MusicVideoLyricsDocument,
     "\n  query MusicVideo($id: ID!) {\n    musicVideo(id: $id) {\n      ...VideoClipFields\n      segments {\n        videoStartMs\n        videoEndMs\n        source\n        trackStartMs\n        rate\n        similarity\n      }\n    }\n  }\n": typeof types.MusicVideoDocument,
     "\n  mutation LinkMusicVideo($id: ID!, $trackId: ID) {\n    linkMusicVideo(id: $id, trackId: $trackId) {\n      id\n    }\n  }\n": typeof types.LinkMusicVideoDocument,
     "\n  mutation UnlockMusicVideo($id: ID!) {\n    unlockMusicVideo(id: $id) {\n      id\n    }\n  }\n": typeof types.UnlockMusicVideoDocument,
@@ -554,6 +555,7 @@ const documents: Documents = {
     "\n  query LyricsTiming {\n    lyricsTiming {\n      withLyrics\n      timed\n      aligned\n      untimed\n      waiting\n      extensionId\n      extension\n    }\n  }\n": types.LyricsTimingDocument,
     "\n  fragment VideoClipFields on VideoClip {\n    id\n    title\n    artist\n    durationMs\n    width\n    height\n    isLive\n    artworkId\n    libraryId\n    path\n    trackId\n    recordingId\n    linkMethod\n    linkLocked\n    sync\n    coverage\n    audioMode\n    streamUrl\n    trackAudioUrl\n    videoAudioUrl\n    hlsUrl\n    versions {\n      name\n      height\n      width\n      bitRate\n      codec\n      prepared\n    }\n    addedAt\n    canManage\n    song {\n      id\n      title\n      artist\n      albumId\n      album\n      year\n      artworkId\n      durationMs\n    }\n  }\n": types.VideoClipFieldsFragmentDoc,
     "\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n": types.MusicVideosDocument,
+    "\n  query MusicVideoLyrics($id: ID!) {\n    musicVideoLyrics(id: $id) {\n      sync\n      pending\n      lines {\n        startMs\n        endMs\n        text\n      }\n    }\n  }\n": types.MusicVideoLyricsDocument,
     "\n  query MusicVideo($id: ID!) {\n    musicVideo(id: $id) {\n      ...VideoClipFields\n      segments {\n        videoStartMs\n        videoEndMs\n        source\n        trackStartMs\n        rate\n        similarity\n      }\n    }\n  }\n": types.MusicVideoDocument,
     "\n  mutation LinkMusicVideo($id: ID!, $trackId: ID) {\n    linkMusicVideo(id: $id, trackId: $trackId) {\n      id\n    }\n  }\n": types.LinkMusicVideoDocument,
     "\n  mutation UnlockMusicVideo($id: ID!) {\n    unlockMusicVideo(id: $id) {\n      id\n    }\n  }\n": types.UnlockMusicVideoDocument,
@@ -1636,6 +1638,10 @@ export function graphql(source: "\n  fragment VideoClipFields on VideoClip {\n  
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n"): (typeof documents)["\n  query MusicVideos($input: MusicVideosInput) {\n    musicVideos(input: $input) {\n      items {\n        ...VideoClipFields\n      }\n      nextCursor\n      totalCount\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MusicVideoLyrics($id: ID!) {\n    musicVideoLyrics(id: $id) {\n      sync\n      pending\n      lines {\n        startMs\n        endMs\n        text\n      }\n    }\n  }\n"): (typeof documents)["\n  query MusicVideoLyrics($id: ID!) {\n    musicVideoLyrics(id: $id) {\n      sync\n      pending\n      lines {\n        startMs\n        endMs\n        text\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

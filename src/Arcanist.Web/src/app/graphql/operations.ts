@@ -3509,6 +3509,20 @@ export const MusicVideosQuery = graphql(`
   }
 `);
 
+export const MusicVideoLyricsQuery = graphql(`
+  query MusicVideoLyrics($id: ID!) {
+    musicVideoLyrics(id: $id) {
+      sync
+      pending
+      lines {
+        startMs
+        endMs
+        text
+      }
+    }
+  }
+`);
+
 export const MusicVideoQuery = graphql(`
   query MusicVideo($id: ID!) {
     musicVideo(id: $id) {

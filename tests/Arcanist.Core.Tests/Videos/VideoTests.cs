@@ -9,6 +9,7 @@ using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Setup;
 using Arcanist.Core.Tests.Media;
 using Arcanist.Core.Tests.Scanning;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Arcanist.Core.Tests.Videos;
 
@@ -42,6 +43,9 @@ public sealed class VideoTests : IAsyncLifetime
         Directory.CreateDirectory(album);
         await File.WriteAllBytesAsync(Path.Combine(album, "01 Song.wav"), AudioFixtures.Wav(AudioFixtures.Melody(3, 40)), Cancel);
         AudioFixtures.Tag(Path.Combine(album, "01 Song.wav"), new FixtureTags(Title: "Song", Artist: "Band", Album: "Album", AlbumArtist: "Band", TrackNumber: 1));
+        // Its timed lyrics: the last line is past the part of the song the video plays.
+        await File.WriteAllTextAsync(Path.Combine(album, "01 Song.lrc"),
+            "[00:02.00]Line one\n[00:10.00]Line two\n[00:25.00]Line three\n[00:33.00]After the cut\n[00:38.00]\n", Cancel);
 
         MakeVideo(Path.Combine(album, "01 Song.mp4"), [AudioFixtures.Noise(1, 5), AudioFixtures.Melody(3, 30), AudioFixtures.Noise(2, 4)]);
         MakeVideo(Path.Combine(_music, "Videos", "Band - Song (Official Video).mp4"), [AudioFixtures.Noise(5, 3), AudioFixtures.Melody(3, 20)]);
@@ -154,6 +158,54 @@ public sealed class VideoTests : IAsyncLifetime
         Assert.Equal(2, (await VideosAsync("?linked=false")).GetProperty("totalCount").GetInt32());
         Assert.Equal(2, (await VideosAsync($"?trackId={trackId}")).GetProperty("totalCount").GetInt32());
         Assert.Equal(1, (await VideosAsync("?search=nothing")).GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task Lyrics_follow_the_song_through_the_video_and_its_own_audio_gets_its_own_timing()
+    {
+        await StartAsync();
+        var page = await VideosAsync();
+        var sidecar = Named(page, "Album/01 Song.mp4");
+        var id = sidecar.GetProperty("id").GetString()!;
+        Assert.Equal("READY", (await AlignedAsync(id)).GetProperty("sync").GetString());
+
+        // The song's timing moved past the opening scene; nothing over the scenes, and the line the video cuts is gone.
+        var lyrics = await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/videos/{id}/lyrics", ArcanistFactory.Json, Cancel);
+        Assert.Equal("SONG", lyrics.GetProperty("sync").GetString());
+        var lines = lyrics.GetProperty("lines").EnumerateArray()
+            .Select(l => (Text: l.GetProperty("text").GetString()!, Start: l.GetProperty("startMs").GetInt32(), End: l.GetProperty("endMs").GetInt32()))
+            .Where(l => l.Text.Length > 0).ToList();
+        Assert.Equal(["Line one", "Line two", "Line three"], lines.Select(l => l.Text));
+        Assert.InRange(lines[0].Start, 6400, 7600);
+        Assert.InRange(lines[2].End, 34_400, 35_400);
+        Assert.All(lines, l => Assert.True(l.Start >= 4600));
+
+        // The live video (another performance), linked to the song by hand: its own audio never lines up with it, so
+        // its lyrics wait for a timing extension, which finds it and saves timing on the video's timeline.
+        var live = Named(page, "Band - Song (Live).mp4");
+        var liveId = live.GetProperty("id").GetString()!;
+        var trackId = sidecar.GetProperty("trackId").GetString()!;
+        (await _admin.PutAsJsonAsync($"/rest/v1/videos/{liveId}/link", new { trackId }, ArcanistFactory.Json, Cancel)).EnsureSuccessStatusCode();
+        Assert.Equal("NO_MATCH", (await AlignedAsync(liveId)).GetProperty("sync").GetString());
+        var untimed = await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/videos/{liveId}/lyrics", ArcanistFactory.Json, Cancel);
+        Assert.Equal("NONE", untimed.GetProperty("sync").GetString());
+        Assert.Contains("Line two", untimed.GetProperty("plain").GetString());
+
+        var timings = _factory.Services.GetRequiredService<Core.Application.Videos.VideoLyricsTimings>();
+        Assert.Equal([Guid.Parse(liveId)], timings.TakeRequested());
+        var pending = (await timings.PendingAsync(null, 50, Cancel)).Videos;
+        var video = Assert.Single(pending);
+        Assert.EndsWith("Band - Song (Live).mp4", video.VideoPath.Replace('\\', '/'));
+        Assert.True(await timings.SaveAsync(video.VideoHash, video.PlainHash, "[00:01.50]Line one\n[00:08.00]Line two\n", Cancel));
+        Assert.Empty((await timings.PendingAsync(null, 50, Cancel)).Videos);
+
+        var timed = await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/videos/{liveId}/lyrics", ArcanistFactory.Json, Cancel);
+        Assert.Equal("VIDEO", timed.GetProperty("sync").GetString());
+        var own = timed.GetProperty("lines").EnumerateArray().Select(l => (Start: l.GetProperty("startMs").GetInt32(), End: l.GetProperty("endMs").GetInt32())).ToList();
+        Assert.Equal(2, own.Count);
+        Assert.Equal((1500, 8000), own[0]);
+        Assert.Equal(8000, own[1].Start);
+        Assert.InRange(own[1].End, 19_500, 20_600);
     }
 
     [Fact]

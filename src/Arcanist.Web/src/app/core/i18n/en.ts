@@ -3389,6 +3389,14 @@ export const en: Dictionary = {
     coverage: 'The song plays in {percent}% of the video',
     timelineHelp:
       "In color, the stretches that play the song's audio; in grey, the video's own. Click to jump.",
+    lyrics: {
+      label: 'Lyrics',
+      SONG: "With the song's timing, where the video plays it (the marks under the stretches)",
+      VIDEO: "Timed on the video's own audio (Lyrics Sync)",
+      NONE: 'No timing',
+      pending: 'Working out its timing…',
+      show: 'Show the lyrics over the video',
+    },
     realign: 'Sync again',
     realigning: 'It will be synced again shortly.',
     delete: 'Delete',

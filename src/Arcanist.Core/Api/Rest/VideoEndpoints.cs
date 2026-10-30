@@ -31,6 +31,10 @@ public static class VideoEndpoints
             .WithName("MusicVideo")
             .WithSummary("A music video, with the stretches where its audio and its song's line up (segments).");
 
+        videos.MapGet("/{id:guid}/lyrics", (Guid id, VideoLyricsService service, CancellationToken ct) => service.GetAsync(id, ct))
+            .WithName("MusicVideoLyrics")
+            .WithSummary("A music video's lyrics on the video's timeline: its song's timing carried over to where the video plays the song (nothing over scenes that are not the song; parts it cuts left out, parts it repeats shown again), or timed on the video's own audio when it is not the song's recording. pending: the timing is being worked out; ask again later.");
+
         videos.MapPut("/{id:guid}/link", (Guid id, LinkMusicVideoInput input, MusicVideoService service, CancellationToken ct) =>
                 service.LinkAsync(id, input.TrackId, ct))
             .WithName("LinkMusicVideo")

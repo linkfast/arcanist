@@ -27,6 +27,32 @@ public sealed record VideoVersion(string Name, int Height, int Width, int BitRat
 /// <param name="Similarity">How alike the two audios are there (TRACK stretches), 0–1.</param>
 public sealed record VideoSegment(int VideoStartMs, int VideoEndMs, VideoAudioMode Source, int? TrackStartMs, double? Rate, double? Similarity);
 
+/// <summary>Where the timing of a music video's lyrics comes from. Part of the API contract.</summary>
+public enum VideoLyricsSync
+{
+    /// <summary>The song's timing, carried over to the stretches where the video plays the song.</summary>
+    Song,
+    /// <summary>Timed on the video's own audio (it does not play its song's recording: live, another edit).</summary>
+    Video,
+    /// <summary>No timing for this video (yet): only the words, if any.</summary>
+    None,
+}
+
+/// <summary>A line of a music video's lyrics, on the video's timeline: shown from StartMs until EndMs.</summary>
+/// <param name="Text">Empty for a break (nothing shown).</param>
+/// <param name="SongTimeMs">Where the line starts in the song (lines carried over from the song's timing).</param>
+public sealed record VideoLyricsLine(int StartMs, int EndMs, string Text, int? SongTimeMs);
+
+/// <summary>
+/// A music video's lyrics: its song's, timed on the video's timeline. Nothing shows over scenes that are not the
+/// song; a part of the song the video cuts is left out and one it repeats shows again.
+/// </summary>
+/// <param name="Lines">Ordered by StartMs; null without timing (see Sync).</param>
+/// <param name="Plain">The song's words, also without timing.</param>
+/// <param name="Pending">The timing is being worked out (the alignment, or Lyrics Sync): asking again later may bring it.</param>
+public sealed record MusicVideoLyrics(Guid VideoId, Guid? TrackId, VideoLyricsSync Sync, IReadOnlyList<VideoLyricsLine>? Lines, string? Plain,
+    bool Instrumental, bool Pending);
+
 /// <summary>The song a music video shows, as the catalog has it (the copy the user can play).</summary>
 /// <param name="Artist">Its primary artists, joined ("A, B"); the album's artist when it names none.</param>
 /// <param name="ArtworkId">The song's cover, or its album's.</param>

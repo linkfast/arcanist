@@ -17,6 +17,11 @@ public sealed partial class Query
     public static Task<VideoClip> MusicVideo([Id] Guid id, [FromServices] MusicVideoService videos, CancellationToken cancellationToken) =>
         videos.GetAsync(id, cancellationToken);
 
+    [Name("musicVideoLyrics")]
+    [Description("A music video's lyrics on the video's timeline: its song's timing carried over to where the video plays the song (nothing over scenes that are not the song; parts it cuts left out, parts it repeats shown again), or timed on the video's own audio when it is not the song's recording. pending: the timing is being worked out; ask again later.")]
+    public static Task<MusicVideoLyrics> MusicVideoLyrics([Id] Guid id, [FromServices] VideoLyricsService lyrics, CancellationToken cancellationToken) =>
+        lyrics.GetAsync(id, cancellationToken);
+
     [Name("videoSettings")]
     [Description("How the server handles music videos: whose audio plays by default, the cache of versions made when played, what is prepared ahead of time for adaptive streaming, and how many videos are linked and aligned. Requires MANAGE_SETTINGS.")]
     public static Task<VideoSettingsInfo> VideoSettings([FromServices] MusicVideoService videos, CancellationToken cancellationToken) =>

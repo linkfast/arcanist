@@ -38,6 +38,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<MusicVideo> MusicVideos => Set<MusicVideo>();
     public DbSet<VideoAlignment> VideoAlignments => Set<VideoAlignment>();
     public DbSet<VideoAlignmentRequest> VideoAlignmentRequests => Set<VideoAlignmentRequest>();
+    public DbSet<VideoLyricsTiming> VideoLyricsTimings => Set<VideoLyricsTiming>();
     public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
     public DbSet<OnlineLookup> OnlineLookups => Set<OnlineLookup>();
     public DbSet<DropFolder> DropFolders => Set<DropFolder>();
@@ -705,6 +706,13 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         });
 
         modelBuilder.Entity<VideoAlignmentRequest>(request => request.HasIndex(r => r.VideoId).IsUnique());
+
+        modelBuilder.Entity<VideoLyricsTiming>(timing =>
+        {
+            timing.Property(t => t.VideoHash).HasMaxLength(64);
+            timing.Property(t => t.PlainHash).HasMaxLength(64);
+            timing.HasIndex(t => t.VideoHash).IsUnique();
+        });
 
         modelBuilder.Entity<DuplicateCandidate>(candidate =>
         {

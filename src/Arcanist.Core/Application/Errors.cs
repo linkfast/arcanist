@@ -300,6 +300,10 @@ public static class ErrorCodes
     public const string JamVoteTooSoon = "jam_vote_too_soon";
     /// <summary>The Jukebox Jam is not voted on.</summary>
     public const string JamVotingOff = "jam_voting_off";
+    /// <summary>The Jukebox Jam does not let those taking part replace the song playing.</summary>
+    public const string JamReplaceOff = "jam_replace_off";
+    /// <summary>Someone replaced the song playing a moment ago: wait <c>retryAfterSeconds</c>.</summary>
+    public const string JamReplaceTooSoon = "jam_replace_too_soon";
     /// <summary>Only the host (its playing client) does that.</summary>
     public const string JamNotHost = "jam_not_host";
     /// <summary>The playlist is the queue of a Jukebox Jam: change it through the Jam.</summary>

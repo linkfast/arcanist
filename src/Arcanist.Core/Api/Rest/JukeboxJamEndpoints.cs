@@ -10,6 +10,8 @@ public sealed record JukeboxJamTracksInput(IReadOnlyList<Guid> TrackIds, Jukebox
 
 public sealed record JukeboxJamVoteInput(Guid EntryId);
 
+public sealed record JukeboxJamReplaceInput(Guid TrackId);
+
 public static class JukeboxJamEndpoints
 {
     /// <summary>A guest's session token, in REST (GraphQL takes it as <c>guestToken</c>).</summary>
@@ -40,6 +42,22 @@ public static class JukeboxJamEndpoints
             .WithName("JukeboxJamSearch")
             .WithSummary("Songs that can be added to a Jam (from its libraries, among those the host can listen to). For those taking part.");
 
+        jams.MapGet("/artists", (string code, string? search, string? after, int? first, [FromHeader(Name = GuestHeader)] string? guest,
+                JukeboxJamService service, CancellationToken ct) => service.ArtistsAsync(code, search, after, first, guest, ct))
+            .WithName("JukeboxJamArtists")
+            .WithSummary("The artists (album artists) of the songs that can be added to a Jam, to browse them; `search` filters by name, `after` is the previous page's nextCursor. For those taking part.");
+
+        jams.MapGet("/albums", (string code, Guid? artistId, string? search, JukeboxJamAlbumSort? sort, string? after, int? first,
+                [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service, CancellationToken ct) =>
+                service.AlbumsAsync(code, artistId, search, sort, after, first, guest, ct))
+            .WithName("JukeboxJamAlbums")
+            .WithSummary("Albums with songs that can be added to a Jam: an artist's (by year) or all of them (by title, or RECENTLY_ADDED); `search` filters by title or artist. For those taking part.");
+
+        jams.MapGet("/albums/{albumId:guid}/songs", (string code, Guid albumId, [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service,
+                CancellationToken ct) => service.AlbumSongsAsync(code, albumId, guest, ct))
+            .WithName("JukeboxJamAlbumSongs")
+            .WithSummary("An album's songs that can be added to a Jam, in disc and track order. For those taking part.");
+
         jams.MapPost("/join", (string code, JoinJukeboxJamInput? input, JukeboxJamService service, CancellationToken ct) =>
                 service.JoinAsync(code, input?.Name, ct))
             .WithName("JoinJukeboxJam")
@@ -49,6 +67,11 @@ public static class JukeboxJamEndpoints
                 CancellationToken ct) => service.AddAsync(code, input.TrackIds, input.Source, guest, ct))
             .WithName("AddToJukeboxJam")
             .WithSummary("Adds songs to a Jam's queue (at most 50 at once). Guests within their limit (jam_guest_limit, with retryAfterSeconds); in voting Jams each comes with a vote of whoever adds it. `source: DJ` is the host's DJ: no limit and no vote.");
+
+        jams.MapPost("/now-playing", (string code, JukeboxJamReplaceInput input, [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service,
+                CancellationToken ct) => service.ReplaceAsync(code, input.TrackId, guest, ct))
+            .WithName("ReplaceJukeboxJamNowPlaying")
+            .WithSummary("Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise), once every 60 seconds in the whole Jam (jam_replace_too_soon with retryAfterSeconds); the host and those who manage it always. For guests it counts as one of their songs.");
 
         jams.MapPost("/votes", (string code, JukeboxJamVoteInput input, [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service,
                 CancellationToken ct) => service.VoteAsync(code, input.EntryId, guest, ct))
@@ -62,7 +85,7 @@ public static class JukeboxJamEndpoints
 
         jams.MapPut("", (string code, UpdateJukeboxJamInput input, JukeboxJamService service, CancellationToken ct) => service.UpdateAsync(code, input, ct))
             .WithName("UpdateJukeboxJam")
-            .WithSummary("Changes a Jam's name, voting, guests and libraries. Host only.");
+            .WithSummary("Changes a Jam's name, voting, guests, whether anyone may replace the song playing, and libraries. Host only.");
 
         jams.MapDelete("/guests/{guestId:guid}", (string code, Guid guestId, JukeboxJamService service, CancellationToken ct) =>
                 service.RemoveGuestAsync(code, guestId, ct))

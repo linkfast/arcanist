@@ -1095,6 +1095,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<bool>("AllowGuests")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("AllowReplace")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -1145,6 +1148,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastReplacedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Paused")

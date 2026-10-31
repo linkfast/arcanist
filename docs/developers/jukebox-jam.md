@@ -11,7 +11,7 @@ operation is in GraphQL and, for clients that cannot use it, in REST under `/res
 
 ## Starting one
 
-`startJukeboxJam(input: {name, playsOn, rendererId, voting, allowGuests, guestLibraryIds})`, for any user:
+`startJukeboxJam(input: {name, playsOn, rendererId, voting, allowGuests, guestLibraryIds, allowReplace})`, for any user:
 
 | `playsOn` | Where it plays |
 |---|---|
@@ -25,7 +25,7 @@ follows it and does what the host's controls ask. Plays count for the host.
 The Jam has a playlist of its own (`playlistId`, of type `JUKEBOX_JAM`): what played stays there as a normal playlist of
 the host's when the Jam ends. `guestLibraryIds` limits the songs that can be added to some of the host's libraries
 (all of them when null). `allowGuests` needs the server's setting (`sharing.jamGuests`, off at first) and the
-`SHARE_LINKS` permission.
+`SHARE_LINKS` permission. `allowReplace` (off by default) lets anyone taking part replace the song playing (below).
 
 `myJukeboxJams` lists the Jams the user hosts or takes part in. `jukeboxJam.url` is the Jam's link, relative to the
 server (a player's page, `/players/<id>/#/jam/<code>`): share it or show it as a QR code.
@@ -42,7 +42,8 @@ server (a player's page, `/players/<id>/#/jam/<code>`): share it or show it as a
 - `played`: the last songs played.
 - `dj`: the DJ session, if there is one (below).
 - `you`: who is asking (`HOST`, `MANAGER`, `MEMBER`, `GUEST`, `VISITOR`), whether they can control it, when they can
-  vote again (`nextVoteAt`) and, for a guest, how many songs they can still add (`addsLeft`).
+  vote again (`nextVoteAt`), whether they can replace the song playing (`canReplace`, and when again: `nextReplaceAt`)
+  and, for a guest, how many songs they can still add (`addsLeft`).
 - To those who control it: `guests` and `guestLibraryIds`.
 
 A signed-in user calls `joinJukeboxJam(code)` (it returns null) and becomes a member of its playlist. Someone without
@@ -51,15 +52,25 @@ in the `X-Arcanist-Guest` header (REST) from then on. Without an account only Ja
 otherwise); a guest the host removed gets `jam_guest_removed`.
 
 - `jukeboxJamSearch(code, query)`: the songs that can be added (full-text search, in the Jam's libraries).
+- Browsing them (`JUKEBOX_JAM_BROWSE`): `jukeboxJamArtists(code, search, after, first)` (album artists, with how many
+  albums), `jukeboxJamAlbums(code, artistId, search, sort, after, first)` (an artist's by year, or all by `TITLE` or
+  `RECENTLY_ADDED`) and `jukeboxJamAlbumSongs(code, albumId)` (in disc and track order, each saying whether it waits in
+  the queue). Pages end with `nextCursor`; pass it as `after`. Artwork ids load from `/rest/v1/artwork/{id}`, also
+  without an account.
 - `addToJukeboxJam(code, trackIds)`: up to 50 at once. A guest adds a few every 10 minutes (the server's setting);
   more is `jam_guest_limit` with `retryAfterSeconds`.
 - `voteJukeboxJam(code, entryId)`: voting Jams only (`jam_voting_off`). Anyone taking part votes as often as they like,
   but **once every 30 seconds** in the whole Jam: sooner is `jam_vote_too_soon` (HTTP 429) with `retryAfterSeconds`.
   A song added in a voting Jam comes with a vote of whoever added it, which does not make them wait.
+- `replaceJukeboxJamNowPlaying(code, trackId)` (`JUKEBOX_JAM_REPLACE`): the song plays **now**, in place of the one
+  playing. Anyone taking part when the Jam has `allowReplace` (`jam_replace_off` otherwise), once every 60 seconds in
+  the whole Jam (`jam_replace_too_soon`, HTTP 429, with `retryAfterSeconds`); the host and those who manage it always.
+  It is added pinned and the host's client gets a `SKIP` command, so it plays next right away. For a guest it counts as
+  one of their songs.
 
 The host and those who manage the playlist control it: `controlJukeboxJam(code, {action, entryId, position})` with
 `SKIP`, `PAUSE`, `RESUME`, `REMOVE`, `PIN` (plays next, whatever the votes say), `UNPIN` and `MOVE` (Jams without
-voting); `removeJukeboxJamGuest`; and the host `updateJukeboxJam` (name, voting, guests, libraries) and `endJukeboxJam`.
+voting); `removeJukeboxJamGuest`; and the host `updateJukeboxJam` (name, voting, guests, `allowReplace`, libraries) and `endJukeboxJam`.
 
 ### Following it live
 

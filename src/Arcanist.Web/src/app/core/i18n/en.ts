@@ -3304,6 +3304,8 @@ export const en: Dictionary = {
     jam_track_not_allowed: 'That song is not in the Jam’s libraries.',
     jam_vote_too_soon: 'You can vote once every 30 seconds.',
     jam_voting_off: 'This Jam is not voted on.',
+    jam_replace_off: 'In this Jam the song playing cannot be changed.',
+    jam_replace_too_soon: 'Someone just changed the song playing; wait a moment.',
     jam_not_host: 'Only the host (the player it plays on) can do that.',
     playlist_is_jam: 'It is the queue of a Jukebox Jam: change it from the Jam.',
     unexpected: 'Something went wrong. Please try again.',

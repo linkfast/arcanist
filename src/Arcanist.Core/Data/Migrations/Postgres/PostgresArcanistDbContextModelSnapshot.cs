@@ -1100,6 +1100,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<bool>("AllowGuests")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("AllowReplace")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -1150,6 +1153,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastReplacedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("Paused")

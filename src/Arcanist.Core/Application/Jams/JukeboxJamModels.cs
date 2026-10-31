@@ -96,7 +96,10 @@ public sealed record JukeboxJamGuestInfo(Guid Id, string Name, DateTime JoinedAt
 /// <param name="Name">The user's or guest's name.</param>
 /// <param name="NextVoteAt">When they can vote again (voting Jams); null: now.</param>
 /// <param name="AddsLeft">Songs a guest can still add in these 10 minutes (null: no limit).</param>
-public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string? Name, Guid? GuestId, bool CanControl, DateTime? NextVoteAt, int? AddsLeft);
+/// <param name="CanReplace">They may replace the song playing with one of theirs (<c>replaceJukeboxJamNowPlaying</c>).</param>
+/// <param name="NextReplaceAt">When they can replace it again (someone just did); null: now.</param>
+public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string? Name, Guid? GuestId, bool CanControl, DateTime? NextVoteAt, int? AddsLeft,
+    bool CanReplace, DateTime? NextReplaceAt);
 
 /// <summary>A Jukebox Jam as the one asking sees it.</summary>
 /// <param name="Url">Its link (relative to the server): the same for everyone; a QR code of it lets others join.</param>
@@ -105,6 +108,7 @@ public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string
 /// <param name="Played">The last songs played, latest first.</param>
 /// <param name="Guests">Its guests, to those who control it.</param>
 /// <param name="GuestLibraryIds">Libraries songs are added from, to those who control it; null: all the host's.</param>
+/// <param name="AllowReplace">Anyone taking part may replace the song playing (the host and its managers always can).</param>
 public sealed record JukeboxJam(
     string Code,
     string Name,
@@ -117,6 +121,7 @@ public sealed record JukeboxJam(
     bool Voting,
     int VoteIntervalSeconds,
     bool AllowGuests,
+    bool AllowReplace,
     JukeboxJamDjSession? Dj,
     JukeboxJamNowPlaying NowPlaying,
     IReadOnlyList<JukeboxJamEntry> Queue,
@@ -129,10 +134,11 @@ public sealed record JukeboxJam(
 
 /// <param name="RendererId">For <see cref="JukeboxJamPlaysOn.Dlna"/>: the renderer (<c>server</c> also works for the server's audio).</param>
 /// <param name="GuestLibraryIds">Libraries songs are added from; all the host's when null or empty.</param>
+/// <param name="AllowReplace">Anyone taking part may replace the song playing; off when null.</param>
 public sealed record StartJukeboxJamInput(string Name, JukeboxJamPlaysOn PlaysOn, string? RendererId, bool Voting, bool AllowGuests,
-    IReadOnlyList<Guid>? GuestLibraryIds);
+    IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null);
 
-public sealed record UpdateJukeboxJamInput(string? Name, bool? Voting, bool? AllowGuests, IReadOnlyList<Guid>? GuestLibraryIds);
+public sealed record UpdateJukeboxJamInput(string? Name, bool? Voting, bool? AllowGuests, IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null);
 
 /// <summary>A guest's session: send <see cref="Token"/> with every request of theirs (<c>guestToken</c>, or <c>X-Arcanist-Guest</c> in REST).</summary>
 public sealed record JukeboxJamGuestSession(string Token, Guid GuestId, string Name, JukeboxJam Jam);
@@ -208,6 +214,25 @@ public sealed record JukeboxJamChange(string Code, JukeboxJamChangeKind Kind, Ju
 
 /// <summary>A song that can be added to a Jam.</summary>
 public sealed record JukeboxJamSearchResult(JukeboxJamSong Song, bool InQueue);
+
+/// <summary>An artist of a Jam's songs (by album artist), to browse them.</summary>
+public sealed record JukeboxJamArtist(Guid Id, string Name, int Albums, Guid? ArtworkId);
+
+public sealed record JukeboxJamArtistPage(IReadOnlyList<JukeboxJamArtist> Items, string? NextCursor, int TotalCount);
+
+/// <summary>An album with songs that can be added to a Jam.</summary>
+/// <param name="Songs">How many of its songs can be added.</param>
+public sealed record JukeboxJamAlbum(Guid Id, string Title, string Artist, Guid ArtistId, int? Year, Guid? ArtworkId, int Songs);
+
+public sealed record JukeboxJamAlbumPage(IReadOnlyList<JukeboxJamAlbum> Items, string? NextCursor, int TotalCount);
+
+public enum JukeboxJamAlbumSort
+{
+    Title,
+
+    /// <summary>Newest in the libraries first.</summary>
+    RecentlyAdded,
+}
 
 /// <summary>A Jam of the user's (hosted or taking part), to find it again.</summary>
 public sealed record JukeboxJamSummary(string Code, string Name, string Host, bool Hosting, JukeboxJamPlaysOn PlaysOn, int Waiting, DateTime StartedAt);

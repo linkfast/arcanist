@@ -32,6 +32,7 @@ public sealed class JukeboxJamService(
     TimeProvider time)
 {
     public const int VoteIntervalSeconds = 30;
+    public const int ReplaceIntervalSeconds = 60;
     public static readonly TimeSpan GuestWindow = TimeSpan.FromMinutes(10);
     public static readonly TimeSpan HostOnline = TimeSpan.FromMinutes(1);
     public const int MaxAddsPerCall = 50;
@@ -94,6 +95,7 @@ public sealed class JukeboxJamService(
             RendererId = rendererId,
             Voting = input.Voting,
             AllowGuests = input.AllowGuests,
+            AllowReplace = input.AllowReplace ?? false,
             GuestLibraryIds = libraries is null ? null : JsonSerializer.Serialize(libraries, Json),
             StartedAt = now,
             LastActivityAt = now,
@@ -165,11 +167,34 @@ public sealed class JukeboxJamService(
         var ids = await Allowed(jam, host).Where(t => hits.Any(h => h.Id == t.Id))
             .OrderByDescending(t => hits.Where(h => h.Id == t.Id).Select(h => h.Score).FirstOrDefault())
             .Select(t => t.Id).Take(size).ToListAsync(cancellationToken);
+        return await ResultsAsync(jam, host, ids, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<JukeboxJamSearchResult>> ResultsAsync(JamSession jam, UserAccess host, List<Guid> ids, CancellationToken cancellationToken)
+    {
         var songs = await SongsAsync(host, ids, cancellationToken);
         var queued = await db.PlaylistEntries.Where(e => e.PlaylistId == jam.PlaylistId && e.PlayedAt == null && ids.Contains(e.TrackId))
             .Select(e => e.TrackId).ToListAsync(cancellationToken);
         return ids.Where(songs.ContainsKey).Select(id => new JukeboxJamSearchResult(songs[id], queued.Contains(id))).ToList();
     }
+
+    private async Task<(JamSession Jam, UserAccess Host)> BrowseAsync(string code, string? guestToken, CancellationToken cancellationToken)
+    {
+        var (jam, caller) = await OpenAsync(code, guestToken, cancellationToken);
+        RequireOpen(jam);
+        RequireParticipant(caller);
+        return (jam, await HostAsync(jam, cancellationToken));
+    }
+
+    private static (int Offset, int Size) Page(string? after, int? first) =>
+        (int.TryParse(after, out var offset) && offset > 0 ? offset : 0, Math.Clamp(first ?? 50, 1, 200));
+
+    private static string? Normalized(string? search) =>
+        string.IsNullOrWhiteSpace(search) ? null : TextNormalizer.Normalize(search.Trim()) is { Length: > 0 } words ? words : null;
+
+    /// <summary>When someone may replace the song playing again (those who control the Jam always can); null: now.</summary>
+    private DateTime? NextReplaceAt(JamSession jam) =>
+        jam.LastReplacedAt is { } at && at + TimeSpan.FromSeconds(ReplaceIntervalSeconds) > Now() ? at + TimeSpan.FromSeconds(ReplaceIntervalSeconds) : null;
 
     /// <summary>
     /// Adds songs to the queue. Guests within their limit; in a voting Jam each comes with a vote of whoever adds it
@@ -240,6 +265,124 @@ public sealed class JukeboxJamService(
 
         Changed(jam, JukeboxJamChangeKind.Queue);
         return await ToModelAsync(jam, caller, cancellationToken);
+    }
+
+    /// <summary>
+    /// Replaces the song playing with another one: it plays now and the one playing ends. Anyone taking part when the
+    /// Jam allows it (<c>jam_replace_off</c> otherwise), once every <see cref="ReplaceIntervalSeconds"/> seconds in
+    /// the whole Jam (<c>jam_replace_too_soon</c>); the host and those who manage it always, at any time. For guests
+    /// it counts as one of their songs. With nothing playing, it is simply the next one.
+    /// </summary>
+    public async Task<JukeboxJam> ReplaceAsync(string code, Guid trackId, string? guestToken, CancellationToken cancellationToken)
+    {
+        var (jam, caller) = await OpenAsync(code, guestToken, cancellationToken);
+        RequireOpen(jam);
+        RequireParticipant(caller);
+        if (!caller.CanControl && !jam.AllowReplace)
+            throw new ArcanistException.Conflict(ErrorCodes.JamReplaceOff);
+
+        var host = await HostAsync(jam, cancellationToken);
+        if (!await Allowed(jam, host).AnyAsync(t => t.Id == trackId, cancellationToken))
+            throw ArcanistException.Field("trackId", ErrorCodes.JamTrackNotAllowed);
+        if (caller.User is { } user)
+            await EnsureMemberAsync(jam, user, cancellationToken);
+
+        bool playing;
+        using (await signals.LockAsync(jam.Id, cancellationToken))
+        {
+            var now = Now();
+            if (!caller.CanControl && NextReplaceAt(jam) is { } next)
+                throw new ArcanistException.TooSoon(ErrorCodes.JamReplaceTooSoon, Math.Max(1, (int)Math.Ceiling((next - now).TotalSeconds)));
+            if (caller.Guest is { } guest)
+            {
+                var limit = (await sharing.GetAsync(cancellationToken)).GuestAddLimit;
+                var recent = await db.PlaylistEntries.Where(e => e.PlaylistId == jam.PlaylistId && e.AddedByGuestId == guest.Id && e.AddedAt > now - GuestWindow)
+                    .OrderBy(e => e.AddedAt).Select(e => e.AddedAt).ToListAsync(cancellationToken);
+                if (recent.Count + 1 > limit)
+                    throw new ArcanistException.TooSoon(ErrorCodes.JamGuestLimit,
+                        Math.Max(1, (int)Math.Ceiling((recent[Math.Max(0, recent.Count - limit)] + GuestWindow - now).TotalSeconds)));
+            }
+
+            var count = await db.PlaylistEntries.CountAsync(e => e.PlaylistId == jam.PlaylistId, cancellationToken);
+            if (count + 1 > PlaylistService.MaxEntries)
+                throw ArcanistException.Field("trackId", ErrorCodes.PlaylistFull);
+            var entry = new Data.Entities.PlaylistEntry
+            {
+                PlaylistId = jam.PlaylistId,
+                TrackId = trackId,
+                Position = count,
+                AddedAt = now,
+                AddedByUserId = caller.User?.UserId,
+                AddedByGuestId = caller.Guest?.Id,
+            };
+            db.PlaylistEntries.Add(entry);
+            jam.PinnedEntryId = entry.Id;
+            jam.LastReplacedAt = now;
+            jam.LastActivityAt = now;
+            jam.Playlist.UpdatedAt = now;
+            await db.SaveChangesAsync(cancellationToken);
+            playing = jam.CurrentEntryId is not null || jam.ExternalNowPlaying is not null;
+        }
+
+        Changed(jam, JukeboxJamChangeKind.Queue);
+        // What plays ends: the client (or JukeboxJamPlayer) then plays the pinned one, this.
+        if (playing)
+            signals.Publish(jam.Id, new JukeboxJamChange(jam.Code, JukeboxJamChangeKind.Command, JukeboxJamAction.Skip, jam.HostDeviceId, Now()));
+        return await ToModelAsync(jam, caller, cancellationToken);
+    }
+
+    /// <summary>The artists of the songs that can be added (by album artist), to browse them. For those taking part.</summary>
+    public async Task<JukeboxJamArtistPage> ArtistsAsync(string code, string? search, string? after, int? first, string? guestToken,
+        CancellationToken cancellationToken)
+    {
+        var (jam, host) = await BrowseAsync(code, guestToken, cancellationToken);
+        var tracks = Allowed(jam, host);
+        var albums = db.Albums.Where(a => tracks.Any(t => t.AlbumId == a.Id));
+        var artists = db.Artists.Where(ar => albums.Any(a => a.AlbumArtistId == ar.Id));
+        if (Normalized(search) is { } words)
+            artists = artists.Where(ar => ar.NormalizedName.Contains(words));
+
+        var (offset, size) = Page(after, first);
+        var total = await artists.CountAsync(cancellationToken);
+        var items = await artists.OrderBy(ar => ar.NormalizedName).ThenBy(ar => ar.Id).Skip(offset).Take(size)
+            .Select(ar => new JukeboxJamArtist(ar.Id, ar.Name, albums.Count(a => a.AlbumArtistId == ar.Id),
+                albums.Where(a => a.AlbumArtistId == ar.Id && a.ArtworkId != null).Select(a => a.ArtworkId).FirstOrDefault()))
+            .ToListAsync(cancellationToken);
+        return new JukeboxJamArtistPage(items, offset + items.Count < total ? (offset + items.Count).ToString() : null, total);
+    }
+
+    /// <summary>Albums with songs that can be added, of an artist or all of them. For those taking part.</summary>
+    public async Task<JukeboxJamAlbumPage> AlbumsAsync(string code, Guid? artistId, string? search, JukeboxJamAlbumSort? sort, string? after, int? first,
+        string? guestToken, CancellationToken cancellationToken)
+    {
+        var (jam, host) = await BrowseAsync(code, guestToken, cancellationToken);
+        var tracks = Allowed(jam, host);
+        var albums = db.Albums.Where(a => tracks.Any(t => t.AlbumId == a.Id));
+        if (artistId is { } artist)
+            albums = albums.Where(a => a.AlbumArtistId == artist);
+        if (Normalized(search) is { } words)
+            albums = albums.Where(a => a.NormalizedTitle.Contains(words) || a.AlbumArtist.NormalizedName.Contains(words));
+
+        var (offset, size) = Page(after, first);
+        var total = await albums.CountAsync(cancellationToken);
+        var ordered = sort == JukeboxJamAlbumSort.RecentlyAdded
+            ? albums.OrderByDescending(a => tracks.Where(t => t.AlbumId == a.Id).Max(t => t.AddedAt)).ThenBy(a => a.Id)
+            : artistId is null ? albums.OrderBy(a => a.NormalizedTitle).ThenBy(a => a.Id)
+            : albums.OrderBy(a => a.Year == null).ThenBy(a => a.Year).ThenBy(a => a.NormalizedTitle).ThenBy(a => a.Id);
+        var items = await ordered.Skip(offset).Take(size)
+            .Select(a => new JukeboxJamAlbum(a.Id, a.Title, a.AlbumArtist.Name, a.AlbumArtistId, a.Year, a.ArtworkId, tracks.Count(t => t.AlbumId == a.Id)))
+            .ToListAsync(cancellationToken);
+        return new JukeboxJamAlbumPage(items, offset + items.Count < total ? (offset + items.Count).ToString() : null, total);
+    }
+
+    /// <summary>An album's songs that can be added, in disc and track order. For those taking part.</summary>
+    public async Task<IReadOnlyList<JukeboxJamSearchResult>> AlbumSongsAsync(string code, Guid albumId, string? guestToken, CancellationToken cancellationToken)
+    {
+        var (jam, host) = await BrowseAsync(code, guestToken, cancellationToken);
+        var ids = await Allowed(jam, host).Where(t => t.AlbumId == albumId)
+            .OrderBy(t => t.DiscNumber ?? 1).ThenBy(t => t.TrackNumber ?? int.MaxValue).ThenBy(t => t.NormalizedTitle)
+            .Select(t => t.Id).Take(500).ToListAsync(cancellationToken);
+        return await ResultsAsync(jam, host, ids, cancellationToken);
     }
 
     /// <summary>
@@ -360,6 +503,8 @@ public sealed class JukeboxJamService(
                 await RequireGuestsAsync(access, cancellationToken);
             jam.AllowGuests = allow;
         }
+        if (input.AllowReplace is { } replace)
+            jam.AllowReplace = replace;
         if (input.GuestLibraryIds is not null)
         {
             var libraries = await LibrariesAsync(access, input.GuestLibraryIds, cancellationToken);
@@ -790,12 +935,15 @@ public sealed class JukeboxJamService(
             jam.Voting,
             VoteIntervalSeconds,
             jam.AllowGuests,
+            jam.AllowReplace,
             jam.DjKind == JamDj.None ? null : new JukeboxJamDjSession(JukeboxJamDjKind.UltimateAiDj, jam.DjName, jam.DjMessage, jam.DjSince ?? jam.StartedAt),
             new JukeboxJamNowPlaying(current is null ? null : Entry(current, JukeboxJamEntryState.Playing), external, jam.Paused, jam.PositionMs, jam.PositionAt),
             waiting.Take(500).Select(e => Entry(e, JukeboxJamEntryState.Waiting)).OfType<JukeboxJamEntry>().ToList(),
             played.Select(e => Entry(e, JukeboxJamEntryState.Played)).OfType<JukeboxJamEntry>().ToList(),
             new JukeboxJamYou(caller.Participation, caller.Guest?.Name ?? (caller.User is { } u2 ? names.GetValueOrDefault(u2.UserId)?.Name ?? (await playlists.UsersAsync([u2.UserId], cancellationToken)).GetValueOrDefault(u2.UserId)?.Name : null),
-                caller.Guest?.Id, caller.CanControl, nextVote, addsLeft),
+                caller.Guest?.Id, caller.CanControl, nextVote, addsLeft,
+                caller.CanControl || (jam.AllowReplace && (caller.User is not null || caller.Guest is not null)),
+                caller.CanControl ? null : NextReplaceAt(jam)),
             guests,
             caller.CanControl ? LibrariesOf(jam) : null,
             jam.StartedAt,

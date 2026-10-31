@@ -13,6 +13,8 @@ type Query {
   appPasswords: [AppPassword!]!
   "Where backups go: folders of this server, S3 buckets and other Arcanist servers. Administrators only."
   backupDestinations: [BackupDestinationInfo!]!
+  "The kinds of destination extensions provide now (Ultimate Cloud, with Ultimate Cloud Plus), named in `language`. Administrators only."
+  backupProviders(language: String): [BackupProvider!]!
   "The backups of the server, its libraries, albums or playlists, with their latest run. Administrators only."
   backups: [BackupDefinition!]!
   "A backup, with its latest run. Administrators only."
@@ -95,6 +97,12 @@ type Query {
   jukeboxJam(code: String!, guestToken: String): JukeboxJam!
   "Songs that can be added to a Jam (from its libraries, among those the host can listen to). For those taking part."
   jukeboxJamSearch(code: String!, query: String!, first: Int, guestToken: String): [JukeboxJamSearchResult!]!
+  "The artists (album artists) of the songs that can be added to a Jam, to browse them; `search` filters by name, `after` is the previous page's nextCursor. For those taking part."
+  jukeboxJamArtists(code: String!, search: String, after: String, first: Int, guestToken: String): JukeboxJamArtistPage!
+  "Albums with songs that can be added to a Jam: an artist's (by year) or all of them (by title, or RECENTLY_ADDED); `search` filters by title or artist. For those taking part."
+  jukeboxJamAlbums(code: String!, artistId: ID, search: String, sort: JukeboxJamAlbumSort, after: String, first: Int, guestToken: String): JukeboxJamAlbumPage!
+  "An album's songs that can be added to a Jam, in disc and track order. For those taking part."
+  jukeboxJamAlbumSongs(code: String!, albumId: ID!, guestToken: String): [JukeboxJamSearchResult!]!
   "Host API: the song the host's client should play next (pinned, then most voted, then by arrival), with its stream; null when nothing waits. Host only."
   jukeboxJamNext(code: String!): JukeboxJamNext
   "Libraries the signed-in user can access. With `includeVirtual`, first \"All\" (`virtual`), every one of them at once, named in `language` (or the request's Accept-Language)."
@@ -177,6 +185,8 @@ type Query {
   playlistEntries(playlistId: ID!, after: String, first: Int): PlaylistEntryPage!
   "The server's other active users, to invite as playlist collaborators."
   shareableUsers: [UserReference!]!
+  "Whether an S3 library can be created now, and why not: the Ultimate Cloud Plus extension with an Ultimate Cloud account on the Cloud plan, and another library besides. Administrators only."
+  s3LibraryAvailability: S3LibraryAvailability!
   "Most recent scans first, of one library or of all libraries the user can see. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobs(libraryId: ID, limit: Int): [ScanJob!]!
   "A scan by id, including live progress while it runs. Requires RUN_SCANS or MANAGE_LIBRARIES."
@@ -476,6 +486,12 @@ enum BackupDestinationKind {
   FOLDER
   S3
   PEER
+  EXTENSION
+}
+
+type BackupProvider {
+  id: String!
+  name: String!
 }
 
 type BackupDefinition {
@@ -1305,6 +1321,7 @@ type Extension {
   managed: Boolean!
   openSource: Boolean!
   blocked: Boolean!
+  usesCore: Boolean!
 }
 
 enum ExtensionStatus {
@@ -1453,6 +1470,7 @@ type JukeboxJam {
   voting: Boolean!
   voteIntervalSeconds: Int!
   allowGuests: Boolean!
+  allowReplace: Boolean!
   dj: JukeboxJamDjSession
   nowPlaying: JukeboxJamNowPlaying!
   queue: [JukeboxJamEntry!]!
@@ -1537,6 +1555,8 @@ type JukeboxJamYou {
   canControl: Boolean!
   nextVoteAt: DateTime
   addsLeft: Int
+  canReplace: Boolean!
+  nextReplaceAt: DateTime
 }
 
 enum JukeboxJamParticipation {
@@ -1558,6 +1578,40 @@ type JukeboxJamGuestInfo {
 type JukeboxJamSearchResult {
   song: JukeboxJamSong!
   inQueue: Boolean!
+}
+
+type JukeboxJamArtistPage {
+  items: [JukeboxJamArtist!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type JukeboxJamArtist {
+  id: ID!
+  name: String!
+  albums: Int!
+  artworkId: ID
+}
+
+type JukeboxJamAlbumPage {
+  items: [JukeboxJamAlbum!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type JukeboxJamAlbum {
+  id: ID!
+  title: String!
+  artist: String!
+  artistId: ID!
+  year: Int
+  artworkId: ID
+  songs: Int!
+}
+
+enum JukeboxJamAlbumSort {
+  TITLE
+  RECENTLY_ADDED
 }
 
 type JukeboxJamNext {
@@ -2511,6 +2565,11 @@ type PlaylistEntry {
   addedBy: UserReference
 }
 
+type S3LibraryAvailability {
+  canCreate: Boolean!
+  errorCode: String
+}
+
 type ScanJob {
   id: ID!
   libraryId: ID!
@@ -2839,7 +2898,7 @@ type UltimateCloudStatus {
   capabilities: [Capability!]!
   errorCode: String
   libraries: [UltimateCloudLibrary!]!
-  audioTool: UltimateCloudTool!
+  plus: UltimateCloudPlusStatus!
   enabled: Boolean!
   services: UltimateCloudServices!
 }
@@ -2892,9 +2951,10 @@ enum UltimateCloudCollection {
   CLOUD_DROP
 }
 
-type UltimateCloudTool {
-  version: String
-  errorCode: String
+type UltimateCloudPlusStatus {
+  installed: Boolean!
+  available: Boolean!
+  extensionId: String!
 }
 
 type UltimateCloudServices {
@@ -3142,7 +3202,10 @@ enum ApiFeature {
   PLAYLIST_SHARING
   JUKEBOX_JAM
   JUKEBOX_JAM_AI_DJ
+  JUKEBOX_JAM_BROWSE
+  JUKEBOX_JAM_REPLACE
   AVAILABLE_PLAYERS
+  WISH_LIST_CLOUD_SYNC
 }
 
 type LegalTerms {
@@ -3427,11 +3490,13 @@ type Mutation {
   joinJukeboxJam(code: String!, name: String): JukeboxJamGuestSession
   "Adds songs to a Jam's queue (at most 50 at once). Guests within their limit (jam_guest_limit, with retryAfterSeconds); in voting Jams each comes with a vote of whoever adds it. `source: DJ` is the host's DJ: no limit and no vote."
   addToJukeboxJam(code: String!, trackIds: [ID!]!, source: JukeboxJamAddSource, guestToken: String): JukeboxJam!
+  "Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise), once every 60 seconds in the whole Jam (jam_replace_too_soon with retryAfterSeconds); the host and those who manage it always. For guests it counts as one of their songs."
+  replaceJukeboxJamNowPlaying(code: String!, trackId: ID!, guestToken: String): JukeboxJam!
   "A vote for a waiting song (voting Jams). As often as one likes, but once every 30 seconds in the whole Jam: sooner is jam_vote_too_soon with retryAfterSeconds."
   voteJukeboxJam(code: String!, entryId: ID!, guestToken: String): JukeboxJam!
   "Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist."
   controlJukeboxJam(code: String!, input: ControlJukeboxJamInput!): JukeboxJam!
-  "Changes a Jam's name, voting, guests and libraries. Host only."
+  "Changes a Jam's name, voting, guests, whether anyone may replace the song playing, and libraries. Host only."
   updateJukeboxJam(code: String!, input: UpdateJukeboxJamInput!): JukeboxJam!
   "Takes a guest out of a Jam: their session no longer works. The host and those who manage it."
   removeJukeboxJamGuest(code: String!, guestId: ID!): JukeboxJam!
@@ -3668,8 +3733,6 @@ type Mutation {
   refreshMyUltimateCloud: MyUltimateCloudStatus!
   "Chooses what the caller's own account gets from this server: their plays, albums heard whole, StarTracks, statistics."
   setMyUltimateCloudServices(input: UltimateCloudServicesInput!): MyUltimateCloudStatus!
-  "Turns Ultimate Cloud's sync component (ultimate-audio, closed source) on or off: on, it is installed and syncing libraries, Cloud Drop and uploads to Ultimate Cloud work, and the server's edition is ULTIMATE; off, it is removed. Administrators only, with a recent authentication."
-  setUltimateCloudSync(enabled: Boolean!): UltimateCloudStatus!
   "Reads the account's plan again now. Administrators only."
   refreshUltimateCloud: UltimateCloudStatus!
   "Sets the library uploads go to when they name none; null leaves the choice to each upload. Requires MANAGE_LIBRARIES."
@@ -3737,6 +3800,8 @@ input CreateBackupDestinationInput {
   path: String
   s3: S3ConnectionInput
   invitation: String
+  provider: String
+  providerSettings: String
 }
 
 input S3ConnectionInput {
@@ -3904,6 +3969,7 @@ input StartJukeboxJamInput {
   voting: Boolean!
   allowGuests: Boolean!
   guestLibraryIds: [ID!]
+  allowReplace: Boolean
 }
 
 type JukeboxJamGuestSession {
@@ -3939,6 +4005,7 @@ input UpdateJukeboxJamInput {
   voting: Boolean
   allowGuests: Boolean
   guestLibraryIds: [ID!]
+  allowReplace: Boolean
 }
 
 input ClaimJukeboxJamHostInput {

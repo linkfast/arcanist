@@ -63,6 +63,12 @@ public sealed class JamSession : Entity
     /// <summary>An entry the host chose to play next, whatever the votes say.</summary>
     public Guid? PinnedEntryId { get; set; }
 
+    /// <summary>Anyone taking part may replace the song playing with one of theirs (the host and its managers always can).</summary>
+    public bool AllowReplace { get; set; }
+
+    /// <summary>When someone last replaced the song playing: others wait a while before doing it again.</summary>
+    public DateTime? LastReplacedAt { get; set; }
+
     public DateTime StartedAt { get; init; }
 
     public DateTime LastActivityAt { get; set; }

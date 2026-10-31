@@ -190,6 +190,12 @@ public enum ApiFeature
     /// <summary>A Jam's host can say Ultimate's AI DJ chooses what plays (<c>setJukeboxJamDj</c>, <c>JukeboxJam.dj</c>).</summary>
     JukeboxJamAiDj,
 
+    /// <summary>Those taking part in a Jam browse its artists and albums (<c>jukeboxJamArtists</c>, <c>jukeboxJamAlbums</c>, <c>jukeboxJamAlbumSongs</c>).</summary>
+    JukeboxJamBrowse,
+
+    /// <summary>A Jam may let anyone replace the song playing (<c>allowReplace</c>, <c>replaceJukeboxJamNowPlaying</c>).</summary>
+    JukeboxJamReplace,
+
     /// <summary><c>availablePlayers</c>: the web players any user can open.</summary>
     AvailablePlayers,
 

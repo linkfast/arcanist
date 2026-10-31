@@ -3887,6 +3887,27 @@
         }
       }
     },
+    "/rest/v1/libraries/s3/availability": {
+      "get": {
+        "tags": [
+          "Libraries"
+        ],
+        "summary": "Whether an S3 library can be created now, and why not: the Ultimate Cloud Plus extension with an Ultimate Cloud account on the Cloud plan, and another library besides. Administrators only.",
+        "operationId": "S3LibraryAvailability",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/S3LibraryAvailability"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/libraries/s3/test": {
       "post": {
         "tags": [
@@ -5765,7 +5786,7 @@
         "tags": [
           "Jukebox Jam"
         ],
-        "summary": "Changes a Jam\u0027s name, voting, guests and libraries. Host only.",
+        "summary": "Changes a Jam\u0027s name, voting, guests, whether anyone may replace the song playing, and libraries. Host only.",
         "operationId": "UpdateJukeboxJam",
         "parameters": [
           {
@@ -5835,6 +5856,199 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JukeboxJamSearchResult"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/artists": {
+      "get": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "The artists (album artists) of the songs that can be added to a Jam, to browse them; \u0060search\u0060 filters by name, \u0060after\u0060 is the previous page\u0027s nextCursor. For those taking part.",
+        "operationId": "JukeboxJamArtists",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJamArtistPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/albums": {
+      "get": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Albums with songs that can be added to a Jam: an artist\u0027s (by year) or all of them (by title, or RECENTLY_ADDED); \u0060search\u0060 filters by title or artist. For those taking part.",
+        "operationId": "JukeboxJamAlbums",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "artistId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/JukeboxJamAlbumSort"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJamAlbumPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/albums/{albumId}/songs": {
+      "get": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "An album\u0027s songs that can be added to a Jam, in disc and track order. For those taking part.",
+        "operationId": "JukeboxJamAlbumSongs",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "albumId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -5938,6 +6152,54 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/JukeboxJamTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/now-playing": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise), once every 60 seconds in the whole Jam (jam_replace_too_soon with retryAfterSeconds); the host and those who manage it always. For guests it counts as one of their songs.",
+        "operationId": "ReplaceJukeboxJamNowPlaying",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JukeboxJamReplaceInput"
               }
             }
           },
@@ -8988,37 +9250,6 @@
         }
       }
     },
-    "/rest/v1/ultimate-cloud/sync": {
-      "put": {
-        "tags": [
-          "Ultimate Cloud"
-        ],
-        "summary": "Turns Ultimate Cloud\u0027s sync component (ultimate-audio, closed source) on or off: on, it is installed and syncing libraries, Cloud Drop and uploads to Ultimate Cloud work, and the server\u0027s edition is ULTIMATE; off, it is removed. Administrators only, with a recent authentication.",
-        "operationId": "SetUltimateCloudSync",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetUltimateCloudSyncInput"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UltimateCloudStatus"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/rest/v1/ultimate-cloud/refresh": {
       "post": {
         "tags": [
@@ -9833,6 +10064,39 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BackupDestinationInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/backups/providers": {
+      "get": {
+        "tags": [
+          "Backups"
+        ],
+        "summary": "The kinds of destination extensions provide now (Ultimate Cloud, with Ultimate Cloud Plus), named in \u0060language\u0060. Administrators only.",
+        "operationId": "BackupProviders",
+        "parameters": [
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupProvider"
+                  }
                 }
               }
             }
@@ -13727,7 +13991,10 @@
           "PLAYLIST_SHARING",
           "JUKEBOX_JAM",
           "JUKEBOX_JAM_AI_DJ",
-          "AVAILABLE_PLAYERS"
+          "JUKEBOX_JAM_BROWSE",
+          "JUKEBOX_JAM_REPLACE",
+          "AVAILABLE_PLAYERS",
+          "WISH_LIST_CLOUD_SYNC"
         ]
       },
       "AppPassword": {
@@ -15039,7 +15306,8 @@
         "enum": [
           "FOLDER",
           "S3",
-          "PEER"
+          "PEER",
+          "EXTENSION"
         ]
       },
       "BackupDestinationTest": {
@@ -15257,6 +15525,21 @@
             "type": "string"
           },
           "code": {
+            "type": "string"
+          }
+        }
+      },
+      "BackupProvider": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
             "type": "string"
           }
         }
@@ -15920,6 +16203,18 @@
             ]
           },
           "invitation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "provider": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "providerSettings": {
             "type": [
               "null",
               "string"
@@ -17577,6 +17872,10 @@
           "blocked": {
             "type": "boolean",
             "default": false
+          },
+          "usesCore": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -18813,6 +19112,7 @@
           "voting",
           "voteIntervalSeconds",
           "allowGuests",
+          "allowReplace",
           "dj",
           "nowPlaying",
           "queue",
@@ -18872,6 +19172,9 @@
             "format": "int32"
           },
           "allowGuests": {
+            "type": "boolean"
+          },
+          "allowReplace": {
             "type": "boolean"
           },
           "dj": {
@@ -18951,6 +19254,158 @@
           "DJ",
           null
         ]
+      },
+      "JukeboxJamAlbum": {
+        "required": [
+          "id",
+          "title",
+          "artist",
+          "artistId",
+          "year",
+          "artworkId",
+          "songs"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "artistId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "year": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "songs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "JukeboxJamAlbumPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JukeboxJamAlbum"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "JukeboxJamAlbumSort": {
+        "enum": [
+          "TITLE",
+          "RECENTLY_ADDED",
+          null
+        ]
+      },
+      "JukeboxJamArtist": {
+        "required": [
+          "id",
+          "name",
+          "albums",
+          "artworkId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "albums": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "JukeboxJamArtistPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JukeboxJamArtist"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "JukeboxJamClientKind": {
         "enum": [
@@ -19304,6 +19759,18 @@
           "DLNA"
         ]
       },
+      "JukeboxJamReplaceInput": {
+        "required": [
+          "trackId"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "JukeboxJamSearchResult": {
         "required": [
           "song",
@@ -19462,7 +19929,9 @@
           "guestId",
           "canControl",
           "nextVoteAt",
-          "addsLeft"
+          "addsLeft",
+          "canReplace",
+          "nextReplaceAt"
         ],
         "type": "object",
         "properties": {
@@ -19500,6 +19969,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "canReplace": {
+            "type": "boolean"
+          },
+          "nextReplaceAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -24953,6 +25432,24 @@
           }
         }
       },
+      "S3LibraryAvailability": {
+        "required": [
+          "canCreate",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "canCreate": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ScanJob": {
         "required": [
           "id",
@@ -26032,17 +26529,6 @@
             }
           },
           "pregenerateOnlyLossless": {
-            "type": "boolean"
-          }
-        }
-      },
-      "SetUltimateCloudSyncInput": {
-        "required": [
-          "enabled"
-        ],
-        "type": "object",
-        "properties": {
-          "enabled": {
             "type": "boolean"
           }
         }
@@ -27277,6 +27763,12 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "allowReplace": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -29415,6 +29907,25 @@
           }
         }
       },
+      "UltimateCloudPlusStatus": {
+        "required": [
+          "installed",
+          "available",
+          "extensionId"
+        ],
+        "type": "object",
+        "properties": {
+          "installed": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "extensionId": {
+            "type": "string"
+          }
+        }
+      },
       "UltimateCloudServices": {
         "required": [
           "personalPlays",
@@ -29473,7 +29984,7 @@
           "capabilities",
           "errorCode",
           "libraries",
-          "audioTool",
+          "plus",
           "enabled",
           "services"
         ],
@@ -29542,35 +30053,14 @@
               "$ref": "#/components/schemas/UltimateCloudLibrary"
             }
           },
-          "audioTool": {
-            "$ref": "#/components/schemas/UltimateCloudTool"
+          "plus": {
+            "$ref": "#/components/schemas/UltimateCloudPlusStatus"
           },
           "enabled": {
             "type": "boolean"
           },
           "services": {
             "$ref": "#/components/schemas/UltimateCloudServices"
-          }
-        }
-      },
-      "UltimateCloudTool": {
-        "required": [
-          "version",
-          "errorCode"
-        ],
-        "type": "object",
-        "properties": {
-          "version": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "errorCode": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -29702,6 +30192,12 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "allowReplace": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

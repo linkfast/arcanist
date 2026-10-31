@@ -16,7 +16,8 @@ export type Permission =
   | 'PLAY_ON_SERVER'
   | 'VIEW_ALL_WISHES'
   | 'EDIT_METADATA'
-  | 'DELETE_TRACKS';
+  | 'DELETE_TRACKS'
+  | 'SHARE_LINKS';
 export type DatabaseProvider = 'SQLITE' | 'POSTGRES';
 
 export interface UserAccount {

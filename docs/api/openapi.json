@@ -1427,6 +1427,123 @@
         }
       }
     },
+    "/rest/v1/public/playlists/{token}/preview/{entryId}": {
+      "get": {
+        "tags": [
+          "Sharing"
+        ],
+        "summary": "30 seconds of a song of a shared playlist, as MP3, for anyone (the entry\u0027s \u0060previewUrl\u0060). Never counted as a play.",
+        "operationId": "SharedPlaylistPreview",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "Sharing"
+        ],
+        "summary": "30 seconds of a song of a shared playlist, as MP3, for anyone (the entry\u0027s \u0060previewUrl\u0060). Never counted as a play.",
+        "operationId": "SharedPlaylistPreview",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/jams": {
+      "get": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "The Jukebox Jams the user hosts or takes part in that have not ended.",
+        "operationId": "MyJukeboxJams",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JukeboxJamSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Starts a Jukebox Jam the user hosts: a live queue (a playlist of its own) that plays on a client of theirs (any that implements the host API), the server\u0027s audio or a DLNA renderer. Opening it to guests without an account needs SHARE_LINKS and the server\u0027s setting.",
+        "operationId": "StartJukeboxJam",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartJukeboxJamInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/uploads": {
       "get": {
         "tags": [
@@ -5031,7 +5148,7 @@
         "tags": [
           "Playlists"
         ],
-        "summary": "Renames, describes and shares a playlist. Owner only.",
+        "summary": "Renames, describes and makes a playlist public or not. Owner and managers.",
         "operationId": "UpdatePlaylist",
         "parameters": [
           {
@@ -5319,7 +5436,7 @@
         "tags": [
           "Playlists"
         ],
-        "summary": "Replaces the users who can add, remove and reorder the playlist\u0027s tracks. Owner only.",
+        "summary": "Replaces the users who can add, remove and reorder the playlist\u0027s tracks (those listed edit it, or still manage it; those who only listen stay). Owner and managers. See setPlaylistMembers.",
         "operationId": "SetPlaylistCollaborators",
         "parameters": [
           {
@@ -5349,6 +5466,804 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Playlist"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/playlists/{playlistId}/members": {
+      "put": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Replaces the users the playlist is shared with and what each can do: LISTEN, EDIT (add, remove and reorder tracks) or MANAGE (also rename it, share it and manage its public link). Owner and managers.",
+        "operationId": "SetPlaylistMembers",
+        "parameters": [
+          {
+            "name": "playlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistMembersInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Playlist"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/playlists/{playlistId}/link": {
+      "post": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Gives the playlist a public link (or returns the one it has): anyone with it sees the playlist and hears 30-second previews. Owner and managers with SHARE_LINKS, when the server allows public links (public_links_disabled otherwise).",
+        "operationId": "CreatePlaylistLink",
+        "parameters": [
+          {
+            "name": "playlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Playlist"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Playlists"
+        ],
+        "summary": "Removes the playlist\u0027s public link: it no longer opens. Owner and managers.",
+        "operationId": "RevokePlaylistLink",
+        "parameters": [
+          {
+            "name": "playlistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Playlist"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/sharing": {
+      "get": {
+        "tags": [
+          "Sharing"
+        ],
+        "summary": "Whether the server lets its users share outside it (public playlist links, guests without an account in Jukebox Jams) and whether the user may (SHARE_LINKS).",
+        "operationId": "Sharing",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharingStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Sharing"
+        ],
+        "summary": "Turns public playlist links and guests in Jukebox Jams on or off (both off at first): turned off, those there were stop working at once. Administrators, with a recent sign-in.",
+        "operationId": "SetSharingSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SharingSettingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharingStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/playlists/{token}": {
+      "get": {
+        "tags": [
+          "Sharing"
+        ],
+        "summary": "A playlist by its public link, page by page; anyone can ask, without an account. Songs come with a 30-second preview; to a signed-in user, also as tracks when they can play them in full. Not found when the link does not work (revoked, or public links turned off).",
+        "operationId": "SharedPlaylist",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedPlaylist"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/playlists/{token}/copy": {
+      "post": {
+        "tags": [
+          "Sharing"
+        ],
+        "summary": "Makes a private playlist of the user\u0027s own with the songs of a shared one (by its public link) they can play.",
+        "operationId": "CopySharedPlaylist",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CopyPlaylistInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Playlist"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}": {
+      "get": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "A Jukebox Jam by its code, as the one asking sees it: what plays, the queue in the order it will play, the DJ if there is one. Users of the server with its code; without an account, only Jams open to guests (with the X-Arcanist-Guest header once joined). An ended one says so (\u0060endedAt\u0060).",
+        "operationId": "JukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Changes a Jam\u0027s name, voting, guests and libraries. Host only.",
+        "operationId": "UpdateJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateJukeboxJamInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/search": {
+      "get": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Songs that can be added to a Jam (from its libraries, among those the host can listen to). For those taking part.",
+        "operationId": "JukeboxJamSearch",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JukeboxJamSearchResult"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/join": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Takes part in a Jam. A signed-in user becomes a member (null is returned); someone without an account gets a guest session by the name they give (send its token in X-Arcanist-Guest).",
+        "operationId": "JoinJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/JoinJukeboxJamInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJamGuestSession"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/tracks": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Adds songs to a Jam\u0027s queue (at most 50 at once). Guests within their limit (jam_guest_limit, with retryAfterSeconds); in voting Jams each comes with a vote of whoever adds it. \u0060source: DJ\u0060 is the host\u0027s DJ: no limit and no vote.",
+        "operationId": "AddToJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JukeboxJamTracksInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/votes": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "A vote for a waiting song (voting Jams). As often as one likes, but once every 30 seconds in the whole Jam: sooner is jam_vote_too_soon with retryAfterSeconds.",
+        "operationId": "VoteJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JukeboxJamVoteInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/control": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist.",
+        "operationId": "ControlJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ControlJukeboxJamInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/guests/{guestId}": {
+      "delete": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Takes a guest out of a Jam: their session no longer works. The host and those who manage it.",
+        "operationId": "RemoveJukeboxJamGuest",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "guestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/end": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Ends a Jam: its code no longer works and what played stays as a playlist of the host\u0027s. Host only.",
+        "operationId": "EndJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/host": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Host API: this client (a web player tab, Ultimate Desktop) plays the Jam; another one claiming it takes over (the one before gets a HOST change with the new device). Host only, for Jams that play on a client.",
+        "operationId": "ClaimJukeboxJamHost",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimJukeboxJamHostInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/next": {
+      "get": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Host API: the song the host\u0027s client should play next (pinned, then most voted, then by arrival), with its stream; null when nothing waits. Host only.",
+        "operationId": "JukeboxJamNext",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJamNext"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/playback": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Host API: what the host\u0027s client plays (an entry of the Jam, which leaves the queue; a song not on the server; or nothing), paused or not and where. Every 5 seconds and on every change, from the device that claimed it (jam_not_host otherwise).",
+        "operationId": "ReportJukeboxJamPlayback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportJukeboxJamPlaybackInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/dj": {
+      "put": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "Host API: a DJ chooses what plays (ULTIMATE_AI_DJ: Ultimate\u0027s AI DJ), or no longer (NONE); everyone in the Jam sees it. Taken off by itself when the host\u0027s client is gone for 5 minutes. Host only.",
+        "operationId": "SetJukeboxJamDj",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetJukeboxJamDjInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
                 }
               }
             }
@@ -5605,6 +6520,30 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Frontend"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/frontends/available": {
+      "get": {
+        "tags": [
+          "Frontends"
+        ],
+        "summary": "The web players any user can open (to switch from one to another), the default one first.",
+        "operationId": "AvailablePlayers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvailablePlayer"
+                  }
                 }
               }
             }
@@ -12784,7 +13723,11 @@
           "LIBRARY_RENAME",
           "MUSIC_VIDEOS",
           "VIDEO_LYRICS",
-          "LYRICS_TRANSCRIPTION"
+          "LYRICS_TRANSCRIPTION",
+          "PLAYLIST_SHARING",
+          "JUKEBOX_JAM",
+          "JUKEBOX_JAM_AI_DJ",
+          "AVAILABLE_PLAYERS"
         ]
       },
       "AppPassword": {
@@ -13894,6 +14837,47 @@
           }
         }
       },
+      "AvailablePlayer": {
+        "required": [
+          "id",
+          "name",
+          "version",
+          "description",
+          "url",
+          "isDefault",
+          "features"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "BackupDefinition": {
         "required": [
           "id",
@@ -14480,6 +15464,42 @@
           }
         }
       },
+      "ClaimJukeboxJamHostInput": {
+        "required": [
+          "deviceId",
+          "kind",
+          "playerId",
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/JukeboxJamClientKind"
+          },
+          "playerId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ClientStreamingQuality": {
         "required": [
           "format",
@@ -14786,6 +15806,35 @@
             "$ref": "#/components/schemas/DlnaRendererAction"
           },
           "positionMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ControlJukeboxJamInput": {
+        "required": [
+          "action",
+          "entryId",
+          "position"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/JukeboxJamAction"
+          },
+          "entryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "position": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
@@ -17722,6 +18771,20 @@
           }
         }
       },
+      "JoinJukeboxJamInput": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "JoinShareRequest": {
         "required": [
           "token",
@@ -17734,6 +18797,709 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "JukeboxJam": {
+        "required": [
+          "code",
+          "name",
+          "playlistId",
+          "host",
+          "url",
+          "playsOn",
+          "rendererId",
+          "hostClient",
+          "voting",
+          "voteIntervalSeconds",
+          "allowGuests",
+          "dj",
+          "nowPlaying",
+          "queue",
+          "played",
+          "you",
+          "guests",
+          "guestLibraryIds",
+          "startedAt",
+          "endedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "playlistId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "host": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "playsOn": {
+            "$ref": "#/components/schemas/JukeboxJamPlaysOn"
+          },
+          "rendererId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hostClient": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JukeboxJamHostClient"
+              }
+            ]
+          },
+          "voting": {
+            "type": "boolean"
+          },
+          "voteIntervalSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "allowGuests": {
+            "type": "boolean"
+          },
+          "dj": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JukeboxJamDjSession"
+              }
+            ]
+          },
+          "nowPlaying": {
+            "$ref": "#/components/schemas/JukeboxJamNowPlaying"
+          },
+          "queue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JukeboxJamEntry"
+            }
+          },
+          "played": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JukeboxJamEntry"
+            }
+          },
+          "you": {
+            "$ref": "#/components/schemas/JukeboxJamYou"
+          },
+          "guests": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/JukeboxJamGuestInfo"
+            }
+          },
+          "guestLibraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "JukeboxJamAction": {
+        "enum": [
+          "SKIP",
+          "PAUSE",
+          "RESUME",
+          "REMOVE",
+          "PIN",
+          "UNPIN",
+          "MOVE"
+        ]
+      },
+      "JukeboxJamAddSource": {
+        "enum": [
+          "REQUEST",
+          "DJ",
+          null
+        ]
+      },
+      "JukeboxJamClientKind": {
+        "enum": [
+          "WEB",
+          "DESKTOP",
+          "MOBILE",
+          "OTHER"
+        ]
+      },
+      "JukeboxJamDjKind": {
+        "enum": [
+          "NONE",
+          "ULTIMATE_AI_DJ"
+        ]
+      },
+      "JukeboxJamDjSession": {
+        "required": [
+          "kind",
+          "name",
+          "message",
+          "since"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/JukeboxJamDjKind"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JukeboxJamEntry": {
+        "required": [
+          "id",
+          "song",
+          "state",
+          "addedBy",
+          "addedByGuest",
+          "addedByDj",
+          "addedByYou",
+          "votes",
+          "pinned",
+          "addedAt",
+          "playedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "song": {
+            "$ref": "#/components/schemas/JukeboxJamSong"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JukeboxJamEntryState"
+          },
+          "addedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "addedByGuest": {
+            "type": "boolean"
+          },
+          "addedByDj": {
+            "type": "boolean"
+          },
+          "addedByYou": {
+            "type": "boolean"
+          },
+          "votes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "playedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "JukeboxJamEntryState": {
+        "enum": [
+          "WAITING",
+          "PLAYING",
+          "PLAYED"
+        ]
+      },
+      "JukeboxJamExternalSongInput": {
+        "required": [
+          "title",
+          "artists",
+          "album",
+          "durationMs",
+          "artworkUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "artists": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artworkUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "JukeboxJamGuestInfo": {
+        "required": [
+          "id",
+          "name",
+          "joinedAt",
+          "songsAdded",
+          "removed"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "songsAdded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "removed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "JukeboxJamGuestSession": {
+        "required": [
+          "token",
+          "guestId",
+          "name",
+          "jam"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "guestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "jam": {
+            "$ref": "#/components/schemas/JukeboxJam"
+          }
+        }
+      },
+      "JukeboxJamHostClient": {
+        "required": [
+          "kind",
+          "playerId",
+          "name",
+          "version",
+          "online",
+          "seenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/JukeboxJamClientKind"
+          },
+          "playerId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "seenAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "JukeboxJamNext": {
+        "required": [
+          "entryId",
+          "track"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "track": {
+            "$ref": "#/components/schemas/Track"
+          }
+        }
+      },
+      "JukeboxJamNowPlaying": {
+        "required": [
+          "entry",
+          "external",
+          "paused",
+          "positionMs",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "entry": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JukeboxJamEntry"
+              }
+            ]
+          },
+          "external": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JukeboxJamSong"
+              }
+            ]
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "positionMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "JukeboxJamParticipation": {
+        "enum": [
+          "HOST",
+          "MANAGER",
+          "MEMBER",
+          "GUEST",
+          "VISITOR"
+        ]
+      },
+      "JukeboxJamPlaybackState": {
+        "enum": [
+          "PLAYING",
+          "PAUSED",
+          "STOPPED"
+        ]
+      },
+      "JukeboxJamPlaysOn": {
+        "enum": [
+          "CLIENT",
+          "SERVER",
+          "DLNA"
+        ]
+      },
+      "JukeboxJamSearchResult": {
+        "required": [
+          "song",
+          "inQueue"
+        ],
+        "type": "object",
+        "properties": {
+          "song": {
+            "$ref": "#/components/schemas/JukeboxJamSong"
+          },
+          "inQueue": {
+            "type": "boolean"
+          }
+        }
+      },
+      "JukeboxJamSong": {
+        "required": [
+          "trackId",
+          "title",
+          "artists",
+          "album",
+          "durationMs",
+          "artworkId",
+          "artworkUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artists": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "artworkUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "JukeboxJamSummary": {
+        "required": [
+          "code",
+          "name",
+          "host",
+          "hosting",
+          "playsOn",
+          "waiting",
+          "startedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "hosting": {
+            "type": "boolean"
+          },
+          "playsOn": {
+            "$ref": "#/components/schemas/JukeboxJamPlaysOn"
+          },
+          "waiting": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JukeboxJamTracksInput": {
+        "required": [
+          "trackIds",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "trackIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JukeboxJamAddSource"
+              }
+            ]
+          }
+        }
+      },
+      "JukeboxJamVoteInput": {
+        "required": [
+          "entryId"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "JukeboxJamYou": {
+        "required": [
+          "participation",
+          "name",
+          "guestId",
+          "canControl",
+          "nextVoteAt",
+          "addsLeft"
+        ],
+        "type": "object",
+        "properties": {
+          "participation": {
+            "$ref": "#/components/schemas/JukeboxJamParticipation"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "guestId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "canControl": {
+            "type": "boolean"
+          },
+          "nextVoteAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "addsLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -21928,7 +23694,8 @@
           "PLAY_ON_SERVER",
           "VIEW_ALL_WISHES",
           "EDIT_METADATA",
-          "DELETE_TRACKS"
+          "DELETE_TRACKS",
+          "SHARE_LINKS"
         ]
       },
       "PlannedMove": {
@@ -22052,7 +23819,11 @@
           "durationMs",
           "artworkIds",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "type",
+          "members",
+          "link",
+          "jukeboxJamCode"
         ],
         "type": "object",
         "properties": {
@@ -22114,6 +23885,31 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PlaylistType"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaylistMember"
+            }
+          },
+          "link": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlaylistLink"
+              }
+            ]
+          },
+          "jukeboxJamCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -22218,11 +24014,90 @@
           }
         }
       },
+      "PlaylistLink": {
+        "required": [
+          "token",
+          "url",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PlaylistMember": {
+        "required": [
+          "user",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserReference"
+          },
+          "role": {
+            "$ref": "#/components/schemas/PlaylistShareRole"
+          }
+        }
+      },
+      "PlaylistMemberInput": {
+        "required": [
+          "userId",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "$ref": "#/components/schemas/PlaylistShareRole"
+          }
+        }
+      },
+      "PlaylistMembersInput": {
+        "required": [
+          "members"
+        ],
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaylistMemberInput"
+            }
+          }
+        }
+      },
       "PlaylistRole": {
         "enum": [
           "OWNER",
+          "MANAGER",
           "COLLABORATOR",
           "VIEWER"
+        ]
+      },
+      "PlaylistShareRole": {
+        "enum": [
+          "LISTEN",
+          "EDIT",
+          "MANAGE"
+        ]
+      },
+      "PlaylistType": {
+        "enum": [
+          "NORMAL",
+          "JUKEBOX_JAM"
         ]
       },
       "PlayOnDlnaRendererInput": {
@@ -22729,6 +24604,49 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "ReportJukeboxJamPlaybackInput": {
+        "required": [
+          "deviceId",
+          "entryId",
+          "external",
+          "state",
+          "positionMs"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "entryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "external": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JukeboxJamExternalSongInput"
+              }
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/JukeboxJamPlaybackState"
+          },
+          "positionMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -23822,6 +25740,31 @@
           }
         }
       },
+      "SetJukeboxJamDjInput": {
+        "required": [
+          "kind",
+          "name",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/JukeboxJamDjKind"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SetLibraryCloudSyncInput": {
         "required": [
           "mode",
@@ -24813,6 +26756,249 @@
           "FAILED"
         ]
       },
+      "SharedPlaylist": {
+        "required": [
+          "token",
+          "name",
+          "description",
+          "owner",
+          "trackCount",
+          "durationMs",
+          "artworkIds",
+          "updatedAt",
+          "playlistId",
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "owner": {
+            "type": "string"
+          },
+          "trackCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "artworkIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "playlistId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "entries": {
+            "$ref": "#/components/schemas/SharedPlaylistPage"
+          }
+        }
+      },
+      "SharedPlaylistEntry": {
+        "required": [
+          "id",
+          "position",
+          "title",
+          "artists",
+          "album",
+          "durationMs",
+          "artworkId",
+          "previewUrl",
+          "track"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artists": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "album": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "previewUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "track": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Track"
+              }
+            ]
+          }
+        }
+      },
+      "SharedPlaylistPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SharedPlaylistEntry"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SharingSettingsInput": {
+        "required": [
+          "publicLinks",
+          "jamGuests",
+          "guestAddLimit",
+          "maxGuests"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLinks": {
+            "type": "boolean"
+          },
+          "jamGuests": {
+            "type": "boolean"
+          },
+          "guestAddLimit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxGuests": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SharingStatus": {
+        "required": [
+          "publicLinks",
+          "jamGuests",
+          "guestAddLimit",
+          "maxGuests",
+          "canShareLinks"
+        ],
+        "type": "object",
+        "properties": {
+          "publicLinks": {
+            "type": "boolean"
+          },
+          "jamGuests": {
+            "type": "boolean"
+          },
+          "guestAddLimit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxGuests": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "canShareLinks": {
+            "type": "boolean"
+          }
+        }
+      },
       "SnapshotAlbum": {
         "required": [
           "id",
@@ -25050,6 +27236,47 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "StartJukeboxJamInput": {
+        "required": [
+          "name",
+          "playsOn",
+          "rendererId",
+          "voting",
+          "allowGuests",
+          "guestLibraryIds"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "playsOn": {
+            "$ref": "#/components/schemas/JukeboxJamPlaysOn"
+          },
+          "rendererId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "voting": {
+            "type": "boolean"
+          },
+          "allowGuests": {
+            "type": "boolean"
+          },
+          "guestLibraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -27439,6 +29666,45 @@
           }
         }
       },
+      "UpdateJukeboxJamInput": {
+        "required": [
+          "name",
+          "voting",
+          "allowGuests",
+          "guestLibraryIds"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "voting": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "allowGuests": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "guestLibraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "UpdateLibraryInput": {
         "required": [
           "name",
@@ -29003,6 +31269,12 @@
     },
     {
       "name": "Playlists"
+    },
+    {
+      "name": "Sharing"
+    },
+    {
+      "name": "Jukebox Jam"
     },
     {
       "name": "arcanist"

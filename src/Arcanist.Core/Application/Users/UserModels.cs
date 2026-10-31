@@ -32,6 +32,12 @@ public enum Permission
 
     /// <summary>Removes tracks from the libraries the user can add to; their files go to the location's trash.</summary>
     DeleteTracks,
+
+    /// <summary>
+    /// Shares outside the server, when it allows it: public links to playlists, Jukebox Jams open to guests without an
+    /// account.
+    /// </summary>
+    ShareLinks,
 }
 
 /// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed,
@@ -106,6 +112,7 @@ public static class PermissionMapping
         Permission.ViewAllWishes => Permissions.ViewAllWishes,
         Permission.EditMetadata => Permissions.EditMetadata,
         Permission.DeleteTracks => Permissions.DeleteTracks,
+        Permission.ShareLinks => Permissions.ShareLinks,
         _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null),
     };
 

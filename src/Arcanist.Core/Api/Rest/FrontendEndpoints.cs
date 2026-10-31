@@ -18,6 +18,10 @@ public static class FrontendEndpoints
             .WithName("Frontends")
             .WithSummary("Installed web players; the default one is served at /. Administrators only.");
 
+        frontends.MapGet("/available", (FrontendService service, CancellationToken ct) => service.AvailableAsync(ct))
+            .WithName("AvailablePlayers")
+            .WithSummary("The web players any user can open (to switch from one to another), the default one first.");
+
         // Uploads exist only in REST: GraphQL has no file type.
         frontends.MapPost("", async (IFormFile file, FrontendService service, CancellationToken ct) =>
             {

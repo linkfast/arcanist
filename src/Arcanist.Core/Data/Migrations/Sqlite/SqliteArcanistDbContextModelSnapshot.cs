@@ -1050,6 +1050,180 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("ImportItems");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamGuest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Banned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("JamId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JamId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("JamGuests");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AllowGuests")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CurrentEntryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DjKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DjMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DjName")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DjSince")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalNowPlaying")
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GuestLibraryIds")
+                        .HasMaxLength(20000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HostClient")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HostDeviceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("HostSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("HostUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Paused")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("PinnedEntryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PlaylistId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PositionAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PositionMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RendererId")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Voting")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("HostUserId");
+
+                    b.HasIndex("PlaylistId")
+                        .IsUnique();
+
+                    b.ToTable("JamSessions");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CastAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("EntryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("FromAdding")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("GuestId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("JamId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JamId", "EntryId");
+
+                    b.HasIndex("JamId", "GuestId", "CastAt");
+
+                    b.HasIndex("JamId", "UserId", "CastAt");
+
+                    b.ToTable("JamVotes");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2119,6 +2293,18 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<bool>("IsPublic")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LinkCreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinkToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -2141,6 +2327,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
 
                     b.HasKey("Id");
 
+                    b.HasIndex("LinkToken")
+                        .IsUnique();
+
                     b.HasIndex("NormalizedName");
 
                     b.HasIndex("OwnerId");
@@ -2159,6 +2348,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("PlaylistId", "UserId");
 
                     b.HasIndex("UserId");
@@ -2174,7 +2368,16 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AddedByDj")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("AddedByGuestId")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("AddedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PlayedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("PlaylistId")
@@ -3163,6 +3366,39 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Navigation("DropFolder");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamGuest", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.JamSession", "Jam")
+                        .WithMany("Guests")
+                        .HasForeignKey("JamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Jam");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamSession", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Playlist", "Playlist")
+                        .WithMany()
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Playlist");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamVote", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.JamSession", "Jam")
+                        .WithMany()
+                        .HasForeignKey("JamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Jam");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.User", "Owner")
@@ -3622,6 +3858,11 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DlnaImport", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamSession", b =>
+                {
+                    b.Navigation("Guests");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>

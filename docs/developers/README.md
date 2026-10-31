@@ -384,6 +384,46 @@ days and hours are theirs.
 moved (`removePlaylistEntries`, `movePlaylistEntries`), since a track can appear twice. Tracks from libraries the user
 cannot access stay in the playlist but are not listed for them. `artworkIds` has up to four covers for a collage.
 
+### Sharing playlists
+
+On servers with `PLAYLIST_SHARING`, a playlist is shared with users of the server by role:
+`setPlaylistMembers(playlistId, members: [{userId, role}])` with `LISTEN` (see and play it), `EDIT` (also add, remove
+and reorder its tracks) or `MANAGE` (also rename it, share it and manage its public link). The owner and managers
+share it; only the owner deletes it. `Playlist.members` lists them, and `Playlist.role` gains `MANAGER`;
+`collaborators` (and `setPlaylistCollaborators`) still work, as the members who edit or manage it.
+`Playlist.type` is `JUKEBOX_JAM` for the queue of a Jam (change it through the Jam: `playlist_is_jam`), with
+`jukeboxJamCode` while it lasts.
+
+The subscription `playlistChanged(playlistId)` (or without it, for all the playlists the user sees) says when one
+changed or was deleted: read it again. `playlists(changedSince:)` still works for clients that poll.
+
+### Public links and previews
+
+When an administrator allows it (`sharing.publicLinks`, Settings → Sharing; off at first) and the user has
+`SHARE_LINKS`, the owner or a manager gives a playlist a public link: `createPlaylistLink` (it returns the playlist with
+`link { token url createdAt }`; asking again returns the same one) and `revokePlaylistLink`. `link.url` is relative to
+the server: a player's page (`/players/<id>/#/s/<token>`, see `features` in [frontends.md](frontends.md)).
+
+Anyone with the token, without an account, reads `sharedPlaylist(token, after, first)` (or `GET
+/rest/v1/public/playlists/{token}`): the name, the owner's name, covers and the songs as the owner has them (title,
+artists, album, duration, artwork), page by page. Each entry's `previewUrl` plays 30 seconds of it as MP3 from about a
+third of the way in, for anyone (`GET /rest/v1/public/playlists/{token}/preview/{entryId}`; never counted as a play;
+null without ffmpeg or for songs only on another server or in Ultimate Cloud). Sent with a session, each entry also has
+`track` when that user can play it in full (with its `streamUrl`), and `copySharedPlaylist(token, name)` saves a
+private copy. A link stops working at once when it is revoked, when the owner loses `SHARE_LINKS` or is disabled, or
+when public links are turned off. These routes are rate limited per address.
+
+### Jukebox Jams
+
+A live queue several people add songs to (and vote on) while it plays on one player of the host's: see
+[jukebox-jam.md](jukebox-jam.md) for the whole API, the host API any player can implement, guests without an account
+and sessions with Ultimate's AI DJ.
+
+### Switching players
+
+`availablePlayers` (any user) lists the web players of the server (id, name, `url`, whether it is the default one,
+its `features`), for a player that offers to open another one.
+
 ## Wish lists
 
 With `WISH_LIST` in `serverInfo.features`, each user keeps a list of songs they want. `addWish` /

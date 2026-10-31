@@ -282,6 +282,28 @@ public static class ErrorCodes
     public const string NoLocalCopy = "no_local_copy";
     /// <summary>The song already has lyrics (or is known to be instrumental): there is nothing to recognize or accept.</summary>
     public const string HasLyrics = "has_lyrics";
+    /// <summary>The server does not allow public links (an admin turns them on), or the user may not make them.</summary>
+    public const string PublicLinksDisabled = "public_links_disabled";
+    /// <summary>The server does not allow guests without an account in Jukebox Jams.</summary>
+    public const string JamGuestsDisabled = "jam_guests_disabled";
+    /// <summary>The Jukebox Jam is over.</summary>
+    public const string JamEnded = "jam_ended";
+    /// <summary>The Jukebox Jam takes no more guests.</summary>
+    public const string JamFull = "jam_full";
+    /// <summary>The guest added as many songs as they may for now.</summary>
+    public const string JamGuestLimit = "jam_guest_limit";
+    /// <summary>The host removed this guest from the Jukebox Jam.</summary>
+    public const string JamGuestRemoved = "jam_guest_removed";
+    /// <summary>The song is not in the libraries of the Jukebox Jam.</summary>
+    public const string JamTrackNotAllowed = "jam_track_not_allowed";
+    /// <summary>One vote every 30 seconds: wait <c>retryAfterSeconds</c>.</summary>
+    public const string JamVoteTooSoon = "jam_vote_too_soon";
+    /// <summary>The Jukebox Jam is not voted on.</summary>
+    public const string JamVotingOff = "jam_voting_off";
+    /// <summary>Only the host (its playing client) does that.</summary>
+    public const string JamNotHost = "jam_not_host";
+    /// <summary>The playlist is the queue of a Jukebox Jam: change it through the Jam.</summary>
+    public const string PlaylistIsJam = "playlist_is_jam";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>
@@ -325,6 +347,12 @@ public abstract class ArcanistException(string code, int statusCode) : Exception
     public sealed class NotFound() : ArcanistException(ErrorCodes.NotFound, StatusCodes.Status404NotFound);
 
     public sealed class Conflict(string code) : ArcanistException(code, StatusCodes.Status409Conflict);
+
+    /// <summary>Not yet: it can be done again after <see cref="RetryAfterSeconds"/> (sent as <c>retryAfterSeconds</c>).</summary>
+    public sealed class TooSoon(string code, int retryAfterSeconds) : ArcanistException(code, StatusCodes.Status429TooManyRequests)
+    {
+        public int RetryAfterSeconds { get; } = retryAfterSeconds;
+    }
 
     /// <summary>The server cannot do it right now (maintenance).</summary>
     public sealed class Unavailable(string code) : ArcanistException(code, StatusCodes.Status503ServiceUnavailable);

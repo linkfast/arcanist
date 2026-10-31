@@ -981,6 +981,7 @@ export const en: Dictionary = {
     VIEW_ALL_WISHES: "View everyone's wish lists",
     EDIT_METADATA: 'Edit tags and covers',
     DELETE_TRACKS: 'Delete songs',
+    SHARE_LINKS: 'Share outside the server',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Create, edit and delete the libraries they can access.',
@@ -999,6 +1000,8 @@ export const en: Dictionary = {
       'Change the tags (title, artists, album…) and covers of songs in the libraries they add to, from apps such as Ultimate Desktop. They are written to the files themselves; the original goes to the folder’s trash.',
     DELETE_TRACKS:
       'Delete songs from the libraries they add to, from apps. Their files go to the folder’s trash (kept 30 days).',
+    SHARE_LINKS:
+      'Make public links to their playlists (anyone with the link sees the songs and hears 30 seconds) and open their Jukebox Jams to guests without an account, when the server allows it (Settings → Sharing).',
   },
   account: {
     videos: {
@@ -1727,6 +1730,23 @@ export const en: Dictionary = {
         'DLNA announces itself by multicast on the local network: in Docker → Arcanist → Edit, choose Network Type: Host.',
       ROCKSTOR:
         "DLNA announces itself by multicast on the local network, which does not leave a Rock-on's container: devices may not find Arcanist.",
+    },
+  },
+  sharing: {
+    card: {
+      title: 'Sharing',
+      description:
+        'What users can share outside the server, with people without an account. Off, nothing leaves the server.',
+      publicLinks: 'Public playlist links',
+      publicLinksHelp:
+        'Anyone with the link sees the playlist’s name, songs and covers and hears 30 seconds of each, without an account. Only someone signed in with access to a song hears it whole. Turning it off stops every link at once.',
+      jamGuests: 'Guests without an account in Jukebox Jams',
+      jamGuestsHelp:
+        'With a Jam’s link or QR code, anyone gives a name, searches its libraries and adds songs (and votes). They hear nothing: the music plays on the host’s player. Turning it off stops every guest at once.',
+      guestAddLimit: 'Songs per guest every 10 minutes',
+      maxGuests: 'Guests per Jam',
+      permission:
+        'Each user also needs the “Share outside the server” permission (Users). Administrators always have it.',
     },
   },
   updates: {
@@ -3259,6 +3279,19 @@ export const en: Dictionary = {
     no_lyrics: 'That song has no lyrics to sync.',
     no_local_copy: 'That song has no copy on the server’s disks to listen to.',
     has_lyrics: 'That song already has lyrics.',
+    public_links_disabled:
+      'Public links are not allowed (Settings → Sharing), or you may not make them.',
+    jam_guests_disabled:
+      'Guests without an account are not allowed in Jams (Settings → Sharing), or you may not invite them.',
+    jam_ended: 'That Jukebox Jam is over.',
+    jam_full: 'The Jam takes no more guests.',
+    jam_guest_limit: 'You added all the songs you can for now; wait a little.',
+    jam_guest_removed: 'The host took you out of this Jam.',
+    jam_track_not_allowed: 'That song is not in the Jam’s libraries.',
+    jam_vote_too_soon: 'You can vote once every 30 seconds.',
+    jam_voting_off: 'This Jam is not voted on.',
+    jam_not_host: 'Only the host (the player it plays on) can do that.',
+    playlist_is_jam: 'It is the queue of a Jukebox Jam: change it from the Jam.',
     unexpected: 'Something went wrong. Please try again.',
     network: 'Cannot reach the server.',
     unauthorized: 'Your session has expired. Please sign in again.',

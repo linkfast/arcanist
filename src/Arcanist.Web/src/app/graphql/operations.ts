@@ -1202,6 +1202,32 @@ export const SetServerUpdateSettingsMutation = graphql(`
   }
 `);
 
+export const SharingFieldsFragment = graphql(`
+  fragment SharingFields on SharingStatus {
+    publicLinks
+    jamGuests
+    guestAddLimit
+    maxGuests
+    canShareLinks
+  }
+`);
+
+export const SharingQuery = graphql(`
+  query Sharing {
+    sharing {
+      ...SharingFields
+    }
+  }
+`);
+
+export const SetSharingSettingsMutation = graphql(`
+  mutation SetSharingSettings($input: SharingSettingsInput!) {
+    setSharingSettings(input: $input) {
+      ...SharingFields
+    }
+  }
+`);
+
 export const ExtensionMarketplaceQuery = graphql(`
   query ExtensionMarketplace($language: String, $refresh: Boolean) {
     extensionMarketplace(language: $language, refresh: $refresh) {

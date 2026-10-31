@@ -26,6 +26,8 @@ public enum Permissions : long
     EditMetadata = 1 << 9,
     /// <summary>Removes tracks from the libraries, their files going to the location's trash.</summary>
     DeleteTracks = 1 << 10,
+    /// <summary>Shares outside the server: public links to playlists, Jukebox Jams open to guests without an account.</summary>
+    ShareLinks = 1 << 11,
 }
 
 public sealed class User : Entity

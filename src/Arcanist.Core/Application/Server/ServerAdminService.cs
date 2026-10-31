@@ -142,6 +142,7 @@ public sealed class ServerAdminService(
         await services.GetRequiredService<Core.Media.TranscodingSettings>().SetAsync(Core.Media.TranscodingConfig.Default, cancellationToken);
         await services.GetRequiredService<Core.Media.StreamingDefaultsSettings>().SetAsync(Core.Media.StreamingDefaults.Default, cancellationToken);
         await services.GetRequiredService<Core.P2P.RemoteLibrariesSettings>().SetAsync(Core.P2P.RemoteLibrariesConfig.Default, cancellationToken);
+        await services.GetRequiredService<Sharing.SharingSettings>().SetAsync(Sharing.SharingConfig.Default, cancellationToken);
         services.GetRequiredService<Core.P2P.P2PNode>().Changed();
         services.GetRequiredService<Core.Cloud.UltimateCloudAccount>().Wake();
 
@@ -167,6 +168,9 @@ public sealed class ServerAdminService(
         guard.Admin();
         guard.RecentAuthentication();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.JamVotes.ExecuteDeleteAsync(cancellationToken);
+        await db.JamGuests.ExecuteDeleteAsync(cancellationToken);
+        await db.JamSessions.ExecuteDeleteAsync(cancellationToken);
         await db.PlaylistEntries.ExecuteDeleteAsync(cancellationToken);
         await db.PlaylistCollaborators.ExecuteDeleteAsync(cancellationToken);
         await db.Playlists.ExecuteDeleteAsync(cancellationToken);

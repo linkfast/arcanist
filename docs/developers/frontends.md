@@ -32,6 +32,7 @@ folder usually produces).
 | `license` | No | An SPDX id or expression (`MIT`, `AGPL-3.0-or-later AND MIT`). It decides whether it is open source: without an open source license (none, or `LicenseRef-…`) it is closed source, which makes the server's edition STANDARD and is neither installed nor run while the server's 100% open source mode is on (`closed_source_disabled`). |
 | `minApiVersion` | No (1) | The oldest `serverInfo.apiVersion` the player works with. Servers with an older API refuse the package. |
 | `entry` | No (`index.html`) | The page served for the player's routes. |
+| `features` | No | What the player does that the server should know. `shared-links`: it opens public playlist links (`#/s/<token>`) and Jukebox Jam links (`#/jam/<code>`); the server makes those links point to the default player when it has this, otherwise to the first player that does. `jukebox-jam-host`: it can be the player a Jukebox Jam plays on ([jukebox-jam.md](jukebox-jam.md)). `availablePlayers` lists every player with its features. |
 
 Limits: 250 MB compressed, 1 GB unpacked, 20,000 files. Paths that would leave the package folder are refused.
 

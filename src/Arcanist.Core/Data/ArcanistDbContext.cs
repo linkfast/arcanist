@@ -92,6 +92,9 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<Playlist> Playlists => Set<Playlist>();
     public DbSet<PlaylistEntry> PlaylistEntries => Set<PlaylistEntry>();
     public DbSet<PlaylistCollaborator> PlaylistCollaborators => Set<PlaylistCollaborator>();
+    public DbSet<JamSession> JamSessions => Set<JamSession>();
+    public DbSet<JamGuest> JamGuests => Set<JamGuest>();
+    public DbSet<JamVote> JamVotes => Set<JamVote>();
 
     public DbSet<BackupDestination> BackupDestinations => Set<BackupDestination>();
 
@@ -517,8 +520,45 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             playlist.Property(p => p.NormalizedName).HasMaxLength(NameLength);
             playlist.Property(p => p.Description).HasMaxLength(2000);
             playlist.Property(p => p.SearchText).HasMaxLength(SearchTextLength);
+            playlist.Property(p => p.Kind).HasConversion<string>().HasMaxLength(EnumLength);
+            playlist.Property(p => p.LinkToken).HasMaxLength(64);
             playlist.HasIndex(p => p.OwnerId);
             playlist.HasIndex(p => p.NormalizedName);
+            playlist.HasIndex(p => p.LinkToken).IsUnique();
+        });
+
+        modelBuilder.Entity<JamSession>(jam =>
+        {
+            jam.HasOne(j => j.Playlist).WithMany().HasForeignKey(j => j.PlaylistId).OnDelete(DeleteBehavior.Cascade);
+            jam.HasIndex(j => j.PlaylistId).IsUnique();
+            jam.HasIndex(j => j.Code).IsUnique();
+            jam.HasIndex(j => j.HostUserId);
+            jam.Property(j => j.Code).HasMaxLength(64);
+            jam.Property(j => j.Target).HasConversion<string>().HasMaxLength(EnumLength);
+            jam.Property(j => j.DjKind).HasConversion<string>().HasMaxLength(EnumLength);
+            jam.Property(j => j.RendererId).HasMaxLength(PathLength);
+            jam.Property(j => j.HostDeviceId).HasMaxLength(200);
+            jam.Property(j => j.HostClient).HasMaxLength(2000);
+            jam.Property(j => j.GuestLibraryIds).HasMaxLength(20000);
+            jam.Property(j => j.DjName).HasMaxLength(NameLength);
+            jam.Property(j => j.DjMessage).HasMaxLength(500);
+            jam.Property(j => j.ExternalNowPlaying).HasMaxLength(4000);
+        });
+
+        modelBuilder.Entity<JamGuest>(guest =>
+        {
+            guest.HasOne(g => g.Jam).WithMany(j => j.Guests).OnDelete(DeleteBehavior.Cascade);
+            guest.Property(g => g.Name).HasMaxLength(100);
+            guest.Property(g => g.TokenHash).HasMaxLength(64);
+            guest.HasIndex(g => g.TokenHash).IsUnique();
+        });
+
+        modelBuilder.Entity<JamVote>(vote =>
+        {
+            vote.HasOne(v => v.Jam).WithMany().OnDelete(DeleteBehavior.Cascade);
+            vote.HasIndex(v => new { v.JamId, v.EntryId });
+            vote.HasIndex(v => new { v.JamId, v.UserId, v.CastAt });
+            vote.HasIndex(v => new { v.JamId, v.GuestId, v.CastAt });
         });
 
         modelBuilder.Entity<PlaylistEntry>(entry =>
@@ -532,6 +572,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
         modelBuilder.Entity<PlaylistCollaborator>(collaborator =>
         {
             collaborator.HasKey(c => new { c.PlaylistId, c.UserId });
+            collaborator.Property(c => c.Role).HasConversion<string>().HasMaxLength(EnumLength);
             collaborator.HasOne(c => c.Playlist).WithMany(p => p.Collaborators).OnDelete(DeleteBehavior.Cascade);
             collaborator.HasOne(c => c.User).WithMany().OnDelete(DeleteBehavior.Cascade);
             collaborator.HasIndex(c => c.UserId);

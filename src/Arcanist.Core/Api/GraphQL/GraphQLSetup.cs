@@ -69,6 +69,8 @@ internal sealed class ArcanistErrorInfoProvider(bool exposeExceptionDetails)
         var extensions = new Dictionary<string, object?> { ["code"] = exception.Code };
         if (exception is ArcanistException.Invalid invalid)
             extensions["errors"] = invalid.Errors.ToDictionary();
+        if (exception is ArcanistException.TooSoon soon)
+            extensions["retryAfterSeconds"] = soon.RetryAfterSeconds;
 
         return new ErrorInfo { Message = exception.Code, Extensions = extensions };
     }

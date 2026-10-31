@@ -87,7 +87,7 @@ internal static class ExportApi
     [
         SettingKeys.RatingMode, SettingKeys.Privacy, SettingKeys.ShareAnonymousStatistics, SettingKeys.OnlineServices, SettingKeys.AcoustIdKey,
         SettingKeys.DefaultLanguage, SettingKeys.AnalysisEnabled, SettingKeys.UpdatesEnabled, SettingKeys.Dlna, SettingKeys.Mstream,
-        SettingKeys.Transcoding, SettingKeys.StreamingDefaults, SettingKeys.RemoteLibraries, SettingKeys.Ai,
+        SettingKeys.Transcoding, SettingKeys.StreamingDefaults, SettingKeys.RemoteLibraries, SettingKeys.Ai, SettingKeys.Sharing,
     ];
 
     public static IEndpointRouteBuilder MapExportApi(this IEndpointRouteBuilder app)

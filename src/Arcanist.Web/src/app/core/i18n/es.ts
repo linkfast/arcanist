@@ -994,6 +994,7 @@ export const es: Dictionary = {
     VIEW_ALL_WISHES: 'Ver la lista de deseos de todos',
     EDIT_METADATA: 'Editar etiquetas y carátulas',
     DELETE_TRACKS: 'Eliminar canciones',
+    SHARE_LINKS: 'Compartir fuera del servidor',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Crear, editar y eliminar las bibliotecas a las que tiene acceso.',
@@ -1012,6 +1013,8 @@ export const es: Dictionary = {
       'Cambiar las etiquetas (título, artistas, álbum…) y las carátulas de las canciones de las bibliotecas a las que sube música, desde apps como Ultimate Desktop. Se escriben en los propios archivos; el original va a la papelera de la carpeta.',
     DELETE_TRACKS:
       'Eliminar canciones de las bibliotecas a las que sube música, desde las apps. Sus archivos van a la papelera de la carpeta (30 días).',
+    SHARE_LINKS:
+      'Crear enlaces públicos de sus playlists (cualquiera con el enlace ve las canciones y oye 30 segundos) y abrir sus Jukebox Jams a invitados sin cuenta, si el servidor lo permite (Ajustes → Compartir).',
   },
   account: {
     videos: {
@@ -1747,6 +1750,23 @@ export const es: Dictionary = {
         'DLNA se anuncia por multicast en la red local: en Docker → Arcanist → Editar, elige Network Type: Host.',
       ROCKSTOR:
         'DLNA se anuncia por multicast en la red local, que no sale del contenedor de un Rock-on: los dispositivos pueden no encontrar Arcanist.',
+    },
+  },
+  sharing: {
+    card: {
+      title: 'Compartir',
+      description:
+        'Lo que los usuarios pueden compartir fuera del servidor, con personas sin cuenta. Apagado, nada sale del servidor.',
+      publicLinks: 'Enlaces públicos de playlists',
+      publicLinksHelp:
+        'Quien tenga el enlace ve el nombre, las canciones y las carátulas de la playlist y escucha 30 segundos de cada una, sin cuenta. Solo quien inicia sesión y tiene acceso a una canción la escucha entera. Apagarlo corta al momento todos los enlaces.',
+      jamGuests: 'Invitados sin cuenta en los Jukebox Jams',
+      jamGuestsHelp:
+        'Con el enlace o el QR de un Jam, cualquiera pone un nombre, busca en sus bibliotecas y añade canciones (y vota). No escucha nada: la música suena en el reproductor del anfitrión. Apagarlo corta al momento a todos los invitados.',
+      guestAddLimit: 'Canciones por invitado cada 10 minutos',
+      maxGuests: 'Invitados por Jam',
+      permission:
+        'Además, cada usuario necesita el permiso «Compartir fuera del servidor» (Usuarios). Los administradores lo tienen siempre.',
     },
   },
   updates: {
@@ -3303,6 +3323,19 @@ export const es: Dictionary = {
     no_lyrics: 'Esa canción no tiene letra que sincronizar.',
     no_local_copy: 'Esa canción no tiene una copia en los discos del servidor que escuchar.',
     has_lyrics: 'Esa canción ya tiene letra.',
+    public_links_disabled:
+      'Los enlaces públicos no están permitidos (Ajustes → Compartir) o no tienes el permiso para crearlos.',
+    jam_guests_disabled:
+      'Los invitados sin cuenta no están permitidos en los Jams (Ajustes → Compartir) o no tienes el permiso.',
+    jam_ended: 'Ese Jukebox Jam ya terminó.',
+    jam_full: 'El Jam no admite más invitados.',
+    jam_guest_limit: 'Ya añadiste todas las canciones que puedes por ahora; espera un poco.',
+    jam_guest_removed: 'El anfitrión te sacó de este Jam.',
+    jam_track_not_allowed: 'Esa canción no está en las bibliotecas del Jam.',
+    jam_vote_too_soon: 'Puedes votar una vez cada 30 segundos.',
+    jam_voting_off: 'En este Jam no se vota.',
+    jam_not_host: 'Solo el anfitrión (el reproductor donde suena) puede hacer eso.',
+    playlist_is_jam: 'Es la cola de un Jukebox Jam: cámbiala desde el Jam.',
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',
     network: 'No se puede contactar con el servidor.',
     unauthorized: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',

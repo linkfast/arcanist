@@ -12,6 +12,11 @@ public sealed partial class Query
     public static Task<IReadOnlyList<Frontend>> Frontends([FromServices] FrontendService frontends, CancellationToken cancellationToken) =>
         frontends.ListAsync(cancellationToken);
 
+    [Name("availablePlayers")]
+    [Description("The web players any user can open (to switch from one to another), the default one first.")]
+    public static Task<IReadOnlyList<AvailablePlayer>> AvailablePlayers([FromServices] FrontendService frontends, CancellationToken cancellationToken) =>
+        frontends.AvailableAsync(cancellationToken);
+
     [Name("playerMarketplace")]
     [Description("The web players of the catalog (github.com/linkfast/arcanist-extensions by default: Ultimate Web Player and those anyone publishes), named in `language`, with what is installed here. Read again after an hour, or now with `refresh`. Administrators only.")]
     public static Task<PlayerMarketplaceInfo> PlayerMarketplace(string? language, bool? refresh, [FromServices] PlayerMarketplaceService marketplace, CancellationToken cancellationToken) =>

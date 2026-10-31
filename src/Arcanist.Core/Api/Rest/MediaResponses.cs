@@ -21,6 +21,49 @@ public static class MediaResponses
         StreamWithProfileAsync(context, trackId, fileId, download, requested is { } format ? TranscodeProfile.For(format) : null, maxBitRate,
             timeOffset, cancellationToken);
 
+    /// <summary>
+    /// A short excerpt of a song as <paramref name="owner"/> has it (a shared playlist's preview, for anyone): MP3 from
+    /// about a third of the way in. Only from this server's own storage; never kept, never counted as a play.
+    /// </summary>
+    public static async Task<IResult> PreviewAsync(HttpContext context, Auth.UserAccess owner, Guid trackId, int seconds, CancellationToken cancellationToken)
+    {
+        var streams = context.RequestServices.GetRequiredService<StreamService>();
+        var storages = context.RequestServices.GetRequiredService<ILibraryStorageResolver>();
+        var transcoder = context.RequestServices.GetRequiredService<Transcoder>();
+
+        StreamTarget target;
+        using (Auth.HttpCurrentUser.ActAs(owner, DateTimeOffset.MinValue))
+            target = await streams.ResolveAsync(trackId, null, false, cancellationToken);
+        if (target.Location.Kind is not (Data.Entities.LibrarySourceKind.Local or Data.Entities.LibrarySourceKind.S3))
+            return Problems.Create(StatusCodes.Status404NotFound, Application.ErrorCodes.NotFound);
+
+        var profile = TranscodeProfile.For(TranscodeFormat.Mp3);
+        context.Response.Headers.CacheControl = "no-store";
+        if (HttpMethods.IsHead(context.Request.Method))
+        {
+            context.Response.ContentType = profile.ContentType;
+            return Results.Empty;
+        }
+        if (context.RequestServices.GetService<StreamActivity>() is { } activity)
+            context.Response.RegisterForDispose(activity.Begin());
+
+        var duration = target.DurationMs / 1000.0;
+        var length = Math.Min(seconds, duration);
+        var start = Math.Clamp(duration * 0.3, 0, Math.Max(0, duration - length));
+        var storage = storages.For(target.Location.Kind);
+        var session = await transcoder.StartAsync(
+            storage.TryGetLocalPath(target.Location, target.RelativePath),
+            () => storage.OpenReadAsync(target.Location, target.RelativePath, cancellationToken),
+            profile,
+            profile.Clamp(128),
+            (target.StartMs ?? 0) / 1000.0 + start,
+            cancellationToken,
+            length);
+        return session is null
+            ? Problems.Create(StatusCodes.Status503ServiceUnavailable, Application.ErrorCodes.TranscodingUnavailable)
+            : new TranscodeResult(session, profile.ContentType, length, null, null);
+    }
+
     /// <param name="requested">Profile to convert with (DLNA also uses <see cref="TranscodeProfile.Lpcm"/>).</param>
     public static async Task<IResult> StreamWithProfileAsync(
         HttpContext context, Guid trackId, Guid? fileId, bool download, TranscodeProfile? requested, int? maxBitRate, double? timeOffset,

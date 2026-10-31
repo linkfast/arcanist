@@ -85,8 +85,18 @@ type Query {
   extensionMarketplace(language: String, refresh: Boolean): ExtensionMarketplaceInfo!
   "Installed web players; the default one is served at /. Administrators only."
   frontends: [Frontend!]!
+  "The web players any user can open (to switch from one to another), the default one first."
+  availablePlayers: [AvailablePlayer!]!
   "The web players of the catalog (github.com/linkfast/arcanist-extensions by default: Ultimate Web Player and those anyone publishes), named in `language`, with what is installed here. Read again after an hour, or now with `refresh`. Administrators only."
   playerMarketplace(language: String, refresh: Boolean): PlayerMarketplaceInfo!
+  "The Jukebox Jams the user hosts or takes part in that have not ended."
+  myJukeboxJams: [JukeboxJamSummary!]!
+  "A Jukebox Jam by its code, as the one asking sees it: what plays, the queue in the order it will play, the DJ if there is one. Users of the server with its code; without an account, only Jams open to guests (with `guestToken` once joined). An ended one says so (`endedAt`)."
+  jukeboxJam(code: String!, guestToken: String): JukeboxJam!
+  "Songs that can be added to a Jam (from its libraries, among those the host can listen to). For those taking part."
+  jukeboxJamSearch(code: String!, query: String!, first: Int, guestToken: String): [JukeboxJamSearchResult!]!
+  "Host API: the song the host's client should play next (pinned, then most voted, then by arrival), with its stream; null when nothing waits. Host only."
+  jukeboxJamNext(code: String!): JukeboxJamNext
   "Libraries the signed-in user can access. With `includeVirtual`, first \"All\" (`virtual`), every one of them at once, named in `language` (or the request's Accept-Language)."
   libraries(includeVirtual: Boolean, language: String): [Library!]!
   "A library by id. Libraries the user cannot access are reported as not found."
@@ -187,6 +197,10 @@ type Query {
   anonymousStatistics: Boolean!
   "Server audio: whether it plays, on which device, and the server's audio devices. Administrators only. The server plays through \"play to\" as the renderer \"server\"."
   serverAudio: ServerAudioStatus!
+  "Whether the server lets its users share outside it (public playlist links, guests without an account in Jukebox Jams) and whether the user may (SHARE_LINKS)."
+  sharing: SharingStatus!
+  "A playlist by its public link, page by page; anyone can ask, without an account. Songs come with a 30-second preview; to a signed-in user, also as tracks when they can play them in full. Not found when the link does not work (revoked, or public links turned off)."
+  sharedPlaylist(token: String!, after: String, first: Int): SharedPlaylist!
   "How much space Arcanist takes, part by part (the database too), its database's tables, how much is in the catalog and the music of each library. Measured at most every five minutes unless refresh is true. Administrators only."
   storageUsage(refresh: Boolean! = false): StorageUsage!
   "The ids of every track the user can play (optionally of one library), at once and sorted: what a client compares with its own to see which tracks left the server."
@@ -1052,6 +1066,10 @@ type Playlist {
   artworkIds: [ID!]!
   createdAt: DateTime!
   updatedAt: DateTime!
+  type: PlaylistType!
+  members: [PlaylistMember!]!
+  link: PlaylistLink
+  jukeboxJamCode: String
 }
 
 type UserReference {
@@ -1061,8 +1079,31 @@ type UserReference {
 
 enum PlaylistRole {
   OWNER
+  MANAGER
   COLLABORATOR
   VIEWER
+}
+
+enum PlaylistType {
+  NORMAL
+  JUKEBOX_JAM
+}
+
+type PlaylistMember {
+  user: UserReference!
+  role: PlaylistShareRole!
+}
+
+enum PlaylistShareRole {
+  LISTEN
+  EDIT
+  MANAGE
+}
+
+type PlaylistLink {
+  token: String!
+  url: String!
+  createdAt: DateTime!
 }
 
 type MixTracks {
@@ -1344,6 +1385,16 @@ type Frontend {
   blocked: Boolean!
 }
 
+type AvailablePlayer {
+  id: String!
+  name: String!
+  version: String!
+  description: String
+  url: String!
+  isDefault: Boolean!
+  features: [String!]!
+}
+
 type PlayerMarketplaceInfo {
   available: Boolean!
   errorCode: String
@@ -1372,6 +1423,146 @@ type MarketplacePlayer {
   isDefault: Boolean!
   pricing: ExtensionPricing
   pricingUrl: String
+}
+
+type JukeboxJamSummary {
+  code: String!
+  name: String!
+  host: String!
+  hosting: Boolean!
+  playsOn: JukeboxJamPlaysOn!
+  waiting: Int!
+  startedAt: DateTime!
+}
+
+enum JukeboxJamPlaysOn {
+  CLIENT
+  SERVER
+  DLNA
+}
+
+type JukeboxJam {
+  code: String!
+  name: String!
+  playlistId: ID!
+  host: String!
+  url: String!
+  playsOn: JukeboxJamPlaysOn!
+  rendererId: String
+  hostClient: JukeboxJamHostClient
+  voting: Boolean!
+  voteIntervalSeconds: Int!
+  allowGuests: Boolean!
+  dj: JukeboxJamDjSession
+  nowPlaying: JukeboxJamNowPlaying!
+  queue: [JukeboxJamEntry!]!
+  played: [JukeboxJamEntry!]!
+  you: JukeboxJamYou!
+  guests: [JukeboxJamGuestInfo!]
+  guestLibraryIds: [ID!]
+  startedAt: DateTime!
+  endedAt: DateTime
+}
+
+type JukeboxJamHostClient {
+  kind: JukeboxJamClientKind!
+  playerId: String
+  name: String
+  version: String
+  online: Boolean!
+  seenAt: DateTime
+}
+
+enum JukeboxJamClientKind {
+  WEB
+  DESKTOP
+  MOBILE
+  OTHER
+}
+
+type JukeboxJamDjSession {
+  kind: JukeboxJamDjKind!
+  name: String
+  message: String
+  since: DateTime!
+}
+
+enum JukeboxJamDjKind {
+  NONE
+  ULTIMATE_AI_DJ
+}
+
+type JukeboxJamNowPlaying {
+  entry: JukeboxJamEntry
+  external: JukeboxJamSong
+  paused: Boolean!
+  positionMs: Int!
+  at: DateTime
+}
+
+type JukeboxJamEntry {
+  id: ID!
+  song: JukeboxJamSong!
+  state: JukeboxJamEntryState!
+  addedBy: String
+  addedByGuest: Boolean!
+  addedByDj: Boolean!
+  addedByYou: Boolean!
+  votes: Int!
+  pinned: Boolean!
+  addedAt: DateTime!
+  playedAt: DateTime
+}
+
+type JukeboxJamSong {
+  trackId: ID
+  title: String!
+  artists: [String!]!
+  album: String
+  durationMs: Int!
+  artworkId: ID
+  artworkUrl: String
+}
+
+enum JukeboxJamEntryState {
+  WAITING
+  PLAYING
+  PLAYED
+}
+
+type JukeboxJamYou {
+  participation: JukeboxJamParticipation!
+  name: String
+  guestId: ID
+  canControl: Boolean!
+  nextVoteAt: DateTime
+  addsLeft: Int
+}
+
+enum JukeboxJamParticipation {
+  HOST
+  MANAGER
+  MEMBER
+  GUEST
+  VISITOR
+}
+
+type JukeboxJamGuestInfo {
+  id: ID!
+  name: String!
+  joinedAt: DateTime!
+  songsAdded: Int!
+  removed: Boolean!
+}
+
+type JukeboxJamSearchResult {
+  song: JukeboxJamSong!
+  inQueue: Boolean!
+}
+
+type JukeboxJamNext {
+  entryId: ID!
+  track: Track!
 }
 
 type Library {
@@ -2497,6 +2688,45 @@ type AudioDevice {
   channels: Int
 }
 
+type SharingStatus {
+  publicLinks: Boolean!
+  jamGuests: Boolean!
+  guestAddLimit: Int!
+  maxGuests: Int!
+  canShareLinks: Boolean!
+}
+
+type SharedPlaylist {
+  token: String!
+  name: String!
+  description: String
+  owner: String!
+  trackCount: Int!
+  durationMs: Long!
+  artworkIds: [ID!]!
+  updatedAt: DateTime!
+  playlistId: ID
+  entries: SharedPlaylistPage!
+}
+
+type SharedPlaylistPage {
+  items: [SharedPlaylistEntry!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type SharedPlaylistEntry {
+  id: ID!
+  position: Int!
+  title: String!
+  artists: [String!]!
+  album: String
+  durationMs: Int!
+  artworkId: ID
+  previewUrl: String
+  track: Track
+}
+
 type StorageUsage {
   dataDirectory: String!
   arcanistBytes: Long!
@@ -2909,6 +3139,10 @@ enum ApiFeature {
   MUSIC_VIDEOS
   VIDEO_LYRICS
   LYRICS_TRANSCRIPTION
+  PLAYLIST_SHARING
+  JUKEBOX_JAM
+  JUKEBOX_JAM_AI_DJ
+  AVAILABLE_PLAYERS
 }
 
 type LegalTerms {
@@ -2964,6 +3198,7 @@ enum Permission {
   VIEW_ALL_WISHES
   EDIT_METADATA
   DELETE_TRACKS
+  SHARE_LINKS
 }
 
 type Session {
@@ -3186,6 +3421,28 @@ type Mutation {
   setDefaultFrontend(id: String!): Frontend!
   "Removes an installed web player. Administrators only, with a recent authentication."
   uninstallFrontend(id: String!): Boolean!
+  "Starts a Jukebox Jam the user hosts: a live queue (a playlist of its own) that plays on a client of theirs (any that implements the host API), the server's audio or a DLNA renderer. Opening it to guests without an account needs SHARE_LINKS and the server's setting."
+  startJukeboxJam(input: StartJukeboxJamInput!): JukeboxJam!
+  "Takes part in a Jam. A signed-in user becomes a member (null is returned: read jukeboxJam); someone without an account gets a guest session by the name they give (send its token as `guestToken`)."
+  joinJukeboxJam(code: String!, name: String): JukeboxJamGuestSession
+  "Adds songs to a Jam's queue (at most 50 at once). Guests within their limit (jam_guest_limit, with retryAfterSeconds); in voting Jams each comes with a vote of whoever adds it. `source: DJ` is the host's DJ: no limit and no vote."
+  addToJukeboxJam(code: String!, trackIds: [ID!]!, source: JukeboxJamAddSource, guestToken: String): JukeboxJam!
+  "A vote for a waiting song (voting Jams). As often as one likes, but once every 30 seconds in the whole Jam: sooner is jam_vote_too_soon with retryAfterSeconds."
+  voteJukeboxJam(code: String!, entryId: ID!, guestToken: String): JukeboxJam!
+  "Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist."
+  controlJukeboxJam(code: String!, input: ControlJukeboxJamInput!): JukeboxJam!
+  "Changes a Jam's name, voting, guests and libraries. Host only."
+  updateJukeboxJam(code: String!, input: UpdateJukeboxJamInput!): JukeboxJam!
+  "Takes a guest out of a Jam: their session no longer works. The host and those who manage it."
+  removeJukeboxJamGuest(code: String!, guestId: ID!): JukeboxJam!
+  "Ends a Jam: its code no longer works and what played stays as a playlist of the host's. Host only."
+  endJukeboxJam(code: String!): JukeboxJam!
+  "Host API: this client (a web player tab, Ultimate Desktop) plays the Jam; another one claiming it takes over (the one before gets a HOST change with the new device). Host only, for Jams that play on a client."
+  claimJukeboxJamHost(code: String!, input: ClaimJukeboxJamHostInput!): JukeboxJam!
+  "Host API: what the host's client plays (an entry of the Jam, which leaves the queue; a song not on the server; or nothing), paused or not and where. Every 5 seconds and on every change, from the device that claimed it (jam_not_host otherwise)."
+  reportJukeboxJamPlayback(code: String!, input: ReportJukeboxJamPlaybackInput!): JukeboxJam!
+  "Host API: a DJ chooses what plays (ULTIMATE_AI_DJ: Ultimate's AI DJ), or no longer (NONE); everyone in the Jam sees it. Taken off by itself when the host's client is gone for 5 minutes. Host only."
+  setJukeboxJamDj(code: String!, input: SetJukeboxJamDjInput!): JukeboxJam!
   "Requires MANAGE_LIBRARIES."
   createLibrary(input: CreateLibraryInput!): Library!
   "Requires MANAGE_LIBRARIES."
@@ -3311,7 +3568,7 @@ type Mutation {
   "Accepts another server's share with its invitation link: its libraries become one library here, scanned at once (nothing is downloaded: the music streams from that server). Administrators only, with a recent authentication."
   acceptShare(link: String!): ReceivedShare!
   createPlaylist(input: CreatePlaylistInput!): Playlist!
-  "Renames, describes and shares a playlist. Owner only."
+  "Renames, describes and makes a playlist public or not. Owner and managers."
   updatePlaylist(id: ID!, input: UpdatePlaylistInput!): Playlist!
   "Owner only."
   deletePlaylist(id: ID!): Boolean!
@@ -3323,8 +3580,14 @@ type Mutation {
   removePlaylistEntries(playlistId: ID!, entryIds: [ID!]!): Playlist!
   "Moves entries together to a position, keeping their order. Owner and collaborators."
   movePlaylistEntries(playlistId: ID!, input: MovePlaylistEntriesInput!): Playlist!
-  "Replaces the users who can add, remove and reorder the playlist's tracks. Owner only."
+  "Replaces the users who can add, remove and reorder the playlist's tracks (those listed edit it, or still manage it; those who only listen stay). Owner and managers. See setPlaylistMembers."
   setPlaylistCollaborators(playlistId: ID!, userIds: [ID!]!): Playlist!
+  "Replaces the users the playlist is shared with and what each can do: LISTEN, EDIT (add, remove and reorder tracks) or MANAGE (also rename it, share it and manage its public link). Owner and managers."
+  setPlaylistMembers(playlistId: ID!, members: [PlaylistMemberInput!]!): Playlist!
+  "Gives the playlist a public link (or returns the one it has): anyone with it sees the playlist and hears 30-second previews. Owner and managers with SHARE_LINKS, when the server allows public links (public_links_disabled otherwise)."
+  createPlaylistLink(playlistId: ID!): Playlist!
+  "Removes the playlist's public link: it no longer opens. Owner and managers."
+  revokePlaylistLink(playlistId: ID!): Playlist!
   "Checks that an S3 bucket answers with those keys, and how much music it holds. Needs the Cloud plan. Administrators only."
   testS3Connection(input: S3ConnectionInput!): S3ConnectionTest!
   "A library in an S3 bucket (any S3-compatible service). Needs the Cloud plan. Administrators only, with a recent authentication."
@@ -3357,6 +3620,10 @@ type Mutation {
   setServerAudioSettings(input: ServerAudioSettingsInput!): ServerAudioStatus!
   "Plays a short tone on the server's device, to check it; refused while a queue plays. Administrators only."
   testServerAudio: Boolean!
+  "Turns public playlist links and guests in Jukebox Jams on or off (both off at first): turned off, those there were stop working at once. Administrators, with a recent sign-in."
+  setSharingSettings(input: SharingSettingsInput!): SharingStatus!
+  "Makes a private playlist of the user's own with the songs of a shared one (by its public link) they can play."
+  copySharedPlaylist(token: String!, name: String): Playlist!
   "Changes a track's tags: fields left out stay, empty ones (\"\", [], 0, the nil UUID) are cleared. Written to every copy's file (the original goes to the trash) and read back into the catalog. Returns the track as it is now: its id changes only when the new tags make it the same song as another track of its album, which it joins. Requires EDIT_METADATA and libraries the user adds to; read_only where the server cannot write, cue_sheet_track for tracks of a file split by a cue sheet, tags_unsupported for formats without tags, busy while a scan keeps the library."
   editTrack(id: ID!, input: TrackEditInput!): Track!
   "Applies the same tag changes to several tracks (at most 1000), as editTrack does. Returns them as they are now, in the order asked. Requires EDIT_METADATA."
@@ -3628,6 +3895,86 @@ input InstallMarketplaceExtensionInput {
 input InstallMarketplacePlayerInput {
   id: String!
   makeDefault: Boolean!
+}
+
+input StartJukeboxJamInput {
+  name: String!
+  playsOn: JukeboxJamPlaysOn!
+  rendererId: String
+  voting: Boolean!
+  allowGuests: Boolean!
+  guestLibraryIds: [ID!]
+}
+
+type JukeboxJamGuestSession {
+  token: String!
+  guestId: ID!
+  name: String!
+  jam: JukeboxJam!
+}
+
+enum JukeboxJamAddSource {
+  REQUEST
+  DJ
+}
+
+input ControlJukeboxJamInput {
+  action: JukeboxJamAction!
+  entryId: ID
+  position: Int
+}
+
+enum JukeboxJamAction {
+  SKIP
+  PAUSE
+  RESUME
+  REMOVE
+  PIN
+  UNPIN
+  MOVE
+}
+
+input UpdateJukeboxJamInput {
+  name: String
+  voting: Boolean
+  allowGuests: Boolean
+  guestLibraryIds: [ID!]
+}
+
+input ClaimJukeboxJamHostInput {
+  deviceId: String!
+  kind: JukeboxJamClientKind!
+  playerId: String
+  name: String
+  version: String
+}
+
+input ReportJukeboxJamPlaybackInput {
+  deviceId: String!
+  entryId: ID
+  external: JukeboxJamExternalSongInput
+  state: JukeboxJamPlaybackState!
+  positionMs: Int!
+}
+
+input JukeboxJamExternalSongInput {
+  title: String!
+  artists: [String!]
+  album: String
+  durationMs: Int
+  artworkUrl: String
+}
+
+enum JukeboxJamPlaybackState {
+  PLAYING
+  PAUSED
+  STOPPED
+}
+
+input SetJukeboxJamDjInput {
+  kind: JukeboxJamDjKind!
+  name: String
+  message: String
 }
 
 input CreateLibraryInput {
@@ -3944,6 +4291,11 @@ input MovePlaylistEntriesInput {
   position: Int!
 }
 
+input PlaylistMemberInput {
+  userId: ID!
+  role: PlaylistShareRole!
+}
+
 type S3ConnectionTest {
   success: Boolean!
   errorCode: String
@@ -3990,6 +4342,13 @@ input FactoryResetInput {
 input ServerAudioSettingsInput {
   deviceId: String
   name: String
+}
+
+input SharingSettingsInput {
+  publicLinks: Boolean!
+  jamGuests: Boolean!
+  guestAddLimit: Int!
+  maxGuests: Int!
 }
 
 input TrackEditInput {
@@ -4154,8 +4513,12 @@ type Subscription {
   backupJobUpdated: BackupJob!
   "Restores as they change: their state at once, their progress about once a second. Administrators only."
   restoreJobUpdated: RestoreJobInfo!
+  "Something changed in a Jam (its queue, what plays, its DJ…): read it again with jukeboxJam. Anyone with its code, also without an account. The host's client also acts on COMMAND (skip, pause, resume) and stops playing it on a HOST change for another device."
+  jukeboxJamChanged(code: String!): JukeboxJamChange!
   "The user's StarTracks (or other ratings) changed, here or through their Ultimate Cloud account."
   starTracksChanged: StarTracksChange!
+  "A playlist the user sees changed (its tracks, name or sharing) or was deleted; with `playlistId`, only that one. Read it again with playlist and playlistEntries."
+  playlistChanged(playlistId: ID): PlaylistChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
   scanJobUpdated(libraryId: ID): ScanJob!
   "The catalog changed in libraries the user can access: tracks edited or deleted (with their ids), or a scan that added, updated or lost files (`scanned`). Refresh with tracks(changedSince:) and trackIds."
@@ -4169,8 +4532,33 @@ type TrackAnalysisReady {
   analysisVersion: Int!
 }
 
+type JukeboxJamChange {
+  code: String!
+  kind: JukeboxJamChangeKind!
+  command: JukeboxJamAction
+  hostDeviceId: String
+  at: DateTime!
+}
+
+enum JukeboxJamChangeKind {
+  QUEUE
+  NOW_PLAYING
+  SETTINGS
+  DJ
+  HOST
+  GUESTS
+  ENDED
+  COMMAND
+}
+
 type StarTracksChange {
   changedAt: DateTime!
+}
+
+type PlaylistChange {
+  playlistId: ID!
+  deleted: Boolean!
+  at: DateTime!
 }
 
 type CatalogChange {

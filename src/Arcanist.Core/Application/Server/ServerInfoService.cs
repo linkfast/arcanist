@@ -176,6 +176,22 @@ public enum ApiFeature
     /// (<c>saveLyricsDraft</c>, <c>acceptLyricsDraft</c>, <c>discardLyricsDraft</c>, <c>lyricsDrafts</c>).
     /// </summary>
     LyricsTranscription,
+
+    /// <summary>
+    /// Playlists shared with users by role (<c>setPlaylistMembers</c>, <c>Playlist.members</c>, the MANAGER role), public
+    /// links with 30-second previews (<c>createPlaylistLink</c>, <c>sharedPlaylist</c>, <c>sharing</c>) and the
+    /// <c>playlistChanged</c> subscription.
+    /// </summary>
+    PlaylistSharing,
+
+    /// <summary>Jukebox Jams (<c>startJukeboxJam</c>, <c>jukeboxJam</c>…), their host API and their guests.</summary>
+    JukeboxJam,
+
+    /// <summary>A Jam's host can say Ultimate's AI DJ chooses what plays (<c>setJukeboxJamDj</c>, <c>JukeboxJam.dj</c>).</summary>
+    JukeboxJamAiDj,
+
+    /// <summary><c>availablePlayers</c>: the web players any user can open.</summary>
+    AvailablePlayers,
 }
 
 public sealed class ServerInfoService(

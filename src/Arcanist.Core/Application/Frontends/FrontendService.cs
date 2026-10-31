@@ -23,6 +23,12 @@ public sealed record Frontend(
     bool OpenSource = true,
     bool Blocked = false);
 
+/// <summary>A web player a user can open. Part of the API contract.</summary>
+/// <param name="Url">Where it opens (relative to the server).</param>
+/// <param name="IsDefault">Served at <c>/</c>.</param>
+/// <param name="Features">What it declares it does (<c>shared-links</c>, <c>jukebox-jam-host</c>…).</param>
+public sealed record AvailablePlayer(string Id, string Name, string Version, string? Description, string Url, bool IsDefault, IReadOnlyList<string> Features);
+
 /// <summary>
 /// Installing and choosing web players. Administrators only, and changes need a recent authentication: a frontend
 /// runs on the same origin as the admin panel, with the signed-in user's session.
@@ -39,6 +45,18 @@ public sealed class FrontendService(AccessGuard guard, FrontendCatalog catalog, 
         {
             OpenSource = Hosting.OpenSource.IsOpenLicense(f.Manifest.License), Blocked = !catalog.IsUsable(f),
         }).ToList();
+    }
+
+    /// <summary>The players any user can open (to switch from one to another), the default one first.</summary>
+    public async Task<IReadOnlyList<AvailablePlayer>> AvailableAsync(CancellationToken cancellationToken)
+    {
+        guard.Authenticated();
+        var current = await catalog.DefaultAsync(cancellationToken);
+        return catalog.List().Where(catalog.IsUsable)
+            .OrderByDescending(f => f.Manifest.Id == current?.Manifest.Id).ThenBy(f => f.Manifest.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(f => new AvailablePlayer(f.Manifest.Id, f.Manifest.Name, f.Manifest.Version, f.Manifest.Description, $"/players/{f.Manifest.Id}/",
+                f.Manifest.Id == current?.Manifest.Id, f.Manifest.Features ?? []))
+            .ToList();
     }
 
     public async Task<Frontend> InstallAsync(Stream archive, CancellationToken cancellationToken)

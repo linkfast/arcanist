@@ -329,6 +329,14 @@ export const TOURS: Record<string, Tour> = {
         },
       },
       {
+        target: '[data-tour="settings-sharing"]',
+        title: { es: 'Compartir', en: 'Sharing' },
+        body: {
+          es: 'Decide si tus usuarios pueden compartir playlists con un enlace público y abrir sus Jukebox Jams a invitados sin cuenta. Empieza apagado.',
+          en: 'Choose whether your users can share playlists with a public link and open their Jukebox Jams to guests without an account. It starts off.',
+        },
+      },
+      {
         target: '[data-tour="settings-maintenance"]',
         title: { es: 'Mantenimiento', en: 'Maintenance' },
         body: {

@@ -35,7 +35,7 @@ public sealed partial class Mutation
         playlists.CreateAsync(input, cancellationToken);
 
     [Name("updatePlaylist")]
-    [Description("Renames, describes and shares a playlist. Owner only.")]
+    [Description("Renames, describes and makes a playlist public or not. Owner and managers.")]
     public static Task<Playlist> UpdatePlaylist([Id] Guid id, UpdatePlaylistInput input, [FromServices] PlaylistService playlists, CancellationToken cancellationToken) =>
         playlists.UpdateAsync(id, input, cancellationToken);
 
@@ -71,8 +71,32 @@ public sealed partial class Mutation
         playlists.MoveEntriesAsync(playlistId, input, cancellationToken);
 
     [Name("setPlaylistCollaborators")]
-    [Description("Replaces the users who can add, remove and reorder the playlist's tracks. Owner only.")]
+    [Description("Replaces the users who can add, remove and reorder the playlist's tracks (those listed edit it, or still manage it; those who only listen stay). Owner and managers. See setPlaylistMembers.")]
     public static Task<Playlist> SetPlaylistCollaborators([Id] Guid playlistId, [Id] IReadOnlyList<Guid> userIds,
         [FromServices] PlaylistService playlists, CancellationToken cancellationToken) =>
         playlists.SetCollaboratorsAsync(playlistId, userIds, cancellationToken);
+
+    [Name("setPlaylistMembers")]
+    [Description("Replaces the users the playlist is shared with and what each can do: LISTEN, EDIT (add, remove and reorder tracks) or MANAGE (also rename it, share it and manage its public link). Owner and managers.")]
+    public static Task<Playlist> SetPlaylistMembers([Id] Guid playlistId, IReadOnlyList<PlaylistMemberInput> members,
+        [FromServices] PlaylistService playlists, CancellationToken cancellationToken) =>
+        playlists.SetMembersAsync(playlistId, members, cancellationToken);
+
+    [Name("createPlaylistLink")]
+    [Description("Gives the playlist a public link (or returns the one it has): anyone with it sees the playlist and hears 30-second previews. Owner and managers with SHARE_LINKS, when the server allows public links (public_links_disabled otherwise).")]
+    public static Task<Playlist> CreatePlaylistLink([Id] Guid playlistId, [FromServices] PlaylistService playlists, CancellationToken cancellationToken) =>
+        playlists.CreateLinkAsync(playlistId, cancellationToken);
+
+    [Name("revokePlaylistLink")]
+    [Description("Removes the playlist's public link: it no longer opens. Owner and managers.")]
+    public static Task<Playlist> RevokePlaylistLink([Id] Guid playlistId, [FromServices] PlaylistService playlists, CancellationToken cancellationToken) =>
+        playlists.RevokeLinkAsync(playlistId, cancellationToken);
+}
+
+public sealed partial class Subscription
+{
+    [Name("playlistChanged")]
+    [Description("A playlist the user sees changed (its tracks, name or sharing) or was deleted; with `playlistId`, only that one. Read it again with playlist and playlistEntries.")]
+    public static IObservable<PlaylistChange> PlaylistChanged([Id] Guid? playlistId, [FromServices] PlaylistService playlists) =>
+        playlists.Watch(playlistId);
 }

@@ -1055,6 +1055,180 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("ImportItems");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamGuest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Banned")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("JamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JamId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("JamGuests");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowGuests")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("CurrentEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DjKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("DjMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("DjName")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime?>("DjSince")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalNowPlaying")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("GuestLibraryIds")
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
+
+                    b.Property<string>("HostClient")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("HostDeviceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("HostSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("HostUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Paused")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("PinnedEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlaylistId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PositionAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PositionMs")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RendererId")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Target")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("Voting")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("HostUserId");
+
+                    b.HasIndex("PlaylistId")
+                        .IsUnique();
+
+                    b.ToTable("JamSessions");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CastAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("FromAdding")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("GuestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("JamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JamId", "EntryId");
+
+                    b.HasIndex("JamId", "GuestId", "CastAt");
+
+                    b.HasIndex("JamId", "UserId", "CastAt");
+
+                    b.ToTable("JamVotes");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2124,6 +2298,18 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("LinkCreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LinkToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -2146,6 +2332,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.HasKey("Id");
 
+                    b.HasIndex("LinkToken")
+                        .IsUnique();
+
                     b.HasIndex("NormalizedName");
 
                     b.HasIndex("OwnerId");
@@ -2164,6 +2353,11 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.HasKey("PlaylistId", "UserId");
 
                     b.HasIndex("UserId");
@@ -2179,8 +2373,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("AddedByDj")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("AddedByGuestId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("AddedByUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PlayedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("PlaylistId")
                         .HasColumnType("uuid");
@@ -3168,6 +3371,39 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Navigation("DropFolder");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamGuest", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.JamSession", "Jam")
+                        .WithMany("Guests")
+                        .HasForeignKey("JamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Jam");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamSession", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Playlist", "Playlist")
+                        .WithMany()
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Playlist");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamVote", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.JamSession", "Jam")
+                        .WithMany()
+                        .HasForeignKey("JamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Jam");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>
                 {
                     b.HasOne("Arcanist.Core.Data.Entities.User", "Owner")
@@ -3627,6 +3863,11 @@ namespace Arcanist.Core.Data.Migrations.Postgres
             modelBuilder.Entity("Arcanist.Core.Data.Entities.DlnaImport", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.JamSession", b =>
+                {
+                    b.Navigation("Guests");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Library", b =>

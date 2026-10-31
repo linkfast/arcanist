@@ -114,6 +114,9 @@ public static class SettingKeys
     /// <summary>Music videos: whose audio plays by default, their cache and the versions made ahead of time.</summary>
     public const string Videos = "videos.settings";
 
+    /// <summary>What users may share outside the server: public playlist links and guests in Jukebox Jams.</summary>
+    public const string Sharing = "sharing.settings";
+
     /// <summary>A user's own choice of whose audio plays with music videos.</summary>
     public static string UserVideos(Guid userId) => $"videos.user.{userId:N}";
 }

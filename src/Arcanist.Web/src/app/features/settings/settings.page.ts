@@ -8,6 +8,7 @@ import { OnlineServicesCard } from './online-services-card';
 import { OpenSourceCard } from './open-source-card';
 import { PrivacyCard } from './privacy-card';
 import { RatingModeCard } from './rating-mode-card';
+import { SharingCard } from './sharing-card';
 import { UpdatesCard } from './updates-card';
 
 /** Server-wide settings: ratings, privacy, online services, updates and maintenance (conversion has its own page). */
@@ -21,6 +22,7 @@ import { UpdatesCard } from './updates-card';
     MaintenanceCard,
     OnlineServicesCard,
     RatingModeCard,
+    SharingCard,
     UpdatesCard,
     HostCard,
   ],
@@ -37,6 +39,7 @@ import { UpdatesCard } from './updates-card';
         <app-online-services-card />
       }
       @if (auth.isAdmin()) {
+        <app-sharing-card />
         <app-lyrics-timing-card />
         <app-open-source-card />
         <app-updates-card />

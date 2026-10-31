@@ -29,6 +29,12 @@ public static class AuthServiceCollectionExtensions
 {
     public const string AuthRateLimit = "auth";
 
+    /// <summary>What anyone can reach without an account (shared playlists, Jukebox Jams).</summary>
+    public const string PublicRateLimit = "public";
+
+    /// <summary>Previews of shared playlists: each one is a conversion.</summary>
+    public const string PreviewRateLimit = "preview";
+
     public static IServiceCollection AddArcanistAuth(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.Section));
@@ -116,6 +122,22 @@ public static class AuthServiceCollectionExtensions
         options.AddPolicy(AuthRateLimit, context =>
         {
             var limit = context.RequestServices.GetRequiredService<IOptions<AuthOptions>>().Value.RequestsPerMinute;
+            return RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "local",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+        });
+
+        options.AddPolicy(PublicRateLimit, context =>
+        {
+            var limit = context.RequestServices.GetRequiredService<IOptions<AuthOptions>>().Value.PublicRequestsPerMinute;
+            return RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "local",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+        });
+
+        options.AddPolicy(PreviewRateLimit, context =>
+        {
+            var limit = context.RequestServices.GetRequiredService<IOptions<AuthOptions>>().Value.PreviewsPerMinute;
             return RateLimitPartition.GetFixedWindowLimiter(
                 context.Connection.RemoteIpAddress?.ToString() ?? "local",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = limit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });

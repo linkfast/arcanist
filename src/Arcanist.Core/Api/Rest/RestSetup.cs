@@ -67,6 +67,8 @@ public static class RestSetup
         rest.MapOrganizationEndpoints();
         rest.MapListeningEndpoints();
         rest.MapPlaylistEndpoints();
+        rest.MapSharingEndpoints();
+        rest.MapJukeboxJamEndpoints();
         rest.MapUploadEndpoints();
         rest.MapWishListEndpoints();
         rest.MapAiEndpoints();
@@ -110,6 +112,11 @@ internal sealed class ArcanistExceptionHandler(IProblemDetailsService problems) 
 
         details.Status = error.StatusCode;
         details.Extensions["code"] = error.Code;
+        if (error is ArcanistException.TooSoon soon)
+        {
+            details.Extensions["retryAfterSeconds"] = soon.RetryAfterSeconds;
+            context.Response.Headers.RetryAfter = soon.RetryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
 
         context.Response.StatusCode = error.StatusCode;
         return await problems.TryWriteAsync(new ProblemDetailsContext

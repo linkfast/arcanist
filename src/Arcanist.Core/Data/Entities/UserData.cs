@@ -98,6 +98,17 @@ public sealed class Playlist : Entity
     /// <summary>Every user of the server can see it (and copy it); only its owner and collaborators change it.</summary>
     public bool IsPublic { get; set; }
 
+    /// <summary>A normal playlist, or the queue of a Jukebox Jam (<see cref="JamSession"/>).</summary>
+    public PlaylistKind Kind { get; set; }
+
+    /// <summary>
+    /// The token of its public link (anyone with it sees the playlist and hears previews), or null without one. Kept as
+    /// is, not hashed: it identifies the playlist and its managers copy it again; revoking it removes it.
+    /// </summary>
+    public string? LinkToken { get; set; }
+
+    public DateTime? LinkCreatedAt { get; set; }
+
     public DateTime CreatedAt { get; init; }
 
     public DateTime UpdatedAt { get; set; }
@@ -125,9 +136,39 @@ public sealed class PlaylistEntry : Entity
 
     /// <summary>Who added it (the owner or a collaborator). Not a foreign key: the user may have been deleted since.</summary>
     public Guid? AddedByUserId { get; init; }
+
+    /// <summary>The guest without an account who added it to a Jukebox Jam (<see cref="JamGuest"/>). Not a foreign key.</summary>
+    public Guid? AddedByGuestId { get; init; }
+
+    /// <summary>Added to a Jukebox Jam by the host's DJ (Ultimate's AI DJ), not asked for by anyone.</summary>
+    public bool AddedByDj { get; init; }
+
+    /// <summary>In a Jukebox Jam, when it started playing: it is no longer waiting in the queue.</summary>
+    public DateTime? PlayedAt { get; set; }
 }
 
-/// <summary>A user the owner invited to add, remove and reorder a playlist's tracks.</summary>
+public enum PlaylistKind
+{
+    Normal,
+
+    /// <summary>The queue of a Jukebox Jam.</summary>
+    Jam,
+}
+
+/// <summary>What a user the playlist is shared with can do.</summary>
+public enum PlaylistMemberRole
+{
+    /// <summary>See it and play it.</summary>
+    Listen,
+
+    /// <summary>Also add, remove and reorder its tracks.</summary>
+    Edit,
+
+    /// <summary>Also rename it, share it with others and manage its public link.</summary>
+    Manage,
+}
+
+/// <summary>A user a playlist is shared with (the name comes from when every one of them could edit it).</summary>
 public sealed class PlaylistCollaborator
 {
     public Guid PlaylistId { get; init; }
@@ -137,6 +178,8 @@ public sealed class PlaylistCollaborator
     public Guid UserId { get; init; }
 
     public User User { get; init; } = null!;
+
+    public PlaylistMemberRole Role { get; set; } = PlaylistMemberRole.Edit;
 
     public DateTime AddedAt { get; init; }
 }

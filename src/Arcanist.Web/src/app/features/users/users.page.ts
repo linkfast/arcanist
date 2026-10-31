@@ -51,6 +51,7 @@ const allPermissions: Permission[] = [
   'VIEW_ALL_WISHES',
   'EDIT_METADATA',
   'DELETE_TRACKS',
+  'SHARE_LINKS',
 ];
 
 interface UserForm {

@@ -25,7 +25,17 @@ public sealed record FrontendManifest(
     string? License = null,
     string? Homepage = null,
     int MinApiVersion = 1,
-    string Entry = "index.html");
+    string Entry = "index.html",
+    IReadOnlyList<string>? Features = null)
+{
+    /// <summary>Opens public playlist links (<c>#/s/&lt;token&gt;</c>) and Jukebox Jams (<c>#/jam/&lt;code&gt;</c>).</summary>
+    public const string SharedLinks = "shared-links";
+
+    /// <summary>Can be the player a Jukebox Jam plays on (implements the host API).</summary>
+    public const string JukeboxJamHost = "jukebox-jam-host";
+
+    public bool Has(string feature) => Features?.Contains(feature, StringComparer.OrdinalIgnoreCase) == true;
+}
 
 /// <summary>An installed frontend: its manifest and where its files are.</summary>
 public sealed record InstalledFrontend(FrontendManifest Manifest, string Root, bool BuiltIn, DateTime InstalledAt);

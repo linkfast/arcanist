@@ -8,6 +8,8 @@ public sealed record PlaylistEntryIdsInput(IReadOnlyList<Guid> EntryIds);
 
 public sealed record PlaylistCollaboratorsInput(IReadOnlyList<Guid> UserIds);
 
+public sealed record PlaylistMembersInput(IReadOnlyList<PlaylistMemberInput> Members);
+
 public static class PlaylistEndpoints
 {
     public static IEndpointRouteBuilder MapPlaylistEndpoints(this IEndpointRouteBuilder rest)
@@ -38,7 +40,7 @@ public static class PlaylistEndpoints
         playlists.MapPut("/{id:guid}", (Guid id, UpdatePlaylistInput input, PlaylistService service, CancellationToken ct) =>
                 service.UpdateAsync(id, input, ct))
             .WithName("UpdatePlaylist")
-            .WithSummary("Renames, describes and shares a playlist. Owner only.");
+            .WithSummary("Renames, describes and makes a playlist public or not. Owner and managers.");
 
         playlists.MapDelete("/{id:guid}", async (Guid id, PlaylistService service, CancellationToken ct) =>
             {
@@ -71,7 +73,22 @@ public static class PlaylistEndpoints
         playlists.MapPut("/{playlistId:guid}/collaborators", (Guid playlistId, PlaylistCollaboratorsInput input, PlaylistService service, CancellationToken ct) =>
                 service.SetCollaboratorsAsync(playlistId, input.UserIds, ct))
             .WithName("SetPlaylistCollaborators")
-            .WithSummary("Replaces the users who can add, remove and reorder the playlist's tracks. Owner only.");
+            .WithSummary("Replaces the users who can add, remove and reorder the playlist's tracks (those listed edit it, or still manage it; those who only listen stay). Owner and managers. See setPlaylistMembers.");
+
+        playlists.MapPut("/{playlistId:guid}/members", (Guid playlistId, PlaylistMembersInput input, PlaylistService service, CancellationToken ct) =>
+                service.SetMembersAsync(playlistId, input.Members, ct))
+            .WithName("SetPlaylistMembers")
+            .WithSummary("Replaces the users the playlist is shared with and what each can do: LISTEN, EDIT (add, remove and reorder tracks) or MANAGE (also rename it, share it and manage its public link). Owner and managers.");
+
+        playlists.MapPost("/{playlistId:guid}/link", (Guid playlistId, PlaylistService service, CancellationToken ct) =>
+                service.CreateLinkAsync(playlistId, ct))
+            .WithName("CreatePlaylistLink")
+            .WithSummary("Gives the playlist a public link (or returns the one it has): anyone with it sees the playlist and hears 30-second previews. Owner and managers with SHARE_LINKS, when the server allows public links (public_links_disabled otherwise).");
+
+        playlists.MapDelete("/{playlistId:guid}/link", (Guid playlistId, PlaylistService service, CancellationToken ct) =>
+                service.RevokeLinkAsync(playlistId, ct))
+            .WithName("RevokePlaylistLink")
+            .WithSummary("Removes the playlist's public link: it no longer opens. Owner and managers.");
 
         rest.MapGet("/shareable-users", (PlaylistService service, CancellationToken ct) => service.ShareableUsersAsync(ct))
             .WithTags("Playlists")

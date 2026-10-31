@@ -19,6 +19,12 @@ public sealed class AuthOptions
     /// <summary>Login/refresh/setup requests per client IP per minute.</summary>
     public int RequestsPerMinute { get; set; } = 20;
 
+    /// <summary>Requests per client IP per minute to what anyone can reach without an account: shared playlists and Jams.</summary>
+    public int PublicRequestsPerMinute { get; set; } = 240;
+
+    /// <summary>Previews of shared playlists per client IP per minute (each is a conversion).</summary>
+    public int PreviewsPerMinute { get; set; } = 20;
+
     /// <summary>How long permission and session state is cached between database reads.</summary>
     public TimeSpan AccessCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
 }

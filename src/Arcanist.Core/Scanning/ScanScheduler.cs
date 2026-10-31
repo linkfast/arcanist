@@ -17,6 +17,7 @@ internal sealed class ScanScheduler(
     TimeProvider time,
     DatabaseMaintenance maintenance,
     Application.Libraries.CloudLibraries cloud,
+    Capabilities.ICapabilityService capabilities,
     ILogger<ScanScheduler> logger) : BackgroundService
 {
     public static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(1);
@@ -47,11 +48,14 @@ internal sealed class ScanScheduler(
         var now = time.GetUtcNow().UtcDateTime;
 
         var cloudOn = cloud.Enabled;
+        var s3On = capabilities.IsEnabled(Capabilities.Capability.ThirdPartyStorage);
         var libraries = await db.Libraries.AsNoTracking()
             .Where(l => l.ScanIntervalMinutes != null)
             // Disabled while the Ultimate Cloud extension is off.
             .Where(l => cloudOn || l.ManagedBy != null
                         || !l.Sources.Any(s => s.Kind == Data.Entities.LibrarySourceKind.UltimateCloud || s.Kind == Data.Entities.LibrarySourceKind.S3))
+            // S3 libraries without the Cloud plan's storage (Ultimate Cloud Plus) are disabled too.
+            .Where(l => s3On || l.ManagedBy != null || !l.Sources.Any(s => s.Kind == Data.Entities.LibrarySourceKind.S3))
             .Select(l => new
             {
                 l.Id,

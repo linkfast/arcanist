@@ -5,23 +5,16 @@ namespace Arcanist.Core.Tests.Capabilities;
 public sealed class CapabilityServiceTests
 {
     [Theory]
-    [InlineData(CloudTier.None, Capability.UltimateCloudSource, false)]
-    [InlineData(CloudTier.None, Capability.CloudSync, false)]
-    [InlineData(CloudTier.Free, Capability.UltimateCloudSource, true)]
-    [InlineData(CloudTier.Free, Capability.CloudSync, false)]
-    [InlineData(CloudTier.Free, Capability.ThirdPartyStorage, false)]
-    [InlineData(CloudTier.Free, Capability.CloudConnect, true)]
-    [InlineData(CloudTier.Paid, Capability.UltimateCloudSource, true)]
-    [InlineData(CloudTier.Paid, Capability.CloudSync, true)]
-    [InlineData(CloudTier.Paid, Capability.ThirdPartyStorage, true)]
-    [InlineData(CloudTier.Paid, Capability.CloudConnect, true)]
-    public void Capabilities_follow_the_linked_cloud_tier(CloudTier tier, Capability capability, bool expected)
+    [InlineData(CloudTier.None, false)]
+    [InlineData(CloudTier.Free, true)]
+    [InlineData(CloudTier.Paid, true)]
+    public void Ultimate_Cloud_as_a_library_source_follows_the_linked_cloud_tier(CloudTier tier, bool expected)
     {
-        var service = new CapabilityService(new FixedTier(tier));
+        // The Cloud plan's features come from Ultimate Cloud Plus (an extension): UltimateCloudTests and the S3 tests cover them.
+        var service = new CapabilityService(new FixedTier(tier), null!, null!);
 
-        Assert.Equal(expected, service.IsEnabled(capability));
+        Assert.Equal(expected, service.IsEnabled(Capability.UltimateCloudSource));
     }
-
     [Fact]
     public void Every_capability_declares_a_required_tier()
     {

@@ -49,6 +49,10 @@ public static class LibraryEndpoints
             .Produces<UploadResult>(StatusCodes.Status201Created)
             .Produces<UploadResult>();
 
+        libraries.MapGet("/s3/availability", (S3LibraryService service, CancellationToken ct) => service.AvailabilityAsync(ct))
+            .WithName("S3LibraryAvailability")
+            .WithSummary("Whether an S3 library can be created now, and why not: the Ultimate Cloud Plus extension with an Ultimate Cloud account on the Cloud plan, and another library besides. Administrators only.");
+
         libraries.MapPost("/s3/test", (S3ConnectionInput input, S3LibraryService service, CancellationToken ct) => service.TestAsync(input, ct))
             .WithName("TestS3Connection")
             .WithSummary("Checks that an S3 bucket answers with those keys, and how much music it holds. Needs the Cloud plan. Administrators only.");

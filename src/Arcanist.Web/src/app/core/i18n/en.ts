@@ -1185,6 +1185,8 @@ export const en: Dictionary = {
       uploadToCloud: 'Upload what gets identified to Ultimate Cloud',
       uploadToCloudHelp:
         'Once a song brought from Cloud Drop is in the library and identified (AcoustID or MusicBrainz, in Settings > Online services), it is uploaded to the chosen Ultimate Cloud library with Arcanist’s description. What is not identified is not uploaded.',
+      uploadNeedsPlus:
+        'Uploading what comes from Cloud Drop to Ultimate Cloud needs the Ultimate Cloud Plus extension.',
       uploads: 'uploads what is identified to {target}',
       uploadTarget: 'Upload to',
       uploadTargetHelp:
@@ -1844,6 +1846,9 @@ export const en: Dictionary = {
       managed: 'Managed',
       managedHelp:
         'Installed by the server’s configuration: always on, and it cannot be uninstalled here. Installing a newer version updates it.',
+      usesCore: 'Uses the core',
+      usesCoreHelp:
+        'It is closed source and uses the server’s code (Arcanist.Core), not only the SDK: the license’s extension exception does not cover it.',
       restartRequired: 'Restart needed',
       restartRequiredHelp: 'The change applies when the server restarts.',
       restartNeeded: 'Some installed or switched on extensions will run once the server restarts.',
@@ -2093,6 +2098,7 @@ export const en: Dictionary = {
     ownAccount: 'My Ultimate Cloud ({name})',
     title: 'Ultimate Cloud',
     needsPlan: 'Syncing with Ultimate Cloud needs the Cloud plan on the linked account.',
+    needsPlus: 'Syncing with Ultimate Cloud needs the Ultimate Cloud Plus extension.',
     downloadTo: 'Download to',
     mode: {
       OFF: 'Do not sync',
@@ -2181,11 +2187,14 @@ export const en: Dictionary = {
         libraryName: "{owner}'s Cloud Drop",
       },
     },
-    tool: {
-      title: 'Sync',
-      installed: 'On: ultimate-audio {version}, signed by Ultimate',
-      off: 'Off',
-      help: 'The sync component (ultimate-audio, closed source) moves music in a way Ultimate\'s apps understand: syncing libraries, Cloud Drop and "Upload to my Ultimate Cloud" need it, and turn it on when used. With the Cloud plan, the server becomes ULTIMATE.',
+    plus: {
+      title: 'Ultimate Cloud Plus',
+      running: 'Running',
+      stopped: 'Installed, but not running',
+      missing: 'Not installed',
+      install: 'Install Ultimate Cloud Plus',
+      manage: 'Go to Extensions',
+      help: 'The paid extension (closed source, from the marketplace) with the Cloud plan’s features: syncing libraries, "Upload to my Ultimate Cloud", uploading what comes from Cloud Drop, backups on Ultimate Cloud, S3 libraries and the seamless connection. With it and the Cloud plan, the server becomes ULTIMATE.',
     },
     extension: {
       enabled: 'Ultimate Cloud',
@@ -3024,12 +3033,14 @@ export const en: Dictionary = {
         FOLDER: 'Server folder',
         S3: 'S3 bucket',
         PEER: 'Another Arcanist server',
+        EXTENSION: 'From an extension',
       },
       kindHelp: {
         FOLDER:
           'A disk, another partition or a mounted network folder. It cannot be inside a library.',
         S3: 'Any S3-compatible service (AWS, Backblaze B2, Wasabi, Cloudflare R2, MinIO…). Needs the Cloud plan.',
         PEER: 'An Arcanist server that invited you to keep backups on it, through the P2P network.',
+        EXTENSION: 'A destination an installed extension offers.',
       },
       name: 'Name',
       namePlaceholder: 'External drive',
@@ -3236,6 +3247,9 @@ export const en: Dictionary = {
       'The song only exists as part of a file split by a CUE sheet, which cannot be uploaded on its own.',
     cloud_sync_failed: 'The sync stopped because of an unexpected error. Check the server log.',
     s3_unavailable: 'Libraries in S3 need the Cloud plan.',
+    cloud_plus_required:
+      'This needs the Ultimate Cloud Plus extension (in Extensions > Marketplace).',
+    s3_only_library: 'An S3 library can never be the only one: create another library first.',
     s3_unreachable: 'The S3 service does not answer at that address.',
     s3_access_denied:
       'The S3 service refused the keys (wrong, or without permission on the bucket).',

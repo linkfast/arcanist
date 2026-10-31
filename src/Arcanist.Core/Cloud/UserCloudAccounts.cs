@@ -177,10 +177,6 @@ public sealed class UserCloudAccounts(
                 _plans[user] = plan;
                 _errors.TryRemove(user, out _);
                 await settings.SetAsync(SettingKeys.UltimateCloudUser(user, "plan"), plan, cancellationToken);
-                // An administrator's account can sync libraries without the server's: it keeps the sync component up to date too.
-                var tool = services.GetRequiredService<UltimateAudioTool>();
-                if (_admins.Contains(user) && await auth.LinkAsync(cancellationToken) is null && tool.IsInstalled)
-                    await tool.EnsureAsync(cancellationToken);
             }
         }
         catch (UltimateCloudException e)
@@ -330,16 +326,12 @@ public sealed class UserCloudAccounts(
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task ConnectAsync(CancellationToken cancellationToken)
+    /// <summary>A user's account or its plan changed: extensions (Ultimate Cloud Plus) hear it.</summary>
+    private Task ConnectAsync(CancellationToken cancellationToken)
     {
-        try
-        {
-            await services.GetRequiredService<UltimateCloudConnect>().SyncAsync(cancellationToken);
-        }
-        catch (UltimateCloudException e)
-        {
-            logger.LogWarning("The P2P connection through Ultimate Cloud could not be updated: {Error}", e.Code);
-        }
+        _ = cancellationToken;
+        services.GetRequiredService<UltimateCloudSignals>().Raise();
+        return Task.CompletedTask;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

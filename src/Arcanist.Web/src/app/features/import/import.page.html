@@ -713,11 +713,23 @@
             <label class="flex items-center gap-2 text-sm">
               <hlm-switch
                 [checked]="current.uploadToCloud"
+                [disabled]="!!cloudPlus() && !current.uploadToCloud"
                 (checkedChange)="updateForm({ uploadToCloud: $event })"
               />
               {{ 'import.folders.uploadToCloud' | t }}
             </label>
             <p hlmFieldDescription>{{ 'import.folders.uploadToCloudHelp' | t }}</p>
+            @if (cloudPlus(); as plus) {
+              <p hlmFieldDescription>
+                {{ 'import.folders.uploadNeedsPlus' | t }}
+                <a
+                  class="underline underline-offset-2"
+                  routerLink="/extensions"
+                  [queryParams]="{ install: plus }"
+                  >{{ 'cloud.plus.install' | t }}</a
+                >
+              </p>
+            }
           </hlm-field>
           @if (current.uploadToCloud) {
             <hlm-field>

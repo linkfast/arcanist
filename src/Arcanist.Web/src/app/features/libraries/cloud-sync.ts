@@ -1,4 +1,5 @@
 import { Component, inject, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideCloud, lucideRefreshCw } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -35,6 +36,7 @@ import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
   selector: 'app-cloud-sync',
   imports: [
     NgIcon,
+    RouterLink,
     HlmButtonImports,
     HlmNativeSelectImports,
     HlmProgressImports,
@@ -56,7 +58,7 @@ import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
           size="sm"
           class="w-56"
           [value]="mode()"
-          [disabled]="busy() || (!available() && mode() === 'OFF')"
+          [disabled]="busy() || (!available() && mode() === 'OFF') || !!plusMissing()"
           (change)="setMode($any($event.target).value)"
         >
           @for (option of modes; track option) {
@@ -85,7 +87,17 @@ import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
         </label>
       }
 
-      @if (!available() && mode() === 'OFF') {
+      @if (plusMissing(); as plus) {
+        <p class="text-xs text-muted-foreground">
+          {{ 'cloudSync.needsPlus' | t }}
+          <a
+            class="underline underline-offset-2"
+            routerLink="/extensions"
+            [queryParams]="{ install: plus }"
+            >{{ 'cloud.plus.install' | t }}</a
+          >
+        </p>
+      } @else if (!available() && mode() === 'OFF') {
         <p class="text-xs text-muted-foreground">{{ 'cloudSync.needsPlan' | t }}</p>
       } @else if (mode() !== 'OFF') {
         @if ((mode() === 'DOWNLOAD' || mode() === 'BOTH') && sources().length > 1) {
@@ -187,6 +199,8 @@ export class CloudSyncPanel {
   readonly state = input<SyncState | undefined>();
   /** The account has the Cloud plan. */
   readonly available = input(false);
+  /** Ultimate Cloud Plus's id while it is not running: syncing is its, so nothing syncs. */
+  readonly plusMissing = input<string | null>(null);
   readonly accounts = input<CloudAccount[]>([]);
   /** Chosen while the sync is off, for when it is turned on. */
   private readonly chosen = signal<string | null | undefined>(undefined);

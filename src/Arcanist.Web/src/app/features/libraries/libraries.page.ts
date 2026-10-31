@@ -44,6 +44,7 @@ import {
   AddLibrarySourceMutation,
   CancelScanMutation,
   CloudSyncsQuery,
+  S3LibraryAvailabilityQuery,
   CreateLibraryMutation,
   DeleteLibraryMutation,
   LibrariesQuery,
@@ -171,8 +172,16 @@ export class LibrariesPage implements OnInit {
   protected readonly cloudAccounts = signal<CloudAccount[]>([]);
   /** The linked account has the Cloud plan. */
   protected readonly cloudSyncAvailable = signal(false);
-  /** The linked account has the Cloud plan's storage on other clouds (S3). */
-  protected readonly s3Available = signal(false);
+  /** The id of Ultimate Cloud Plus while it is not running (syncing needs it); null when it runs. */
+  protected readonly cloudPlus = signal<string | null>(null);
+  /**
+   * Whether an S3 library can be created (Ultimate Cloud Plus and an account on the Cloud plan): the button only shows
+   * when it could, and stays disabled while another library is missing (an S3 library is never the only one).
+   */
+  protected readonly s3Availability = signal<{
+    canCreate: boolean;
+    errorCode?: string | null;
+  } | null>(null);
   protected readonly s3Open = signal(false);
 
   protected async s3Created(): Promise<void> {
@@ -497,7 +506,13 @@ export class LibrariesPage implements OnInit {
       this.cloudSyncs.set(Object.fromEntries(result.cloudSyncs.map((s) => [s.libraryId, s])));
       this.cloudAccounts.set(result.ultimateCloudAccounts);
       this.cloudSyncAvailable.set(result.serverInfo.capabilities.includes('CLOUD_SYNC'));
-      this.s3Available.set(result.serverInfo.capabilities.includes('THIRD_PARTY_STORAGE'));
+      this.cloudPlus.set(
+        result.ultimateCloud.plus.available ? null : result.ultimateCloud.plus.extensionId,
+      );
+      if (this.auth.isAdmin()) {
+        const s3 = (await this.gql.query(S3LibraryAvailabilityQuery)).s3LibraryAvailability;
+        this.s3Availability.set(s3.canCreate || s3.errorCode === 's3_only_library' ? s3 : null);
+      }
     } catch {
       // Retried while following; without it the libraries still show.
     }

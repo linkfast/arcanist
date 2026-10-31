@@ -44,11 +44,11 @@ public sealed record SetLibraryCloudSyncInput(CloudSyncMode Mode, Guid? Download
 
 /// <summary>
 /// Syncing libraries with the linked Ultimate Cloud account (Cloud plan). Administrators only: it sends the
-/// server's music to the account; turning it on needs a recent authentication.
+/// server's music to the account; turning it on needs a recent authentication. The server keeps how each library syncs;
+/// Ultimate Cloud Plus (<see cref="CloudPlus"/>) does the syncing.
 /// </summary>
-public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, ICapabilityService capabilities, UserCloudAccounts accounts, IServiceProvider services)
+public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, ICapabilityService capabilities, UserCloudAccounts accounts, CloudPlus plus)
 {
-    private CloudSyncWorker Worker => services.GetRequiredService<CloudSyncWorker>();
 
     /// <summary>The sync of every library with folders on this server.</summary>
     public async Task<IReadOnlyList<LibraryCloudSyncState>> ListAsync(CancellationToken cancellationToken)
@@ -70,6 +70,9 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
         if (input.Mode != CloudSyncMode.Off)
         {
             guard.RecentAuthentication();
+            // Syncing is Ultimate Cloud Plus's (closed source): without it, nothing would sync.
+            if (plus.Sync is null)
+                throw new ArcanistException.Conflict(ErrorCodes.CloudPlusRequired);
             // Another user's account is theirs: only the server's, or the caller's own (unless it was chosen already).
             if (input.AccountUserId is { } user && user != actor.UserId && user != previous)
                 throw ArcanistException.Field("accountUserId", ErrorCodes.NotFound);
@@ -77,10 +80,6 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
                 throw new ArcanistException.Conflict(ErrorCodes.CloudSyncUnavailable);
             if (library.Sources.Count == 0 || library.Sources.Any(s => s.Kind != LibrarySourceKind.Local))
                 throw ArcanistException.Field("mode", ErrorCodes.ReadOnly);
-            // Syncing needs Ultimate Cloud's sync component (closed source): turning it on installs it.
-            using (Core.Cloud.UltimateCloudClient.As(input.AccountUserId))
-                if (await services.GetRequiredService<IUltimateAudio>().EnsureInstalledAsync(cancellationToken) is { } unavailable)
-                    throw new ArcanistException.Conflict(unavailable);
             if (input.DownloadSourceId is { } sourceId && library.Sources.All(s => s.Id != sourceId))
                 throw ArcanistException.Field("downloadSourceId", ErrorCodes.NotFound);
             if (input.Mode is CloudSyncMode.Download or CloudSyncMode.Both
@@ -107,7 +106,7 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
         sync.DownloadSourceId = input.DownloadSourceId;
         sync.Requested = input.Mode != CloudSyncMode.Off;
         await db.SaveChangesAsync(cancellationToken);
-        Worker.Wake();
+        plus.Sync?.Wake();
         return (await StatesAsync([libraryId], cancellationToken))[0];
     }
 
@@ -119,7 +118,7 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
                    ?? throw new ArcanistException.NotFound();
         sync.Requested = true;
         await db.SaveChangesAsync(cancellationToken);
-        Worker.Wake();
+        plus.Sync?.Wake();
         return (await StatesAsync([libraryId], cancellationToken))[0];
     }
 
@@ -136,7 +135,7 @@ public sealed class CloudSyncService(ArcanistDbContext db, AccessGuard guard, IC
             .OrderBy(i => i.Title)
             .Select(i => new { i.LibraryId, i.Title, i.Path, i.Reason })
             .ToListAsync(cancellationToken);
-        var progress = Worker.Progress;
+        var progress = plus.Sync?.Activity;
 
         int Count(Guid id, CloudSyncItemStatus status) => counts.Where(c => c.LibraryId == id && c.Status == status).Sum(c => c.Count);
 

@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -17,6 +17,7 @@ import type {
   BackupDestinationKind,
 } from '../../graphql/generated/graphql';
 import {
+  BackupProvidersQuery,
   CreateBackupDestinationMutation,
   CreateServerDirectoryMutation,
   ServerDirectoriesQuery,
@@ -79,6 +80,19 @@ import {
                 <span class="font-medium">{{ 'backups.destinations.kinds.' + option | t }}</span>
                 <span class="text-xs text-muted-foreground">{{
                   'backups.destinations.kindHelp.' + option | t
+                }}</span>
+              </span>
+            </label>
+          }
+          @for (provider of providers(); track provider.id) {
+            <label class="flex items-start gap-3 rounded-lg border p-3 text-sm">
+              <hlm-radio [value]="'provider:' + provider.id" class="mt-0.5"
+                ><hlm-radio-indicator indicator
+              /></hlm-radio>
+              <span class="grid gap-0.5">
+                <span class="font-medium">{{ provider.name }}</span>
+                <span class="text-xs text-muted-foreground">{{
+                  'backups.destinations.kindHelp.EXTENSION' | t
                 }}</span>
               </span>
             </label>
@@ -192,7 +206,7 @@ import {
     }
   `,
 })
-export class DestinationForm {
+export class DestinationForm implements OnInit {
   protected readonly i18n = inject(I18n);
   private readonly gql = inject(Gql);
 
@@ -203,7 +217,10 @@ export class DestinationForm {
   readonly created = output<Destination>();
   readonly cancelled = output<void>();
 
-  protected kind: BackupDestinationKind = 'FOLDER';
+  /** A kind of destination, or provider:<id> for one an extension provides. */
+  protected kind: BackupDestinationKind | `provider:${string}` = 'FOLDER';
+  /** The kinds of destination extensions provide (Ultimate Cloud, with Ultimate Cloud Plus). */
+  protected readonly providers = signal<{ id: string; name: string }[]>([]);
   protected name = '';
   protected path = '';
   protected invitation = '';
@@ -220,6 +237,17 @@ export class DestinationForm {
     (await this.gql.mutate(CreateServerDirectoryMutation, { input: { parent, name } }))
       .createServerDirectory;
 
+  async ngOnInit(): Promise<void> {
+    try {
+      this.providers.set(
+        (await this.gql.query(BackupProvidersQuery, { language: this.i18n.language() }))
+          .backupProviders,
+      );
+    } catch {
+      // Without them, the server's own kinds are still there.
+    }
+  }
+
   protected kinds(): BackupDestinationKind[] {
     return this.s3Offered() ? ['FOLDER', 'S3', 'PEER'] : ['FOLDER', 'PEER'];
   }
@@ -230,8 +258,10 @@ export class DestinationForm {
         return !!this.name.trim() && !!this.path.trim();
       case 'S3':
         return !!this.name.trim() && s3ConnectionReady(this.s3);
-      default:
+      case 'PEER':
         return !!this.invitation.trim();
+      default:
+        return !!this.name.trim();
     }
   }
 
@@ -260,7 +290,10 @@ export class DestinationForm {
       const result = await this.gql.mutate(CreateBackupDestinationMutation, {
         input: {
           name: this.name.trim(),
-          kind: this.kind,
+          kind: this.kind.startsWith('provider:')
+            ? 'EXTENSION'
+            : (this.kind as BackupDestinationKind),
+          provider: this.kind.startsWith('provider:') ? this.kind.slice('provider:'.length) : null,
           path: this.kind === 'FOLDER' ? this.path.trim() : null,
           s3: this.kind === 'S3' ? s3ConnectionInput(this.s3) : null,
           invitation: this.kind === 'PEER' ? this.invitation.trim() : null,

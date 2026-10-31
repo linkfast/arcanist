@@ -1,5 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArrowRightLeft,
@@ -129,6 +130,7 @@ const REFRESH_MS = 5000;
   selector: 'app-import-page',
   imports: [
     FormsModule,
+    RouterLink,
     NgIcon,
     BrnDialogContent,
     BrnAlertDialogContent,
@@ -172,6 +174,8 @@ const REFRESH_MS = 5000;
 export class ImportPage implements OnInit {
   protected readonly auth = inject(AuthService);
   private readonly extensions = inject(EnabledExtensions);
+  /** Ultimate Cloud Plus's id while it is not running: uploading Cloud Drop's songs is its. */
+  protected readonly cloudPlus = signal<string | null>(null);
   /** The Ultimate Cloud accounts linked to this server: where Cloud Drop's songs can be uploaded. */
   protected readonly cloudAccounts = signal<
     { id: string; name?: string | null; ownerFirstName?: string | null }[]
@@ -728,8 +732,10 @@ export class ImportPage implements OnInit {
     this.libraries.set(libraries.libraries);
     this.folders.set(folders.dropFolders);
     try {
-      this.cloudAccounts.set(
-        (await this.gql.query(UltimateCloudAccountsQuery)).ultimateCloudAccounts,
+      const result = await this.gql.query(UltimateCloudAccountsQuery);
+      this.cloudAccounts.set(result.ultimateCloudAccounts);
+      this.cloudPlus.set(
+        result.ultimateCloud.plus.available ? null : result.ultimateCloud.plus.extensionId,
       );
     } catch {
       this.cloudAccounts.set([]);

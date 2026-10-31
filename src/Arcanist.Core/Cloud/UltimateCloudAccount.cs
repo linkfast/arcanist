@@ -20,14 +20,14 @@ public sealed record CloudPlanSnapshot(string Plan, string CloudStatus, bool Fea
 public sealed class UltimateCloudAccount(
     UltimateCloudAuth auth,
     UltimateCloudClient client,
-    UltimateAudioTool tool,
-    IServiceProvider services,
+    UltimateCloudSignals signals,
     SettingsStore settings,
     IArcanistDbContextFactory databases,
     IOptionsMonitor<SetupOptions> setup,
     IOptionsMonitor<UltimateCloudOptions> options,
     DatabaseMaintenance maintenance,
     Extensions.ExtensionHost extensions,
+    Hosting.ArcanistPaths paths,
     TimeProvider time,
     ILogger<UltimateCloudAccount> logger) : BackgroundService, ICloudLinkState
 {
@@ -144,7 +144,7 @@ public sealed class UltimateCloudAccount(
         _plan = null;
         ErrorCode = null;
         await settings.SetAsync<CloudPlanSnapshot?>(SettingKeys.UltimateCloudPlan, null, cancellationToken);
-        await ConnectAsync(cancellationToken);
+        Changed();
     }
 
     /// <summary>Checks the plan now.</summary>
@@ -163,32 +163,19 @@ public sealed class UltimateCloudAccount(
             _plan = ParsePlan(await client.SendAsync(PlanQuery, null, cancellationToken), time);
             ErrorCode = null;
             await settings.SetAsync(SettingKeys.UltimateCloudPlan, _plan, cancellationToken);
-            // The sync component, when an administrator installed it: updated when Ultimate Cloud serves a new version.
-            if (tool.IsInstalled)
-                await tool.EnsureAsync(cancellationToken);
-            await ConnectAsync(cancellationToken);
+            Changed();
         }
         catch (UltimateCloudException e)
         {
             // Unreachable: the last known plan holds for a while. Expired: linking again is needed.
-            await ConnectAsync(cancellationToken);
             ErrorCode = e.Code;
+            Changed();
             logger.LogWarning("The Ultimate Cloud plan could not be checked: {Error} ({Message})", e.Code, e.Message);
         }
     }
 
-    /// <summary>Registers the node and trusts the account's devices (or forgets them without the Cloud plan).</summary>
-    private async Task ConnectAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await services.GetRequiredService<UltimateCloudConnect>().SyncAsync(cancellationToken);
-        }
-        catch (UltimateCloudException e)
-        {
-            logger.LogWarning("The P2P connection through Ultimate Cloud could not be updated: {Error}", e.Code);
-        }
-    }
+    /// <summary>The account or its plan changed: extensions (Ultimate Cloud Plus) hear it.</summary>
+    private void Changed() => signals.Raise();
 
     public void Wake()
     {
@@ -226,6 +213,17 @@ public sealed class UltimateCloudAccount(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Before Ultimate Cloud Plus, the sync component (ultimate-audio) was downloaded here: nothing uses it now.
+        try
+        {
+            var tool = Path.Combine(paths.Root, "tools", "ultimate-audio");
+            if (Directory.Exists(tool))
+                Directory.Delete(tool, recursive: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            logger.LogDebug(e, "The old ultimate-audio folder could not be removed");
+        }
         extensions.EnabledChanged += id =>
         {
             if (id == Extensions.UltimateCloud.UltimateCloudExtension.Id)
@@ -246,9 +244,9 @@ public sealed class UltimateCloudAccount(
                             await RefreshAsync(stoppingToken);
                         else if (!enabled && _wasEnabled != false)
                         {
-                            // Switched off: the devices trusted through the account are not any more.
+                            // Switched off: what depends on the account (extensions) hears it.
                             CancelLink();
-                            await ConnectAsync(stoppingToken);
+                            Changed();
                         }
 
                         _wasEnabled = enabled;

@@ -18,6 +18,10 @@ public static class BackupEndpoints
             .WithName("BackupDestinations")
             .WithSummary("Where backups go: folders of this server, S3 buckets and other Arcanist servers. Administrators only.");
 
+        backups.MapGet("/providers", (string? language, BackupService service, CancellationToken ct) => service.ProvidersAsync(language, ct))
+            .WithName("BackupProviders")
+            .WithSummary("The kinds of destination extensions provide now (Ultimate Cloud, with Ultimate Cloud Plus), named in `language`. Administrators only.");
+
         backups.MapPost("/destinations", (CreateBackupDestinationInput input, BackupService service, CancellationToken ct) => service.CreateDestinationAsync(input, ct))
             .WithName("CreateBackupDestination")
             .WithSummary("Adds a destination for backups (it must be writable). Administrators only, with a recent authentication.");

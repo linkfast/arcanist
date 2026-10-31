@@ -1087,6 +1087,7 @@ export const ExtensionFields = graphql(`
     managed
     openSource
     blocked
+    usesCore
   }
 `);
 
@@ -2242,9 +2243,10 @@ export const UltimateCloudStatusFields = graphql(`
       name
       collection
     }
-    audioTool {
-      version
-      errorCode
+    plus {
+      installed
+      available
+      extensionId
     }
     enabled
     services {
@@ -2271,6 +2273,12 @@ export const UltimateCloudAccountsQuery = graphql(`
       name
       ownerFirstName
       userId
+    }
+    ultimateCloud {
+      plus {
+        available
+        extensionId
+      }
     }
   }
 `);
@@ -2521,6 +2529,12 @@ export const CloudSyncsQuery = graphql(`
     serverInfo {
       capabilities
     }
+    ultimateCloud {
+      plus {
+        available
+        extensionId
+      }
+    }
   }
 `);
 
@@ -2551,6 +2565,24 @@ export const TestS3ConnectionMutation = graphql(`
   }
 `);
 
+export const S3LibraryAvailabilityQuery = graphql(`
+  query S3LibraryAvailability {
+    s3LibraryAvailability {
+      canCreate
+      errorCode
+    }
+  }
+`);
+
+export const BackupProvidersQuery = graphql(`
+  query BackupProviders($language: String) {
+    backupProviders(language: $language) {
+      id
+      name
+    }
+  }
+`);
+
 export const CreateS3LibraryMutation = graphql(`
   mutation CreateS3Library($input: CreateS3LibraryInput!) {
     createS3Library(input: $input) {
@@ -2562,14 +2594,6 @@ export const CreateS3LibraryMutation = graphql(`
 export const RefreshUltimateCloudMutation = graphql(`
   mutation RefreshUltimateCloud {
     refreshUltimateCloud {
-      ...UltimateCloudStatusFields
-    }
-  }
-`);
-
-export const SetUltimateCloudSyncMutation = graphql(`
-  mutation SetUltimateCloudSync($enabled: Boolean!) {
-    setUltimateCloudSync(enabled: $enabled) {
       ...UltimateCloudStatusFields
     }
   }

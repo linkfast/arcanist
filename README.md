@@ -135,4 +135,6 @@ Arcanist is free software: you can redistribute it and/or modify it under the te
 
 If you run a modified version of Arcanist and let other people use it over a network, the AGPL requires you to offer them the corresponding source code.
 
+As an additional permission under section 7 of the AGPL, extensions and web players that use only the public SDK (`Arcanist.Extensibility`) and the HTTP APIs may have any license, proprietary ones included: see [LICENSE-EXCEPTION.md](LICENSE-EXCEPTION.md) (a draft pending legal review).
+
 Third-party components and their licenses are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

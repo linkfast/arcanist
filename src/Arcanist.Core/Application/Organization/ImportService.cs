@@ -80,11 +80,6 @@ public sealed class ImportService(
         var errors = new ValidationErrors();
         var storage = storages.For(LibrarySourceKind.Local);
 
-        // Cloud Drop gives the audio without its tags: Ultimate Cloud's sync component puts them back (installed now).
-        if (folder.Kind == DropFolderKind.UltimateCloudDrop && input.Enabled
-            && await services.GetRequiredService<Core.Cloud.IUltimateAudio>().EnsureInstalledAsync(cancellationToken) is { } unavailable)
-            throw new ArcanistException.Conflict(unavailable);
-
         string? path = null;
         if (folder.Kind == DropFolderKind.UltimateCloudDrop)
         {
@@ -142,6 +137,9 @@ public sealed class ImportService(
         string? uploadAccount = null;
         if (folder.Kind == DropFolderKind.UltimateCloudDrop && input.UploadToCloud)
         {
+            // Uploading is Ultimate Cloud Plus's (closed source): without it, nothing would go up.
+            if (!services.GetRequiredService<Cloud.CloudPlus>().Available)
+                throw new ArcanistException.Conflict(ErrorCodes.CloudPlusRequired);
             // The account's library that receives the uploads: the server's account, or the administrator's own.
             var auth = services.GetRequiredService<Core.Cloud.UltimateCloudAuth>();
             var server = (await auth.LinkAsync(cancellationToken))?.Subject;

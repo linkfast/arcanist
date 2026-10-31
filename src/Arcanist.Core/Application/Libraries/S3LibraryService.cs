@@ -41,6 +41,14 @@ public sealed record S3ConnectionTest(bool Success, string? ErrorCode, int Audio
 /// Lost, the library cannot be read any more.</param>
 public sealed record CreateS3LibraryInput(string Name, S3ConnectionInput Connection, string? EncryptionKey = null);
 
+/// <summary>Whether an S3 library can be created now, and why not.</summary>
+/// <param name="ErrorCode">
+/// <c>cloud_plus_required</c> (the Ultimate Cloud Plus extension is not running), <c>s3_unavailable</c> (no Ultimate Cloud
+/// account with the Cloud plan up to date), <c>s3_only_library</c> (an S3 library is never the only one: create another first)
+/// or another reason of the extension's.
+/// </param>
+public sealed record S3LibraryAvailability(bool CanCreate, string? ErrorCode);
+
 /// <summary>
 /// Libraries in S3 buckets (Cloud plan). Administrators only: the server signs in to the bucket with the keys given,
 /// which are kept protected and never returned; creating one needs a recent authentication.
@@ -67,6 +75,8 @@ public sealed partial class S3LibraryService(
         var actor = guard.Admin();
         guard.RecentAuthentication();
         RequirePlan();
+        if (await (services.GetRequiredService<Cloud.CloudPlus>().S3?.CanCreateAsync(cancellationToken) ?? Task.FromResult<string?>(ErrorCodes.CloudPlusRequired)) is { } refused)
+            throw new ArcanistException.Conflict(refused);
 
         var errors = new ValidationErrors();
         var name = input.Name?.Trim() ?? "";
@@ -125,6 +135,17 @@ public sealed partial class S3LibraryService(
         var encryption = new S3Encryption(S3Encryption.ParseKey(ownerKey)!);
         if (!await S3Storage.KeyMatchesAsync(storage.Client(connection), prefix, encryption, cancellationToken))
             throw new ArcanistException.Conflict(ErrorCodes.S3WrongKey);
+    }
+
+    /// <summary>Whether an S3 library can be created now (the panel shows its button only then), and why not.</summary>
+    public async Task<S3LibraryAvailability> AvailabilityAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var policy = services.GetRequiredService<Cloud.CloudPlus>().S3;
+        var refused = policy is null ? ErrorCodes.CloudPlusRequired
+            : !capabilities.IsEnabled(Capability.ThirdPartyStorage) ? ErrorCodes.S3Unavailable
+            : await policy.CanCreateAsync(cancellationToken);
+        return new S3LibraryAvailability(refused is null, refused);
     }
 
     private void RequirePlan()

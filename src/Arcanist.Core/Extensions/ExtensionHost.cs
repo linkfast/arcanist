@@ -50,6 +50,9 @@ public sealed class ExtensionRegistration(ExtensionManifest manifest, bool built
 
     internal IArcanistExtension? Instance { get; set; }
 
+    /// <summary>Its assembly references the server's (`Arcanist.Core`), not only the SDK: the AGPL's extension exception does not cover it.</summary>
+    public bool UsesCore { get; internal set; }
+
     /// <summary>On when nothing in the configuration says otherwise (built-in ones that say so).</summary>
     internal bool EnabledByDefault { get; init; }
 
@@ -99,6 +102,22 @@ public sealed class ExtensionHost
     /// <summary>Installed through the configuration (<see cref="ManagedExtensions"/>): always on, never uninstalled.</summary>
     public bool IsManaged(string id) => _managed.Contains(id);
 
+    /// <summary>
+    /// Whether a service an extension registered may be used now: its extension is on and not blocked (switching one
+    /// off applies at once, its services stay registered until a restart). Services of the server itself always may.
+    /// </summary>
+    public bool IsActive(object service)
+    {
+        var context = AssemblyLoadContext.GetLoadContext(service.GetType().Assembly);
+        if (context is not ExtensionLoadContext extension)
+            return true;
+        return Find(extension.Id) is { Status: ExtensionStatus.Running } && IsEnabled(extension.Id);
+    }
+
+    /// <summary>The service of type <typeparamref name="T"/> while it may be used (<see cref="IsActive"/>), or null.</summary>
+    public T? Active<T>(IServiceProvider services) where T : class =>
+        services.GetService<T>() is { } service && IsActive(service) ? service : null;
+
     private HashSet<string> _managed = [];
 
     /// <summary>Raised when an administrator switches an extension on or off, with its id.</summary>
@@ -137,7 +156,7 @@ public sealed class ExtensionHost
 
             try
             {
-                registration.Instance = Instantiate(manifest, root);
+                (registration.Instance, registration.UsesCore) = Instantiate(manifest, root);
                 registration.Status = ExtensionStatus.Running;
             }
             catch (Exception e)
@@ -290,14 +309,15 @@ public sealed class ExtensionHost
         }
     }
 
-    private static IArcanistExtension Instantiate(ExtensionManifest manifest, string root)
+    private static (IArcanistExtension Instance, bool UsesCore) Instantiate(ExtensionManifest manifest, string root)
     {
         var path = Path.GetFullPath(Path.Combine(root, manifest.Assembly));
         var context = new ExtensionLoadContext(manifest.Id, path);
         var assembly = context.LoadFromFile(path);
         var type = assembly.GetExportedTypes().SingleOrDefault(t => typeof(IArcanistExtension).IsAssignableFrom(t) && t is { IsAbstract: false, IsInterface: false })
                    ?? throw new InvalidOperationException($"{manifest.Assembly} has no public IArcanistExtension implementation.");
-        return (IArcanistExtension)Activator.CreateInstance(type)!;
+        var usesCore = assembly.GetReferencedAssemblies().Any(a => a.Name == typeof(ExtensionHost).Assembly.GetName().Name);
+        return ((IArcanistExtension)Activator.CreateInstance(type)!, usesCore);
     }
 
     /// <summary>
@@ -306,6 +326,8 @@ public sealed class ExtensionHost
     /// </summary>
     private sealed class ExtensionLoadContext(string id, string mainAssembly) : AssemblyLoadContext($"extension:{id}")
     {
+        public string Id { get; } = id;
+
         private static readonly HashSet<string> Platform = ((AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string) ?? "")
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(Path.GetFileNameWithoutExtension)

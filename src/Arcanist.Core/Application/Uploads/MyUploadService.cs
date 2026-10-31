@@ -150,11 +150,10 @@ public sealed class MyUploadService(
         var access = guard.Permission(Permissions.Download);
         if (!server.Enabled)
             throw new ArcanistException.Conflict(ErrorCodes.CloudDisabled);
+        // Sending them is Ultimate Cloud Plus's (closed source): without it, nothing would go.
+        var uploads = services.GetRequiredService<Cloud.CloudPlus>().Uploads ?? throw new ArcanistException.Conflict(ErrorCodes.CloudPlusRequired);
         if (accounts.TierOf(access.UserId) == CloudTier.None)
             throw new ArcanistException.Conflict(ErrorCodes.CloudNotLinked);
-        using (UltimateCloudClient.As(access.UserId))
-            if (await services.GetRequiredService<IUltimateAudio>().EnsureInstalledAsync(cancellationToken) is { } unavailable)
-                throw new ArcanistException.Conflict(unavailable);
         if (input.TrackIds is not { Count: > 0 and <= MaxTracks })
             throw ArcanistException.Field("trackIds", ErrorCodes.InvalidFormat);
 
@@ -218,7 +217,7 @@ public sealed class MyUploadService(
 
         db.UserUploads.AddRange(rows);
         await db.SaveChangesAsync(cancellationToken);
-        services.GetService<MyCloudUploadWorker>()?.Wake();
+        uploads.Wake();
 
         var tracks = await catalog.VisibleTracksAsync(access, ids, cancellationToken);
         var libraryIds = rows.Where(r => r.LibraryId is not null).Select(r => r.LibraryId!.Value).Distinct().ToList();

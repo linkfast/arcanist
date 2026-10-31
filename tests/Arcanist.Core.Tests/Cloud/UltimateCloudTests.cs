@@ -329,37 +329,6 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
             });
         }
 
-        // The tools Ultimate Cloud signs for Arcanist servers.
-        if (url == "https://cloud.test/arcanist/tools/manifest")
-        {
-            if (!ServeTool)
-                return new HttpResponseMessage(HttpStatusCode.NotFound);
-            var manifest = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
-            {
-                tool = "ultimate-audio",
-                version = "1.0.0",
-                protocol = 1,
-                files = new[]
-                {
-                    new
-                    {
-                        rid = UltimateAudioTool.Platform ?? "none",
-                        name = ToolName,
-                        size = (long)ToolBytes.Length,
-                        sha256 = TamperTool ? new string('0', 64) : Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(ToolBytes)),
-                    },
-                },
-            }));
-            var signer = SignWithOtherKey ? System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256) : ToolKey;
-            return Json(new { manifest = Convert.ToBase64String(manifest), signature = Convert.ToBase64String(signer.SignData(manifest, System.Security.Cryptography.HashAlgorithmName.SHA256)) });
-        }
-
-        if (url == $"https://cloud.test/arcanist/tools/files/{ToolName}")
-        {
-            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(ToolBytes) };
-        }
-
         // Backblaze B2 uploads, checked as B2 checks them.
         if (url == $"{FilesBase}/b2api/upload")
         {
@@ -397,29 +366,6 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
     public const string FilesBase = "https://f000.backblazeb2.test";
 
-    /// <summary>The key the fake signs its tools with; Arcanist is told to trust it.</summary>
-    public System.Security.Cryptography.ECDsa ToolKey { get; } = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
-
-    public bool ServeTool { get; set; }
-
-    public bool SignWithOtherKey { get; set; }
-
-    public bool TamperTool { get; set; }
-
-    /// <summary>A stand-in for ultimate-audio: a script that answers version and hash, and fails the rest.</summary>
-    public static string ToolName => OperatingSystem.IsWindows() ? "ultimate-audio-test.cmd" : "ultimate-audio-test";
-
-    public static byte[] ToolBytes { get; } = Encoding.ASCII.GetBytes(OperatingSystem.IsWindows()
-        ? "@echo off\r\n" +
-          "if \"%1\"==\"version\" (echo {\"tool\":\"ultimate-audio\",\"version\":\"1.0.0\",\"protocol\":1}& exit /b 0)\r\n" +
-          "if \"%1\"==\"hash\" (echo {\"audioHash\":\"abc123\"}& exit /b 0)\r\n" +
-          "echo {\"error\":\"corrupt_file\",\"message\":\"bad\"}\r\nexit /b 1\r\n"
-        : "#!/bin/sh\n" +
-          "case \"$1\" in\n" +
-          "  version) echo '{\"tool\":\"ultimate-audio\",\"version\":\"1.0.0\",\"protocol\":1}' ;;\n" +
-          "  hash) echo '{\"audioHash\":\"abc123\"}' ;;\n" +
-          "  *) echo '{\"error\":\"corrupt_file\",\"message\":\"bad\"}'; exit 1 ;;\n" +
-          "esac\n");
 
     /// <summary>The account's own plays (<c>recordPlay</c>): AcoustID, title and when.</summary>
     public ConcurrentQueue<(string AcoustId, string? Title, DateTime? PlayedAt)> Plays { get; } = new();
@@ -542,7 +488,6 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = configured ? FakeUltimateCloud.ApiUrl : null,
             ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
-            ["Arcanist:UltimateCloud:ToolsPublicKey"] = _cloud.ToolKey.ExportSubjectPublicKeyInfoPem(),
             ["Arcanist:Extensions:dlna:Enabled"] = dlna ? "true" : null,
         }, services: _cloud.Register);
         await _factory.CompleteSetupAsync();
@@ -563,22 +508,6 @@ public sealed class UltimateCloudTests : IAsyncDisposable
                 return status;
             if (DateTime.UtcNow > deadline)
                 Assert.Fail($"Still {status}");
-            await Task.Delay(50, TestContext.Current.CancellationToken);
-        }
-    }
-
-    /// <summary>The audio tool, once sync is turned on.</summary>
-    private static async Task<JsonElement> WaitForToolAsync(HttpClient admin)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(15);
-        while (true)
-        {
-            var tool = (await admin.GraphQLAsync("query { ultimateCloud { audioTool { version errorCode } } }"))
-                .GetProperty("data").GetProperty("ultimateCloud").GetProperty("audioTool");
-            if (tool.GetProperty("version").ValueKind != JsonValueKind.Null || tool.GetProperty("errorCode").ValueKind != JsonValueKind.Null)
-                return tool;
-            if (DateTime.UtcNow > deadline)
-                Assert.Fail($"Still {tool}");
             await Task.Delay(50, TestContext.Current.CancellationToken);
         }
     }
@@ -619,7 +548,10 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         Assert.Equal("ana", status.GetProperty("account").GetString());
         Assert.Equal("Cloud", status.GetProperty("plan").GetProperty("name").GetString());
         Assert.Equal("PAID", status.GetProperty("tier").GetString());
-        Assert.Contains("CLOUD_SYNC", status.GetProperty("capabilities").EnumerateArray().Select(c => c.GetString()));
+        // A linked account uses Ultimate Cloud as a library source; the Cloud plan's features need Ultimate Cloud Plus.
+        var capabilities = status.GetProperty("capabilities").EnumerateArray().Select(c => c.GetString()).ToList();
+        Assert.Contains("ULTIMATE_CLOUD_SOURCE", capabilities);
+        Assert.DoesNotContain("CLOUD_SYNC", capabilities);
 
         var info = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", TestContext.Current.CancellationToken);
         Assert.Equal("PAID", info.GetProperty("cloudTier").GetString());
@@ -642,7 +574,7 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         var refreshed = (await admin.GraphQLAsync("mutation { refreshUltimateCloud { tier capabilities plan { name } } }"))
             .GetProperty("data").GetProperty("refreshUltimateCloud");
         Assert.Equal("FREE", refreshed.GetProperty("tier").GetString());
-        Assert.Equal(["ULTIMATE_CLOUD_SOURCE", "CLOUD_CONNECT"], refreshed.GetProperty("capabilities").EnumerateArray().Select(c => c.GetString()));
+        Assert.Equal(["ULTIMATE_CLOUD_SOURCE"], refreshed.GetProperty("capabilities").EnumerateArray().Select(c => c.GetString()));
 
         // Unlinking ends the session on Ultimate Cloud and turns everything off.
         var unlinked = (await admin.GraphQLAsync("mutation { unlinkUltimateCloud { state tier plan { name } } }"))
@@ -779,63 +711,34 @@ public sealed class UltimateCloudTests : IAsyncDisposable
         .GetProperty("edition").GetString();
 
     [Fact]
-    public async Task The_sync_component_installs_when_sync_is_turned_on_and_runs_as_a_separate_program()
+    public async Task Without_Ultimate_Cloud_Plus_the_Cloud_plans_features_ask_for_it()
     {
-        _cloud.ServeTool = true;
         var admin = await StartAsync();
         await admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }");
         _cloud.Approve = true;
         await WaitForStateAsync(admin, "LINKED");
 
-        // Linking installs nothing closed source: the server is still open source.
-        await admin.GraphQLAsync("mutation { refreshUltimateCloud { state } }");
-        Assert.False(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
+        // The paid plan alone makes nothing closed source run: the server stays open source.
+        var plus = (await admin.GraphQLAsync("query { ultimateCloud { plus { installed available extensionId } } }"))
+            .GetProperty("data").GetProperty("ultimateCloud").GetProperty("plus");
+        Assert.Equal((false, false, "ultimate-cloud-plus"), (plus.GetProperty("installed").GetBoolean(), plus.GetProperty("available").GetBoolean(),
+            plus.GetProperty("extensionId").GetString()));
         Assert.Equal("OPEN_SOURCE", await EditionAsync(admin));
 
-        // Sync on: installed, and with the paid plan the server is Ultimate.
-        Assert.Equal("LINKED", (await admin.GraphQLAsync("mutation { setUltimateCloudSync(enabled: true) { state } }"))
-            .GetProperty("data").GetProperty("setUltimateCloudSync").GetProperty("state").GetString());
-        var tool = await WaitForToolAsync(admin);
-        Assert.Equal("ULTIMATE", await EditionAsync(admin));
-        Assert.Equal("1.0.0", tool.GetProperty("version").GetString());
-        Assert.Equal(JsonValueKind.Null, tool.GetProperty("errorCode").ValueKind);
-        Assert.True(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
-
-        var audio = _factory.Services.GetRequiredService<UltimateAudioTool>();
-        Assert.Equal("abc123", await audio.HashAsync(Path.Combine(_factory.DataPath, "anything.flac"), TestContext.Current.CancellationToken));
-        var failure = await Assert.ThrowsAsync<UltimateCloudException>(() =>
-            audio.StripAsync("in.flac", "out.flac", TestContext.Current.CancellationToken));
-        Assert.Equal("tool:corrupt_file", failure.Code);
-
-        // A free plan unlocks nothing of Ultimate: the closed source component in use makes it Standard.
-        _cloud.Plan = "Standard";
-        await admin.GraphQLAsync("mutation { refreshUltimateCloud { state } }");
-        Assert.Equal("STANDARD", await EditionAsync(admin));
-
-        // Sync off: removed, open source again.
-        await admin.GraphQLAsync("mutation { setUltimateCloudSync(enabled: false) { state } }");
-        Assert.False(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
-        Assert.Equal("OPEN_SOURCE", await EditionAsync(admin));
-    }
-
-    [Theory]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task A_tool_not_signed_by_Ultimate_or_altered_is_not_installed(bool otherKey, bool tampered)
-    {
-        (_cloud.ServeTool, _cloud.SignWithOtherKey, _cloud.TamperTool) = (true, otherKey, tampered);
-        var admin = await StartAsync();
-        await admin.GraphQLAsync("mutation { startUltimateCloudLink { state } }");
-        _cloud.Approve = true;
-        await WaitForStateAsync(admin, "LINKED");
-        Assert.Equal("cloud_tool_invalid", (await admin.GraphQLAsync("mutation { setUltimateCloudSync(enabled: true) { state } }")).ErrorCode());
-
-        var tool = await WaitForToolAsync(admin);
-        Assert.Equal(JsonValueKind.Null, tool.GetProperty("version").ValueKind);
-        Assert.Equal("cloud_tool_invalid", tool.GetProperty("errorCode").GetString());
-        Assert.False(File.Exists(Path.Combine(_factory.DataPath, "tools", "ultimate-audio", FakeUltimateCloud.ToolName)));
-        await Assert.ThrowsAsync<UltimateCloudException>(() => _factory.Services.GetRequiredService<UltimateAudioTool>()
-            .HashAsync("x.flac", TestContext.Current.CancellationToken));
+        // Syncing, uploading to Ultimate Cloud and S3 libraries answer that they need it.
+        var music = Directory.CreateTempSubdirectory("arcanist-cloud-plus-").FullName;
+        var libraryId = (await admin.GraphQLAsync("mutation($p: String!) { createLibrary(input: { name: \"Music\", visibleToAll: true, watchForChanges: false, sources: [{ location: $p }] }) { id } }", new { p = music }))
+            .GetProperty("data").GetProperty("createLibrary").GetProperty("id").GetString();
+        Assert.Equal("cloud_plus_required", (await admin.GraphQLAsync(
+            "mutation($id: ID!) { setLibraryCloudSync(libraryId: $id, input: { mode: UPLOAD }) { mode } }", new { id = libraryId })).ErrorCode());
+        Assert.Equal("cloud_plus_required", (await admin.GraphQLAsync(
+            "mutation($t: [ID!]!) { uploadTracksToMyCloud(input: { trackIds: $t }) { status } }", new { t = new[] { Guid.NewGuid() } })).ErrorCode());
+        var s3 = (await admin.GraphQLAsync("query { s3LibraryAvailability { canCreate errorCode } }")).GetProperty("data").GetProperty("s3LibraryAvailability");
+        Assert.Equal((false, "cloud_plus_required"), (s3.GetProperty("canCreate").GetBoolean(), s3.GetProperty("errorCode").GetString()));
+        var features = (await admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", ArcanistFactory.Json, TestContext.Current.CancellationToken))
+            .GetProperty("features").EnumerateArray().Select(f => f.GetString()).ToList();
+        Assert.DoesNotContain("MY_CLOUD_UPLOADS", features);
+        Assert.DoesNotContain("WISH_LIST_CLOUD_SYNC", features);
     }
 
     [Fact]

@@ -5,13 +5,13 @@
   </div>
   @if (canManage()) {
     <div class="flex flex-wrap gap-2">
-      @if (auth.isAdmin() && cloudOn()) {
+      @if (auth.isAdmin() && cloudOn() && s3Availability(); as s3) {
         <button
           hlmBtn
           variant="outline"
           type="button"
-          [disabled]="!s3Available()"
-          [title]="s3Available() ? '' : ('s3.needsPlan' | t)"
+          [disabled]="!s3.canCreate"
+          [title]="s3.errorCode ? i18n.error(s3.errorCode) : ''"
           (click)="s3Open.set(true)"
         >
           {{ 's3.open' | t }}
@@ -259,6 +259,7 @@
               [sources]="library.sources ?? []"
               [state]="cloudSyncs()[library.id]"
               [available]="cloudSyncAvailable()"
+              [plusMissing]="cloudPlus()"
               [accounts]="cloudAccounts()"
               (changed)="cloudSyncChanged($event)"
             />

@@ -16,7 +16,7 @@ Signed-off-by: Jane Doe <jane@example.com>
 
 ## Licensing of contributions
 
-- All contributions are licensed under AGPL-3.0-or-later.
+- All contributions are licensed under AGPL-3.0-or-later with the additional permission in [LICENSE-EXCEPTION.md](LICENSE-EXCEPTION.md) (extensions that use only the SDK may have any license).
 - New dependencies must use a license compatible with AGPL-3.0 (for example MIT, BSD, Apache-2.0, MPL-2.0, LGPL or GPL-3.0). GPL-2.0-only code cannot be combined with Arcanist.
 - Do not copy code from other projects unless its license is compatible and its copyright notices are preserved. Arcanist does not reuse code from mStream; compatibility with mStream is implemented from its public API documentation.
 - Add new third-party components to [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

@@ -20,12 +20,19 @@ public sealed record BackupDestinationInfo(
 /// <param name="Path">For a folder: its full path on this server.</param>
 /// <param name="S3">For S3: the connection, as for libraries in S3.</param>
 /// <param name="Invitation">For another server: the link it gave (<c>arcanist://p2p?kind=backup…</c>).</param>
+/// <param name="Provider">For an extension's kind (<see cref="BackupDestinationKind.Extension"/>): its id, from <c>backupProviders</c>.</param>
+/// <param name="ProviderSettings">For an extension's kind: what it asks for, as JSON (may be empty).</param>
 public sealed record CreateBackupDestinationInput(
     string Name,
     BackupDestinationKind Kind,
     string? Path,
     S3ConnectionInput? S3,
-    string? Invitation);
+    string? Invitation,
+    string? Provider = null,
+    string? ProviderSettings = null);
+
+/// <summary>A kind of destination an extension provides (Ultimate Cloud, with Ultimate Cloud Plus).</summary>
+public sealed record BackupProvider(string Id, string Name);
 
 /// <summary>Whether a destination can be written now.</summary>
 /// <param name="ErrorCode">Why not, when it cannot.</param>

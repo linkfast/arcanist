@@ -27,12 +27,6 @@ public sealed class UltimateCloudOptions
     /// <summary>How long the last known plan holds while Ultimate Cloud cannot be reached.</summary>
     public TimeSpan OfflineGrace { get; set; } = TimeSpan.FromDays(7);
 
-    /// <summary>Where Ultimate Cloud serves the tools it signs (ultimate-audio); by default <c>/arcanist/tools/</c> on the API's host.</summary>
-    public string? ToolsUrl { get; set; }
-
-    /// <summary>The key those tools are signed with (PEM); by default the one Arcanist ships (<see cref="UltimateAudioTool.PublicKey"/>).</summary>
-    public string? ToolsPublicKey { get; set; }
-
     /// <summary>Where the change notices are subscribed to (WebSocket); by default the API's URL.</summary>
     public string? EventsUrl { get; set; }
 }

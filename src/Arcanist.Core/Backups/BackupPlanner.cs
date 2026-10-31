@@ -18,6 +18,7 @@ internal sealed class BackupTargets(IServiceProvider services)
         BackupDestinationKind.Folder => new FolderTarget(destination.Location),
         BackupDestinationKind.S3 => services.GetRequiredService<S3BackupTargets>().Open(destination),
         BackupDestinationKind.Peer => services.GetRequiredService<PeerBackupTargets>().Open(destination),
+        BackupDestinationKind.Extension => services.GetRequiredService<ExtensionBackupTargets>().Open(destination),
         _ => throw new ArcanistException.Conflict(ErrorCodes.BackupDestinationUnavailable),
     };
 }

@@ -34,10 +34,7 @@ public sealed class UserCloudAccountsTests : IAsyncDisposable
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = FakeUltimateCloud.ApiUrl,
             ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
-            // Syncing a library installs the sync component, which the fake Ultimate Cloud signs and serves.
-            ["Arcanist:UltimateCloud:ToolsPublicKey"] = _cloud.ToolKey.ExportSubjectPublicKeyInfoPem(),
         }, services: _cloud.Register);
-        _cloud.ServeTool = true;
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
         _admin = await _factory.CreateAuthenticatedClientAsync();
         await _factory.WaitForScansAsync(_admin);
@@ -161,37 +158,6 @@ public sealed class UserCloudAccountsTests : IAsyncDisposable
             Assert.False(await db.Libraries.AnyAsync(l => l.OwnerUserId != null, Cancel));
             Assert.False(await db.Settings.AnyAsync(s => s.Key.StartsWith(SettingKeys.UltimateCloudUserPrefix), Cancel));
         }
-    }
-
-    [Fact]
-    public async Task An_administrator_s_own_Cloud_plan_unlocks_the_paid_features()
-    {
-        await StartAsync();
-        Assert.Equal("NONE", (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", Cancel)).GetProperty("cloudTier").GetString());
-
-        var status = await LinkAsync(_admin);
-        Assert.Equal("PAID", status.GetProperty("tier").GetString());
-        Assert.Equal("PAID", (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/server-info", Cancel)).GetProperty("cloudTier").GetString());
-
-        // It is one of the accounts music can go to, and a library syncs with it.
-        Guid adminId;
-        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
-            adminId = await db.Users.Where(u => u.UserName == ArcanistFactory.AdminUserName).Select(u => u.Id).SingleAsync(Cancel);
-        var account = Assert.Single((await _admin.GraphQLAsync("query { ultimateCloudAccounts { id userId } }"))
-            .GetProperty("data").GetProperty("ultimateCloudAccounts").EnumerateArray());
-        Assert.Equal(("user-2", adminId.ToString()), (account.GetProperty("id").GetString(), account.GetProperty("userId").GetString()));
-
-        var library = (await _admin.GraphQLAsync("query { libraries { id personal } }")).GetProperty("data").GetProperty("libraries").EnumerateArray()
-            .Single(l => !l.GetProperty("personal").GetBoolean()).GetProperty("id").GetString();
-        const string set = "mutation($id: ID!, $a: ID) { setLibraryCloudSync(libraryId: $id, input: {mode: UPLOAD, accountUserId: $a}) { mode accountUserId } }";
-        // Not with the server's account, which is not linked.
-        Assert.Equal("cloud_sync_unavailable", (await _admin.GraphQLAsync(set, new { id = library, a = (Guid?)null })).ErrorCode());
-        var sync = (await _admin.GraphQLAsync(set, new { id = library, a = adminId })).GetProperty("data").GetProperty("setLibraryCloudSync");
-        Assert.Equal(("UPLOAD", adminId.ToString()), (sync.GetProperty("mode").GetString(), sync.GetProperty("accountUserId").GetString()));
-
-        // Another user's account is theirs alone.
-        var other = await _factory.CreateUserAsync("carla", UserRole.Admin);
-        Assert.Equal("validation_failed", (await _admin.GraphQLAsync(set, new { id = library, a = other.Id })).ErrorCode());
     }
 
     public async ValueTask DisposeAsync()

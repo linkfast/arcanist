@@ -25,6 +25,7 @@ public sealed class LibraryService(
     LibraryWatchSignal watches,
     LibraryMoves moves,
     CloudLibraries cloud,
+    Cloud.CloudPlus cloudPlus,
     Storage.ILibraryStorageResolver storages,
     TimeProvider time,
     SettingsStore settings,
@@ -186,6 +187,9 @@ public sealed class LibraryService(
         var library = await FindManageableAsync(actor, id, cancellationToken);
         if (library.ManagedBy is not null)
             throw new ArcanistException.Conflict(ErrorCodes.LibraryManaged);
+        // Ultimate Cloud Plus keeps S3 libraries from being the only ones left.
+        if (cloudPlus.S3 is { } s3 && await s3.CanDeleteAsync(id, cancellationToken) is { } refused)
+            throw new ArcanistException.Conflict(refused);
         await RemoveAsync(db, scans, library, cancellationToken);
         accessCache.InvalidateAll();
     }

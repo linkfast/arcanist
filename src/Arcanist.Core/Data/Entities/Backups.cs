@@ -10,6 +10,9 @@ public enum BackupDestinationKind
 
     /// <summary>Another Arcanist server, through the P2P network, that agreed to keep this server's backups.</summary>
     Peer,
+
+    /// <summary>A kind an extension provides (such as Ultimate Cloud, with Ultimate Cloud Plus): <c>Location</c> starts with its id.</summary>
+    Extension,
 }
 
 /// <summary>Where backups go. Removing it never touches what is already there.</summary>
@@ -19,7 +22,7 @@ public sealed class BackupDestination : Entity
 
     public BackupDestinationKind Kind { get; init; }
 
-    /// <summary>The folder's full path, <c>s3://bucket/prefix</c>, or the other server's node id.</summary>
+    /// <summary>The folder's full path, <c>s3://bucket/prefix</c>, the other server's node id, or an extension's <c>&lt;provider&gt;:&lt;location&gt;</c>.</summary>
     public required string Location { get; set; }
 
     /// <summary>As JSON: the S3 connection (with its secret protected), or the other server's ticket.</summary>

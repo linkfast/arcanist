@@ -31,10 +31,6 @@ public static class UltimateCloudEndpoints
             .WithSummary("Shows a collection of the account (its library or Cloud Drop) as a library of this server; nothing is downloaded. " +
                          "Administrators only, with a recent authentication.");
 
-        cloud.MapPut("/sync", (SetUltimateCloudSyncInput input, UltimateCloudService service, CancellationToken ct) => service.SetSyncAsync(input.Enabled, ct))
-            .WithName("SetUltimateCloudSync")
-            .WithSummary("Turns Ultimate Cloud's sync component (ultimate-audio, closed source) on or off: on, it is installed and syncing libraries, Cloud Drop and uploads to Ultimate Cloud work, and the server's edition is ULTIMATE; off, it is removed. Administrators only, with a recent authentication.");
-
         cloud.MapPost("/refresh", (UltimateCloudService service, CancellationToken ct) => service.RefreshAsync(ct))
             .WithName("RefreshUltimateCloud")
             .WithSummary("Reads the account's plan again now. Administrators only.");

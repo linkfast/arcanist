@@ -1,4 +1,3 @@
-import { Edition } from '../../core/server/edition';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
@@ -27,7 +26,6 @@ import {
   AddUltimateCloudLibraryMutation,
   CancelUltimateCloudLinkMutation,
   RefreshUltimateCloudMutation,
-  SetUltimateCloudSyncMutation,
   SetExtensionEnabledMutation,
   SetUltimateCloudServicesMutation,
   StartUltimateCloudLinkMutation,
@@ -87,7 +85,6 @@ export class CloudPage implements OnInit {
   protected readonly switchVersion = signal(0);
 
   protected readonly status = signal<Status | null>(null);
-  private readonly edition = inject(Edition);
   protected readonly metrics = signal<Metrics | null>(null);
   protected readonly services = SERVICES;
   protected readonly periods = PERIODS;
@@ -272,16 +269,6 @@ export class CloudPage implements OnInit {
     await this.run(async () =>
       this.show((await this.gql.mutate(RefreshUltimateCloudMutation)).refreshUltimateCloud),
     );
-  }
-
-  /** The sync component (ultimate-audio, closed source): installed on, removed off. */
-  protected async setSync(enabled: boolean): Promise<void> {
-    await this.run(async () => {
-      this.show(
-        (await this.gql.mutate(SetUltimateCloudSyncMutation, { enabled })).setUltimateCloudSync,
-      );
-      await this.edition.refresh();
-    });
   }
 
   protected async unlink(): Promise<void> {

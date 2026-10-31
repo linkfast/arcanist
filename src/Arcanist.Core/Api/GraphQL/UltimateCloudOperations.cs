@@ -103,11 +103,6 @@ public sealed partial class Mutation
         UltimateCloudServicesInput input, [FromServices] MyUltimateCloudService cloud, CancellationToken cancellationToken) =>
         cloud.SetServicesAsync(input, cancellationToken);
 
-    [Name("setUltimateCloudSync")]
-    [Description("Turns Ultimate Cloud's sync component (ultimate-audio, closed source) on or off: on, it is installed and syncing libraries, Cloud Drop and uploads to Ultimate Cloud work, and the server's edition is ULTIMATE; off, it is removed. Administrators only, with a recent authentication.")]
-    public static Task<UltimateCloudStatus> SetUltimateCloudSync(bool enabled, [FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>
-        cloud.SetSyncAsync(enabled, cancellationToken);
-
     [Name("refreshUltimateCloud")]
     [Description("Reads the account's plan again now. Administrators only.")]
     public static Task<UltimateCloudStatus> RefreshUltimateCloud([FromServices] UltimateCloudService cloud, CancellationToken cancellationToken) =>

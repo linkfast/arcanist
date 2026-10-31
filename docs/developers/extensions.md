@@ -5,13 +5,18 @@ written with the same SDK. Administrators install extensions from the admin pane
 `.zip` or giving its URL, and switch them on and off there.
 
 An extension runs **inside the server, with full trust**: it can read and change everything the server can. The
-panel says so before installing and asks for the administrator's password again. Since it links with the server,
-its license must be compatible with the AGPL-3.0-or-later.
+panel says so before installing and asks for the administrator's password again.
+
+**Licensing.** An extension that uses **only** the SDK (`Arcanist.Extensibility`) and the HTTP APIs may have any
+license, a proprietary one included: that is the additional permission of the AGPL in
+[LICENSE-EXCEPTION.md](../../LICENSE-EXCEPTION.md) (a draft pending legal review). One that references
+`Arcanist.Core` links with the server's code, so its license must be compatible with the AGPL-3.0-or-later.
 
 ## The SDK
 
 Reference the `Arcanist.Extensibility` assembly (and the server's `Arcanist.Core`, if you use its application
-services) and target the same .NET version as the server. Implement `IArcanistExtension`:
+services and your extension is open source) and target the same .NET version as the server. Implement
+`IArcanistExtension`:
 
 ```csharp
 using Arcanist.Extensibility;
@@ -271,6 +276,35 @@ downloader can offer what users want:
 ```csharp
 var wanted = await wishLists.ListAllAsync(wantedOnly: true, cancellationToken);
 ```
+
+### Libraries
+
+`IMusicLibraries` (from DI) reads and fills the server's libraries without `Arcanist.Core`: `ListAsync` and `GetAsync`
+(each library with its folders, their kind and whether they can be written), `SongsAsync` (the present songs of a
+library, one per audio, with their tags, `ContentHash` and AcoustID), `BestLocalCopyAsync`, `OpenAsync` (a temporary
+local copy of a song, fetched from S3, other servers or Ultimate Cloud when needed; dispose it), `ArtworkAsync`,
+`ImportAsync` (puts a file into a library folder with the library's template, never overwriting: `Imported`,
+`Duplicate` when the library has that audio, or `Unreadable`) and `QueueScanAsync`. It checks no permissions.
+
+### Ultimate Cloud and the Cloud plan
+
+`IUltimateCloud` gives the Ultimate Cloud accounts the server links (the server's and the users' own, with their plan;
+`ServerPlan` is the best among the server's and its administrators'), runs queries of Ultimate Cloud's GraphQL API as
+one of them (`SendAsync`; the extension never sees their tokens) and raises `Changed` when accounts or plans change.
+Ultimate Cloud's paid features (the Cloud plan) are extensions that register these providers in `ConfigureServices`;
+the server uses them only while the extension runs, and answers `cloud_plus_required` without them:
+
+| Provider | What the server does with it |
+| --- | --- |
+| `ICloudPlusFeatures` | Announces the capabilities `CLOUD_SYNC`, `THIRD_PARTY_STORAGE`, `CLOUD_CONNECT` and the API feature `WISH_LIST_CLOUD_SYNC` while they are on. |
+| `ICloudSyncProvider` | Offers syncing libraries (`setLibraryCloudSync`, `syncLibraryWithCloud`) and wakes it on changes; the syncs are kept by the server (`ICloudSyncStore`). |
+| `IMyCloudUploadProvider` | Takes `uploadTracksToMyCloud`; the queue is the users' history of uploads (`IMyCloudUploadQueue`). |
+| `IS3LibraryPolicy` | Whether S3 libraries can be created, used and deleted. Without one there are no S3 libraries (those of a managed extension excepted). |
+| `IBackupDestinationProvider` | A kind of backup destination (`backupProviders`), with an `IBackupStore` that never overwrites. |
+
+`ICloudDropUploads` (Cloud Drop's songs waiting to go to the account's library) and `IP2PDevices` (this server's P2P
+node, and the devices an Ultimate Cloud account vouches for) are what the server keeps for them. Ultimate Cloud Plus,
+LinkFast's paid extension, is built on these.
 
 ## Publishing in the Marketplace
 

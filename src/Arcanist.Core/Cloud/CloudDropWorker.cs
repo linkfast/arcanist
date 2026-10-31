@@ -22,8 +22,6 @@ public sealed class CloudDropWorker(
     UltimateCloudClient client,
     UltimateCloudAccount account,
     CloudTrackDownloader downloader,
-    CloudSyncWorker uploads,
-    UltimateCloudAuth auth,
     ImportMonitor imports,
     DatabaseMaintenance maintenance,
     IOptions<OrganizationOptions> options,
@@ -114,65 +112,6 @@ public sealed class CloudDropWorker(
             await SettleAsync(folder, present, cancellationToken);
             if (await FetchAsync(folder, tracks, cancellationToken))
                 imports.RequestRun();
-            if (folder.UploadToCloud)
-                await UploadAsync(folder, cancellationToken);
-        }
-    }
-
-    /// <summary>Songs brought from Cloud Drop, now in the library and identified, go to the account's library.</summary>
-    private async Task UploadAsync(DropFolder folder, CancellationToken cancellationToken)
-    {
-        // Only to the account chosen (the server's, or an administrator's own): while it is not linked, the songs wait.
-        Guid? user = null;
-        if (folder.UploadAccount is { } subject)
-        {
-            (var found, user) = await auth.AccountOfAsync(subject, cancellationToken);
-            if (!found)
-                return;
-        }
-
-        using var as_ = UltimateCloudClient.As(user);
-
-        List<CloudDropFetch> waiting;
-        await using (var db = databases.CreateDbContext())
-        {
-            waiting = await db.CloudDropFetches.AsNoTracking()
-                .Where(f => f.DropFolderId == folder.Id && (f.Upload == CloudDropUpload.Waiting || f.Upload == CloudDropUpload.Failed))
-                .OrderBy(f => f.UpdatedAt)
-                .Take(MaxPerRun)
-                .ToListAsync(cancellationToken);
-        }
-
-        foreach (var fetch in waiting)
-        {
-            Guid? trackId;
-            bool identified;
-            await using (var db = databases.CreateDbContext())
-            {
-                trackId = fetch.TrackId ?? await db.MediaFiles
-                    .Where(f => f.LibrarySourceId == fetch.LibrarySourceId && f.RelativePath == fetch.LibraryPath && f.MissingSince == null)
-                    .Select(f => (Guid?)f.TrackId)
-                    .FirstOrDefaultAsync(cancellationToken);
-                identified = trackId is not null && await db.Tracks
-                    .AnyAsync(t => t.Id == trackId && (t.Recording.AcoustId != null || t.Recording.MusicBrainzId != null), cancellationToken);
-            }
-
-            // Not catalogued yet, or not identified yet: looked at again on the next run.
-            if (!identified)
-                continue;
-
-            var (cloudTrackId, error) = await uploads.UploadTrackAsync(trackId!.Value, cancellationToken);
-            using var work = await maintenance.WorkAsync(cancellationToken);
-            await using var save = databases.CreateDbContext();
-            var row = await save.CloudDropFetches.SingleAsync(f => f.Id == fetch.Id, cancellationToken);
-            row.TrackId = trackId;
-            row.Upload = cloudTrackId is not null ? CloudDropUpload.Uploaded : CloudDropUpload.Failed;
-            row.UploadedTrackId = cloudTrackId;
-            row.ErrorCode = error;
-            row.UpdatedAt = Now();
-            await save.SaveChangesAsync(cancellationToken);
-            if (cloudTrackId is not null)
-                logger.LogInformation("{Title} was identified and uploaded to the account's library", fetch.Title);
         }
     }
 

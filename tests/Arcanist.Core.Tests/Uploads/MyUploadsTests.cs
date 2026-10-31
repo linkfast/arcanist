@@ -23,7 +23,6 @@ public sealed class MyUploadsTests : IAsyncDisposable
     private readonly string _music = Directory.CreateTempSubdirectory("arcanist-my-uploads-").FullName;
     private readonly string _staging = Directory.CreateTempSubdirectory("arcanist-my-uploads-staging-").FullName;
     private readonly FakeUltimateCloud _cloud = new();
-    private readonly FakeUltimateAudio _audio = new();
     private ArcanistFactory _factory = null!;
 
     public async ValueTask DisposeAsync()
@@ -153,78 +152,4 @@ public sealed class MyUploadsTests : IAsyncDisposable
         Assert.Equal(0, (await HistoryAsync(admin)).GetProperty("totalCount").GetInt32());
     }
 
-    [Fact]
-    public async Task Songs_go_to_the_users_own_Ultimate_Cloud_library()
-    {
-        AudioFixtures.WriteWav(Path.Combine(_music, "Single", "s.wav"), 3, new FixtureTags("Single", "Soloist", "Single", "Soloist", TrackNumber: 1));
-        _cloud.Plans["user-2"] = "Standard";
-        _factory = new ArcanistFactory(new Dictionary<string, string?>
-        {
-            ["Arcanist:UltimateCloud:ApiUrl"] = FakeUltimateCloud.ApiUrl,
-            ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
-        }, services: services =>
-        {
-            _cloud.Register(services);
-            services.AddSingleton<IUltimateAudio>(_audio);
-        });
-        await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
-        var admin = await _factory.CreateAuthenticatedClientAsync();
-        await _factory.WaitForScansAsync(admin);
-        Guid single;
-        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
-            single = await db.Tracks.Where(t => t.Title == "Single").Select(t => t.Id).SingleAsync(Cancel);
-        var upload = $"mutation {{ uploadTracksToMyCloud(input: {{trackIds: [\"{single}\"]}}) {{ status errorCode }} }}";
-
-        // Sending a song gives away a copy of it: DOWNLOAD, and an account of their own.
-        await _factory.CreateUserAsync("carla");
-        Assert.Equal("forbidden", (await (await _factory.CreateAuthenticatedClientAsync("carla")).GraphQLAsync(upload)).ErrorCode());
-        await _factory.CreateUserAsync("bruno", permissions: Permissions.Download);
-        var bruno = await _factory.CreateAuthenticatedClientAsync("bruno");
-        Assert.Equal("cloud_not_linked", (await bruno.GraphQLAsync(upload)).ErrorCode());
-
-        _cloud.ApprovingAs = "user-2";
-        await bruno.GraphQLAsync("mutation { startMyUltimateCloudLink(input: {libraryName: \"Mi Ultimate Cloud\"}) { state } }");
-        _cloud.Approve = true;
-        var deadline = DateTime.UtcNow.AddSeconds(30);
-        while ((await bruno.GraphQLAsync("query { myUltimateCloud { tier } }")).GetProperty("data").GetProperty("myUltimateCloud").GetProperty("tier").GetString() == "NONE")
-        {
-            Assert.True(DateTime.UtcNow < deadline, "Not linked");
-            await Task.Delay(100, Cancel);
-        }
-
-        // Queued, then uploaded into their account's library (not the server's).
-        var queued = (await bruno.GraphQLAsync(upload)).GetProperty("data").GetProperty("uploadTracksToMyCloud")[0];
-        Assert.Equal("QUEUED", queued.GetProperty("status").GetString());
-        var history = await UntilAsync(bruno, h => StatusOf(h, 0) is "UPLOADED" or "FAILED");
-        Assert.Equal("UPLOADED", StatusOf(history, 0));
-        Assert.Equal("ULTIMATE_CLOUD", history.GetProperty("items")[0].GetProperty("kind").GetString());
-        Assert.Equal("Single", history.GetProperty("items")[0].GetProperty("track").GetProperty("title").GetString());
-        Assert.Contains(_cloud.AccountTracks["user-2"], t => t.Id.StartsWith("up-user-2-", StringComparison.Ordinal));
-        Assert.Empty(_cloud.Tracks);
-
-        // Once there, it is not uploaded again.
-        await bruno.GraphQLAsync(upload);
-        history = await UntilAsync(bruno, h => StatusOf(h, 0) is "ALREADY_IN_CLOUD" or "UPLOADED" or "FAILED");
-        Assert.Equal("ALREADY_IN_CLOUD", StatusOf(history, 0));
-
-        // A song only shared by another server goes only when that server allows downloads.
-        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
-        {
-            var source = await db.LibrarySources.SingleAsync(s => s.Library.Name == "Music", Cancel);
-            var remote = new P2PRemote { NodeId = "00", Ticket = "{}", Name = "Other", LibraryId = source.LibraryId, Rules = new P2PRules { AllowDownload = false } };
-            db.P2PRemotes.Add(remote);
-            await db.SaveChangesAsync(Cancel);
-            await db.LibrarySources.Where(s => s.Id == source.Id)
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Kind, LibrarySourceKind.Peer).SetProperty(x => x.Location, remote.Id.ToString()), Cancel);
-            // Without the copy their own library may have catalogued by now (that one would make it "already there").
-            await db.MediaFiles.Where(f => f.LibrarySource.Kind == LibrarySourceKind.UltimateCloud).ExecuteDeleteAsync(Cancel);
-        }
-
-        var refused = (await bruno.GraphQLAsync(upload)).GetProperty("data").GetProperty("uploadTracksToMyCloud")[0];
-        Assert.Equal("FAILED", refused.GetProperty("status").GetString());
-        Assert.Equal("download_not_allowed", refused.GetProperty("errorCode").GetString());
-
-        // What is still on its way stays when the history is forgotten; the rest goes.
-        Assert.Equal(3, (await bruno.GraphQLAsync("mutation { clearMyUploads }")).GetProperty("data").GetProperty("clearMyUploads").GetInt32());
-    }
 }

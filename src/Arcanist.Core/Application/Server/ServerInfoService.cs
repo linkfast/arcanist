@@ -192,6 +192,12 @@ public enum ApiFeature
 
     /// <summary><c>availablePlayers</c>: the web players any user can open.</summary>
     AvailablePlayers,
+
+    /// <summary>
+    /// Users' wish lists sync with their own Ultimate Cloud account (Ultimate Cloud Plus): clients that also keep a
+    /// wish list in the account need not sync this server's themselves.
+    /// </summary>
+    WishListCloudSync,
 }
 
 public sealed class ServerInfoService(
@@ -204,7 +210,8 @@ public sealed class ServerInfoService(
     Listening.RatingSettings ratings,
     Core.Extensions.ExtensionHost extensions,
     Core.Ai.AiMonitor ai,
-    EditionResolver edition)
+    EditionResolver edition,
+    Cloud.CloudPlus plus)
 {
     public const int ApiVersion = 1;
 
@@ -222,7 +229,10 @@ public sealed class ServerInfoService(
         transcoder.Formats(ffmpeg.Current),
         ratings.Current,
         Enum.GetValues<ApiFeature>().Where(f => (f != ApiFeature.TrackAnalysis || AnalysisOn)
-            && (f != ApiFeature.LyricsTranscription || Application.Catalog.LyricsTimingService.StateOf(extensions) == Application.Catalog.LyricsTimingExtension.Running)).ToList(),
+            && (f != ApiFeature.LyricsTranscription || Application.Catalog.LyricsTimingService.StateOf(extensions) == Application.Catalog.LyricsTimingExtension.Running)
+            // What Ultimate Cloud Plus provides, while it runs.
+            && (f != ApiFeature.MyCloudUploads || plus.Uploads is not null)
+            && (f != ApiFeature.WishListCloudSync || plus.Features?.WishListSync == true)).ToList(),
         AnalysisOn ? ai.Current.Progress with { AnalysisVersion = Core.Analysis.DjAudioAnalyzer.Version } : null,
         edition.Current,
         extensions.OpenSourceOnly);

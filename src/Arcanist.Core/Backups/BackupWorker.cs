@@ -305,6 +305,7 @@ public static class BackupServiceCollectionExtensions
         services.AddSingleton<BackupTargets>();
         services.AddSingleton<Targets.S3BackupTargets>();
         services.AddSingleton<PeerBackupTargets>();
+        services.AddSingleton<Targets.ExtensionBackupTargets>();
         services.AddSingleton<PeerBackupStore>();
         services.AddSingleton<BackupWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<BackupWorker>());

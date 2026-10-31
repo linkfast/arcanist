@@ -4,6 +4,14 @@ using GraphQL;
 
 namespace Arcanist.Core.Api.GraphQL;
 
+public sealed partial class Query
+{
+    [Name("s3LibraryAvailability")]
+    [Description("Whether an S3 library can be created now, and why not: the Ultimate Cloud Plus extension with an Ultimate Cloud account on the Cloud plan, and another library besides. Administrators only.")]
+    public static Task<S3LibraryAvailability> S3LibraryAvailability([FromServices] S3LibraryService s3, CancellationToken cancellationToken) =>
+        s3.AvailabilityAsync(cancellationToken);
+}
+
 public sealed partial class Mutation
 {
     [Name("testS3Connection")]

@@ -32,7 +32,12 @@ public sealed class BackupS3Tests(S3Container s3) : IClassFixture<S3Container>, 
         {
             ["Arcanist:UltimateCloud:ApiUrl"] = FakeUltimateCloud.ApiUrl,
             ["Arcanist:UltimateCloud:Authority"] = FakeUltimateCloud.Authority,
-        }, services: _cloud.Register);
+        }, services: services =>
+        {
+            _cloud.Register(services);
+            // The Cloud plan's storage comes with Ultimate Cloud Plus (here, its stand-in).
+            Cloud.FakeCloudPlus.Register(services);
+        });
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
         _admin = await _factory.CreateAuthenticatedClientAsync();
         await _factory.WaitForScansAsync(_admin);

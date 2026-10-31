@@ -17,6 +17,8 @@ namespace Arcanist.Core.Application.Extensions;
 /// <param name="IconUrl">Its icon (of its settings page, or of its first app); null when it has none.</param>
 /// <param name="Managed">Installed by the server's configuration: always on, it cannot be switched off or uninstalled
 /// (installing a newer version updates it).</param>
+/// <param name="UsesCore">Closed source and referencing the server's code (`Arcanist.Core`), not only the SDK: outside the
+/// AGPL's extension exception (LICENSE-EXCEPTION.md). Known once it is loaded.</param>
 public sealed record Extension(
     string Id,
     string Name,
@@ -36,7 +38,8 @@ public sealed record Extension(
     string? IconUrl = null,
     bool Managed = false,
     bool OpenSource = true,
-    bool Blocked = false);
+    bool Blocked = false,
+    bool UsesCore = false);
 
 /// <summary>
 /// A page of a running extension that the user may open from a player (in a window or a tab of its own). Part of the
@@ -269,7 +272,8 @@ public sealed class ExtensionService(
             manifest.Homepage, registration.BuiltIn, enabled, registration.Status, registration.ErrorCode, restart,
             manifest.Routes ?? [], $"/ext/{manifest.Id}", manifest.AdminPage is null ? null : $"/admin/extensions/{manifest.Id}",
             manifest.AdminPage?.Icon ?? manifest.Apps?.FirstOrDefault(a => a.Icon is not null)?.Icon, host.IsManaged(manifest.Id),
-            registration.BuiltIn || OpenSource.IsOpenLicense(manifest.License), host.IsBlocked(manifest.Id));
+            registration.BuiltIn || OpenSource.IsOpenLicense(manifest.License), host.IsBlocked(manifest.Id),
+            !registration.BuiltIn && !OpenSource.IsOpenLicense(manifest.License) && loaded?.UsesCore == true);
     }
 
     private void RequireSensitive()

@@ -24,7 +24,7 @@ public enum ClosedComponentKind
 {
     Extension,
     Player,
-    /// <summary>A program the server runs, such as ultimate-audio.</summary>
+    /// <summary>A program the server runs (none any more: kept for older clients).</summary>
     Tool,
 }
 
@@ -40,12 +40,12 @@ public sealed record OpenSourceMode(bool Enabled, bool SetByEnvironment, ServerE
 public sealed record SetOpenSourceModeInput(bool Enabled);
 
 /// <summary>The server's edition, worked out from what is unlocked and installed. Cheap: read on every serverInfo.</summary>
-public sealed class EditionResolver(ExtensionHost extensions, FrontendCatalog players, IUltimateAudio ultimateAudio, ICloudLinkState cloud,
+public sealed class EditionResolver(ExtensionHost extensions, FrontendCatalog players, Cloud.CloudPlus plus, ICloudLinkState cloud,
     IConfiguration configuration)
 {
     public ServerEdition Current =>
-        // Ultimate: the paid plan (a free account unlocks nothing of it) with the sync component running.
-        cloud.Tier == CloudTier.Paid && ultimateAudio.IsInstalled && !OpenSource.IsOn(configuration) ? ServerEdition.Ultimate
+        // Ultimate: the paid plan (a free account unlocks nothing of it) with Ultimate Cloud Plus running.
+        cloud.Tier == CloudTier.Paid && plus.Available && !OpenSource.IsOn(configuration) ? ServerEdition.Ultimate
         : Components().Any(c => c.Active) ? ServerEdition.Standard
         : ServerEdition.OpenSource;
 
@@ -58,8 +58,6 @@ public sealed class EditionResolver(ExtensionHost extensions, FrontendCatalog pl
         foreach (var player in players.List().Where(p => !OpenSource.IsOpenLicense(p.Manifest.License)))
             list.Add(new ClosedComponent(ClosedComponentKind.Player, player.Manifest.Id, player.Manifest.Name, player.Manifest.License,
                 players.IsUsable(player)));
-        if (ultimateAudio.IsInstalled)
-            list.Add(new ClosedComponent(ClosedComponentKind.Tool, "ultimate-audio", "ultimate-audio", null, !OpenSource.IsOn(configuration)));
         return list;
     }
 }

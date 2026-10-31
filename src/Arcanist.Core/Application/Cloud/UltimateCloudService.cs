@@ -50,13 +50,11 @@ public sealed record UltimateCloudLibrary(Guid LibraryId, string Name, UltimateC
 /// <param name="Name">The library's name; by default, "Ultimate Cloud" (or "Cloud Drop").</param>
 public sealed record AddUltimateCloudLibraryInput(UltimateCloudCollection Collection, string? Name);
 
-/// <summary>ultimate-audio, the tool Ultimate Cloud serves for syncing (audio hashes and tags as Ultimate clients handle them).</summary>
-/// <param name="Version">The installed version; null while it is not installed.</param>
-/// <param name="ErrorCode">Why the last install or update failed.</param>
-/// <summary>Ultimate Cloud's sync component (ultimate-audio): its version when installed, or why it could not be.</summary>
-public sealed record UltimateCloudTool(string? Version, string? ErrorCode);
-
-public sealed record SetUltimateCloudSyncInput(bool Enabled);
+/// <summary>Ultimate Cloud Plus, the extension with the Cloud plan's features (sync, uploads, S3, the transparent connection).</summary>
+/// <param name="Installed">It is installed in this server.</param>
+/// <param name="Available">It runs: its features can be used (with the Cloud plan).</param>
+/// <param name="ExtensionId">Its id in the marketplace, to install it.</param>
+public sealed record UltimateCloudPlusStatus(bool Installed, bool Available, string ExtensionId);
 
 /// <summary>The Ultimate Cloud account linked to this server, and what it enables.</summary>
 /// <param name="Account">The account's user name or email.</param>
@@ -74,7 +72,7 @@ public sealed record UltimateCloudStatus(
     IReadOnlyList<Capability> Capabilities,
     string? ErrorCode,
     IReadOnlyList<UltimateCloudLibrary> Libraries,
-    UltimateCloudTool AudioTool,
+    UltimateCloudPlusStatus Plus,
     bool Enabled,
     UltimateCloudServices Services);
 
@@ -88,7 +86,7 @@ public sealed class UltimateCloudService(
     ScanCoordinator scans,
     UserAccessCache accessCache,
     SettingsStore settings,
-    UltimateAudioTool tool,
+    CloudPlus plus,
     UltimateCloudServicesSettings services,
     UltimateCloudClient client,
     UltimateCloudReporter reporter)
@@ -121,29 +119,6 @@ public sealed class UltimateCloudService(
         guard.Admin();
         guard.RecentAuthentication();
         await account.UnlinkAsync(cancellationToken);
-        return await CurrentAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Turns Ultimate Cloud's sync component (ultimate-audio, closed source) on or off: on, it is installed (signed by
-    /// Ultimate Cloud) and syncing, Cloud Drop and uploads to Ultimate Cloud work, and the server's edition is ULTIMATE;
-    /// off, it is removed and they stop. Administrators only, with a recent authentication.
-    /// </summary>
-    public async Task<UltimateCloudStatus> SetSyncAsync(bool enabled, CancellationToken cancellationToken)
-    {
-        guard.Admin();
-        guard.RecentAuthentication();
-        RequireEnabled();
-        if (!enabled)
-            await tool.UninstallAsync(cancellationToken);
-        else
-        {
-            // Ultimate Cloud serves it to a linked account: the server's, or else the administrator's own.
-            var actor = guard.Authenticated().UserId;
-            using (UltimateCloudClient.As(await auth.LinkAsync(cancellationToken) is null ? actor : null))
-                if (await tool.EnsureInstalledAsync(cancellationToken) is { } unavailable)
-                    throw new ArcanistException.Conflict(unavailable);
-        }
         return await CurrentAsync(cancellationToken);
     }
 
@@ -240,7 +215,7 @@ public sealed class UltimateCloudService(
                 Enum.TryParse<UltimateCloudCollection>(s.Location, out var collection) ? collection : UltimateCloudCollection.Library))
             .OrderBy(l => l.Name)
             .ToList(),
-            new UltimateCloudTool(tool.Version, link is null ? null : tool.ErrorCode),
+            new UltimateCloudPlusStatus(plus.Installed, plus.Available, CloudPlus.ExtensionId),
             account.Enabled,
             await ServicesAsync(cancellationToken));
     }

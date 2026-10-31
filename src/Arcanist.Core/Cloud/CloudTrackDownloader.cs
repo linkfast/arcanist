@@ -1,17 +1,18 @@
 using System.Text.Json.Nodes;
 using Arcanist.Core.Application;
+using Arcanist.Core.Application.Organization;
 using Arcanist.Core.Hosting;
+using Arcanist.Core.Organization;
 
 namespace Arcanist.Core.Cloud;
 
 /// <summary>
-/// Downloads a track of the linked Ultimate Cloud account to a local file, tagged as Ultimate's clients restore it:
-/// Ultimate Cloud keeps the audio without tags, and describes it apart (title, artists, album, cover…).
+/// Downloads a track of the linked Ultimate Cloud account to a local file, tagged again: Ultimate Cloud keeps the audio
+/// without tags, and describes it apart (title, artists, album, cover…). The tags are written with ATL (<see cref="TagWriter"/>).
 /// </summary>
 public sealed class CloudTrackDownloader(
     UltimateCloudClient client,
     IHttpClientFactory clients,
-    IUltimateAudio audio,
     ArcanistPaths paths,
     ILogger<CloudTrackDownloader> logger)
 {
@@ -19,6 +20,9 @@ public sealed class CloudTrackDownloader(
     public const string Fields =
         "cloudTrackId title artist album genre trackNumber discNumber year beatsPerMinute audioFormat " +
         "coverImageId musicBrainzRecordingId musicBrainzReleaseGroupId musicBrainzArtistId";
+
+    /// <summary>Covers larger than this are left out.</summary>
+    private const long MaxCoverBytes = 10 * 1024 * 1024;
 
     /// <summary>Writes the track to <paramref name="file"/>.</summary>
     /// <param name="track">The track as Ultimate Cloud describes it (<see cref="Fields"/>).</param>
@@ -45,18 +49,18 @@ public sealed class CloudTrackDownloader(
             }
 
             int? Int(string name) => track[name] is JsonValue value && value.TryGetValue<int>(out var number) && number > 0 ? number : null;
+            Guid? Mbid(string name) => Guid.TryParse(Text(track, name), out var mbid) ? mbid : null;
             try
             {
-                await audio.TagAsync(file, new UltimateAudioMetadata(
-                    Text(track, "title"), Text(track, "artist"), Text(track, "album"), Text(track, "genre"), Int("trackNumber"), Int("discNumber"),
-                    Int("year"), Int("beatsPerMinute"), Text(track, "musicBrainzRecordingId"), Text(track, "musicBrainzReleaseGroupId"), null,
-                    Text(track, "musicBrainzArtistId"), cover),
-                    cancellationToken);
+                var picture = cover is not null && new FileInfo(cover).Length <= MaxCoverBytes ? await File.ReadAllBytesAsync(cover, cancellationToken) : null;
+                TagWriter.Write(file, new ImportTagsInput(
+                    Text(track, "title"), Text(track, "artist"), Text(track, "album"), null, Int("year"), Int("trackNumber"), Int("discNumber"),
+                    Text(track, "genre"), Mbid("musicBrainzRecordingId")), picture);
             }
-            catch (UltimateCloudException e)
+            catch (Exception e) when (e is IOException or InvalidOperationException or NotSupportedException)
             {
                 // Untagged, the song is still the song: it goes on as it is.
-                logger.LogDebug("Could not tag {Title} from Ultimate Cloud: {Error}", Text(track, "title"), e.Code);
+                logger.LogDebug("Could not tag {Title} from Ultimate Cloud: {Error}", Text(track, "title"), e.Message);
             }
 
             return null;

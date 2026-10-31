@@ -8,6 +8,7 @@ using Arcanist.Core.Hosting;
 using Arcanist.Core.Organization;
 using Arcanist.Core.Storage;
 using Arcanist.Core.Storage.S3;
+using Arcanist.Extensibility;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
@@ -65,6 +66,7 @@ public sealed class BackupService(
             BackupDestinationKind.Folder => await FolderDestinationAsync(name, input.Path, cancellationToken),
             BackupDestinationKind.S3 => S3Destination(name, input.S3),
             BackupDestinationKind.Peer => await services.GetRequiredService<BackupPeers>().JoinAsync(name, input.Invitation, cancellationToken),
+            BackupDestinationKind.Extension => await ExtensionDestinationAsync(name, input.Provider, input.ProviderSettings, cancellationToken),
             _ => throw ArcanistException.Field("kind", ErrorCodes.InvalidFormat),
         };
 
@@ -112,6 +114,31 @@ public sealed class BackupService(
             throw ArcanistException.Field("path", ErrorCodes.BackupDestinationOverlaps);
 
         return new BackupDestination { Name = name, Kind = BackupDestinationKind.Folder, Location = location, CreatedAt = Now };
+    }
+
+    /// <summary>The kinds of destination extensions provide now (Ultimate Cloud, with Ultimate Cloud Plus).</summary>
+    public async Task<IReadOnlyList<BackupProvider>> ProvidersAsync(string? language, CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        var lang = language ?? await services.GetRequiredService<SettingsStore>().GetAsync<string?>(SettingKeys.DefaultLanguage, null, cancellationToken) ?? "en";
+        return services.GetRequiredService<ExtensionBackupTargets>().Providers.Select(p => new BackupProvider(p.Id, p.Name(lang))).ToList();
+    }
+
+    private async Task<BackupDestination> ExtensionDestinationAsync(string name, string? providerId, string? settings, CancellationToken cancellationToken)
+    {
+        var provider = providerId is null ? null : services.GetRequiredService<ExtensionBackupTargets>().Provider(providerId);
+        if (provider is null)
+            throw ArcanistException.Field("provider", ErrorCodes.NotFound);
+        BackupDestinationSetup setup;
+        try
+        {
+            setup = await provider.CreateAsync(settings, cancellationToken);
+        }
+        catch (BackupDestinationException e)
+        {
+            throw new ArcanistException.Conflict(e.Code);
+        }
+        return new BackupDestination { Name = name, Kind = BackupDestinationKind.Extension, Location = $"{provider.Id}:{setup.Location}", Settings = setup.Settings, CreatedAt = Now };
     }
 
     private BackupDestination S3Destination(string name, S3ConnectionInput? input)

@@ -179,6 +179,15 @@ interface PendingInstall {
                             >{{ 'extensions.list.managed' | t }}</span
                           >
                         }
+                        @if (extension.usesCore) {
+                          <span
+                            hlmBadge
+                            variant="outline"
+                            class="ml-1 border-amber-500/50 text-amber-700 dark:text-amber-400"
+                            [title]="'extensions.list.usesCoreHelp' | t"
+                            >{{ 'extensions.list.usesCore' | t }}</span
+                          >
+                        }
                         @if (extension.restartRequired) {
                           <span hlmBadge variant="outline" class="ml-1">{{
                             'extensions.list.restartRequired' | t

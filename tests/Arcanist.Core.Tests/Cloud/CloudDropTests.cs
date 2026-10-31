@@ -17,7 +17,6 @@ public sealed class CloudDropTests : IAsyncDisposable
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
     private readonly FakeUltimateCloud _cloud = new();
-    private readonly FakeUltimateAudio _audio = new();
     private readonly string _music = Directory.CreateTempSubdirectory("arcanist-clouddrop-").FullName;
     private ArcanistFactory _factory = null!;
     private HttpClient _admin = null!;
@@ -38,7 +37,6 @@ public sealed class CloudDropTests : IAsyncDisposable
         }, services: services =>
         {
             _cloud.Register(services);
-            services.AddSingleton<IUltimateAudio>(_audio);
         });
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
         _admin = await _factory.CreateAuthenticatedClientAsync();
@@ -121,47 +119,6 @@ public sealed class CloudDropTests : IAsyncDisposable
         await _factory.Services.GetRequiredService<CloudDropWorker>().RunAsync(Cancel);
         await _factory.WaitForImportsAsync();
         Assert.Single(Music());
-    }
-
-    [Fact]
-    public async Task Songs_from_Cloud_Drop_go_to_the_account_s_library_once_identified()
-    {
-        _cloud.AddDropTrack("drop-4", "Tidal", "Haze", "Low Tide", 4, AudioFixtures.Music(bpm: 110, seconds: 3, chordSeed: 4));
-        await StartAsync();
-        // Only to a linked account's library; by default, the linked one.
-        var other = await AddCloudDropFolderAsync("MOVE", uploadToCloud: true, uploadAccount: "someone-else");
-        Assert.Contains("cloud_not_linked", await other.Content.ReadAsStringAsync(Cancel));
-        var accounts = (await _admin.GraphQLAsync("query { ultimateCloudAccounts { id ownerFirstName } }")).GetProperty("data").GetProperty("ultimateCloudAccounts");
-        var added = await AddCloudDropFolderAsync("MOVE", uploadToCloud: true);
-        Assert.Equal(HttpStatusCode.Created, added.StatusCode);
-        Assert.Equal(Assert.Single(accounts.EnumerateArray()).GetProperty("id").GetString(),
-            (await added.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("uploadAccount").GetString());
-        await WaitAsync(async () => (await FetchesAsync()).Any(f => f.Upload == CloudDropUpload.Waiting), "The song was not brought");
-        await _factory.WaitForScansAsync(_admin);
-        await WaitAsync(async () =>
-        {
-            await using var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext();
-            return await db.Tracks.AnyAsync(t => t.Title == "Tidal", Cancel);
-        }, "The song did not reach the library");
-
-        // Not identified yet: it waits.
-        var worker = _factory.Services.GetRequiredService<CloudDropWorker>();
-        await worker.RunAsync(Cancel);
-        Assert.Equal(CloudDropUpload.Waiting, Assert.Single(await FetchesAsync()).Upload);
-        Assert.Empty(_cloud.Tracks);
-
-        // Identified (as AcoustID would): uploaded, described by the catalog.
-        await using (var db = _factory.Services.GetRequiredService<IArcanistDbContextFactory>().CreateDbContext())
-        {
-            var recording = await db.Tracks.Where(t => t.Title == "Tidal").Select(t => t.Recording).SingleAsync(Cancel);
-            recording.MusicBrainzId = Guid.NewGuid();
-            await db.SaveChangesAsync(Cancel);
-        }
-
-        await worker.RunAsync(Cancel);
-        var fetch = Assert.Single(await FetchesAsync());
-        Assert.Equal((CloudDropUpload.Uploaded, "up-1"), (fetch.Upload!.Value, fetch.UploadedTrackId));
-        Assert.Equal("up-1", Assert.Single(_cloud.Tracks).Id);
     }
 
     [Fact]

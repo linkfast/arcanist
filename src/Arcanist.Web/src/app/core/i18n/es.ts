@@ -1200,6 +1200,8 @@ export const es: Dictionary = {
       uploadToCloud: 'Subir a Ultimate Cloud lo que se identifique',
       uploadToCloudHelp:
         'Cuando una canción traída de Cloud Drop ya está en la biblioteca e identificada (AcoustID o MusicBrainz, en Ajustes > Servicios en línea), se sube a la biblioteca de Ultimate Cloud elegida, con la descripción de Arcanist. Lo que no se identifica no se sube.',
+      uploadNeedsPlus:
+        'Subir lo de Cloud Drop a Ultimate Cloud necesita la extensión Ultimate Cloud Plus.',
       uploads: 'sube lo identificado a {target}',
       uploadTarget: 'Subir a',
       uploadTargetHelp:
@@ -1864,6 +1866,9 @@ export const es: Dictionary = {
       managed: 'Gestionada',
       managedHelp:
         'La instaló la configuración del servidor: siempre está activa y no se puede desinstalar desde aquí. Sí se puede actualizar instalando una versión más nueva.',
+      usesCore: 'Usa el núcleo',
+      usesCoreHelp:
+        'Es de código cerrado y usa el código del servidor (Arcanist.Core), no solo el SDK: la excepción para extensiones de la licencia no la cubre.',
       restartRequired: 'Requiere reiniciar',
       restartRequiredHelp: 'El cambio se aplicará al reiniciar el servidor.',
       restartNeeded:
@@ -2117,6 +2122,7 @@ export const es: Dictionary = {
     ownAccount: 'Mi Ultimate Cloud ({name})',
     title: 'Ultimate Cloud',
     needsPlan: 'Sincronizar con Ultimate Cloud necesita el plan Cloud de la cuenta vinculada.',
+    needsPlus: 'Sincronizar con Ultimate Cloud necesita la extensión Ultimate Cloud Plus.',
     downloadTo: 'Bajar a',
     mode: {
       OFF: 'No sincronizar',
@@ -2205,11 +2211,14 @@ export const es: Dictionary = {
         libraryName: 'Cloud Drop de {owner}',
       },
     },
-    tool: {
-      title: 'Sincronización',
-      installed: 'Activada: ultimate-audio {version}, firmada por Ultimate',
-      off: 'Desactivada',
-      help: 'El componente de sincronización (ultimate-audio, de código cerrado) sube y baja música compatible con las apps de Ultimate: sincronizar bibliotecas, Cloud Drop y «Subir a mi Ultimate Cloud» lo necesitan, y se activa solo al usarlas. Con el plan Cloud, el servidor pasa a ser ULTIMATE.',
+    plus: {
+      title: 'Ultimate Cloud Plus',
+      running: 'En marcha',
+      stopped: 'Instalada, pero no está en marcha',
+      missing: 'No instalada',
+      install: 'Instalar Ultimate Cloud Plus',
+      manage: 'Ir a Extensiones',
+      help: 'La extensión de pago (de código cerrado, del marketplace) con lo del plan Cloud: sincronizar bibliotecas, «Subir a mi Ultimate Cloud», subir lo de Cloud Drop, copias de seguridad en Ultimate Cloud, bibliotecas en S3 y la conexión transparente. Con ella y el plan Cloud, el servidor pasa a ser ULTIMATE.',
     },
     extension: {
       enabled: 'Ultimate Cloud',
@@ -3058,12 +3067,14 @@ export const es: Dictionary = {
         FOLDER: 'Carpeta del servidor',
         S3: 'Bucket S3',
         PEER: 'Otro servidor Arcanist',
+        EXTENSION: 'De una extensión',
       },
       kindHelp: {
         FOLDER:
           'Un disco, otra partición o una carpeta de red montada. No puede estar dentro de una biblioteca.',
         S3: 'Cualquier servicio compatible con S3 (AWS, Backblaze B2, Wasabi, Cloudflare R2, MinIO…). Necesita el plan Cloud.',
         PEER: 'Un servidor Arcanist que te haya invitado a guardar copias en él, a través de la red P2P.',
+        EXTENSION: 'Un destino que ofrece una extensión instalada.',
       },
       name: 'Nombre',
       namePlaceholder: 'Disco externo',
@@ -3277,6 +3288,9 @@ export const es: Dictionary = {
     cloud_sync_failed:
       'La sincronización se detuvo por un error inesperado. Revisa el registro del servidor.',
     s3_unavailable: 'Las bibliotecas en S3 necesitan el plan Cloud.',
+    cloud_plus_required:
+      'Esto necesita la extensión Ultimate Cloud Plus (en Extensiones > Marketplace).',
+    s3_only_library: 'Una biblioteca en S3 nunca puede ser la única: crea antes otra biblioteca.',
     s3_unreachable: 'El servicio S3 no responde en esa dirección.',
     s3_access_denied:
       'El servicio S3 rechazó las claves (incorrectas, o sin permiso en el bucket).',

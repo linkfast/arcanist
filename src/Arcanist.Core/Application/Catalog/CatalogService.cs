@@ -22,6 +22,7 @@ public sealed class CatalogService(
     Core.Extensions.ExtensionHost extensions,
     LyricsTiming lyricsTiming,
     Videos.VideoClips videoClips,
+    Capabilities.ICapabilityService capabilities,
     TimeProvider time)
 {
     public const int DefaultPageSize = 50;
@@ -223,6 +224,8 @@ public sealed class CatalogService(
         return (await ToModelsAsync([track], access, cancellationToken))[0];
     }
 
+    private bool S3On => capabilities.IsEnabled(Capabilities.Capability.ThirdPartyStorage);
+
     /// <summary>Files the caller may play: present (not missing) and in an accessible library.</summary>
     internal IQueryable<MediaFile> VisibleFiles(UserAccess access)
     {
@@ -232,6 +235,9 @@ public sealed class CatalogService(
         if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id))
             files = files.Where(f => f.LibrarySource.Library.ManagedBy != null
                                      || (f.LibrarySource.Kind != LibrarySourceKind.UltimateCloud && f.LibrarySource.Kind != LibrarySourceKind.S3));
+        // S3 libraries also need the Cloud plan's storage (Ultimate Cloud Plus, with an account's Cloud plan up to date).
+        else if (!S3On)
+            files = files.Where(f => f.LibrarySource.Library.ManagedBy != null || f.LibrarySource.Kind != LibrarySourceKind.S3);
         if (access.IsAdmin)
             return files;
 
@@ -244,7 +250,7 @@ public sealed class CatalogService(
     {
         var videos = db.MusicVideos.Where(v => v.MissingSince == null
                                                && (v.LibrarySource.Library.OwnerUserId == null || v.LibrarySource.Library.OwnerUserId == access.UserId));
-        if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id))
+        if (!extensions.IsEnabled(Core.Extensions.UltimateCloud.UltimateCloudExtension.Id) || !S3On)
             videos = videos.Where(v => v.LibrarySource.Library.ManagedBy != null || v.LibrarySource.Kind != LibrarySourceKind.S3);
         if (access.IsAdmin)
             return videos;

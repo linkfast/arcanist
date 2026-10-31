@@ -304,6 +304,10 @@ public static class ErrorCodes
     public const string JamNotHost = "jam_not_host";
     /// <summary>The playlist is the queue of a Jukebox Jam: change it through the Jam.</summary>
     public const string PlaylistIsJam = "playlist_is_jam";
+    /// <summary>The Cloud plan's features need the Ultimate Cloud Plus extension (installed, on and running).</summary>
+    public const string CloudPlusRequired = "cloud_plus_required";
+    /// <summary>An S3 library is never the only library: another kind must exist (and stay).</summary>
+    public const string S3OnlyLibrary = "s3_only_library";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

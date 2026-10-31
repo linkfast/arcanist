@@ -11,6 +11,11 @@ public sealed partial class Query
     public static Task<IReadOnlyList<BackupDestinationInfo>> BackupDestinations([FromServices] BackupService backups, CancellationToken cancellationToken) =>
         backups.DestinationsAsync(cancellationToken);
 
+    [Name("backupProviders")]
+    [Description("The kinds of destination extensions provide now (Ultimate Cloud, with Ultimate Cloud Plus), named in `language`. Administrators only.")]
+    public static Task<IReadOnlyList<BackupProvider>> BackupProviders(string? language, [FromServices] BackupService backups, CancellationToken cancellationToken) =>
+        backups.ProvidersAsync(language, cancellationToken);
+
     [Name("backups")]
     [Description("The backups of the server, its libraries, albums or playlists, with their latest run. Administrators only.")]
     public static Task<IReadOnlyList<BackupDefinition>> Backups([FromServices] BackupService backups, CancellationToken cancellationToken) =>

@@ -160,27 +160,25 @@
                   <dt class="text-muted-foreground">{{ 'cloud.plan.checked' | t }}</dt>
                   <dd [title]="plan.checkedAt | dateTime">{{ plan.checkedAt | relativeTime }}</dd>
                 }
-                <dt class="text-muted-foreground">{{ 'cloud.tool.title' | t }}</dt>
+                <dt class="text-muted-foreground">{{ 'cloud.plus.title' | t }}</dt>
                 <dd class="grid gap-1">
-                  <label class="flex items-center gap-2">
-                    <hlm-switch
-                      [checked]="!!current.audioTool.version"
-                      [disabled]="busy()"
-                      (checkedChange)="setSync($event)"
-                      [aria-label]="'cloud.tool.title' | t"
-                    />
-                    @if (current.audioTool.version; as version) {
-                      {{ 'cloud.tool.installed' | t: { version } }}
-                    } @else {
-                      <span class="text-muted-foreground">{{ 'cloud.tool.off' | t }}</span>
-                    }
-                  </label>
-                  @if (current.audioTool.errorCode) {
-                    <span class="text-xs text-destructive">{{
-                      i18n.error(current.audioTool.errorCode)
-                    }}</span>
+                  @if (current.plus.available) {
+                    <span>{{ 'cloud.plus.running' | t }}</span>
+                  } @else if (current.plus.installed) {
+                    <span class="text-muted-foreground">{{ 'cloud.plus.stopped' | t }}</span>
+                    <a class="text-xs underline underline-offset-2" routerLink="/extensions">{{
+                      'cloud.plus.manage' | t
+                    }}</a>
+                  } @else {
+                    <span class="text-muted-foreground">{{ 'cloud.plus.missing' | t }}</span>
+                    <a
+                      class="text-xs underline underline-offset-2"
+                      routerLink="/extensions"
+                      [queryParams]="{ install: current.plus.extensionId }"
+                      >{{ 'cloud.plus.install' | t }}</a
+                    >
                   }
-                  <span class="text-xs text-muted-foreground">{{ 'cloud.tool.help' | t }}</span>
+                  <span class="text-xs text-muted-foreground">{{ 'cloud.plus.help' | t }}</span>
                 </dd>
               </dl>
               <div class="flex flex-wrap gap-2">

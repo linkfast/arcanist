@@ -169,7 +169,11 @@ fn pausing_and_the_volume() {
     shared.render(&mut buffer);
     assert!(buffer.iter().all(|s| *s == 0.0));
     engine.stop();
-    sleep(Duration::from_millis(50));
+    // The decoder thread takes the stop when it next runs: on a busy machine that can be well after 50 ms.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while engine.status().state != "idle" && Instant::now() < deadline {
+        sleep(Duration::from_millis(10));
+    }
     assert_eq!("idle", engine.status().state);
 }
 

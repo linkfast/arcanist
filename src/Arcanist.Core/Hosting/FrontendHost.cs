@@ -28,6 +28,9 @@ public sealed class FrontendOptions
     /// Default: <c>wwwroot/players</c>. They are served like the installed ones, and cannot be uninstalled.
     /// </summary>
     public string? BundledRoot { get; set; }
+
+    /// <summary>The generic Jukebox Jam client, served at <c>/players/jam/</c>. Default: <c>JamClient</c>.</summary>
+    public string? JamClientRoot { get; set; }
 }
 
 /// <summary>

@@ -1,0 +1,10 @@
+{
+  "id": "jam",
+  "name": "Jukebox Jam",
+  "version": "1.0.0",
+  "description": "Arcanist's own Jukebox Jam client: follow a Jam, vote, browse its music and add songs, with or without an account.",
+  "author": "LinkFast S.A. and Arcanist contributors",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://github.com/linkfast/arcanist",
+  "features": ["jukebox-jam"]
+}

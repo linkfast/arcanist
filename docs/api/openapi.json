@@ -5982,7 +5982,7 @@
             "name": "sort",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/JukeboxJamAlbumSort"
+              "type": "string"
             }
           },
           {
@@ -13993,6 +13993,7 @@
           "JUKEBOX_JAM_AI_DJ",
           "JUKEBOX_JAM_BROWSE",
           "JUKEBOX_JAM_REPLACE",
+          "JUKEBOX_JAM_SAVE_AS_PLAYLIST",
           "AVAILABLE_PLAYERS",
           "WISH_LIST_CLOUD_SYNC"
         ]
@@ -19113,6 +19114,7 @@
           "voteIntervalSeconds",
           "allowGuests",
           "allowReplace",
+          "saveAsPlaylist",
           "dj",
           "nowPlaying",
           "queue",
@@ -19175,6 +19177,9 @@
             "type": "boolean"
           },
           "allowReplace": {
+            "type": "boolean"
+          },
+          "saveAsPlaylist": {
             "type": "boolean"
           },
           "dj": {
@@ -19336,13 +19341,6 @@
             "format": "int32"
           }
         }
-      },
-      "JukeboxJamAlbumSort": {
-        "enum": [
-          "TITLE",
-          "RECENTLY_ADDED",
-          null
-        ]
       },
       "JukeboxJamArtist": {
         "required": [
@@ -27769,6 +27767,12 @@
               "null",
               "boolean"
             ]
+          },
+          "saveAsPlaylist": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -30194,6 +30198,12 @@
             }
           },
           "allowReplace": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "saveAsPlaylist": {
             "type": [
               "null",
               "boolean"

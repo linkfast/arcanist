@@ -1,3 +1,4 @@
+using Arcanist.Core.Application;
 using Arcanist.Core.Application.Jams;
 using Arcanist.Core.Auth;
 using Microsoft.AspNetCore.Mvc;
@@ -47,9 +48,13 @@ public static class JukeboxJamEndpoints
             .WithName("JukeboxJamArtists")
             .WithSummary("The artists (album artists) of the songs that can be added to a Jam, to browse them; `search` filters by name, `after` is the previous page's nextCursor. For those taking part.");
 
-        jams.MapGet("/albums", (string code, Guid? artistId, string? search, JukeboxJamAlbumSort? sort, string? after, int? first,
+        // The sort as the API writes its enums (RECENTLY_ADDED), as the catalog's albums take it.
+        jams.MapGet("/albums", (string code, Guid? artistId, string? search, string? sort, string? after, int? first,
                 [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service, CancellationToken ct) =>
-                service.AlbumsAsync(code, artistId, search, sort, after, first, guest, ct))
+                service.AlbumsAsync(code, artistId, search,
+                    sort is null ? null
+                    : Enum.TryParse<JukeboxJamAlbumSort>(sort.Replace("_", ""), ignoreCase: true, out var parsed) ? parsed
+                    : throw ArcanistException.Field("sort", ErrorCodes.InvalidFormat), after, first, guest, ct))
             .WithName("JukeboxJamAlbums")
             .WithSummary("Albums with songs that can be added to a Jam: an artist's (by year) or all of them (by title, or RECENTLY_ADDED); `search` filters by title or artist. For those taking part.");
 

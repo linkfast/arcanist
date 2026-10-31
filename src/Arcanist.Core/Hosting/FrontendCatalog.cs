@@ -28,8 +28,11 @@ public sealed record FrontendManifest(
     string Entry = "index.html",
     IReadOnlyList<string>? Features = null)
 {
-    /// <summary>Opens public playlist links (<c>#/s/&lt;token&gt;</c>) and Jukebox Jams (<c>#/jam/&lt;code&gt;</c>).</summary>
+    /// <summary>Opens public playlist links (<c>#/s/&lt;token&gt;</c>).</summary>
     public const string SharedLinks = "shared-links";
+
+    /// <summary>Is a client of Jukebox Jams (<c>#/jam/&lt;code&gt;</c>): those taking part follow it and add songs from it.</summary>
+    public const string JukeboxJam = "jukebox-jam";
 
     /// <summary>Can be the player a Jukebox Jam plays on (implements the host API).</summary>
     public const string JukeboxJamHost = "jukebox-jam-host";
@@ -59,7 +62,8 @@ public sealed partial class FrontendCatalog(
     public bool IsUsable(InstalledFrontend frontend) => !OpenSource.IsOn(configuration) || OpenSource.IsOpenLicense(frontend.Manifest.License);
 
     /// <summary>A player that may be served now (<see cref="IsUsable"/>).</summary>
-    public InstalledFrontend? FindUsable(string id) => Find(id) is { } frontend && IsUsable(frontend) ? frontend : null;
+    public InstalledFrontend? FindUsable(string id) =>
+        id == JamClientId ? JamClient : Find(id) is { } frontend && IsUsable(frontend) ? frontend : null;
 
     public const string ManifestFile = "arcanist-frontend.json";
 
@@ -82,6 +86,25 @@ public sealed partial class FrontendCatalog(
                 ? TryRead(root) ?? new FrontendManifest("player", "Web player", "")
                 : new FrontendManifest("player", "Web player", "");
             return new InstalledFrontend(manifest, root, BuiltIn: true, File.GetLastWriteTimeUtc(Path.Combine(root, "index.html")));
+        }
+    }
+
+    /// <summary>The id of the generic Jukebox Jam client (<see cref="JamClient"/>), served at <c>/players/jam/</c>.</summary>
+    public const string JamClientId = "jam";
+
+    /// <summary>
+    /// The generic client of Jukebox Jams, part of the server (<see cref="FrontendOptions.JamClientRoot"/>): those taking
+    /// part open it when no installed player is a Jam client, so a Jam never depends on one. Served at
+    /// <c>/players/jam/</c>, it is not a player of the list (never the default, not listed, not installable over).
+    /// </summary>
+    public InstalledFrontend? JamClient
+    {
+        get
+        {
+            var root = Path.GetFullPath(options.Value.JamClientRoot ?? "JamClient", environment.ContentRootPath);
+            return TryRead(root) is { Id: JamClientId } manifest && File.Exists(Path.Combine(root, manifest.Entry))
+                ? new InstalledFrontend(manifest, root, BuiltIn: true, File.GetLastWriteTimeUtc(Path.Combine(root, manifest.Entry)))
+                : null;
         }
     }
 
@@ -168,7 +191,7 @@ public sealed partial class FrontendCatalog(
             try
             {
                 var manifest = Validate(PackageArchive.ReadManifest<FrontendManifest>(unpacked, ManifestFile), unpacked);
-                if (BuiltIn?.Manifest.Id == manifest.Id || Bundled.Any(b => b.Manifest.Id == manifest.Id))
+                if (BuiltIn?.Manifest.Id == manifest.Id || Bundled.Any(b => b.Manifest.Id == manifest.Id) || manifest.Id == JamClientId)
                     throw ArcanistException.Field("id", ErrorCodes.Duplicate);
                 if (OpenSource.IsOn(configuration) && !OpenSource.IsOpenLicense(manifest.License))
                     throw new ArcanistException.Conflict(ErrorCodes.ClosedSourceDisabled);

@@ -196,6 +196,9 @@ public enum ApiFeature
     /// <summary>A Jam may let anyone replace the song playing (<c>allowReplace</c>, <c>replaceJukeboxJamNowPlaying</c>).</summary>
     JukeboxJamReplace,
 
+    /// <summary>A Jam says whether what played stays as a playlist when it ends (<c>saveAsPlaylist</c>, on by default).</summary>
+    JukeboxJamSaveAsPlaylist,
+
     /// <summary><c>availablePlayers</c>: the web players any user can open.</summary>
     AvailablePlayers,
 

@@ -1172,6 +1172,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(4096)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("SaveAsPlaylist")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("TEXT");
 

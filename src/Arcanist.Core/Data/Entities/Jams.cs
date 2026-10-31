@@ -69,6 +69,9 @@ public sealed class JamSession : Entity
     /// <summary>When someone last replaced the song playing: others wait a while before doing it again.</summary>
     public DateTime? LastReplacedAt { get; set; }
 
+    /// <summary>When it ends, what played stays as a playlist of the host's; otherwise the playlist goes with it.</summary>
+    public bool SaveAsPlaylist { get; set; } = true;
+
     public DateTime StartedAt { get; init; }
 
     public DateTime LastActivityAt { get; set; }

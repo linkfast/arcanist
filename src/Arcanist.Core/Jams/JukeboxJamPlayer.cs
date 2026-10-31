@@ -32,8 +32,15 @@ public sealed class JukeboxJamPlayer(
     /// <summary>How often renderers are followed (tests make it shorter).</summary>
     public static TimeSpan FollowInterval { get; set; } = TimeSpan.FromSeconds(2);
 
-    /// <summary>For each Jam, the entries given to its renderer, in the renderer's queue order.</summary>
-    private readonly ConcurrentDictionary<Guid, List<(Guid EntryId, Guid TrackId)>> _fed = new();
+    /// <summary>What a Jam gave its renderer: the entry playing (at its place in the renderer's queue) and the one put after it.</summary>
+    private sealed class Feed
+    {
+        public (Guid EntryId, Guid TrackId)? Current;
+        public int CurrentIndex = -1;
+        public (Guid EntryId, Guid TrackId)? Next;
+    }
+
+    private readonly ConcurrentDictionary<Guid, Feed> _fed = new();
     private readonly ConcurrentQueue<(Guid JamId, JukeboxJamAction Action)> _commands = new();
     private readonly SemaphoreSlim _wake = new(0);
 
@@ -123,17 +130,16 @@ public sealed class JukeboxJamPlayer(
         var dlna = services.GetRequiredService<DlnaService>();
         var jams = services.GetRequiredService<JukeboxJamService>();
         var rendererId = jam.RendererId!;
-        var fed = _fed.GetOrAdd(jam.Id, _ => []);
+        var feed = _fed.GetOrAdd(jam.Id, _ => new Feed());
 
+        // The renderer may already play a queue of the host's (or get one while the Jam goes on): it is kept, and the
+        // Jam's songs go right after the one playing, one at a time; the host's own queue goes on when none waits.
         var state = await dlna.RendererAsync(rendererId, cancellationToken);
-        // Ours while the renderer plays the queue it was given (someone else may have played something there since).
-        var ours = fed.Count > 0 && state.Queue.SequenceEqual(fed.Select(f => f.TrackId));
-        var playing = ours && state.State is DlnaTransportState.Playing or DlnaTransportState.Paused or DlnaTransportState.Transitioning;
-        Guid? current = playing && state.QueueIndex >= 0 && state.QueueIndex < fed.Count ? fed[state.QueueIndex].EntryId : null;
+        var current = Follow(feed, state);
 
         foreach (var command in commands)
         {
-            if (!ours)
+            if (!Active(state))
                 break;
             var action = command switch
             {
@@ -145,50 +151,97 @@ public sealed class JukeboxJamPlayer(
                 state = await dlna.ControlAsync(new ControlDlnaRendererInput(rendererId, control, null), cancellationToken);
             else if (command == JukeboxJamAction.Skip)
             {
-                // The next one given, or a new queue with the next waiting song.
+                // To the Jam's first waiting song (a song chosen to play now is first): put after this one if it is not.
+                var first = (await jams.WaitingAsync(jam, cancellationToken)).FirstOrDefault(e => e.Id != current);
+                if (first is not null && feed.Next?.EntryId != first.Id && HasQueue(state))
+                {
+                    state = await dlna.EditQueueAsync(new EditDlnaQueueInput(rendererId, DlnaQueueAction.InsertNext, [first.TrackId], null, null), cancellationToken);
+                    feed.Next = (first.Id, first.TrackId);
+                }
                 if (state.QueueIndex + 1 < state.Queue.Count)
                     state = await dlna.ControlAsync(new ControlDlnaRendererInput(rendererId, DlnaRendererAction.Next, null), cancellationToken);
                 else
-                {
-                    playing = false;
-                    current = null;
-                    await dlna.ControlAsync(new ControlDlnaRendererInput(rendererId, DlnaRendererAction.Stop, null), cancellationToken);
-                }
-                if (playing)
-                    current = state.QueueIndex >= 0 && state.QueueIndex < fed.Count ? fed[state.QueueIndex].EntryId : null;
+                    state = await dlna.ControlAsync(new ControlDlnaRendererInput(rendererId, DlnaRendererAction.Stop, null), cancellationToken);
+                current = Follow(feed, state);
             }
         }
 
-        var waiting = (await jams.WaitingAsync(jam, cancellationToken)).Where(e => e.Id != current && fed.All(f => f.EntryId != e.Id || f.EntryId == current)).ToList();
-        if (!playing)
+        // An entry taken out of the Jam after it was given to the renderer plays there as any song of the host's.
+        var allWaiting = await jams.WaitingAsync(jam, cancellationToken);
+        if (feed.Next is { } given && allWaiting.All(e => e.Id != given.EntryId))
+            feed.Next = null;
+        if (current is { } id && id != jam.CurrentEntryId && allWaiting.All(e => e.Id != id))
         {
-            // Nothing of the Jam plays: the next waiting song starts a new queue.
+            current = null;
+            feed.Current = null;
+            feed.CurrentIndex = -1;
+        }
+        var waiting = allWaiting.Where(e => e.Id != current && e.Id != feed.Next?.EntryId).ToList();
+        if (!Active(state))
+        {
+            // Nothing plays there: the next waiting song starts a new queue.
+            feed.Next = null;
             if (waiting.FirstOrDefault() is { } next)
             {
                 state = await dlna.PlayAsync(new PlayOnDlnaRendererInput(rendererId, [next.TrackId], 0), cancellationToken);
-                fed.Clear();
-                fed.Add((next.Id, next.TrackId));
+                feed.Current = (next.Id, next.TrackId);
+                feed.CurrentIndex = 0;
                 current = next.Id;
-                playing = true;
             }
         }
-        else if (state.QueueIndex == state.Queue.Count - 1 && waiting.FirstOrDefault() is { } following)
+        else if (HasQueue(state) && feed.Next is null && waiting.FirstOrDefault() is { } following)
         {
-            // The last one given plays: the next waiting one goes after it, to play without a gap.
-            state = await dlna.EditQueueAsync(new EditDlnaQueueInput(rendererId, DlnaQueueAction.Append, [following.TrackId], null, null), cancellationToken);
-            fed.Add((following.Id, following.TrackId));
+            // Right after the one playing (the Jam's or the host's own), to play next without a gap.
+            state = await dlna.EditQueueAsync(new EditDlnaQueueInput(rendererId, DlnaQueueAction.InsertNext, [following.TrackId], null, null), cancellationToken);
+            feed.Next = (following.Id, following.TrackId);
         }
 
-        var playback = current is null ? JukeboxJamPlaybackState.Stopped
+        // A song of the host's own playing is shown as such; nothing playing is nothing.
+        var hostSong = current is null && Active(state) ? JukeboxJamService.HostSong(state.Track) : null;
+        var playback = current is null && hostSong is null ? JukeboxJamPlaybackState.Stopped
             : state.State == DlnaTransportState.Paused ? JukeboxJamPlaybackState.Paused
             : JukeboxJamPlaybackState.Playing;
-        if (await jams.PlayingAsync(jam, current, null, playback, state.PositionMs, cancellationToken))
+        if (await jams.PlayingAsync(jam, current, hostSong, playback, state.PositionMs, cancellationToken))
         {
             await db.SaveChangesAsync(cancellationToken);
             signals.Publish(jam.Id, new JukeboxJamChange(jam.Code, JukeboxJamChangeKind.NowPlaying, null, null, time.GetUtcNow().UtcDateTime));
         }
         else if (jam.PositionAt is null || time.GetUtcNow().UtcDateTime - jam.PositionAt > TimeSpan.FromSeconds(10))
             await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool Active(DlnaRendererState state) =>
+        state.State is DlnaTransportState.Playing or DlnaTransportState.Paused or DlnaTransportState.Transitioning;
+
+    /// <summary>The renderer plays a queue of Arcanist's (songs can be put after the one playing).</summary>
+    private static bool HasQueue(DlnaRendererState state) => state.QueueIndex >= 0 && state.QueueIndex < state.Queue.Count;
+
+    /// <summary>
+    /// The Jam's entry that plays on the renderer, if any: the one put next once it starts, or the one playing while
+    /// it still does (at its place: the host's queue may hold the same song elsewhere).
+    /// </summary>
+    private static Guid? Follow(Feed feed, DlnaRendererState state)
+    {
+        if (!Active(state) || !HasQueue(state))
+        {
+            feed.Current = null;
+            feed.CurrentIndex = -1;
+            return null;
+        }
+
+        var playing = state.Queue[state.QueueIndex];
+        if (feed.Next is { } next && next.TrackId == playing && state.QueueIndex != feed.CurrentIndex)
+        {
+            feed.Current = next;
+            feed.CurrentIndex = state.QueueIndex;
+            feed.Next = null;
+        }
+        if (feed.Current is { } current && current.TrackId == playing && state.QueueIndex == feed.CurrentIndex)
+            return current.EntryId;
+
+        feed.Current = null;
+        feed.CurrentIndex = -1;
+        return null;
     }
 
     /// <summary>DJs of hosts gone for 5 minutes are taken off; Jams without activity for 12 hours end.</summary>
@@ -214,7 +267,7 @@ public sealed class JukeboxJamPlayer(
         var idle = await db.JamSessions.Include(j => j.Playlist).Where(j => j.EndedAt == null && j.LastActivityAt < now - IdleTimeout).ToListAsync(cancellationToken);
         foreach (var jam in idle)
         {
-            await JukeboxJamService.EndAsync(db, jam, now, cancellationToken);
+            await JukeboxJamService.EndOrDiscardAsync(db, jam, now, cancellationToken);
             signals.Publish(jam.Id, new JukeboxJamChange(jam.Code, JukeboxJamChangeKind.Ended, null, null, now));
         }
     }

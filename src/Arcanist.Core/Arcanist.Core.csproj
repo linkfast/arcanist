@@ -66,6 +66,13 @@
     FetchBundledPlayers alone (`dotnet msbuild -t:FetchBundledPlayers`) checks the downloads.
   -->
   <ItemGroup>
+    <!-- The generic Jukebox Jam client (/players/jam/): plain files, served as they are. -->
+    <Content Remove="JamClient\**" />
+    <None Remove="JamClient\**" />
+    <Content Include="JamClient\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The terms and the disclaimer the setup wizard and the players ask to accept (Legal/LegalTerms.cs). -->
     <EmbeddedResource Include="Legal\terms.json" LogicalName="Arcanist.Core.Legal.terms.json" />
   </ItemGroup>

@@ -1177,6 +1177,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
 
+                    b.Property<bool>("SaveAsPlaylist")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 

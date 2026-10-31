@@ -96,6 +96,7 @@ public sealed class JukeboxJamService(
             Voting = input.Voting,
             AllowGuests = input.AllowGuests,
             AllowReplace = input.AllowReplace ?? false,
+            SaveAsPlaylist = input.SaveAsPlaylist ?? true,
             GuestLibraryIds = libraries is null ? null : JsonSerializer.Serialize(libraries, Json),
             StartedAt = now,
             LastActivityAt = now,
@@ -505,6 +506,8 @@ public sealed class JukeboxJamService(
         }
         if (input.AllowReplace is { } replace)
             jam.AllowReplace = replace;
+        if (input.SaveAsPlaylist is { } save)
+            jam.SaveAsPlaylist = save;
         if (input.GuestLibraryIds is not null)
         {
             var libraries = await LibrariesAsync(access, input.GuestLibraryIds, cancellationToken);
@@ -530,21 +533,50 @@ public sealed class JukeboxJamService(
         return await ToModelAsync(jam, caller, cancellationToken);
     }
 
-    /// <summary>Ends the Jam: its code no longer works and its queue stays as a normal playlist of the host's. Host only.</summary>
+    /// <summary>
+    /// Ends the Jam: its code no longer works, and what played stays as a normal playlist of the host's
+    /// (<see cref="JamSession.SaveAsPlaylist"/>) or goes, the Jam with it. Host only.
+    /// </summary>
     public async Task<JukeboxJam> EndAsync(string code, CancellationToken cancellationToken)
     {
         var (jam, caller) = await OpenAsync(code, null, cancellationToken);
         RequireHost(jam, caller);
-        if (jam.EndedAt is null)
-        {
+        if (jam.EndedAt is not null)
+            return await ToModelAsync(jam, caller, cancellationToken);
+
+        var save = jam.SaveAsPlaylist;
+        if (save)
             await EndAsync(db, jam, Now(), cancellationToken);
-            Publish(jam, JukeboxJamChangeKind.Ended);
-        }
-        return await ToModelAsync(jam, caller, cancellationToken);
+        jam.EndedAt ??= Now();
+        // Described before it goes: the model of a Jam whose playlist is deleted is its last one.
+        var model = await ToModelAsync(jam, caller, cancellationToken);
+        if (!save)
+            await DiscardAsync(db, jam, cancellationToken);
+        Publish(jam, JukeboxJamChangeKind.Ended);
+        if (!save)
+            playlists.Publish(jam.Playlist, [], deleted: true);
+        return model;
     }
 
-    /// <summary>Ends a Jam (also the player's, after hours without activity): what waits is dropped, the rest stays.</summary>
-    internal static async Task EndAsync(ArcanistDbContext db, JamSession jam, DateTime now, CancellationToken cancellationToken)
+    /// <summary>
+    /// Ends a Jam (also the player's, after hours without activity): what waits is dropped, what played stays as a
+    /// playlist; or, when it is not kept (<see cref="JamSession.SaveAsPlaylist"/>), the playlist and the Jam go.
+    /// </summary>
+    internal static async Task EndOrDiscardAsync(ArcanistDbContext db, JamSession jam, DateTime now, CancellationToken cancellationToken)
+    {
+        if (jam.SaveAsPlaylist)
+            await EndAsync(db, jam, now, cancellationToken);
+        else
+            await DiscardAsync(db, jam, cancellationToken);
+    }
+
+    private static async Task DiscardAsync(ArcanistDbContext db, JamSession jam, CancellationToken cancellationToken)
+    {
+        // The Jam, its guests and votes go with its playlist (cascade).
+        await db.Playlists.Where(p => p.Id == jam.PlaylistId).ExecuteDeleteAsync(cancellationToken);
+    }
+
+    private static async Task EndAsync(ArcanistDbContext db, JamSession jam, DateTime now, CancellationToken cancellationToken)
     {
         jam.EndedAt = now;
         jam.Playlist.Kind = PlaylistKind.Normal;
@@ -866,6 +898,19 @@ public sealed class JukeboxJamService(
             null));
     }
 
+    /// <summary>
+    /// A song of the host's own that plays (not one of the Jam's: the renderer's own queue went on), as
+    /// <see cref="JamSession.ExternalNowPlaying"/> keeps it.
+    /// </summary>
+    internal static string? HostSong(Catalog.Track? track) => track is null ? null : JsonSerializer.Serialize(new JukeboxJamSong(
+        track.Id,
+        track.Title,
+        track.Artists.Where(a => a.Role != ArtistRole.Featured).Select(a => a.Name).DefaultIfEmpty(track.AlbumArtist.Name).ToList(),
+        track.Album.Title,
+        track.DurationMs,
+        track.ArtworkId,
+        null), Json);
+
     private async Task<JukeboxJam> ToModelAsync(JamSession jam, Caller caller, CancellationToken cancellationToken)
     {
         var host = await users.GetUserAsync(jam.HostUserId, cancellationToken);
@@ -936,6 +981,7 @@ public sealed class JukeboxJamService(
             VoteIntervalSeconds,
             jam.AllowGuests,
             jam.AllowReplace,
+            jam.SaveAsPlaylist,
             jam.DjKind == JamDj.None ? null : new JukeboxJamDjSession(JukeboxJamDjKind.UltimateAiDj, jam.DjName, jam.DjMessage, jam.DjSince ?? jam.StartedAt),
             new JukeboxJamNowPlaying(current is null ? null : Entry(current, JukeboxJamEntryState.Playing), external, jam.Paused, jam.PositionMs, jam.PositionAt),
             waiting.Take(500).Select(e => Entry(e, JukeboxJamEntryState.Waiting)).OfType<JukeboxJamEntry>().ToList(),

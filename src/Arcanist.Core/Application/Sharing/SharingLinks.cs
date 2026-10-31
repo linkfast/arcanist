@@ -5,16 +5,26 @@ namespace Arcanist.Core.Application.Sharing;
 
 /// <summary>
 /// Where shared links open: a player's page (<c>/players/&lt;id&gt;/#/s/&lt;token&gt;</c> for a playlist,
-/// <c>#/jam/&lt;code&gt;</c> for a Jukebox Jam). The default player when it opens them (<see cref="FrontendManifest.SharedLinks"/>),
-/// otherwise the first that does; links never need a route of their own.
+/// <c>#/jam/&lt;code&gt;</c> for a Jukebox Jam); links never need a route of their own. Playlists open in the default
+/// player when it opens them (<see cref="FrontendManifest.SharedLinks"/>), otherwise the first that does. Jams open in
+/// Ultimate Web Player when it is installed and is a Jam client (<see cref="FrontendManifest.JukeboxJam"/>), otherwise
+/// in the server's generic client (<see cref="FrontendCatalog.JamClient"/>): a Jam never depends on a player having one.
 /// </summary>
 public sealed class SharingLinks(FrontendCatalog frontends)
 {
+    /// <summary>Ultimate Web Player's id: the Jam client of choice.</summary>
+    public const string UltimateWebPlayerId = "ultimate-web-player";
+
     public async Task<string> PlaylistUrlAsync(string token, CancellationToken cancellationToken) =>
         $"{await PlayerPathAsync(cancellationToken)}#/s/{token}";
 
-    public async Task<string> JamUrlAsync(string code, CancellationToken cancellationToken) =>
-        $"{await PlayerPathAsync(cancellationToken)}#/jam/{code}";
+    public Task<string> JamUrlAsync(string code, CancellationToken cancellationToken)
+    {
+        var player = frontends.FindUsable(UltimateWebPlayerId) is { } ultimate && ultimate.Manifest.Has(FrontendManifest.JukeboxJam)
+            ? ultimate.Manifest.Id
+            : FrontendCatalog.JamClientId;
+        return Task.FromResult($"/players/{player}/#/jam/{code}");
+    }
 
     private async Task<string> PlayerPathAsync(CancellationToken cancellationToken)
     {

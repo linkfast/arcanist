@@ -1471,6 +1471,7 @@ type JukeboxJam {
   voteIntervalSeconds: Int!
   allowGuests: Boolean!
   allowReplace: Boolean!
+  saveAsPlaylist: Boolean!
   dj: JukeboxJamDjSession
   nowPlaying: JukeboxJamNowPlaying!
   queue: [JukeboxJamEntry!]!
@@ -3204,6 +3205,7 @@ enum ApiFeature {
   JUKEBOX_JAM_AI_DJ
   JUKEBOX_JAM_BROWSE
   JUKEBOX_JAM_REPLACE
+  JUKEBOX_JAM_SAVE_AS_PLAYLIST
   AVAILABLE_PLAYERS
   WISH_LIST_CLOUD_SYNC
 }
@@ -3970,6 +3972,7 @@ input StartJukeboxJamInput {
   allowGuests: Boolean!
   guestLibraryIds: [ID!]
   allowReplace: Boolean
+  saveAsPlaylist: Boolean
 }
 
 type JukeboxJamGuestSession {
@@ -4006,6 +4009,7 @@ input UpdateJukeboxJamInput {
   allowGuests: Boolean
   guestLibraryIds: [ID!]
   allowReplace: Boolean
+  saveAsPlaylist: Boolean
 }
 
 input ClaimJukeboxJamHostInput {

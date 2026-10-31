@@ -109,6 +109,7 @@ public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string
 /// <param name="Guests">Its guests, to those who control it.</param>
 /// <param name="GuestLibraryIds">Libraries songs are added from, to those who control it; null: all the host's.</param>
 /// <param name="AllowReplace">Anyone taking part may replace the song playing (the host and its managers always can).</param>
+/// <param name="SaveAsPlaylist">When it ends, what played stays as a playlist of the host's (by default); otherwise it is deleted.</param>
 public sealed record JukeboxJam(
     string Code,
     string Name,
@@ -122,6 +123,7 @@ public sealed record JukeboxJam(
     int VoteIntervalSeconds,
     bool AllowGuests,
     bool AllowReplace,
+    bool SaveAsPlaylist,
     JukeboxJamDjSession? Dj,
     JukeboxJamNowPlaying NowPlaying,
     IReadOnlyList<JukeboxJamEntry> Queue,
@@ -136,9 +138,10 @@ public sealed record JukeboxJam(
 /// <param name="GuestLibraryIds">Libraries songs are added from; all the host's when null or empty.</param>
 /// <param name="AllowReplace">Anyone taking part may replace the song playing; off when null.</param>
 public sealed record StartJukeboxJamInput(string Name, JukeboxJamPlaysOn PlaysOn, string? RendererId, bool Voting, bool AllowGuests,
-    IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null);
+    IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null, bool? SaveAsPlaylist = null);
 
-public sealed record UpdateJukeboxJamInput(string? Name, bool? Voting, bool? AllowGuests, IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null);
+public sealed record UpdateJukeboxJamInput(string? Name, bool? Voting, bool? AllowGuests, IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null,
+    bool? SaveAsPlaylist = null);
 
 /// <summary>A guest's session: send <see cref="Token"/> with every request of theirs (<c>guestToken</c>, or <c>X-Arcanist-Guest</c> in REST).</summary>
 public sealed record JukeboxJamGuestSession(string Token, Guid GuestId, string Name, JukeboxJam Jam);

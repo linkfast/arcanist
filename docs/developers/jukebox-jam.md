@@ -11,7 +11,7 @@ operation is in GraphQL and, for clients that cannot use it, in REST under `/res
 
 ## Starting one
 
-`startJukeboxJam(input: {name, playsOn, rendererId, voting, allowGuests, guestLibraryIds, allowReplace})`, for any user:
+`startJukeboxJam(input: {name, playsOn, rendererId, voting, allowGuests, guestLibraryIds, allowReplace, saveAsPlaylist})`, for any user:
 
 | `playsOn` | Where it plays |
 |---|---|
@@ -19,16 +19,22 @@ operation is in GraphQL and, for clients that cannot use it, in REST under `/res
 | `SERVER` | The server's own audio output (needs `PLAY_ON_SERVER` and the Server audio extension). |
 | `DLNA` | A DLNA renderer (`rendererId`, from `dlnaRenderers`). |
 
-For `SERVER` and `DLNA` the server plays it: it gives the renderer the next song (and the one after, without a gap),
-follows it and does what the host's controls ask. Plays count for the host.
+For `SERVER` and `DLNA` the server plays it: it follows the renderer and does what the host's controls ask. Plays
+count for the host. **The renderer's own queue is kept**: when the host already plays something there (or plays more
+later), the Jam's next song goes right after the one playing, one at a time, and the host's own queue goes on when the
+Jam has nothing waiting; meanwhile `nowPlaying.external` shows the host's song. An idle renderer starts with the Jam's.
 
 The Jam has a playlist of its own (`playlistId`, of type `JUKEBOX_JAM`): what played stays there as a normal playlist of
-the host's when the Jam ends. `guestLibraryIds` limits the songs that can be added to some of the host's libraries
+the host's when the Jam ends, unless `saveAsPlaylist` is false (`JUKEBOX_JAM_SAVE_AS_PLAYLIST`; true by default, and
+`updateJukeboxJam` changes it): then the playlist and the Jam are deleted when it ends. `guestLibraryIds` limits the songs that can be added to some of the host's libraries
 (all of them when null). `allowGuests` needs the server's setting (`sharing.jamGuests`, off at first) and the
 `SHARE_LINKS` permission. `allowReplace` (off by default) lets anyone taking part replace the song playing (below).
 
 `myJukeboxJams` lists the Jams the user hosts or takes part in. `jukeboxJam.url` is the Jam's link, relative to the
-server (a player's page, `/players/<id>/#/jam/<code>`): share it or show it as a QR code.
+server: share it or show it as a QR code. It opens the Jam's **client**, where those taking part follow it, vote and add
+songs: Ultimate Web Player when it is installed and declares `"features": ["jukebox-jam"]`, otherwise the server's own
+generic client (`/players/jam/#/jam/<code>`, part of Arcanist: a Jam never depends on a player implementing one). Hosts
+link to it to add songs too; a player only has to play the Jam (the host API below).
 
 ## Taking part
 
@@ -86,12 +92,16 @@ Any client of the host's can play a `CLIENT` Jam, in this cycle:
    while it lives); `kind` is `WEB`, `DESKTOP`, `MOBILE` or `OTHER`; `playerId` a web player's id. Another device of the
    host's claiming it takes over: the one before gets a `HOST` change whose `hostDeviceId` is not its own, and must stop.
 2. `jukeboxJamNext(code)`: the song to play next (`entryId` and the `track`, with its `streamUrl` for the host), or null.
-   Ask again whenever the Jam changes (`QUEUE`, `SETTINGS`): votes and pins change what comes next. Keep the next song
-   ready before the one playing ends, to play without a gap.
+   Ask again whenever the Jam changes (`QUEUE`, `SETTINGS`): votes and pins change what comes next. **Put it right after
+   the song playing** in the client's own queue, without replacing it: the host may be playing something of theirs, or
+   have songs of their own coming; those go on after the Jam's when it has none waiting. Nothing playing: start it.
+   Keep it ready before the one playing ends, to play without a gap.
 3. `reportJukeboxJamPlayback(code, {deviceId, entryId, external, state, positionMs})` every 5 seconds and on every
-   change (`PLAYING`, `PAUSED`, `STOPPED`). Reporting an entry takes it out of the queue: it is playing. Reports from
+   change (`PLAYING`, `PAUSED`, `STOPPED`). Reporting an entry takes it out of the queue: it is playing. A song of
+   the host's own is `external` (title, artists, album, duration, artwork URL), shown to everyone. Reports from
    another device are `jam_not_host`.
-4. On a `COMMAND` change, do `command`: `SKIP` (play the next one now), `PAUSE`, `RESUME`.
+4. On a `COMMAND` change, do `command`: `SKIP` (to the Jam's next song now: ask `jukeboxJamNext` first, a song
+   someone chose to play now comes first), `PAUSE`, `RESUME`.
 5. On `ENDED`, stop.
 
 `jukeboxJam.hostClient` shows the client to everyone (`online` while it reported in the last minute). A minimal host in
@@ -154,4 +164,4 @@ ULTIMATE's colors above the queue.
 
 `endJukeboxJam(code)` (host), or 12 hours without activity: the code no longer works (`jam_ended` for changes;
 `jukeboxJam` still answers with `endedAt`), what was waiting is dropped, and what played stays as a normal playlist of
-the host's (members keep it).
+the host's (members keep it). With `saveAsPlaylist` false the playlist goes too, and the code answers not found.

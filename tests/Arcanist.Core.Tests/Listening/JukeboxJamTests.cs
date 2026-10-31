@@ -301,7 +301,7 @@ public sealed class JukeboxJamServerAudioTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        foreach (var (title, i) in new[] { "Alpha", "Bravo" }.Select((t, i) => (t, i)))
+        foreach (var (title, i) in new[] { "Alpha", "Bravo", "Charlie" }.Select((t, i) => (t, i)))
             AudioFixtures.WriteWav(Path.Combine(_root, $"{title}.wav"), i + 1, new FixtureTags(title, "Band", "Album", "Band", TrackNumber: i + 1));
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_root]));
         _admin = await _factory.CreateAuthenticatedClientAsync();
@@ -354,5 +354,75 @@ public sealed class JukeboxJamServerAudioTests : IAsyncLifetime
         _output.Sink!.Finish();
         await Until(async () => (await OkAsync(_admin.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("nowPlaying").GetProperty("entry") is
             { ValueKind: JsonValueKind.Object } entry && entry.GetProperty("song").GetProperty("title").GetString() == "Bravo", "the next song plays");
+    }
+    private async Task<(string? Entry, string? External)> PlayingAsync(string code)
+    {
+        var now = (await OkAsync(_admin.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("nowPlaying");
+        return (now.GetProperty("entry") is { ValueKind: JsonValueKind.Object } entry ? entry.GetProperty("song").GetProperty("title").GetString() : null,
+            now.GetProperty("external") is { ValueKind: JsonValueKind.Object } external ? external.GetProperty("title").GetString() : null);
+    }
+
+    [Fact]
+    public async Task A_jam_keeps_what_the_host_already_plays_and_its_songs_go_right_after_the_one_playing()
+    {
+        await OkAsync(_admin.PutAsJsonAsync("/rest/v1/extensions/server-audio/enabled", new { enabled = true }, ArcanistFactory.Json, Cancel));
+        await Until(() => Task.FromResult(_output.Sink is not null), "the device opens");
+        // The host plays their own queue there: Alpha, then Bravo.
+        await OkAsync(_admin.PostAsJsonAsync("/rest/v1/dlna/play", new { rendererId = "server", trackIds = new[] { _tracks["Alpha"], _tracks["Bravo"] }, startIndex = 0 },
+            ArcanistFactory.Json, Cancel));
+        var code = (await StartAsync(new { name = "Party", playsOn = "SERVER", voting = false, allowGuests = false })).GetProperty("code").GetString()!;
+
+        // What plays is the host's, and keeps playing.
+        await Until(async () => await PlayingAsync(code) == (null, "Alpha"), "the host's song is shown as theirs");
+
+        // A song added to the Jam goes right after the one playing, before the host's own next one.
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/tracks", new { trackIds = new[] { _tracks["Charlie"] } }, ArcanistFactory.Json, Cancel));
+        await Until(async () => (await OkAsync(_admin.GetAsync("/rest/v1/dlna/renderers/server", Cancel))).GetProperty("queue").GetArrayLength() == 3,
+            "the Jam's song is put in the renderer's queue");
+        var queue = (await OkAsync(_admin.GetAsync("/rest/v1/dlna/renderers/server", Cancel))).GetProperty("queue").EnumerateArray().Select(t => t.GetGuid()).ToList();
+        Assert.Equal([_tracks["Alpha"], _tracks["Charlie"], _tracks["Bravo"]], queue);
+
+        _output.Sink!.Finish();
+        await Until(async () => await PlayingAsync(code) == ("Charlie", null), "the Jam's song plays next");
+
+        // The Jam has nothing more: the host's own queue goes on.
+        _output.Sink!.Finish();
+        await Until(async () => await PlayingAsync(code) == (null, "Bravo"), "the host's queue goes on");
+    }
+
+    [Fact]
+    public async Task A_jam_that_is_not_kept_leaves_no_playlist_when_it_ends()
+    {
+        var kept = (await StartAsync(new { name = "Kept", playsOn = "CLIENT", voting = false, allowGuests = false })).GetProperty("code").GetString()!;
+        var gone = await StartAsync(new { name = "Gone", playsOn = "CLIENT", voting = false, allowGuests = false, saveAsPlaylist = false });
+        Assert.False(gone.GetProperty("saveAsPlaylist").GetBoolean());
+        var goneCode = gone.GetProperty("code").GetString()!;
+        foreach (var code in new[] { kept, goneCode })
+        {
+            await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/tracks", new { trackIds = new[] { _tracks["Alpha"] } }, ArcanistFactory.Json, Cancel));
+            await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/end", new { }, ArcanistFactory.Json, Cancel));
+        }
+
+        var names = (await _admin.GraphQLAsync("query { playlists { name } }")).GetProperty("data").GetProperty("playlists")
+            .EnumerateArray().Select(p => p.GetProperty("name").GetString()).ToList();
+        Assert.Contains("Kept", names);
+        Assert.DoesNotContain("Gone", names);
+        Assert.Equal(HttpStatusCode.NotFound, (await _admin.GetAsync($"/rest/v1/public/jams/{goneCode}", Cancel)).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_jams_link_opens_the_servers_own_client_when_no_player_is_one()
+    {
+        var jam = await StartAsync(new { name = "Link", playsOn = "CLIENT", voting = false, allowGuests = false });
+        var url = jam.GetProperty("url").GetString()!;
+        Assert.Equal($"/players/jam/#/jam/{jam.GetProperty("code").GetString()}", url);
+
+        var page = await _admin.GetAsync("/players/jam/", Cancel);
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("<base href=\"/players/jam/\"", await page.Content.ReadAsStringAsync(Cancel));
+        Assert.Equal(HttpStatusCode.OK, (await _admin.GetAsync("/players/jam/jam.js", Cancel)).StatusCode);
+        // Not a player of the list.
+        var players = await _admin.GraphQLAsync("query { availablePlayers { id } }");
+        Assert.DoesNotContain(players.GetProperty("data").GetProperty("availablePlayers").EnumerateArray(), p => p.GetProperty("id").GetString() == "jam");
     }
 }

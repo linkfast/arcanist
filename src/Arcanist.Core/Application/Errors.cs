@@ -280,6 +280,8 @@ public static class ErrorCodes
     public const string NoLyrics = "no_lyrics";
     /// <summary>The song has no copy on this server's disks to listen to (only in Ultimate Cloud, S3 or another server).</summary>
     public const string NoLocalCopy = "no_local_copy";
+    /// <summary>The song already has lyrics (or is known to be instrumental): there is nothing to recognize or accept.</summary>
+    public const string HasLyrics = "has_lyrics";
 }
 
 /// <summary>Collects field errors as codes, keyed by camelCase field path (e.g. <c>libraries[0].folders[1]</c>).</summary>

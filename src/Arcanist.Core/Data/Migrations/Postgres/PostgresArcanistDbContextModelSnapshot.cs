@@ -1229,6 +1229,37 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("Lyrics");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LyricsDraft", b =>
+                {
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("EditedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Lines")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TrackId");
+
+                    b.ToTable("LyricsDrafts");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.MediaFile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3193,6 +3224,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
                         .WithOne()
                         .HasForeignKey("Arcanist.Core.Data.Entities.Lyrics", "TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LyricsDraft", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithOne()
+                        .HasForeignKey("Arcanist.Core.Data.Entities.LyricsDraft", "TrackId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

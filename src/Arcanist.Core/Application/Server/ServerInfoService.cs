@@ -169,6 +169,13 @@ public enum ApiFeature
     /// following where the video plays its song and leaving its other scenes without lyrics.
     /// </summary>
     VideoLyrics,
+
+    /// <summary>
+    /// Recognizing the words of songs without lyrics with a model (the Lyrics Sync extension, while it runs):
+    /// <c>lyricsTranscription</c>, <c>requestLyricsTranscription</c>, and the review of the draft it writes
+    /// (<c>saveLyricsDraft</c>, <c>acceptLyricsDraft</c>, <c>discardLyricsDraft</c>, <c>lyricsDrafts</c>).
+    /// </summary>
+    LyricsTranscription,
 }
 
 public sealed class ServerInfoService(
@@ -198,7 +205,8 @@ public sealed class ServerInfoService(
         cloudLink.Tier,
         transcoder.Formats(ffmpeg.Current),
         ratings.Current,
-        Enum.GetValues<ApiFeature>().Where(f => f != ApiFeature.TrackAnalysis || AnalysisOn).ToList(),
+        Enum.GetValues<ApiFeature>().Where(f => (f != ApiFeature.TrackAnalysis || AnalysisOn)
+            && (f != ApiFeature.LyricsTranscription || Application.Catalog.LyricsTimingService.StateOf(extensions) == Application.Catalog.LyricsTimingExtension.Running)).ToList(),
         AnalysisOn ? ai.Current.Progress with { AnalysisVersion = Core.Analysis.DjAudioAnalyzer.Version } : null,
         edition.Current,
         extensions.OpenSourceOnly);

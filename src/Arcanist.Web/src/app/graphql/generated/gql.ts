@@ -289,6 +289,12 @@ type Documents = {
     "\n  mutation SetVideoSettings($input: VideoSettingsInput!) {\n    setVideoSettings(input: $input) {\n      defaultAudio\n    }\n  }\n": typeof types.SetVideoSettingsDocument,
     "\n  query MyVideoSettings {\n    myVideoSettings {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": typeof types.MyVideoSettingsDocument,
     "\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": typeof types.SetMyVideoSettingsDocument,
+    "\n  query LyricsDrafts($offset: Int, $first: Int) {\n    lyricsDrafts(offset: $offset, first: $first) {\n      totalCount\n      items {\n        trackId\n        title\n        artist\n        album\n        artworkId\n        durationMs\n        lines\n        uncertain\n        language\n        createdAt\n        updatedAt\n        editedBy\n      }\n    }\n  }\n": typeof types.LyricsDraftsDocument,
+    "\n  query LyricsReview($trackId: ID!) {\n    track(id: $trackId) {\n      id\n      title\n      durationMs\n      streamUrl\n      artworkId\n      artists {\n        name\n        role\n      }\n      album {\n        title\n      }\n    }\n    lyricsTranscription(trackId: $trackId) {\n      ...LyricsTranscriptionFields\n    }\n  }\n": typeof types.LyricsReviewDocument,
+    "\n  fragment LyricsTranscriptionFields on LyricsTranscriptionStatus {\n    trackId\n    state\n    reason\n    canRequest\n    canReview\n    draft {\n      language\n      model\n      createdAt\n      updatedAt\n      editedBy\n      lines {\n        timeMs\n        text\n        confidence\n      }\n    }\n  }\n": typeof types.LyricsTranscriptionFieldsFragmentDoc,
+    "\n  mutation SaveLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]!) {\n    saveLyricsDraft(trackId: $trackId, lines: $lines) {\n      ...LyricsTranscriptionFields\n    }\n  }\n": typeof types.SaveLyricsDraftDocument,
+    "\n  mutation AcceptLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]) {\n    acceptLyricsDraft(trackId: $trackId, lines: $lines) {\n      trackId\n      source\n    }\n  }\n": typeof types.AcceptLyricsDraftDocument,
+    "\n  mutation DiscardLyricsDraft($trackId: ID!, $again: Boolean) {\n    discardLyricsDraft(trackId: $trackId, again: $again) {\n      ...LyricsTranscriptionFields\n    }\n  }\n": typeof types.DiscardLyricsDraftDocument,
 };
 const documents: Documents = {
     "\n  fragment ScanJobFields on ScanJob {\n    id\n    libraryId\n    kind\n    status\n    requestedAt\n    startedAt\n    finishedAt\n    filesSeen\n    filesAdded\n    filesUpdated\n    filesMissing\n    errors\n    errorCode\n    progress {\n      phase\n      filesFound\n      filesToRead\n      filesRead\n    }\n  }\n": types.ScanJobFieldsFragmentDoc,
@@ -566,6 +572,12 @@ const documents: Documents = {
     "\n  mutation SetVideoSettings($input: VideoSettingsInput!) {\n    setVideoSettings(input: $input) {\n      defaultAudio\n    }\n  }\n": types.SetVideoSettingsDocument,
     "\n  query MyVideoSettings {\n    myVideoSettings {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": types.MyVideoSettingsDocument,
     "\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n": types.SetMyVideoSettingsDocument,
+    "\n  query LyricsDrafts($offset: Int, $first: Int) {\n    lyricsDrafts(offset: $offset, first: $first) {\n      totalCount\n      items {\n        trackId\n        title\n        artist\n        album\n        artworkId\n        durationMs\n        lines\n        uncertain\n        language\n        createdAt\n        updatedAt\n        editedBy\n      }\n    }\n  }\n": types.LyricsDraftsDocument,
+    "\n  query LyricsReview($trackId: ID!) {\n    track(id: $trackId) {\n      id\n      title\n      durationMs\n      streamUrl\n      artworkId\n      artists {\n        name\n        role\n      }\n      album {\n        title\n      }\n    }\n    lyricsTranscription(trackId: $trackId) {\n      ...LyricsTranscriptionFields\n    }\n  }\n": types.LyricsReviewDocument,
+    "\n  fragment LyricsTranscriptionFields on LyricsTranscriptionStatus {\n    trackId\n    state\n    reason\n    canRequest\n    canReview\n    draft {\n      language\n      model\n      createdAt\n      updatedAt\n      editedBy\n      lines {\n        timeMs\n        text\n        confidence\n      }\n    }\n  }\n": types.LyricsTranscriptionFieldsFragmentDoc,
+    "\n  mutation SaveLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]!) {\n    saveLyricsDraft(trackId: $trackId, lines: $lines) {\n      ...LyricsTranscriptionFields\n    }\n  }\n": types.SaveLyricsDraftDocument,
+    "\n  mutation AcceptLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]) {\n    acceptLyricsDraft(trackId: $trackId, lines: $lines) {\n      trackId\n      source\n    }\n  }\n": types.AcceptLyricsDraftDocument,
+    "\n  mutation DiscardLyricsDraft($trackId: ID!, $again: Boolean) {\n    discardLyricsDraft(trackId: $trackId, again: $again) {\n      ...LyricsTranscriptionFields\n    }\n  }\n": types.DiscardLyricsDraftDocument,
 };
 
 /**
@@ -1682,6 +1694,30 @@ export function graphql(source: "\n  query MyVideoSettings {\n    myVideoSetting
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n"): (typeof documents)["\n  mutation SetMyVideoSettings($audio: VideoAudioMode) {\n    setMyVideoSettings(audio: $audio) {\n      audio\n      serverDefault\n      effective\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query LyricsDrafts($offset: Int, $first: Int) {\n    lyricsDrafts(offset: $offset, first: $first) {\n      totalCount\n      items {\n        trackId\n        title\n        artist\n        album\n        artworkId\n        durationMs\n        lines\n        uncertain\n        language\n        createdAt\n        updatedAt\n        editedBy\n      }\n    }\n  }\n"): (typeof documents)["\n  query LyricsDrafts($offset: Int, $first: Int) {\n    lyricsDrafts(offset: $offset, first: $first) {\n      totalCount\n      items {\n        trackId\n        title\n        artist\n        album\n        artworkId\n        durationMs\n        lines\n        uncertain\n        language\n        createdAt\n        updatedAt\n        editedBy\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query LyricsReview($trackId: ID!) {\n    track(id: $trackId) {\n      id\n      title\n      durationMs\n      streamUrl\n      artworkId\n      artists {\n        name\n        role\n      }\n      album {\n        title\n      }\n    }\n    lyricsTranscription(trackId: $trackId) {\n      ...LyricsTranscriptionFields\n    }\n  }\n"): (typeof documents)["\n  query LyricsReview($trackId: ID!) {\n    track(id: $trackId) {\n      id\n      title\n      durationMs\n      streamUrl\n      artworkId\n      artists {\n        name\n        role\n      }\n      album {\n        title\n      }\n    }\n    lyricsTranscription(trackId: $trackId) {\n      ...LyricsTranscriptionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment LyricsTranscriptionFields on LyricsTranscriptionStatus {\n    trackId\n    state\n    reason\n    canRequest\n    canReview\n    draft {\n      language\n      model\n      createdAt\n      updatedAt\n      editedBy\n      lines {\n        timeMs\n        text\n        confidence\n      }\n    }\n  }\n"): (typeof documents)["\n  fragment LyricsTranscriptionFields on LyricsTranscriptionStatus {\n    trackId\n    state\n    reason\n    canRequest\n    canReview\n    draft {\n      language\n      model\n      createdAt\n      updatedAt\n      editedBy\n      lines {\n        timeMs\n        text\n        confidence\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SaveLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]!) {\n    saveLyricsDraft(trackId: $trackId, lines: $lines) {\n      ...LyricsTranscriptionFields\n    }\n  }\n"): (typeof documents)["\n  mutation SaveLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]!) {\n    saveLyricsDraft(trackId: $trackId, lines: $lines) {\n      ...LyricsTranscriptionFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation AcceptLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]) {\n    acceptLyricsDraft(trackId: $trackId, lines: $lines) {\n      trackId\n      source\n    }\n  }\n"): (typeof documents)["\n  mutation AcceptLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]) {\n    acceptLyricsDraft(trackId: $trackId, lines: $lines) {\n      trackId\n      source\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DiscardLyricsDraft($trackId: ID!, $again: Boolean) {\n    discardLyricsDraft(trackId: $trackId, again: $again) {\n      ...LyricsTranscriptionFields\n    }\n  }\n"): (typeof documents)["\n  mutation DiscardLyricsDraft($trackId: ID!, $again: Boolean) {\n    discardLyricsDraft(trackId: $trackId, again: $again) {\n      ...LyricsTranscriptionFields\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

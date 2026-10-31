@@ -3623,3 +3623,94 @@ export const SetMyVideoSettingsMutation = graphql(`
     }
   }
 `);
+
+export const LyricsDraftsQuery = graphql(`
+  query LyricsDrafts($offset: Int, $first: Int) {
+    lyricsDrafts(offset: $offset, first: $first) {
+      totalCount
+      items {
+        trackId
+        title
+        artist
+        album
+        artworkId
+        durationMs
+        lines
+        uncertain
+        language
+        createdAt
+        updatedAt
+        editedBy
+      }
+    }
+  }
+`);
+
+export const LyricsReviewQuery = graphql(`
+  query LyricsReview($trackId: ID!) {
+    track(id: $trackId) {
+      id
+      title
+      durationMs
+      streamUrl
+      artworkId
+      artists {
+        name
+        role
+      }
+      album {
+        title
+      }
+    }
+    lyricsTranscription(trackId: $trackId) {
+      ...LyricsTranscriptionFields
+    }
+  }
+`);
+
+export const LyricsTranscriptionFields = graphql(`
+  fragment LyricsTranscriptionFields on LyricsTranscriptionStatus {
+    trackId
+    state
+    reason
+    canRequest
+    canReview
+    draft {
+      language
+      model
+      createdAt
+      updatedAt
+      editedBy
+      lines {
+        timeMs
+        text
+        confidence
+      }
+    }
+  }
+`);
+
+export const SaveLyricsDraftMutation = graphql(`
+  mutation SaveLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]!) {
+    saveLyricsDraft(trackId: $trackId, lines: $lines) {
+      ...LyricsTranscriptionFields
+    }
+  }
+`);
+
+export const AcceptLyricsDraftMutation = graphql(`
+  mutation AcceptLyricsDraft($trackId: ID!, $lines: [LyricsLineInput!]) {
+    acceptLyricsDraft(trackId: $trackId, lines: $lines) {
+      trackId
+      source
+    }
+  }
+`);
+
+export const DiscardLyricsDraftMutation = graphql(`
+  mutation DiscardLyricsDraft($trackId: ID!, $again: Boolean) {
+    discardLyricsDraft(trackId: $trackId, again: $again) {
+      ...LyricsTranscriptionFields
+    }
+  }
+`);

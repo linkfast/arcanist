@@ -11,9 +11,11 @@ import {
   lucideCast,
   lucideChartColumn,
   lucideGift,
+  lucideCircleHelp,
   lucideChevronDown,
   lucideCloud,
   lucideClapperboard,
+  lucideMicVocal,
   lucideCopy,
   lucideDatabase,
   lucideExternalLink,
@@ -38,6 +40,8 @@ import { I18n, TranslatePipe } from '../core/i18n/i18n';
 import { LanguageSelect } from '../shared/language-select';
 import { Brand } from '../shared/brand';
 import { ThemeSelect } from '../shared/theme-select';
+import { TourService } from '../core/tour/tour.service';
+import { TourOverlay } from '../shared/tour-overlay';
 import { UpdateNotice } from './update-notice';
 
 /** Layout of the signed-in panel: navigation on the side (on top on small screens) and the page content. */
@@ -54,6 +58,7 @@ import { UpdateNotice } from './update-notice';
     LanguageSelect,
     ThemeSelect,
     UpdateNotice,
+    TourOverlay,
   ],
   providers: [
     provideIcons({
@@ -62,9 +67,11 @@ import { UpdateNotice } from './update-notice';
       lucideCast,
       lucideChartColumn,
       lucideGift,
+      lucideCircleHelp,
       lucideChevronDown,
       lucideCloud,
       lucideClapperboard,
+      lucideMicVocal,
       lucideCopy,
       lucideDatabase,
       lucideHouse,
@@ -134,7 +141,7 @@ import { UpdateNotice } from './update-notice';
           </button>
         </div>
 
-        <nav class="flex flex-col gap-1">
+        <nav class="flex flex-col gap-1" data-tour="nav">
           @for (item of navigation(); track item.path) {
             @if (item.path === '/extensions') {
               <!-- Extensions: their list, and below it the pages that manage each one. -->
@@ -234,9 +241,24 @@ import { UpdateNotice } from './update-notice';
         </div>
       </aside>
 
-      <main class="min-w-0 flex-1 px-3 py-4 sm:p-6 md:p-8">
+      <main class="relative min-w-0 flex-1 px-3 pb-4 pt-11 sm:px-6 sm:pb-6 md:px-8 md:pb-8">
+        <!-- This section's tour, whenever the user wants it. -->
+        <button
+          hlmBtn
+          variant="ghost"
+          size="icon"
+          type="button"
+          class="absolute right-1 top-1 z-10 text-muted-foreground sm:right-3 md:right-5"
+          data-tour="help"
+          [attr.title]="'tour.help' | t"
+          [attr.aria-label]="'tour.help' | t"
+          (click)="tour.start(url())"
+        >
+          <ng-icon name="lucideCircleHelp" />
+        </button>
         <router-outlet />
       </main>
+      <app-tour-overlay />
       <!-- In a chunk of its own: most visits have nothing to tell. -->
       @defer (on idle) {
         <app-update-notice />
@@ -250,7 +272,7 @@ export class Shell {
   private readonly i18n = inject(I18n);
   private readonly router = inject(Router);
 
-  private readonly url = toSignal(
+  protected readonly url = toSignal(
     this.router.events.pipe(
       filter((event) => event instanceof NavigationEnd),
       map(() => this.router.url),
@@ -259,6 +281,13 @@ export class Shell {
   );
 
   protected readonly edition = inject(Edition);
+  protected readonly tour = inject(TourService);
+
+  /** Each section's tour, the first time it opens (once the page has drawn). */
+  private readonly tourOnNavigation = effect(() => {
+    const url = this.url();
+    untracked(() => setTimeout(() => void this.tour.maybeStart(url), 600));
+  });
 
   /** The menu on phones (beside the page on wider screens); any navigation closes it. */
   protected readonly menuOpen = signal(false);
@@ -350,6 +379,12 @@ export class Shell {
         label: 'nav.videos',
         icon: 'lucideClapperboard',
         visible: this.auth.can('MANAGE_LIBRARIES') || this.auth.can('EDIT_METADATA'),
+      },
+      {
+        path: '/lyrics/review',
+        label: 'nav.lyricsReview',
+        icon: 'lucideMicVocal',
+        visible: this.auth.can('EDIT_METADATA'),
       },
       {
         path: '/import',

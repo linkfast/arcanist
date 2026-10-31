@@ -10991,6 +10991,242 @@
         }
       }
     },
+    "/rest/v1/tracks/{trackId}/lyrics/transcription": {
+      "get": {
+        "tags": [
+          "Lyrics recognition"
+        ],
+        "summary": "Whether a song\u0027s words can be recognized by a model (the Lyrics Sync extension), where that stands, and the draft waiting for review (for those who can review it).",
+        "operationId": "LyricsTranscription",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsTranscriptionStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Lyrics recognition"
+        ],
+        "summary": "Asks for a song without lyrics to have its words recognized by a model (Lyrics Sync). What it writes is a draft that needs review before anyone sees it as the song\u0027s lyrics. Any user who can hear the song. 409 with has_lyrics, lyrics_sync_unavailable or no_local_copy.",
+        "operationId": "RequestLyricsTranscription",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsTranscriptionStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/{trackId}/lyrics/draft": {
+      "put": {
+        "tags": [
+          "Lyrics recognition"
+        ],
+        "summary": "Saves a reviewer\u0027s corrections to a song\u0027s lyrics draft (it stays a draft). Requires EDIT_METADATA and a library with the song the user may change.",
+        "operationId": "SaveLyricsDraft",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LyricsDraftInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsTranscriptionStatus"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Lyrics recognition"
+        ],
+        "summary": "Throws a song\u0027s lyrics draft away; with again=true the song is recognized again. Requires EDIT_METADATA.",
+        "operationId": "DiscardLyricsDraft",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "again",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsTranscriptionStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/tracks/{trackId}/lyrics/draft/accept": {
+      "post": {
+        "tags": [
+          "Lyrics recognition"
+        ],
+        "summary": "Accepts a song\u0027s lyrics draft (with the lines given, or as it is) as its lyrics, timed line by line (source TRANSCRIBED). Requires EDIT_METADATA. 409 with has_lyrics when the song got lyrics meanwhile.",
+        "operationId": "AcceptLyricsDraft",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AcceptLyricsDraftInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackLyrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/lyrics/drafts": {
+      "get": {
+        "tags": [
+          "Lyrics recognition"
+        ],
+        "summary": "The lyrics drafts waiting for review, of songs the user may review (EDIT_METADATA), most recently recognized first, with how many lines the model was unsure of.",
+        "operationId": "LyricsDrafts",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsDraftPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/migration-codes": {
       "get": {
         "tags": [
@@ -11291,6 +11527,23 @@
           }
         }
       },
+      "AcceptLyricsDraftInput": {
+        "required": [
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LyricsLineInput"
+            }
+          }
+        }
+      },
       "AcceptShareInput": {
         "required": [
           "link"
@@ -11511,6 +11764,13 @@
               "type": "string"
             },
             "description": "The texts of a list."
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Where a link goes: a page of the admin panel (\u0060/admin/\u2026\u0060, opened in place) or an https address (in a new tab)."
           }
         },
         "description": "A piece of a section, built with its Field, Status, Notice, Progress and List methods."
@@ -11521,7 +11781,8 @@
           "STATUS",
           "NOTICE",
           "PROGRESS",
-          "LIST"
+          "LIST",
+          "LINK"
         ],
         "description": "What a block is."
       },
@@ -12522,7 +12783,8 @@
           "CHANGES_SINCE",
           "LIBRARY_RENAME",
           "MUSIC_VIDEOS",
-          "VIDEO_LYRICS"
+          "VIDEO_LYRICS",
+          "LYRICS_TRANSCRIPTION"
         ]
       },
       "AppPassword": {
@@ -18591,7 +18853,225 @@
           }
         }
       },
+      "LyricsDraftInfo": {
+        "required": [
+          "lines",
+          "language",
+          "model",
+          "createdAt",
+          "updatedAt",
+          "editedBy"
+        ],
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LyricsDraftLine"
+            }
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LyricsDraftInput": {
+        "required": [
+          "lines"
+        ],
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LyricsLineInput"
+            }
+          }
+        }
+      },
+      "LyricsDraftLine": {
+        "required": [
+          "timeMs",
+          "text",
+          "confidence"
+        ],
+        "type": "object",
+        "properties": {
+          "timeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          },
+          "confidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "LyricsDraftPage": {
+        "required": [
+          "items",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LyricsDraftSummary"
+            }
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "LyricsDraftSummary": {
+        "required": [
+          "trackId",
+          "title",
+          "artist",
+          "album",
+          "artworkId",
+          "durationMs",
+          "lines",
+          "uncertain",
+          "language",
+          "createdAt",
+          "updatedAt",
+          "editedBy"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "album": {
+            "type": "string"
+          },
+          "artworkId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lines": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "uncertain": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "LyricsLine": {
+        "required": [
+          "timeMs",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "timeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "LyricsLineInput": {
         "required": [
           "timeMs",
           "text"
@@ -18617,6 +19097,7 @@
           "EMBEDDED",
           "ONLINE",
           "ALIGNED",
+          "TRANSCRIBED",
           null
         ]
       },
@@ -18684,6 +19165,60 @@
           },
           "extension": {
             "$ref": "#/components/schemas/LyricsTimingExtension"
+          }
+        }
+      },
+      "LyricsTranscriptionState": {
+        "enum": [
+          "UNAVAILABLE",
+          "HAS_LYRICS",
+          "NOT_REQUESTED",
+          "QUEUED",
+          "WORKING",
+          "NEEDS_REVIEW",
+          "NO_VOICE",
+          "FAILED"
+        ]
+      },
+      "LyricsTranscriptionStatus": {
+        "required": [
+          "trackId",
+          "state",
+          "reason",
+          "canRequest",
+          "canReview",
+          "draft"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "$ref": "#/components/schemas/LyricsTranscriptionState"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canRequest": {
+            "type": "boolean"
+          },
+          "canReview": {
+            "type": "boolean"
+          },
+          "draft": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LyricsDraftInfo"
+              }
+            ]
           }
         }
       },
@@ -28549,6 +29084,9 @@
     },
     {
       "name": "Online services"
+    },
+    {
+      "name": "Lyrics recognition"
     }
   ]
 }

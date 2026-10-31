@@ -123,6 +123,8 @@ builder.Services.AddScoped<Arcanist.Core.Application.Videos.VideoLyricsService>(
 builder.Services.AddSingleton<Arcanist.Core.Application.Videos.VideoLyricsTimings>();
 builder.Services.AddSingleton<LyricsTiming>();
 builder.Services.AddScoped<LyricsTimingService>();
+builder.Services.AddSingleton<LyricsTranscription>();
+builder.Services.AddScoped<LyricsTranscriptionService>();
 builder.Services.AddScoped<TrackMatchService>();
 builder.Services.AddScoped<TrackEditService>();
 builder.Services.AddScoped<Arcanist.Core.Application.ServerMigration.PersonalExportService>();

@@ -1224,6 +1224,37 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("Lyrics");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LyricsDraft", b =>
+                {
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("EditedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Lines")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("TrackId");
+
+                    b.ToTable("LyricsDrafts");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.MediaFile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3188,6 +3219,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
                         .WithOne()
                         .HasForeignKey("Arcanist.Core.Data.Entities.Lyrics", "TrackId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Track");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LyricsDraft", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.Track", "Track")
+                        .WithOne()
+                        .HasForeignKey("Arcanist.Core.Data.Entities.LyricsDraft", "TrackId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

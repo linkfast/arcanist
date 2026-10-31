@@ -163,7 +163,8 @@ public sealed class HelloAdminPage(HelloSettings settings) : IExtensionAdminPage
 
 - A page is a list of **sections** (cards), each with a title, a description, **blocks** and **actions** (buttons).
 - Blocks are fields (`Text`, `Secret`, `Number`, `Switch`, `Select`, `MultiSelect`, `TextArea`, `Url`, `Library`),
-  statuses (a label and a value with a tone), notices, progress bars and lists. `RefreshSeconds` reads the page again
+  statuses (a label and a value with a tone), notices, progress bars, lists and links (`AdminBlock.Link`: a page of
+  the panel, `/admin/…`, opened in place, or an `https://` address in a new tab). `RefreshSeconds` reads the page again
   while it is open, to follow something in progress.
 - The panel sends every field to `SaveAsync` by its key, and the fields as they are on screen to `RunAsync`. A
   `Secret` field is never shown back: it comes empty, and empty means "keep what there is".

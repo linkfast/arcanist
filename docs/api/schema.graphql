@@ -109,6 +109,10 @@ type Query {
   librarySummaries: [LibrarySummary!]!
   "How many songs have lyrics, how many of them are timed (and how many timed on this server), how many plain lyrics could be timed here, and whether the official extension that does it (Lyrics Sync) is installed and running. Administrators only."
   lyricsTiming: LyricsTimingStatus!
+  "Whether a song's words can be recognized by a model (the Lyrics Sync extension), where that stands, and the draft waiting for review (only for those who can review it: EDIT_METADATA and a library with the song they may change)."
+  lyricsTranscription(trackId: ID!): LyricsTranscriptionStatus!
+  "The lyrics drafts waiting for review, of songs the user may review (EDIT_METADATA), most recently recognized first, with how many lines the model was unsure of."
+  lyricsDrafts(offset: Int, first: Int): LyricsDraftPage!
   "Where Arcanist found ffmpeg, and the progress of a download. Requires MANAGE_SETTINGS."
   ffmpeg: FfmpegStatus!
   "The conversion cache and the versions of the music made ahead of time (passive transcoding), with their progress. Requires MANAGE_SETTINGS."
@@ -938,6 +942,7 @@ enum LyricsSource {
   EMBEDDED
   ONLINE
   ALIGNED
+  TRANSCRIBED
 }
 
 type Waveform {
@@ -1602,6 +1607,61 @@ enum LyricsTimingExtension {
   NOT_INSTALLED
   INSTALLED
   RUNNING
+}
+
+type LyricsTranscriptionStatus {
+  trackId: ID!
+  state: LyricsTranscriptionState!
+  reason: String
+  canRequest: Boolean!
+  canReview: Boolean!
+  draft: LyricsDraftInfo
+}
+
+enum LyricsTranscriptionState {
+  UNAVAILABLE
+  HAS_LYRICS
+  NOT_REQUESTED
+  QUEUED
+  WORKING
+  NEEDS_REVIEW
+  NO_VOICE
+  FAILED
+}
+
+type LyricsDraftInfo {
+  lines: [LyricsDraftLine!]!
+  language: String
+  model: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  editedBy: String
+}
+
+type LyricsDraftLine {
+  timeMs: Int!
+  text: String!
+  confidence: Float
+}
+
+type LyricsDraftPage {
+  items: [LyricsDraftSummary!]!
+  totalCount: Int!
+}
+
+type LyricsDraftSummary {
+  trackId: ID!
+  title: String!
+  artist: String
+  album: String!
+  artworkId: ID
+  durationMs: Int!
+  lines: Int!
+  uncertain: Int!
+  language: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  editedBy: String
 }
 
 type FfmpegStatus {
@@ -2848,6 +2908,7 @@ enum ApiFeature {
   LIBRARY_RENAME
   MUSIC_VIDEOS
   VIDEO_LYRICS
+  LYRICS_TRANSCRIPTION
 }
 
 type LegalTerms {
@@ -3155,6 +3216,14 @@ type Mutation {
   setRatingMode(mode: RatingMode!): RatingMode!
   "Asks the Lyrics Sync extension to work out the timing of a song's lyrics again from its audio, whatever timing they have (from the file, LRCLib or worked out here). The lyrics as they are now come back with resyncPending; their current timing stays until the new one is saved (syncedSource ALIGNED, resyncPending false), and is kept if the extension cannot match the words to the singing (resyncPending false, nothing changed). Requires EDIT_METADATA. Errors: not_found, lyrics_sync_unavailable (the extension is not installed or not running), no_lyrics (none, or instrumental), library_read_only, no_local_copy (no copy on this server's disks to listen to)."
   resyncTrackLyrics(trackId: ID!): TrackLyrics!
+  "Asks for a song without lyrics to have its words recognized by a model (Lyrics Sync), first of all (also again after NO_VOICE or FAILED). What it writes is a draft (NEEDS_REVIEW) that nobody sees as the song's lyrics until someone reviews and accepts it. Any user who can hear the song. Errors: not_found, has_lyrics, lyrics_sync_unavailable, no_local_copy."
+  requestLyricsTranscription(trackId: ID!): LyricsTranscriptionStatus!
+  "Saves a reviewer's corrections to a song's lyrics draft; it stays a draft. Lines a person changed lose the model's confidence. Requires EDIT_METADATA and a library with the song the user may change. Errors: not_found (no draft), library_read_only, validation (at most 2000 lines of 500 characters, times not negative)."
+  saveLyricsDraft(trackId: ID!, lines: [LyricsLineInput!]!): LyricsTranscriptionStatus!
+  "Accepts a song's lyrics draft (with the lines given, or as it is) as its lyrics, timed line by line (source TRANSCRIBED: lyrics a file brings later replace them). Requires EDIT_METADATA. Errors: not_found, has_lyrics (it got lyrics meanwhile), library_read_only."
+  acceptLyricsDraft(trackId: ID!, lines: [LyricsLineInput!]): TrackLyrics!
+  "Throws a song's lyrics draft away; with again: true the song is recognized again. Requires EDIT_METADATA."
+  discardLyricsDraft(trackId: ID!, again: Boolean): LyricsTranscriptionStatus!
   "Uses the ffmpeg at the given path, or finds one automatically when null. Fails with not_ffmpeg if it does not work. Administrators only, with a recent password."
   setFfmpegPath(path: String): FfmpegStatus!
   "The conversion cache (on or off, size, age) and the versions to make ahead of time, of which libraries. Versions nobody asks for any more are removed. Requires MANAGE_SETTINGS."
@@ -3638,6 +3707,11 @@ input RecordPlayInput {
   playedMs: Int!
   playedAt: DateTime
   client: String
+}
+
+input LyricsLineInput {
+  timeMs: Int!
+  text: String!
 }
 
 input SetTranscodingSettingsInput {

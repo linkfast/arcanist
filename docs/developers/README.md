@@ -291,6 +291,28 @@ words could not be matched to the singing. The extension waits while the server 
 long as the song on a modest CPU. Errors: `lyrics_sync_unavailable` (the extension is not installed or not running),
 `no_lyrics`, `library_read_only` and `no_local_copy` (no copy on the server's disks to listen to).
 
+### Recognizing the lyrics of songs without any
+
+With Lyrics Sync running (`serverInfo.features` has `LYRICS_TRANSCRIPTION`), a song with no lyrics anywhere can have
+its words written by a speech model. Models get sung words wrong often, so what it writes is a **draft**: nobody sees
+it as the song's lyrics until a person corrects and accepts it.
+
+- `lyricsTranscription(trackId)` / `GET /rest/v1/tracks/{trackId}/lyrics/transcription` says where it stands:
+  `state` is `NOT_REQUESTED`, `QUEUED`, `WORKING`, `NEEDS_REVIEW`, `NO_VOICE` (nothing sung was heard), `FAILED`,
+  `HAS_LYRICS` or `UNAVAILABLE` (with `reason`). Offer «Recognize the lyrics» when `canRequest` is true.
+- `requestLyricsTranscription(trackId)` / `POST` to the same path asks for it, before the extension's other work. Any
+  user who can hear the song may ask. Poll the state every 10 seconds or so while it is `QUEUED` or `WORKING`; it takes
+  about as long as the song on a modest CPU.
+- The draft (`draft`: `lines` with `timeMs`, `text` and the model's `confidence` from 0 to 1, `language`, `editedBy`)
+  comes only to those who can review it (`canReview`: `EDIT_METADATA` and a library with the song they may change).
+  A player can build its own editor on `saveLyricsDraft(trackId, lines)` (`PUT …/lyrics/draft`; lines a person changed
+  lose their confidence), `acceptLyricsDraft(trackId, lines?)` (`POST …/lyrics/draft/accept`: they become the song's
+  lyrics, `source: TRANSCRIBED`, synchronized line by line) and `discardLyricsDraft(trackId, again)`
+  (`DELETE …/lyrics/draft?again=`). `lyricsDrafts` / `GET /rest/v1/lyrics/drafts` lists those waiting, with how many
+  lines the model was unsure of (`uncertain`, confidence under 0.6). Or simply send the user to the panel's editor,
+  `/admin/lyrics/review/{trackId}`.
+- Lyrics a file or a `.lrc` brings later replace `TRANSCRIBED` ones.
+
 ## Music videos
 
 Servers with `MUSIC_VIDEOS` in `serverInfo.features` keep music videos: files next to their songs, named after them,

@@ -73,6 +73,8 @@ public enum AdminBlockKind
     Progress,
     /// <summary>A label and a list of short texts.</summary>
     List,
+    /// <summary>A label and a link (<see cref="AdminBlock.Url"/>): a page of the admin panel, or a web address.</summary>
+    Link,
 }
 
 /// <summary>How a field is edited, and the JSON its value is.</summary>
@@ -138,6 +140,7 @@ public enum AdminActionStyle
 /// <param name="Tone">The color of a status or notice.</param>
 /// <param name="Percent">How far a progress went, from 0 to 100.</param>
 /// <param name="Items">The texts of a list.</param>
+/// <param name="Url">Where a link goes: a page of the admin panel (<c>/admin/…</c>, opened in place) or an https address (in a new tab).</param>
 public sealed record AdminBlock(
     AdminBlockKind Kind,
     string? Key = null,
@@ -153,8 +156,13 @@ public sealed record AdminBlock(
     string? Text = null,
     AdminTone Tone = AdminTone.Neutral,
     double? Percent = null,
-    IReadOnlyList<string>? Items = null)
+    IReadOnlyList<string>? Items = null,
+    string? Url = null)
 {
+    /// <summary>A label and a link to a page of the admin panel (<c>/admin/…</c>) or a web address; <paramref name="text"/> is the link's text.</summary>
+    public static AdminBlock Link(string label, string text, string url, string? help = null) =>
+        new(AdminBlockKind.Link, Label: label, Text: text, Help: help, Url: url);
+
     /// <summary>A setting; <paramref name="value"/> is serialized to JSON (camelCase).</summary>
     public static AdminBlock Field(string key, string label, AdminFieldType type, object? value, string? help = null,
         IReadOnlyList<AdminOption>? options = null, string? placeholder = null, double? min = null, double? max = null, bool readOnly = false) =>

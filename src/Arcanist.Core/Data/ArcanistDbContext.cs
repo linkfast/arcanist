@@ -39,6 +39,7 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<VideoAlignment> VideoAlignments => Set<VideoAlignment>();
     public DbSet<VideoAlignmentRequest> VideoAlignmentRequests => Set<VideoAlignmentRequest>();
     public DbSet<VideoLyricsTiming> VideoLyricsTimings => Set<VideoLyricsTiming>();
+    public DbSet<LyricsDraft> LyricsDrafts => Set<LyricsDraft>();
     public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
     public DbSet<OnlineLookup> OnlineLookups => Set<OnlineLookup>();
     public DbSet<DropFolder> DropFolders => Set<DropFolder>();
@@ -730,6 +731,14 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             lyrics.Property(l => l.Source).HasConversion<string>().HasMaxLength(EnumLength);
             lyrics.Property(l => l.SyncedSource).HasConversion<string>().HasMaxLength(EnumLength);
             lyrics.Property(l => l.ReplacedTimingHash).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<LyricsDraft>(draft =>
+        {
+            draft.HasKey(d => d.TrackId);
+            draft.HasOne(d => d.Track).WithOne().HasForeignKey<LyricsDraft>(d => d.TrackId).OnDelete(DeleteBehavior.Cascade);
+            draft.Property(d => d.Language).HasMaxLength(16);
+            draft.Property(d => d.Model).HasMaxLength(100);
         });
 
         modelBuilder.Entity<OnlineLookup>(lookup =>

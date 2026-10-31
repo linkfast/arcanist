@@ -36,7 +36,9 @@ import { LibrariesQuery } from '../../graphql/operations';
 /** What an extension describes (IExtensionAdminPage in the SDK). */
 type Tone = 'NEUTRAL' | 'GOOD' | 'WARNING' | 'BAD';
 interface Block {
-  kind: 'FIELD' | 'STATUS' | 'NOTICE' | 'PROGRESS' | 'LIST';
+  kind: 'FIELD' | 'STATUS' | 'NOTICE' | 'PROGRESS' | 'LIST' | 'LINK';
+  /** Where a link goes: a page of the panel (/admin/…) or a web address. */
+  url?: string | null;
   key?: string | null;
   label?: string | null;
   help?: string | null;
@@ -131,7 +133,7 @@ interface Result {
 
       @if (page(); as p) {
         @if (p.setup; as needed) {
-          <div hlmAlert>
+          <div hlmAlert data-tour="extension-page-setup">
             <p hlmAlertTitle>{{ needed.title }}</p>
             <div hlmAlertDescription class="grid gap-2">
               <p>{{ needed.description }}</p>
@@ -160,7 +162,7 @@ interface Result {
           </div>
         }
         @for (section of p.sections; track section.id) {
-          <section hlmCard>
+          <section hlmCard data-tour="extension-page-section">
             <div hlmCardHeader>
               <h2 hlmCardTitle>{{ section.title }}</h2>
               @if (section.description) {
@@ -323,6 +325,29 @@ interface Result {
                       </ul>
                     </div>
                   }
+                  @case ('LINK') {
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span class="text-muted-foreground">{{ block.label }}</span>
+                      @if (panelPath(block.url); as path) {
+                        <a hlmBtn size="sm" variant="outline" [routerLink]="path">{{
+                          block.text
+                        }}</a>
+                      } @else if (webUrl(block.url); as url) {
+                        <a
+                          hlmBtn
+                          size="sm"
+                          variant="outline"
+                          [href]="url"
+                          target="_blank"
+                          rel="noopener"
+                          >{{ block.text }}</a
+                        >
+                      }
+                      @if (block.help) {
+                        <p class="w-full text-xs text-muted-foreground">{{ block.help }}</p>
+                      }
+                    </div>
+                  }
                 }
               }
               @if (section.actions?.length) {
@@ -353,7 +378,13 @@ interface Result {
 
         @if (editable()) {
           <div class="flex items-center gap-3">
-            <button hlmBtn type="button" [disabled]="busy() || !dirty()" (click)="save()">
+            <button
+              hlmBtn
+              type="button"
+              data-tour="extension-page-save"
+              [disabled]="busy() || !dirty()"
+              (click)="save()"
+            >
               {{ 'common.save' | t }}
             </button>
             @if (dirty()) {
@@ -470,6 +501,16 @@ export class ExtensionPage implements OnInit, OnDestroy {
       key,
       on ? [...current.filter((v) => v !== option), option] : current.filter((v) => v !== option),
     );
+  }
+
+  /** A link block's page of the panel (the route under /admin), or null for other addresses. */
+  protected panelPath(url?: string | null): string | null {
+    return url?.startsWith('/admin/') ? url.slice('/admin'.length) : null;
+  }
+
+  /** A link block's web address, only https (an extension cannot send the panel anywhere else). */
+  protected webUrl(url?: string | null): string | null {
+    return url?.startsWith('https://') ? url : null;
   }
 
   protected badge(tone?: Tone): 'default' | 'secondary' | 'destructive' | 'outline' {

@@ -53,6 +53,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/videos/videos.page').then((m) => m.VideosPage),
       },
       {
+        path: 'lyrics/review',
+        canActivate: [permissionGuard('EDIT_METADATA')],
+        loadComponent: () =>
+          import('./features/lyrics/lyrics-review.page').then((m) => m.LyricsReviewPage),
+      },
+      {
+        path: 'lyrics/review/:trackId',
+        canActivate: [permissionGuard('EDIT_METADATA')],
+        loadComponent: () =>
+          import('./features/lyrics/lyrics-review.page').then((m) => m.LyricsReviewPage),
+      },
+      {
         path: 'import',
         canActivate: [permissionGuard('MANAGE_LIBRARIES')],
         loadComponent: () => import('./features/import/import.page').then((m) => m.ImportPage),

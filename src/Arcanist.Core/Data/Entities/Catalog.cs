@@ -257,6 +257,11 @@ public enum LyricsSource
     Embedded,
     Online,
     Aligned,
+    /// <summary>
+    /// Recognized in the song by a model (Lyrics Sync) and accepted by a person after reviewing it
+    /// (<see cref="LyricsDraft"/>): the least trusted, so lyrics from the file or a sidecar replace it.
+    /// </summary>
+    Transcribed,
 }
 
 /// <summary>A track's lyrics. Each track keeps the most trusted ones it has found.</summary>

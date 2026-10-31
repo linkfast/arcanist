@@ -412,13 +412,14 @@ public sealed class TrackEditService(
         var scanned = new List<ScannedFile>();
         var written = new List<MediaFile>();
         var moved = new Dictionary<Guid, Guid>();
+        var sidecarsRemoved = new HashSet<Guid>();
         try
         {
             using (await LockAsync(toWrite.Select(f => f.LibrarySource.LibraryId), cancellationToken))
             {
                 foreach (var file in toWrite)
                 {
-                    scanned.Add(await RewriteFileAsync(file, changes, picture, folder, cancellationToken));
+                    scanned.Add(await RewriteFileAsync(file, changes, picture, folder, sidecarsRemoved, cancellationToken));
                     written.Add(file);
                 }
             }
@@ -428,6 +429,15 @@ public sealed class TrackEditService(
             // What was written is catalogued, and its tracks follow it, even when a later file failed.
             if (scanned.Count > 0)
             {
+                // A .lrc that went (the edited lyrics have no timing): its lyrics leave the catalog, or they would still win
+                // over the tags' (a sidecar is trusted most).
+                if (sidecarsRemoved.Count > 0)
+                {
+                    await using var clean = databases.CreateDbContext();
+                    await clean.Lyrics.Where(l => sidecarsRemoved.Contains(l.TrackId) && l.Source == LyricsSource.Sidecar)
+                        .ExecuteDeleteAsync(CancellationToken.None);
+                }
+
                 await CatalogueAsync(scanned, cancellationToken);
                 moved = await FollowAsync(ids, written);
             }
@@ -461,7 +471,8 @@ public sealed class TrackEditService(
         return moved;
     }
 
-    private async Task<ScannedFile> RewriteFileAsync(MediaFile file, TrackEditInput changes, byte[]? picture, string folder, CancellationToken cancellationToken)
+    private async Task<ScannedFile> RewriteFileAsync(
+        MediaFile file, TrackEditInput changes, byte[]? picture, string folder, HashSet<Guid> sidecarsRemoved, CancellationToken cancellationToken)
     {
         var storage = storages.For(file.LibrarySource.Kind);
         var location = StorageLocation.From(file.LibrarySource);
@@ -526,12 +537,80 @@ public sealed class TrackEditService(
             var entry = await storage.StatAsync(location, file.RelativePath, CancellationToken.None)
                         ?? new StorageEntry(file.RelativePath, size, Now());
             logger.LogInformation("Edited the tags of {Path}", file.RelativePath);
+
+            if (changes.Lyrics is { } lyrics)
+            {
+                var (sidecarMetadata, removed) = await EditSidecarLyricsAsync(storage, location, file.RelativePath, lyrics, metadata, folder);
+                metadata = sidecarMetadata;
+                if (removed)
+                    sidecarsRemoved.Add(file.TrackId);
+            }
+
             return new ScannedFile(file.LibrarySourceId, file.Id, file.RelativePath, entry.Size, entry.ModifiedAt, hash,
                 metadata with { EmbeddedPicture = null }, artwork);
         }
         finally
         {
             File.Delete(temporary);
+        }
+    }
+
+    /// <summary>
+    /// The .lrc beside an edited file, which a scan reads before its tags: lyrics with timing replace what it says (and
+    /// are catalogued from it, as a scan would); lyrics without timing, or none, take it to the trash, so the tags'
+    /// are the ones read. Returns the metadata to catalogue, and whether a .lrc went. Without a .lrc, nothing changes.
+    /// </summary>
+    private async Task<(AudioMetadata Metadata, bool Removed)> EditSidecarLyricsAsync(
+        ILibraryStorage storage, StorageLocation location, string audioPath, string lyrics, AudioMetadata metadata, string folder)
+    {
+        var stem = AudioFormats.WithoutExtension(audioPath);
+        string? sidecar = null;
+        foreach (var candidate in new[] { stem + ".lrc", stem + ".LRC" })
+        {
+            if (await storage.ExistsAsync(location, candidate, CancellationToken.None))
+            {
+                sidecar = candidate;
+                break;
+            }
+        }
+
+        if (sidecar is null)
+            return (metadata, false);
+
+        var text = lyrics.Replace("\r\n", "\n").Trim();
+        var lines = Lrc.Parse(text);
+        var trashed = false;
+        try
+        {
+            // Past the audio file there is no turning back: the caller leaving must not stop this halfway.
+            await storage.TrashAsync(location, sidecar, CancellationToken.None);
+            trashed = true;
+            if (lines.Count == 0)
+            {
+                logger.LogInformation("Moved {Path} to the trash: the edited lyrics have no timing", sidecar);
+                return (metadata, true);
+            }
+
+            var temporary = Path.Combine(folder, $"edit-{Guid.NewGuid():N}.lrc");
+            try
+            {
+                await File.WriteAllTextAsync(temporary, text + "\n", new System.Text.UTF8Encoding(false), CancellationToken.None);
+                await storage.ImportAsync(location, sidecar, temporary, CancellationToken.None);
+            }
+            finally
+            {
+                File.Delete(temporary);
+            }
+
+            logger.LogInformation("Wrote the edited lyrics to {Path}", sidecar);
+            return (metadata with { SyncedLyrics = text, Lyrics = string.Join('\n', lines.Select(l => l.Text)), LyricsSource = LyricsSource.Sidecar }, false);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or HttpRequestException)
+        {
+            // The audio file is in place already, with the lyrics in its tags: it is catalogued either way. With the old .lrc
+            // in the trash, the tags' are the ones read; when it couldn't even go there, it still wins until fixed by hand.
+            logger.LogWarning(e, "Could not write the edited lyrics to {Path}", sidecar);
+            return (metadata, trashed);
         }
     }
 

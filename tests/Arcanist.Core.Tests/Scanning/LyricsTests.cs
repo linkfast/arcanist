@@ -101,6 +101,48 @@ public sealed class LyricsTests : IAsyncLifetime
         Assert.Equal("Hello", lyrics.GetProperty("synced")[0].GetProperty("text").GetString());
     }
 
+    [Fact]
+    public async Task Edited_lyrics_go_to_the_sidecar_that_would_hide_the_tags()
+    {
+        AudioFixtures.WriteWav(Path.Combine(_music, "timed.wav"), 1, new FixtureTags(Title: "Timed", Lyrics: "Tag words"));
+        File.WriteAllText(Path.Combine(_music, "timed.lrc"), "[00:01.00]Old line one\n[00:02.00]Old line two\n");
+        AudioFixtures.WriteWav(Path.Combine(_music, "plain.wav"), 2, new FixtureTags(Title: "Plain", Lyrics: "Tag words"));
+        File.WriteAllText(Path.Combine(_music, "plain.lrc"), "[00:01.00]Old timed line\n");
+
+        await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
+        _admin = await _factory.CreateAuthenticatedClientAsync();
+        await _factory.WaitForScansAsync(_admin);
+
+        async Task<JsonElement> EditAsync(string title, string text)
+        {
+            var id = (await TrackAsync(title)).GetProperty("id").GetString();
+            var response = await _admin.PatchAsync($"/rest/v1/tracks/{id}", JsonContent.Create(new { lyrics = text }, options: ArcanistFactory.Json), Cancel);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/tracks/{id}/lyrics", ArcanistFactory.Json, Cancel);
+        }
+
+        // New timing (what Ultimate Desktop's sync editor saves): it goes to the .lrc, which keeps winning, now with it.
+        var timed = await EditAsync("Timed", "[00:03.00]New line one\n[00:04.50]New line two");
+        Assert.Equal("SIDECAR", timed.GetProperty("source").GetString());
+        Assert.Equal(4500, timed.GetProperty("synced")[1].GetProperty("timeMs").GetInt32());
+        Assert.Equal("New line two", timed.GetProperty("synced")[1].GetProperty("text").GetString());
+        Assert.Contains("[00:04.50]New line two", File.ReadAllText(Path.Combine(_music, "timed.lrc")));
+
+        // Lyrics without timing: the .lrc goes to the trash, so the tags (which have them) are the ones read.
+        var plain = await EditAsync("Plain", "Just words now");
+        Assert.Equal("EMBEDDED", plain.GetProperty("source").GetString());
+        Assert.Equal("Just words now", plain.GetProperty("plain").GetString());
+        Assert.Equal(JsonValueKind.Null, plain.GetProperty("synced").ValueKind);
+        Assert.False(File.Exists(Path.Combine(_music, "plain.lrc")));
+
+        // A rescan reads the same from the files.
+        var library = (await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/libraries", ArcanistFactory.Json, Cancel))[0];
+        await _admin.PostAsJsonAsync($"/rest/v1/libraries/{library.GetProperty("id").GetString()}/scans", new StartScanInput(Full: true), Cancel);
+        await _factory.WaitForScansAsync(_admin);
+        var rescanned = await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/tracks/{(await TrackAsync("Timed")).GetProperty("id")}/lyrics", ArcanistFactory.Json, Cancel);
+        Assert.Equal(3000, rescanned.GetProperty("synced")[0].GetProperty("timeMs").GetInt32());
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _factory.DisposeAsync();

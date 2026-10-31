@@ -69,7 +69,7 @@ const IdleMs = 30000;
   ],
   providers: [provideIcons({ lucideRefreshCw, lucideUpload })],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="import-uploads">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'import.uploads.title' | t }}</h2>
         <p hlmCardDescription>{{ 'import.uploads.description' | t }}</p>

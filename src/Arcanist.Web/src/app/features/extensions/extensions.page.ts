@@ -97,7 +97,7 @@ interface PendingInstall {
     </header>
 
     <div class="grid grid-cols-[minmax(0,1fr)] gap-6">
-      <div class="flex flex-wrap gap-1 border-b pb-2" role="tablist">
+      <div class="flex flex-wrap gap-1 border-b pb-2" role="tablist" data-tour="extensions-tabs">
         @for (option of tabs; track option) {
           <button
             hlmBtn
@@ -145,7 +145,7 @@ interface PendingInstall {
 
       @switch (tab()) {
         @case ('installed') {
-          <section hlmCard>
+          <section hlmCard data-tour="extensions-list">
             <div hlmCardHeader>
               <h2 hlmCardTitle>{{ 'extensions.list.title' | t }}</h2>
               <p hlmCardDescription>{{ 'extensions.list.description' | t }}</p>

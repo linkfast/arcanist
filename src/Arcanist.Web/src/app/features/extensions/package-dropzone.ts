@@ -17,6 +17,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
   template: `
     <div
       class="grid gap-3 rounded-lg border-2 border-dashed p-5 text-center transition-colors"
+      data-tour="extensions-install"
       [class.border-primary]="dragging()"
       [class.bg-muted]="dragging()"
       (dragover)="over($event)"

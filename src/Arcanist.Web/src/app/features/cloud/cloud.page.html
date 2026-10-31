@@ -5,7 +5,7 @@
 
 @if (status(); as current) {
   <div class="grid grid-cols-[minmax(0,1fr)] gap-6">
-    <section hlmCard>
+    <section hlmCard data-tour="cloud-switch">
       <div hlmCardContent class="grid gap-2 pt-6">
         <label class="flex items-center gap-2 text-sm font-medium">
           @for (version of [switchVersion()]; track version) {
@@ -31,7 +31,7 @@
         </div>
       }
 
-      <section hlmCard>
+      <section hlmCard data-tour="cloud-account">
         <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'cloud.account.title' | t }}</h2>
           <p hlmCardDescription>{{ 'cloud.account.description' | t }}</p>
@@ -332,7 +332,7 @@
         }
       }
 
-      <section hlmCard>
+      <section hlmCard data-tour="cloud-capabilities">
         <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'cloud.capabilities.title' | t }}</h2>
           <p hlmCardDescription>{{ 'cloud.capabilities.description' | t }}</p>

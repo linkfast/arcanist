@@ -13,7 +13,7 @@ import { RatingModeQuery, SetRatingModeMutation } from '../../graphql/operations
   selector: 'app-rating-mode-card',
   imports: [FormsModule, HlmCardImports, HlmRadioGroupImports, TranslatePipe],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="settings-ratings">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'settings.ratings.title' | t }}</h2>
         <p hlmCardDescription>{{ 'settings.ratings.description' | t }}</p>

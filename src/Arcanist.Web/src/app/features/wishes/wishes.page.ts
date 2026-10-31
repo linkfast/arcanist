@@ -77,12 +77,12 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
       }
 
       @if (scope() === 'MINE') {
-        <section hlmCard>
+        <section hlmCard data-tour="wishes-add">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'wishes.add' | t }}</h2>
           </div>
           <div hlmCardContent class="grid gap-4">
-            <form class="grid gap-2" (ngSubmit)="read()">
+            <form class="grid gap-2" data-tour="wishes-link" (ngSubmit)="read()">
               <label hlmFieldLabel for="wish-link">{{ 'wishes.link' | t }}</label>
               <div class="flex flex-wrap gap-2">
                 <input
@@ -231,7 +231,7 @@ type Preview = ResolveWishLinkMutation['resolveWishLink'];
         <p class="text-sm text-muted-foreground">{{ 'wishes.allHelp' | t }}</p>
       }
 
-      <section hlmCard>
+      <section hlmCard data-tour="wishes-wanted">
         <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'wishes.wanted' | t }} ({{ wanted().length }})</h2>
           <p hlmCardDescription>{{ 'wishes.wantedHelp' | t }}</p>

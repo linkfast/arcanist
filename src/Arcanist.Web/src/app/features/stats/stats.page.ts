@@ -41,7 +41,7 @@ type Stats = Result['serverStats'];
         <h1 class="text-2xl font-semibold">{{ 'stats.title' | t }}</h1>
         <p class="text-sm text-muted-foreground">{{ 'stats.subtitle' | t }}</p>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2" data-tour="stats-filters">
         <select
           hlmNativeSelect
           class="max-w-56"
@@ -74,7 +74,7 @@ type Stats = Result['serverStats'];
 
     @if (stats(); as s) {
       <div class="grid gap-6">
-        <section hlmCard>
+        <section hlmCard data-tour="stats-library">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'stats.library' | t }}</h2>
           </div>
@@ -117,7 +117,7 @@ type Stats = Result['serverStats'];
           </div>
         </section>
 
-        <section hlmCard>
+        <section hlmCard data-tour="stats-listening">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'stats.listening' | t }}</h2>
           </div>
@@ -278,7 +278,7 @@ type Stats = Result['serverStats'];
           </div>
         </section>
 
-        <section hlmCard>
+        <section hlmCard data-tour="stats-users">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'stats.users' | t }}</h2>
           </div>

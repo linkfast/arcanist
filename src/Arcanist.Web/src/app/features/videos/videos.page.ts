@@ -44,7 +44,7 @@ import { VideoDetail } from './video-detail';
       <p class="text-sm text-muted-foreground">{{ 'videos.subtitle' | t }}</p>
     </header>
 
-    <form class="mb-4 flex flex-wrap gap-2" (ngSubmit)="reload()">
+    <form class="mb-4 flex flex-wrap gap-2" data-tour="videos-filters" (ngSubmit)="reload()">
       <input
         hlmInput
         name="search"
@@ -69,7 +69,7 @@ import { VideoDetail } from './video-detail';
       <p class="mb-3 text-sm text-muted-foreground">
         {{ 'videos.count' | t: { count: total() } }}
       </p>
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-tour="videos-list">
         @for (video of list; track video.id) {
           <button
             type="button"

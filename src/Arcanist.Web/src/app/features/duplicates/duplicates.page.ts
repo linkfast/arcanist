@@ -42,7 +42,7 @@ type Pair = Candidates['duplicateCandidates'][number];
     </header>
 
     <hlm-tabs class="mb-4" [tab]="tab()" (tabActivated)="tab.set($any($event))">
-      <hlm-tabs-list>
+      <hlm-tabs-list data-tour="duplicates-tabs">
         <button hlmTabsTrigger="possible">{{ 'duplicates.tabs.possible' | t }}</button>
         <button hlmTabsTrigger="libraries">{{ 'duplicates.tabs.libraries' | t }}</button>
       </hlm-tabs-list>
@@ -53,7 +53,7 @@ type Pair = Candidates['duplicateCandidates'][number];
     } @else {
       <p class="mb-4 text-sm text-muted-foreground">{{ 'duplicates.subtitle' | t }}</p>
       @if (pairs(); as list) {
-        <div class="grid gap-4">
+        <div class="grid gap-4" data-tour="duplicates-list">
           @for (pair of list; track pair.id) {
             <section hlmCard>
               <div hlmCardHeader>

@@ -41,7 +41,7 @@
   }
 
   @if (status(); as current) {
-    <section hlmCard>
+    <section hlmCard data-tour="database-current">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'database.current.title' | t }}</h2>
       </div>
@@ -147,7 +147,7 @@
     }
 
     @if (current.provider === 'SQLITE' && !maintenance()?.active) {
-      <section hlmCard>
+      <section hlmCard data-tour="database-migrate">
         <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'database.migrate.title' | t }}</h2>
           <p hlmCardDescription>{{ 'database.migrate.description' | t }}</p>

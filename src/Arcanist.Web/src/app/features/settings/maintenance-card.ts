@@ -38,7 +38,7 @@ type Reset = 'settings' | 'userData' | 'factory';
     TranslatePipe,
   ],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="settings-maintenance">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'settings.maintenance.title' | t }}</h2>
         <p hlmCardDescription>{{ 'settings.maintenance.description' | t }}</p>

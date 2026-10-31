@@ -3,7 +3,7 @@
     <h1 class="text-2xl font-semibold">{{ 'users.title' | t }}</h1>
     <p class="text-sm text-muted-foreground">{{ 'users.subtitle' | t }}</p>
   </div>
-  <button hlmBtn type="button" class="gap-1" (click)="openCreate()">
+  <button hlmBtn type="button" class="gap-1" data-tour="users-create" (click)="openCreate()">
     <ng-icon name="lucidePlus" />
     {{ 'users.create' | t }}
   </button>
@@ -13,13 +13,13 @@
   <div class="flex justify-center py-12"><hlm-spinner /></div>
 } @else {
   <hlm-tabs tab="users" class="w-full">
-    <hlm-tabs-list>
+    <hlm-tabs-list data-tour="users-tabs">
       <button hlmTabsTrigger="users">{{ 'users.tabs.users' | t }}</button>
       <button hlmTabsTrigger="access">{{ 'users.tabs.access' | t }}</button>
     </hlm-tabs-list>
 
     <div hlmTabsContent="users">
-      <div hlmTableContainer class="rounded-lg border">
+      <div hlmTableContainer class="rounded-lg border" data-tour="users-table">
         <table hlmTable>
           <thead hlmTHead>
             <tr hlmTr>

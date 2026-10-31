@@ -6,7 +6,7 @@
 <div class="grid gap-6">
   @if (auth.isAdmin()) {
     <app-arcanist-migration (started)="arcanistStarted($event)" />
-    <section hlmCard class="order-first">
+    <section hlmCard class="order-first" data-tour="import-migrate">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'import.migrate.title' | t }}</h2>
         <p hlmCardDescription>{{ 'import.migrate.help' | t }}</p>
@@ -275,7 +275,7 @@
       </hlm-alert-dialog-content>
     </hlm-alert-dialog>
 
-    <section hlmCard>
+    <section hlmCard data-tour="import-folders">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'import.folders.title' | t }}</h2>
         <p hlmCardDescription>{{ 'import.folders.help' | t }}</p>
@@ -381,7 +381,7 @@
 
   <app-uploads-card />
 
-  <section hlmCard>
+  <section hlmCard data-tour="import-queue">
     <div hlmCardHeader>
       <h2 hlmCardTitle>{{ 'import.queue.title' | t }}</h2>
       <p hlmCardDescription>

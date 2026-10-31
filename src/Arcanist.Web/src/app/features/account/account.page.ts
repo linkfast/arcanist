@@ -1,4 +1,5 @@
 import { MyDlna } from './my-dlna';
+import { MyTours } from './my-tours';
 import { MyVideos } from './my-videos';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -48,6 +49,7 @@ type Session = SessionsResult['mySessions'][number];
     MyDevices,
     MyDlna,
     MyVideos,
+    MyTours,
   ],
   template: `
     <header class="mb-6">
@@ -114,7 +116,7 @@ type Session = SessionsResult['mySessions'][number];
         </form>
       </section>
 
-      <section hlmCard>
+      <section hlmCard data-tour="account-sessions">
         <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'account.sessions' | t }}</h2>
           <p hlmCardDescription>{{ 'account.sessionsHelp' | t }}</p>
@@ -158,7 +160,7 @@ type Session = SessionsResult['mySessions'][number];
         </ul>
       </section>
 
-      <section hlmCard>
+      <section hlmCard data-tour="account-app-passwords">
         <div hlmCardHeader>
           <h2 hlmCardTitle>{{ 'account.appPasswords.title' | t }}</h2>
           <p hlmCardDescription>{{ 'account.appPasswords.description' | t }}</p>
@@ -250,6 +252,7 @@ type Session = SessionsResult['mySessions'][number];
       <app-my-devices />
       <app-my-dlna />
       <app-my-videos />
+      <app-my-tours />
 
       <section hlmCard>
         <div hlmCardHeader>

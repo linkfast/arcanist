@@ -27,7 +27,7 @@ interface State {
   selector: 'app-privacy-card',
   imports: [HlmCardImports, HlmSwitchImports, PrivacyLevel, TranslatePipe],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="settings-privacy">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'settings.privacy.title' | t }}</h2>
         <p hlmCardDescription>{{ 'settings.privacy.description' | t }}</p>

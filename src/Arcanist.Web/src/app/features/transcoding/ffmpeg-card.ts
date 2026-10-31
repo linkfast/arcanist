@@ -38,7 +38,7 @@ export const FfmpegGuide = 'https://github.com/linkfast/arcanist/blob/main/docs/
     BytesPipe,
   ],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="transcoding-ffmpeg">
       <div hlmCardHeader>
         <h2 hlmCardTitle>ffmpeg</h2>
         <p hlmCardDescription>{{ 'settings.ffmpeg.description' | t }}</p>

@@ -46,7 +46,7 @@ const SETTING_OF: Record<OnlineService, SettingKey> = {
     RelativeTimePipe,
   ],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="settings-online">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'settings.online.title' | t }}</h2>
         <p hlmCardDescription>{{ 'settings.online.description' | t }}</p>

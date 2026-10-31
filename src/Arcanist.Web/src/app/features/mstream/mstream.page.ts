@@ -108,7 +108,7 @@ const Unavailable = [
           </div>
         </section>
 
-        <section hlmCard>
+        <section hlmCard data-tour="mstream-sign-in">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'mstreamPage.signIn.title' | t }}</h2>
             <p hlmCardDescription>{{ 'mstreamPage.signIn.description' | t }}</p>
@@ -128,7 +128,7 @@ const Unavailable = [
           </div>
         </section>
 
-        <section hlmCard>
+        <section hlmCard data-tour="mstream-quick-connect">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'mstreamPage.quickConnect.title' | t }}</h2>
             <p hlmCardDescription>{{ 'mstreamPage.quickConnect.description' | t }}</p>
@@ -195,7 +195,7 @@ const Unavailable = [
           </div>
         </section>
 
-        <section hlmCard>
+        <section hlmCard data-tour="mstream-features">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'mstreamPage.features.title' | t }}</h2>
             <p hlmCardDescription>{{ 'mstreamPage.features.description' | t }}</p>

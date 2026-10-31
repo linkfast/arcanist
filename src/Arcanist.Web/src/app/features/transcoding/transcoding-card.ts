@@ -63,7 +63,7 @@ const Ages = [7, 30, 90, 365];
     CountPipe,
   ],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="transcoding-conversion">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'transcoding.title' | t }}</h2>
         <p hlmCardDescription>{{ 'transcoding.description' | t }}</p>

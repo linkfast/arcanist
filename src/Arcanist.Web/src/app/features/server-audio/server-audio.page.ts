@@ -86,7 +86,7 @@ const Server = 'server';
 
     @if (status(); as current) {
       <div class="grid gap-6">
-        <section hlmCard>
+        <section hlmCard data-tour="server-audio-output">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'serverAudio.output.title' | t }}</h2>
             <p hlmCardDescription>{{ 'serverAudio.output.description' | t }}</p>
@@ -143,7 +143,7 @@ const Server = 'server';
         </section>
 
         @if (current.enabled && current.available) {
-          <section hlmCard>
+          <section hlmCard data-tour="server-audio-device">
             <div hlmCardHeader>
               <h2 hlmCardTitle>{{ 'serverAudio.settings.title' | t }}</h2>
               <p hlmCardDescription>{{ 'serverAudio.settings.description' | t }}</p>
@@ -204,7 +204,7 @@ const Server = 'server';
             </div>
           </section>
 
-          <section hlmCard>
+          <section hlmCard data-tour="server-audio-playing">
             <div hlmCardHeader>
               <h2 hlmCardTitle>{{ 'serverAudio.playing.title' | t }}</h2>
               <p hlmCardDescription>{{ 'serverAudio.playing.description' | t }}</p>

@@ -9,7 +9,7 @@
 
 @if (status(); as current) {
   <div class="grid grid-cols-[minmax(0,1fr)] gap-6">
-    <div class="flex flex-wrap gap-1 border-b pb-2" role="tablist">
+    <div class="flex flex-wrap gap-1 border-b pb-2" role="tablist" data-tour="network-tabs">
       @for (option of tabs; track option) {
         <button
           hlmBtn
@@ -32,7 +32,7 @@
 
     @switch (tab()) {
       @case ('node') {
-        <section hlmCard>
+        <section hlmCard data-tour="network-node">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'network.node.title' | t }}</h2>
             <p hlmCardDescription>{{ 'network.node.description' | t }}</p>
@@ -89,7 +89,7 @@
 
             @if (settings; as form) {
               <form class="grid gap-4" (ngSubmit)="saveSettings()">
-                <label class="flex items-center gap-2 text-sm">
+                <label class="flex items-center gap-2 text-sm" data-tour="network-enable">
                   <hlm-switch [checked]="form.enabled" (checkedChange)="form.enabled = $event" />
                   {{ 'network.node.enabled' | t }}
                 </label>

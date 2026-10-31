@@ -61,7 +61,7 @@ type Song = SearchResult['tracks']['items'][number];
 
     @if (status(); as current) {
       <div class="grid gap-6">
-        <section hlmCard>
+        <section hlmCard data-tour="ai-analysis">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'ai.analysis.title' | t }}</h2>
             <p hlmCardDescription>{{ 'ai.analysis.description' | t }}</p>
@@ -129,7 +129,7 @@ type Song = SearchResult['tracks']['items'][number];
           </div>
         </section>
 
-        <section hlmCard>
+        <section hlmCard data-tour="ai-performance">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'ai.performance.title' | t }}</h2>
             <p hlmCardDescription>{{ 'ai.performance.description' | t }}</p>
@@ -168,7 +168,7 @@ type Song = SearchResult['tracks']['items'][number];
         </section>
 
         @if (current.enabled) {
-          <section hlmCard>
+          <section hlmCard data-tour="ai-inspector">
             <div hlmCardHeader>
               <h2 hlmCardTitle>{{ 'ai.inspector.title' | t }}</h2>
               <p hlmCardDescription>{{ 'ai.inspector.description' | t }}</p>

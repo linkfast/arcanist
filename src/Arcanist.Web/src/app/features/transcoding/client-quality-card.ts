@@ -45,7 +45,7 @@ const key = (quality: Quality): string =>
   selector: 'app-client-quality-card',
   imports: [FormsModule, HlmButtonImports, HlmCardImports, HlmNativeSelectImports, TranslatePipe],
   template: `
-    <section hlmCard>
+    <section hlmCard data-tour="transcoding-clients">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'transcoding.clients.title' | t }}</h2>
         <p hlmCardDescription>{{ 'transcoding.clients.description' | t }}</p>

@@ -107,7 +107,7 @@ const AllSections: DlnaSection[] = [
 
     @if (status(); as current) {
       <div class="grid gap-6">
-        <section hlmCard>
+        <section hlmCard data-tour="dlna-server">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'dlna.server.title' | t }}</h2>
             <p hlmCardDescription>{{ 'dlna.server.description' | t }}</p>
@@ -151,7 +151,7 @@ const AllSections: DlnaSection[] = [
         </section>
 
         <!-- Everything devices see, saved together. -->
-        <section hlmCard>
+        <section hlmCard data-tour="dlna-settings">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'dlna.settings.title' | t }}</h2>
             <p hlmCardDescription>{{ 'dlna.settings.description' | t }}</p>
@@ -277,7 +277,7 @@ const AllSections: DlnaSection[] = [
           </div>
         </section>
 
-        <section hlmCard>
+        <section hlmCard data-tour="dlna-renderers">
           <div hlmCardHeader>
             <h2 hlmCardTitle>{{ 'dlna.renderers.title' | t }}</h2>
             <p hlmCardDescription>{{ 'dlna.renderers.description' | t }}</p>

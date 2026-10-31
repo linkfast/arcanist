@@ -424,11 +424,13 @@ public sealed class CatalogService(
         if (!await VisibleTracks(access).AnyAsync(t => t.Id == trackId, cancellationToken))
             throw new ArcanistException.NotFound();
 
+        // Before reading the lyrics: a re-sync ends after its timing is saved, so lyrics read once it is no longer
+        // pending have that timing (read the other way round, the old timing could come back as the final one).
+        var resyncPending = lyricsTiming.IsResyncPending(trackId) && LyricsTimingService.StateOf(extensions) == LyricsTimingExtension.Running;
         var lyrics = await db.Lyrics.AsNoTracking().SingleOrDefaultAsync(l => l.TrackId == trackId, cancellationToken)
                      ?? throw new ArcanistException.NotFound();
         // Only those who may ask for it pay for the check (trackLyrics is read often).
         var canResync = access.Has(Permissions.EditMetadata) && await ResyncBlockerAsync(access, trackId, lyrics, cancellationToken) is null;
-        var resyncPending = lyricsTiming.IsResyncPending(trackId) && LyricsTimingService.StateOf(extensions) == LyricsTimingExtension.Running;
 
         // LRC kept as plain lyrics (read before it was recognised as such) is synchronized too.
         var timing = lyrics.Synced ?? (lyrics.Plain is { } text && Core.Scanning.Lrc.LooksTimed(text) ? text : null);

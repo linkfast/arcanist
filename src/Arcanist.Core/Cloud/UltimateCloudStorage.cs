@@ -37,7 +37,7 @@ internal sealed class UltimateCloudStorage(
     TimeProvider time,
     ILogger<UltimateCloudStorage> logger) : ILibraryStorage, IDescribedStorage
 {
-    public const string FilesClientName = "ultimate-cloud-files";
+    public const string FilesClientName = UltimateCloudClient.FilesClientName;
 
     private readonly ConcurrentDictionary<string, (string Url, DateTimeOffset Until)> _urls = new(StringComparer.Ordinal);
 

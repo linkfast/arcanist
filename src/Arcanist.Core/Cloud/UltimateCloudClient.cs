@@ -45,6 +45,9 @@ public sealed class UltimateCloudException(string code, string? message = null) 
 public sealed class UltimateCloudClient(IHttpClientFactory clients, UltimateCloudAuth auth, Microsoft.Extensions.Options.IOptionsMonitor<UltimateCloudOptions> options)
 {
     public const string HttpClientName = "ultimate-cloud";
+
+    /// <summary>The HTTP client for Ultimate Cloud's files (B2 uploads and downloads), without a timeout.</summary>
+    public const string FilesClientName = "ultimate-cloud-files";
     public const string ClientApp = "arcanist-server";
 
     private static readonly AsyncLocal<Guid?> Account = new();

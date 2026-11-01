@@ -32,6 +32,8 @@ for arch in ${ARCHES:-x64 arm64}; do
     cp packaging/linux/arcanist.service "$staging/usr/lib/systemd/system/arcanist.service"
     sed -i 's|^# systemd unit for an Arcanist tarball extracted to /opt/arcanist.*|# systemd unit of the arcanist package. Change it with `sudo systemctl edit arcanist`, not here.|' \
         "$staging/usr/lib/systemd/system/arcanist.service"
+    # Updating from the panel: the server (unprivileged) leaves a request and this service installs the release as root.
+    cp packaging/linux/arcanist-update.service packaging/linux/arcanist-update.path "$staging/usr/lib/systemd/system/"
     cat > "$staging/usr/share/doc/arcanist/copyright" <<EOF
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: Arcanist
@@ -77,6 +79,7 @@ EOF
 set -e
 if [ "$1" = configure ] && [ -d /run/systemd/system ]; then
     systemctl daemon-reload
+    systemctl enable --now arcanist-update.path >/dev/null 2>&1 || true
     if [ -z "$2" ]; then
         # First install: start it, and with the system from now on.
         systemctl enable --now arcanist.service >/dev/null 2>&1 || true
@@ -100,6 +103,7 @@ EOF
 #!/bin/sh
 set -e
 if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
+    systemctl disable --now arcanist-update.path >/dev/null 2>&1 || true
     systemctl disable --now arcanist.service >/dev/null 2>&1 || true
 fi
 exit 0

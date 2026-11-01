@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { toast } from '@spartan-ng/brain/sonner';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
@@ -75,69 +76,76 @@ const SETTING_OF: Record<OnlineService, SettingKey> = {
                 />
               </div>
               @if (service.enabled) {
-                <p
-                  class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
-                >
-                  @if (!service.ready) {
-                    <span hlmBadge variant="destructive">{{ 'settings.online.needsKey' | t }}</span>
-                  }
-                  <span>{{ 'settings.online.found' | t: { count: (service.found | count) } }}</span>
-                  <span>{{
-                    'settings.online.notFound' | t: { count: (service.notFound | count) }
+                @if (!service.ready) {
+                  <span hlmBadge variant="destructive" class="justify-self-start">{{
+                    'settings.online.needsKey' | t
                   }}</span>
-                  <span>{{
-                    'settings.online.pending' | t: { count: (service.pending | count) }
-                  }}</span>
-                  @if (service.lastRequestAt) {
+                }
+                @if (service.lastError) {
+                  <p class="text-xs text-destructive">
+                    {{ 'settings.online.error.' + service.lastError | t }}
+                  </p>
+                }
+                <details class="text-xs text-muted-foreground">
+                  <summary class="cursor-pointer select-none">
+                    {{ 'settings.online.found' | t: { count: (service.found | count) } }}
+                    ·
+                    {{ 'settings.online.pending' | t: { count: (service.pending | count) } }}
+                  </summary>
+                  <p class="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                     <span>{{
-                      'settings.online.lastRequest'
-                        | t: { when: (service.lastRequestAt | relativeTime) }
+                      'settings.online.notFound' | t: { count: (service.notFound | count) }
                     }}</span>
-                  }
-                  @if (service.lastError) {
-                    <span class="text-destructive">{{
-                      'settings.online.error.' + service.lastError | t
-                    }}</span>
-                  }
-                </p>
+                    @if (service.lastRequestAt) {
+                      <span>{{
+                        'settings.online.lastRequest'
+                          | t: { when: (service.lastRequestAt | relativeTime) }
+                      }}</span>
+                    }
+                  </p>
+                </details>
+              }
+              <!-- The key where it is needed, not at the end of the card. -->
+              @if (service.service === 'ACOUST_ID') {
+                <div hlmField class="mt-2 border-t pt-3">
+                  <label hlmFieldLabel for="acoustid-key">{{
+                    'settings.online.acoustIdKey' | t
+                  }}</label>
+                  <div class="flex flex-wrap gap-2">
+                    <input
+                      hlmInput
+                      id="acoustid-key"
+                      class="min-w-0 flex-1"
+                      [(ngModel)]="acoustIdKey"
+                      [placeholder]="
+                        (s.hasOwnAcoustIdKey
+                          ? 'settings.online.keySaved'
+                          : 'settings.online.keyPlaceholder'
+                        ) | t
+                      "
+                    />
+                    <button
+                      hlmBtn
+                      variant="outline"
+                      type="button"
+                      [disabled]="busy() || (!acoustIdKey.trim() && !s.hasOwnAcoustIdKey)"
+                      (click)="saveKey()"
+                    >
+                      {{ 'common.save' | t }}
+                    </button>
+                  </div>
+                  <p hlmFieldDescription>
+                    {{
+                      ((s.hasAcoustIdKey && !s.hasOwnAcoustIdKey) || s.hasOwnAcoustIdKey
+                        ? 'settings.online.acoustIdKeyHelp'
+                        : 'settings.online.acoustIdKeyNeeded'
+                      ) | t
+                    }}
+                  </p>
+                </div>
               }
             </div>
           }
-
-          <div hlmField>
-            <label hlmFieldLabel for="acoustid-key">{{ 'settings.online.acoustIdKey' | t }}</label>
-            <div class="flex flex-wrap gap-2">
-              <input
-                hlmInput
-                id="acoustid-key"
-                class="min-w-0 flex-1"
-                [(ngModel)]="acoustIdKey"
-                [placeholder]="
-                  (s.hasOwnAcoustIdKey
-                    ? 'settings.online.keySaved'
-                    : 'settings.online.keyPlaceholder'
-                  ) | t
-                "
-              />
-              <button
-                hlmBtn
-                variant="outline"
-                type="button"
-                [disabled]="busy()"
-                (click)="saveKey()"
-              >
-                {{ 'common.save' | t }}
-              </button>
-            </div>
-            <p hlmFieldDescription>
-              {{
-                ((s.hasAcoustIdKey && !s.hasOwnAcoustIdKey) || s.hasOwnAcoustIdKey
-                  ? 'settings.online.acoustIdKeyHelp'
-                  : 'settings.online.acoustIdKeyNeeded'
-                ) | t
-              }}
-            </p>
-          </div>
 
           @if (error()) {
             <p class="text-sm text-destructive">{{ error() }}</p>
@@ -178,6 +186,7 @@ export class OnlineServicesCard implements OnInit {
       this.status.set(
         (await this.gql.mutate(SetOnlineServicesMutation, { input })).setOnlineServices,
       );
+      toast.success(this.i18n.t('common.saved'));
     });
   }
 
@@ -188,6 +197,7 @@ export class OnlineServicesCard implements OnInit {
         (await this.gql.mutate(SetAcoustIdKeyMutation, { input: { key } })).setAcoustIdKey,
       );
       this.acoustIdKey = '';
+      toast.success(this.i18n.t('common.saved'));
     });
   }
 

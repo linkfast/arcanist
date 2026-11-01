@@ -9651,6 +9651,46 @@
         }
       }
     },
+    "/rest/v1/server/update/install": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Where an update being installed from the panel is. Administrators only.",
+        "operationId": "ServerUpdateInstall",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerUpdateInstall"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Installs the latest release where the installation lets the panel do it (\u0060install.selfUpdate\u0060 is PANEL; update_self_unavailable otherwise). The server restarts by itself: wait for /health. Only the latest release of the official repository, checked against its checksum. Administrators only, with a recent authentication.",
+        "operationId": "InstallServerUpdate",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerUpdateInstall"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/server/update/settings": {
       "put": {
         "tags": [
@@ -25677,6 +25717,21 @@
           }
         }
       },
+      "SelfUpdateMode": {
+        "enum": [
+          "NONE",
+          "PANEL"
+        ],
+        "default": "NONE"
+      },
+      "SelfUpdateState": {
+        "enum": [
+          "IDLE",
+          "DOWNLOADING",
+          "INSTALLING",
+          "FAILED"
+        ]
+      },
       "ServerAudioSettingsInput": {
         "required": [
           "deviceId",
@@ -26115,6 +26170,31 @@
               {
                 "$ref": "#/components/schemas/UpdateInstall"
               }
+            ]
+          }
+        }
+      },
+      "ServerUpdateInstall": {
+        "required": [
+          "state",
+          "version",
+          "errorCode"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/SelfUpdateState"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -30328,6 +30408,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "selfUpdate": {
+            "$ref": "#/components/schemas/SelfUpdateMode"
           }
         }
       },

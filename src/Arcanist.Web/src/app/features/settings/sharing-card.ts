@@ -34,6 +34,14 @@ import { SetSharingSettingsMutation, SharingQuery } from '../../graphql/operatio
       </div>
       @if (status(); as s) {
         <div hlmCardContent class="grid gap-4 text-sm">
+          @if ((s.publicLinks || s.jamGuests) && !s.publicUrl && isLocal) {
+            <p
+              class="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-amber-800 dark:text-amber-300"
+              role="alert"
+            >
+              {{ 'sharing.card.publicUrlNeeded' | t: { origin } }}
+            </p>
+          }
           <label class="flex items-start gap-3">
             <hlm-switch
               class="mt-0.5"
@@ -176,6 +184,7 @@ export class SharingCard implements OnInit {
         ...change,
       };
       this.show((await this.gql.mutate(SetSharingSettingsMutation, { input })).setSharingSettings);
+      if (change.publicUrl === undefined) toast.success(this.i18n.t('common.saved'));
       return true;
     } catch (error) {
       toast.error(this.i18n.error(ApiError.from(error).code));

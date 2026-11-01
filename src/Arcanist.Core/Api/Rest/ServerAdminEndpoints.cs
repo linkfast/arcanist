@@ -44,6 +44,14 @@ public static class ServerAdminEndpoints
             .WithName("CheckServerUpdate")
             .WithSummary("Checks now for a newer Arcanist. Administrators only.");
 
+        server.MapGet("/update/install", (UpdateService service) => service.InstallStatus())
+            .WithName("ServerUpdateInstall")
+            .WithSummary("Where an update being installed from the panel is. Administrators only.");
+
+        server.MapPost("/update/install", (UpdateService service, CancellationToken ct) => service.InstallAsync(ct))
+            .WithName("InstallServerUpdate")
+            .WithSummary("Installs the latest release where the installation lets the panel do it (`install.selfUpdate` is PANEL; update_self_unavailable otherwise). The server restarts by itself: wait for /health. Only the latest release of the official repository, checked against its checksum. Administrators only, with a recent authentication.");
+
         server.MapPut("/update/settings", (SetServerUpdateSettingsInput input, UpdateService service, CancellationToken ct) => service.SetSettingsAsync(input, ct))
             .WithName("SetServerUpdateSettings")
             .WithSummary("Switches the checks for newer versions on or off. Administrators only.");

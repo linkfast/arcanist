@@ -55,7 +55,15 @@ type Reset = 'settings' | 'userData' | 'factory';
             {{ 'settings.maintenance.wizardRun' | t }}
           </button>
         </div>
+      </div>
+    </section>
 
+    <section hlmCard class="border-destructive/40">
+      <div hlmCardHeader>
+        <h2 hlmCardTitle class="text-destructive">{{ 'settings.maintenance.danger' | t }}</h2>
+        <p hlmCardDescription>{{ 'settings.maintenance.dangerHelp' | t }}</p>
+      </div>
+      <div hlmCardContent class="grid gap-4">
         @for (reset of resets; track reset) {
           <div
             class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/40 p-3"

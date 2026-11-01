@@ -277,19 +277,19 @@ export const TOURS: Record<string, Tour> = {
         },
       },
       {
-        target: '[data-tour="users-tabs"]',
-        title: { es: 'Cuentas y acceso', en: 'Accounts and access' },
+        target: '[data-tour="users-filters"]',
+        title: { es: 'Encontrar a alguien', en: 'Finding someone' },
         body: {
-          es: 'Usuarios lista las cuentas; Acceso a bibliotecas dice, por usuario, qué bibliotecas escucha y en cuáles puede subir.',
-          en: 'Users lists the accounts; Library access says, per user, which libraries they play and which they can upload to.',
+          es: 'Busca por nombre, o mira solo los administradores o las cuentas desactivadas.',
+          en: 'Search by name, or see only administrators or disabled accounts.',
         },
       },
       {
         target: '[data-tour="users-table"]',
         title: { es: 'Cada cuenta', en: 'Each account' },
         body: {
-          es: 'Desde sus botones la editas, le pones una contraseña nueva o la eliminas.',
-          en: 'Its buttons edit it, set a new password or delete it.',
+          es: 'Su nombre abre todo lo suyo: la cuenta, lo que puede hacer y sus bibliotecas. En el menú «…» le pones una contraseña nueva, la desactivas o la eliminas.',
+          en: 'Its name opens all of it: the account, what it can do and its libraries. The «…» menu sets a new password, disables it or deletes it.',
         },
       },
     ],
@@ -305,39 +305,39 @@ export const TOURS: Record<string, Tour> = {
         },
       },
       {
-        target: '[data-tour="settings-ratings"]',
-        title: { es: 'Valoraciones', en: 'Ratings' },
+        target: '[data-tour="section-general"]',
+        title: { es: 'General', en: 'General' },
         body: {
-          es: 'Una estrella (StarTracks) o de una a cinco, en todos los reproductores. Puedes cambiarlo cuando quieras.',
-          en: 'One star (StarTracks) or one to five, in every player. You can change it any time.',
+          es: 'Las valoraciones (una estrella o de una a cinco, en todos los reproductores) y las letras con tiempos.',
+          en: 'Ratings (one star or one to five, in every player) and lyrics with timing.',
         },
       },
       {
-        target: '[data-tour="settings-privacy"]',
-        title: { es: 'Privacidad', en: 'Privacy' },
+        target: '[data-tour="section-privacy"]',
+        title: { es: 'Privacidad y servicios', en: 'Privacy and services' },
         body: {
-          es: 'Qué sale de este servidor. Lo que excluyes aquí se apaga y no se puede encender en otro sitio.',
-          en: 'What leaves this server. What you leave out here is switched off and cannot be switched on elsewhere.',
+          es: 'Qué sale de este servidor, y los servicios en línea que completan tu biblioteca: identifican canciones y traen carátulas y letras.',
+          en: 'What leaves this server, and the online services that complete your library: they identify songs and fetch artwork and lyrics.',
         },
       },
       {
-        target: '[data-tour="settings-online"]',
-        title: { es: 'Servicios en línea', en: 'Online services' },
-        body: {
-          es: 'Completan tu biblioteca en segundo plano: identifican canciones y álbumes, y traen carátulas y letras.',
-          en: 'They complete your library in the background: they identify songs and albums, and fetch artwork and lyrics.',
-        },
-      },
-      {
-        target: '[data-tour="settings-sharing"]',
+        target: '[data-tour="section-sharing"]',
         title: { es: 'Compartir', en: 'Sharing' },
         body: {
-          es: 'Decide si tus usuarios pueden compartir playlists con un enlace público y abrir sus Jukebox Jams a invitados sin cuenta. Empieza apagado.',
-          en: 'Choose whether your users can share playlists with a public link and open their Jukebox Jams to guests without an account. It starts off.',
+          es: 'Si tus usuarios pueden compartir playlists con un enlace público y abrir sus Jukebox Jams a invitados sin cuenta. Empieza apagado. También la dirección pública de tu servidor, con la que salen esos enlaces.',
+          en: 'Whether your users can share playlists with a public link and open their Jukebox Jams to guests without an account. It starts off. Also your server’s public address, which those links start with.',
         },
       },
       {
-        target: '[data-tour="settings-maintenance"]',
+        target: '[data-tour="section-server"]',
+        title: { es: 'Este servidor', en: 'This server' },
+        body: {
+          es: 'Las actualizaciones, dónde corre y qué partes no son de código abierto.',
+          en: 'Updates, where it runs and which parts are not open source.',
+        },
+      },
+      {
+        target: '[data-tour="section-maintenance"]',
         title: { es: 'Mantenimiento', en: 'Maintenance' },
         body: {
           es: 'Vuelve a pasar por el asistente o restablece el servidor. Tus archivos de música nunca se tocan.',
@@ -789,27 +789,27 @@ export const TOURS: Record<string, Tour> = {
         },
       },
       {
-        target: '[data-tour="account-sessions"]',
-        title: { es: 'Sesiones abiertas', en: 'Open sessions' },
+        target: '[data-tour="section-security"]',
+        title: { es: 'Seguridad', en: 'Security' },
         body: {
-          es: 'Dónde tienes la sesión iniciada. Cierra las que no reconozcas.',
-          en: 'Where you are signed in. Sign out of any you do not recognise.',
+          es: 'Tu contraseña y dónde tienes la sesión iniciada. Cierra las sesiones que no reconozcas.',
+          en: 'Your password and where you are signed in. Sign out of any session you do not recognise.',
         },
       },
       {
-        target: '[data-tour="account-app-passwords"]',
-        title: { es: 'Contraseñas de aplicación', en: 'App passwords' },
+        target: '[data-tour="section-apps"]',
+        title: { es: 'Apps y dispositivos', en: 'Apps and devices' },
         body: {
-          es: 'Crea una para cada app de Subsonic o mStream: tu contraseña nunca sale de aquí.',
-          en: 'Create one for each Subsonic or mStream app: your password never leaves here.',
+          es: 'Crea una contraseña de aplicación para cada app de Subsonic o mStream: tu contraseña nunca sale de aquí. Y empareja tus dispositivos para escuchar fuera de casa.',
+          en: 'Create an app password for each Subsonic or mStream app: your password never leaves here. And pair your devices to listen away from home.',
         },
       },
       {
-        target: '[data-tour="account-tours"]',
-        title: { es: 'Tours del panel', en: 'Panel tours' },
+        target: '[data-tour="section-preferences"]',
+        title: { es: 'Preferencias', en: 'Preferences' },
         body: {
-          es: 'Si los desactivaste o saltaste alguno, vuelve a activarlos aquí, o pide ver todos otra vez.',
-          en: 'If you turned them off or skipped one, turn them back on here, or ask to see them all again.',
+          es: 'El idioma y el tema, y los tours: si los desactivaste o saltaste alguno, vuelve a activarlos aquí.',
+          en: 'Language and theme, and tours: if you turned them off or skipped one, turn them back on here.',
         },
       },
     ],

@@ -67,6 +67,12 @@ public static class ErrorCodes
     public const string DownloadFailed = "download_failed";
     /// <summary>The list of Arcanist's releases could not be read.</summary>
     public const string UpdateCheckFailed = "update_check_failed";
+    /// <summary>The panel cannot install updates on this server: it has to be done outside it.</summary>
+    public const string UpdateSelfUnavailable = "update_self_unavailable";
+    /// <summary>The update could not be installed.</summary>
+    public const string UpdateInstallFailed = "update_install_failed";
+    /// <summary>The package downloaded is not the one published: it was not installed.</summary>
+    public const string UpdateChecksumMismatch = "update_checksum_mismatch";
     /// <summary>The server that shares the music does not count this server's plays.</summary>
     public const string PlaysNotAccepted = "plays_not_accepted";
     /// <summary>The extension catalog (the marketplace) could not be read.</summary>

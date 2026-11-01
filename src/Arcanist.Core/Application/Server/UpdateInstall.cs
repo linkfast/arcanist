@@ -37,6 +37,7 @@ public sealed record UpdateCommand(UpdateCommandKind Kind, string Script);
 /// <param name="DataInContainer">In Docker, the data directory is not a mount: recreating the container deletes it.</param>
 /// <param name="Mounts">In Docker, the folders mounted in the container: what recreating it keeps.</param>
 /// <param name="LibrariesOutsideMounts">In Docker, the libraries whose folder is in no mount: recreating the container loses them.</param>
+/// <param name="SelfUpdate">Whether the panel can install it (<c>installServerUpdate</c>).</param>
 public sealed record UpdateInstall(
     IReadOnlyList<UpdateDownload> Downloads,
     IReadOnlyList<UpdateCommand> Commands,
@@ -44,7 +45,8 @@ public sealed record UpdateInstall(
     bool UpdatesItself,
     bool DataInContainer,
     IReadOnlyList<string> Mounts,
-    IReadOnlyList<string> LibrariesOutsideMounts);
+    IReadOnlyList<string> LibrariesOutsideMounts,
+    SelfUpdateMode SelfUpdate = SelfUpdateMode.None);
 
 /// <summary>A file of a release, as it is kept between checks.</summary>
 public sealed record ReleaseAsset(string Name, string Url, long Size, string? Sha256);
@@ -69,7 +71,10 @@ internal static partial class UpdateInstructions
             false, [], []);
     }
 
-    private static List<ReleaseAsset> Downloads(InstallKind kind, bool arm, IReadOnlyList<ReleaseAsset> assets)
+    /// <summary>How many packages an installation needs: OpenMediaVault's plugin goes with the server's.</summary>
+    public static int PackagesFor(InstallKind kind) => kind == InstallKind.OpenMediaVault ? 2 : 1;
+
+    public static List<ReleaseAsset> Downloads(InstallKind kind, bool arm, IReadOnlyList<ReleaseAsset> assets)
     {
         var patterns = kind switch
         {

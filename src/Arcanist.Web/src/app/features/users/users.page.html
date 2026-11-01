@@ -12,226 +12,190 @@
 @if (users() === null) {
   <div class="flex justify-center py-12"><hlm-spinner /></div>
 } @else {
-  <hlm-tabs tab="users" class="w-full">
-    <hlm-tabs-list data-tour="users-tabs">
-      <button hlmTabsTrigger="users">{{ 'users.tabs.users' | t }}</button>
-      <button hlmTabsTrigger="access">{{ 'users.tabs.access' | t }}</button>
-    </hlm-tabs-list>
-
-    <div hlmTabsContent="users">
-      <div hlmTableContainer class="rounded-lg border" data-tour="users-table">
-        <table hlmTable>
-          <thead hlmTHead>
-            <tr hlmTr>
-              <th hlmTh>{{ 'common.userName' | t }}</th>
-              <th hlmTh>{{ 'users.role' | t }}</th>
-              <th hlmTh class="hidden lg:table-cell">{{ 'users.permissions' | t }}</th>
-              <th hlmTh class="hidden md:table-cell">{{ 'users.lastLogin' | t }}</th>
-              <th hlmTh class="text-right">{{ 'common.actions' | t }}</th>
-            </tr>
-          </thead>
-          <tbody hlmTBody>
-            @for (user of users(); track user.id) {
-              <tr hlmTr>
-                <td hlmTd>
-                  <div class="font-medium">{{ user.userName }}</div>
-                  @if (user.displayName) {
-                    <div class="text-xs text-muted-foreground">{{ user.displayName }}</div>
-                  }
-                </td>
-                <td hlmTd>
-                  <div class="flex flex-wrap gap-1">
-                    <span hlmBadge [variant]="user.role === 'ADMIN' ? 'default' : 'secondary'">{{
-                      'users.roles.' + user.role | t
-                    }}</span>
-                    @if (user.isDisabled) {
-                      <span hlmBadge variant="destructive">{{ 'users.disabled' | t }}</span>
-                    }
-                  </div>
-                </td>
-                <td hlmTd class="hidden lg:table-cell">
-                  <div class="flex flex-wrap gap-1">
-                    @if (user.role === 'ADMIN') {
-                      <span class="text-xs text-muted-foreground">{{
-                        'users.allPermissions' | t
-                      }}</span>
-                    } @else {
-                      @for (permission of user.permissions; track permission) {
-                        <span hlmBadge variant="outline">{{
-                          'permissions.' + permission | t
-                        }}</span>
-                      } @empty {
-                        <span class="text-xs text-muted-foreground">{{
-                          'users.listenOnly' | t
-                        }}</span>
-                      }
-                    }
-                  </div>
-                </td>
-                <td hlmTd class="hidden text-sm text-muted-foreground md:table-cell">
-                  {{ user.lastLoginAt ? (user.lastLoginAt | relativeTime) : ('users.never' | t) }}
-                </td>
-                <td hlmTd class="text-right">
-                  @if (canEdit(user)) {
-                    <div class="flex justify-end gap-1">
-                      <button
-                        hlmBtn
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        [attr.aria-label]="'common.edit' | t"
-                        (click)="openEdit(user)"
-                      >
-                        <ng-icon name="lucidePencil" />
-                      </button>
-                      <button
-                        hlmBtn
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        [attr.aria-label]="'users.resetPassword' | t"
-                        (click)="newPassword = ''; resetting.set(user)"
-                      >
-                        <ng-icon name="lucideKeyRound" />
-                      </button>
-                      @if (user.id !== auth.user()?.id) {
-                        <button
-                          hlmBtn
-                          variant="ghost"
-                          size="icon"
-                          type="button"
-                          [attr.aria-label]="'common.delete' | t"
-                          (click)="deleting.set(user)"
-                        >
-                          <ng-icon name="lucideTrash2" />
-                        </button>
-                      }
-                    </div>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+  <div class="grid gap-3">
+    <div class="flex flex-wrap items-center gap-2" data-tour="users-filters">
+      <input
+        hlmInput
+        type="search"
+        class="min-w-0 flex-1 sm:max-w-xs"
+        [attr.aria-label]="'users.searchUsers' | t"
+        [placeholder]="'users.searchUsers' | t"
+        [ngModel]="userQuery()"
+        (ngModelChange)="userQuery.set($event)"
+      />
+      <div class="flex gap-1" role="group" [attr.aria-label]="'users.filter.label' | t">
+        @for (option of filters; track option) {
+          <button
+            hlmBtn
+            size="sm"
+            type="button"
+            [variant]="filter() === option ? 'secondary' : 'ghost'"
+            [attr.aria-pressed]="filter() === option"
+            (click)="filter.set(option)"
+          >
+            {{ 'users.filter.' + option | t }}
+          </button>
+        }
       </div>
     </div>
 
-    <div hlmTabsContent="access" class="grid gap-3">
-      <p class="text-sm text-muted-foreground">{{ 'users.accessHelp' | t }}</p>
-      @if (accessLibraries().length === 0) {
-        <p class="rounded-lg border p-6 text-sm text-muted-foreground">
-          {{ 'users.noLibraries' | t }}
-        </p>
-      } @else {
-        @if ((users() ?? []).length > userSearchFrom) {
-          <input
-            hlmInput
-            type="search"
-            class="w-full sm:max-w-xs"
-            [attr.aria-label]="'users.searchUsers' | t"
-            [placeholder]="'users.searchUsers' | t"
-            [ngModel]="userQuery()"
-            (ngModelChange)="userQuery.set($event)"
-          />
-        }
-        <div hlmTableContainer class="rounded-lg border">
-          <table hlmTable>
-            <thead hlmTHead>
-              <tr hlmTr>
-                <th hlmTh>{{ 'common.userName' | t }}</th>
-                <th hlmTh>{{ 'users.tabs.access' | t }}</th>
-                <th hlmTh class="text-right">{{ 'common.actions' | t }}</th>
-              </tr>
-            </thead>
-            <tbody hlmTBody>
-              @for (user of filteredUsers(); track user.id) {
-                <tr hlmTr>
-                  <td hlmTd>
-                    <div class="font-medium">{{ user.userName }}</div>
-                    @if (user.displayName) {
-                      <div class="text-xs text-muted-foreground">{{ user.displayName }}</div>
-                    }
-                  </td>
-                  <td hlmTd class="text-sm">
-                    @if (user.role === 'ADMIN') {
-                      <span class="text-muted-foreground">{{ 'users.adminAccess' | t }}</span>
-                    } @else {
-                      {{ 'users.accessSummary' | t: accessSummary(user) }}
-                      @if (accessSummary(user).listen > 0) {
-                        <span class="text-muted-foreground">
-                          · {{ 'users.accessListenOnly' | t: accessSummary(user) }}</span
-                        >
-                      }
-                    }
-                  </td>
-                  <td hlmTd class="text-right">
-                    @if (user.role !== 'ADMIN') {
+    <div hlmTableContainer class="rounded-lg border" data-tour="users-table">
+      <table hlmTable>
+        <thead hlmTHead>
+          <tr hlmTr>
+            <th hlmTh>{{ 'common.userName' | t }}</th>
+            <th hlmTh class="hidden md:table-cell">{{ 'users.libraries' | t }}</th>
+            <th hlmTh class="hidden lg:table-cell">{{ 'users.permissions' | t }}</th>
+            <th hlmTh class="hidden md:table-cell">{{ 'users.lastLogin' | t }}</th>
+            <th hlmTh class="w-12">
+              <span class="sr-only">{{ 'common.actions' | t }}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody hlmTBody>
+          @for (user of filteredUsers(); track user.id) {
+            <tr hlmTr>
+              <td hlmTd class="whitespace-normal">
+                @if (canEdit(user)) {
+                  <button
+                    type="button"
+                    class="text-left font-medium hover:underline"
+                    (click)="openEdit(user)"
+                  >
+                    {{ user.userName }}
+                  </button>
+                } @else {
+                  <span class="font-medium">{{ user.userName }}</span>
+                }
+                @if (user.displayName) {
+                  <div class="text-xs text-muted-foreground">{{ user.displayName }}</div>
+                }
+                <div class="mt-1 flex flex-wrap gap-1">
+                  @if (user.role === 'ADMIN') {
+                    <span hlmBadge>{{ 'users.roles.ADMIN' | t }}</span>
+                  }
+                  @if (user.isDisabled) {
+                    <span hlmBadge variant="destructive">{{ 'users.disabled' | t }}</span>
+                  }
+                </div>
+                <div class="mt-1 text-xs text-muted-foreground md:hidden">
+                  {{ accessText(user) }}
+                </div>
+              </td>
+              <td hlmTd class="hidden text-sm whitespace-normal md:table-cell">
+                {{ accessText(user) }}
+              </td>
+              <td
+                hlmTd
+                class="hidden text-sm whitespace-normal lg:table-cell"
+                [title]="permissionNames(user)"
+              >
+                {{ permissionText(user) }}
+              </td>
+              <td hlmTd class="hidden text-sm text-muted-foreground md:table-cell">
+                {{ user.lastLoginAt ? (user.lastLoginAt | relativeTime) : ('users.never' | t) }}
+              </td>
+              <td hlmTd class="text-right">
+                @if (canEdit(user)) {
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    [attr.aria-label]="'users.actionsFor' | t: { name: user.userName }"
+                    [cdkMenuTriggerFor]="actions"
+                  >
+                    <ng-icon name="lucideEllipsis" />
+                  </button>
+                  <ng-template #actions>
+                    <div
+                      cdkMenu
+                      class="z-50 grid min-w-52 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
+                    >
                       <button
-                        hlmBtn
-                        variant="outline"
-                        size="sm"
+                        cdkMenuItem
+                        [class]="menuItem"
                         type="button"
-                        [disabled]="busy() || !canEdit(user)"
-                        (click)="openAccess(user)"
+                        (cdkMenuItemTriggered)="openEdit(user)"
                       >
-                        {{ 'users.editAccess' | t }}
+                        <ng-icon name="lucidePencil" /> {{ 'common.edit' | t }}
                       </button>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr hlmTr>
-                  <td hlmTd colspan="3" class="text-sm text-muted-foreground">
-                    {{ 'users.noUsersMatch' | t }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
+                      <button
+                        cdkMenuItem
+                        [class]="menuItem"
+                        type="button"
+                        (cdkMenuItemTriggered)="newPassword = ''; resetting.set(user)"
+                      >
+                        <ng-icon name="lucideKeyRound" /> {{ 'users.resetPassword' | t }}
+                      </button>
+                      @if (user.id !== auth.user()?.id) {
+                        <button
+                          cdkMenuItem
+                          [class]="menuItem"
+                          type="button"
+                          (cdkMenuItemTriggered)="toggling.set(user)"
+                        >
+                          <ng-icon [name]="user.isDisabled ? 'lucideCircleCheck' : 'lucideBan'" />
+                          {{ (user.isDisabled ? 'users.enable' : 'users.disable') | t }}
+                        </button>
+                        <button
+                          cdkMenuItem
+                          [class]="menuItem + ' text-destructive'"
+                          type="button"
+                          (cdkMenuItemTriggered)="deleting.set(user)"
+                        >
+                          <ng-icon name="lucideTrash2" /> {{ 'common.delete' | t }}
+                        </button>
+                      }
+                    </div>
+                  </ng-template>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr hlmTr>
+              <td hlmTd colspan="5" class="text-sm text-muted-foreground">
+                {{ 'users.noUsersMatch' | t }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
-  </hlm-tabs>
+  </div>
 }
 
-<!-- A user's access to the libraries -->
-<hlm-dialog [state]="accessFor() ? 'open' : 'closed'" (closed)="accessFor.set(null)">
-  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-xl">
-    @if (accessFor(); as user) {
-      <hlm-dialog-header>
-        <h3 hlmDialogTitle>{{ 'users.accessFor' | t: { name: user.userName } }}</h3>
-        <p hlmDialogDescription>{{ 'users.accessHelp' | t }}</p>
-      </hlm-dialog-header>
-      <app-library-access-editor
-        [libraries]="accessLibraries()"
-        [value]="accessDraft()"
-        [disabled]="busy()"
-        (changed)="accessDraft.set($event)"
-      />
-      <hlm-dialog-footer>
-        <button hlmBtn variant="outline" type="button" (click)="accessFor.set(null)">
-          {{ 'common.cancel' | t }}
-        </button>
-        <button hlmBtn type="button" [disabled]="busy()" (click)="saveAccess()">
-          {{ 'common.save' | t }}
-        </button>
-      </hlm-dialog-footer>
-    }
-  </hlm-dialog-content>
-</hlm-dialog>
-
-<!-- Create / edit -->
+<!-- A user: their account, what they may do and their libraries, also to create one -->
 <hlm-dialog [state]="form() ? 'open' : 'closed'" (closed)="form.set(null)">
-  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-lg lg:max-w-4xl">
+  <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-xl">
     @if (form(); as current) {
-      <form class="grid gap-4" (ngSubmit)="saveForm()">
+      <form class="grid gap-4" novalidate (ngSubmit)="saveForm()">
         <hlm-dialog-header>
-          <h3 hlmDialogTitle>{{ (current.id ? 'users.edit' : 'users.create') | t }}</h3>
+          <h3 hlmDialogTitle>
+            {{ current.id ? current.userName : ('users.create' | t) }}
+          </h3>
         </hlm-dialog-header>
 
-        <!-- Wide screens: the account on one side, what it may do on the other, the libraries below. -->
-        <div class="grid gap-4 lg:grid-cols-2 lg:gap-x-8">
-          <div class="grid content-start gap-4">
+        @if (current.role !== 'ADMIN') {
+          <div class="flex flex-wrap gap-1 border-b pb-2" role="tablist">
+            @for (tab of formTabs; track tab) {
+              <button
+                hlmBtn
+                size="sm"
+                type="button"
+                role="tab"
+                [attr.aria-selected]="visibleTab() === tab"
+                [variant]="visibleTab() === tab ? 'secondary' : 'ghost'"
+                (click)="formTab.set(tab)"
+              >
+                {{ 'users.tabs.' + tab | t }}
+              </button>
+            }
+          </div>
+        }
+
+        @switch (visibleTab()) {
+          @case ('account') {
             <div class="grid gap-4 sm:grid-cols-2">
               <hlm-field>
                 <label hlmFieldLabel for="user-name">{{ 'common.userName' | t }}</label>
@@ -244,6 +208,9 @@
                   [ngModel]="current.userName"
                   (ngModelChange)="updateForm({ userName: $event })"
                 />
+                @if (submitted() && !current.userName.trim()) {
+                  <p class="text-sm text-destructive">{{ 'users.nameRequired' | t }}</p>
+                }
               </hlm-field>
               <hlm-field>
                 <label hlmFieldLabel for="display-name">{{ 'common.displayName' | t }}</label>
@@ -258,90 +225,114 @@
               @if (!current.id) {
                 <hlm-field class="sm:col-span-2">
                   <label hlmFieldLabel for="user-password">{{ 'common.password' | t }}</label>
-                  <input
-                    hlmInput
-                    id="user-password"
-                    name="password"
-                    type="password"
-                    autocomplete="new-password"
-                    [ngModel]="current.password"
-                    (ngModelChange)="updateForm({ password: $event })"
-                  />
-                  <p hlmFieldDescription>{{ 'setup.admin.passwordHelp' | t }}</p>
+                  <div class="flex flex-wrap gap-2">
+                    <input
+                      hlmInput
+                      id="user-password"
+                      name="password"
+                      class="min-w-0 flex-1"
+                      autocomplete="new-password"
+                      [type]="passwordVisible() ? 'text' : 'password'"
+                      [ngModel]="current.password"
+                      (ngModelChange)="passwordVisible.set(false); updateForm({ password: $event })"
+                    />
+                    <button hlmBtn variant="outline" type="button" (click)="generatePassword()">
+                      {{ 'users.generatePassword' | t }}
+                    </button>
+                    @if (passwordVisible()) {
+                      <button
+                        hlmBtn
+                        variant="outline"
+                        type="button"
+                        (click)="copy(current.password)"
+                      >
+                        {{ 'common.copy' | t }}
+                      </button>
+                    }
+                  </div>
+                  <p
+                    hlmFieldDescription
+                    [class.text-destructive]="submitted() && current.password.length < 8"
+                  >
+                    {{ 'setup.admin.passwordHelp' | t }}
+                  </p>
+                </hlm-field>
+              }
+              @if (auth.isAdmin()) {
+                <hlm-field>
+                  <label hlmFieldLabel>{{ 'users.role' | t }}</label>
+                  <hlm-native-select
+                    [value]="current.role"
+                    (change)="updateForm({ role: $any($event.target).value })"
+                  >
+                    <option hlmNativeSelectOption value="USER">{{ 'users.roles.USER' | t }}</option>
+                    <option hlmNativeSelectOption value="ADMIN">
+                      {{ 'users.roles.ADMIN' | t }}
+                    </option>
+                  </hlm-native-select>
+                  @if (current.role === 'ADMIN') {
+                    <p hlmFieldDescription>{{ 'users.adminHelp' | t }}</p>
+                  }
                 </hlm-field>
               }
             </div>
-
-            @if (auth.isAdmin()) {
-              <hlm-field>
-                <label hlmFieldLabel>{{ 'users.role' | t }}</label>
-                <hlm-native-select
-                  [value]="current.role"
-                  (change)="updateForm({ role: $any($event.target).value })"
-                >
-                  <option hlmNativeSelectOption value="USER">{{ 'users.roles.USER' | t }}</option>
-                  <option hlmNativeSelectOption value="ADMIN">{{ 'users.roles.ADMIN' | t }}</option>
-                </hlm-native-select>
-              </hlm-field>
-            }
-            @if (current.id && current.id !== auth.user()?.id) {
-              <label class="flex items-center gap-2 text-sm">
-                <hlm-switch
-                  [checked]="current.isDisabled"
-                  (checkedChange)="updateForm({ isDisabled: $event })"
-                />
-                {{ 'users.disableAccount' | t }}
-              </label>
-            }
-          </div>
-          @if (current.role !== 'ADMIN') {
-            <fieldset class="grid gap-2">
-              <legend class="mb-1 text-sm font-medium">{{ 'users.permissions' | t }}</legend>
-              @for (permission of grantable(); track permission) {
-                <label class="flex items-start gap-2 text-sm">
-                  <hlm-checkbox
-                    class="mt-0.5"
-                    [checked]="current.permissions.includes(permission)"
-                    (checkedChange)="togglePermission(permission, $event)"
-                  />
-                  <span>
-                    {{ 'permissions.' + permission | t }}
-                    <span class="block text-xs text-muted-foreground">{{
-                      'permissionHelp.' + permission | t
-                    }}</span>
-                  </span>
-                </label>
+          }
+          @case ('permissions') {
+            <div class="grid gap-4">
+              @for (group of permissionGroups(); track group.id) {
+                <fieldset class="grid gap-2">
+                  <legend class="mb-1 text-sm font-medium">
+                    {{ 'users.permissionGroups.' + group.id | t }}
+                  </legend>
+                  @for (permission of group.permissions; track permission) {
+                    <label class="flex items-start gap-2 text-sm">
+                      <hlm-checkbox
+                        class="mt-0.5"
+                        [checked]="current.permissions.includes(permission)"
+                        (checkedChange)="togglePermission(permission, $event)"
+                      />
+                      <span>
+                        {{ 'permissions.' + permission | t }}
+                        <span class="block text-xs text-muted-foreground">{{
+                          'permissionHelp.' + permission | t
+                        }}</span>
+                      </span>
+                    </label>
+                  }
+                </fieldset>
               }
-            </fieldset>
-
-            @if (!current.id && accessLibraries().length > 0) {
-              <div class="grid gap-2 lg:col-span-2">
-                <p class="text-sm font-medium">{{ 'users.libraries' | t }}</p>
+              @if (current.permissions.length === 0) {
+                <p class="text-xs text-muted-foreground">{{ 'users.onlyListens' | t }}</p>
+              }
+            </div>
+          }
+          @case ('libraries') {
+            @if (accessLibraries().length > 0) {
+              <div class="grid gap-2">
+                <p class="text-sm text-muted-foreground">{{ 'users.accessHelp' | t }}</p>
                 <app-library-access-editor
                   [libraries]="accessLibraries()"
                   [value]="current.levels"
                   (changed)="updateForm({ levels: $event })"
                 />
               </div>
+            } @else {
+              <p class="rounded-lg border p-6 text-sm text-muted-foreground">
+                {{ 'users.noLibraries' | t }}
+              </p>
             }
           }
-        </div>
+        }
 
         @if (formError()) {
-          <p class="text-sm text-destructive">{{ formError() }}</p>
+          <p class="text-sm text-destructive" role="alert">{{ formError() }}</p>
         }
 
         <hlm-dialog-footer>
           <button hlmBtn variant="outline" type="button" (click)="form.set(null)">
             {{ 'common.cancel' | t }}
           </button>
-          <button
-            hlmBtn
-            type="submit"
-            [disabled]="
-              busy() || !current.userName.trim() || (!current.id && current.password.length < 8)
-            "
-          >
+          <button hlmBtn type="submit" [disabled]="busy()">
             {{ 'common.save' | t }}
           </button>
         </hlm-dialog-footer>
@@ -353,7 +344,7 @@
 <!-- Reset password -->
 <hlm-dialog [state]="resetting() ? 'open' : 'closed'" (closed)="resetting.set(null)">
   <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-sm">
-    <form class="grid gap-4" (ngSubmit)="confirmReset()">
+    <form class="grid gap-4" novalidate (ngSubmit)="confirmReset()">
       <hlm-dialog-header>
         <h3 hlmDialogTitle>
           {{ 'users.resetPasswordFor' | t: { name: resetting()?.userName ?? '' } }}
@@ -370,6 +361,12 @@
           autocomplete="new-password"
           [(ngModel)]="newPassword"
         />
+        <p
+          hlmFieldDescription
+          [class.text-destructive]="newPassword.length > 0 && newPassword.length < 8"
+        >
+          {{ 'setup.admin.passwordHelp' | t }}
+        </p>
       </hlm-field>
       <hlm-dialog-footer>
         <button hlmBtn variant="outline" type="button" (click)="resetting.set(null)">
@@ -383,22 +380,59 @@
   </hlm-dialog-content>
 </hlm-dialog>
 
+<!-- Disable or enable -->
+<hlm-alert-dialog [state]="toggling() ? 'open' : 'closed'" (closed)="toggling.set(null)">
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    @if (toggling(); as user) {
+      <hlm-alert-dialog-header>
+        <h3 hlmAlertDialogTitle>
+          {{
+            (user.isDisabled ? 'users.enableTitle' : 'users.disableTitle')
+              | t: { name: user.userName }
+          }}
+        </h3>
+        <p hlmAlertDialogDescription>
+          {{ (user.isDisabled ? 'users.enableHelp' : 'users.disableHelp') | t }}
+        </p>
+      </hlm-alert-dialog-header>
+      <hlm-alert-dialog-footer>
+        <button hlmAlertDialogCancel type="button" (click)="toggling.set(null)">
+          {{ 'common.cancel' | t }}
+        </button>
+        <button hlmAlertDialogAction type="button" (click)="confirmToggle(user)">
+          {{ (user.isDisabled ? 'users.enable' : 'users.disable') | t }}
+        </button>
+      </hlm-alert-dialog-footer>
+    }
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>
+
 <!-- Delete -->
 <hlm-alert-dialog [state]="deleting() ? 'open' : 'closed'" (closed)="deleting.set(null)">
   <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
-    <hlm-alert-dialog-header>
-      <h3 hlmAlertDialogTitle>
-        {{ 'users.deleteTitle' | t: { name: deleting()?.userName ?? '' } }}
-      </h3>
-      <p hlmAlertDialogDescription>{{ 'users.deleteHelp' | t }}</p>
-    </hlm-alert-dialog-header>
-    <hlm-alert-dialog-footer>
-      <button hlmAlertDialogCancel type="button" (click)="deleting.set(null)">
-        {{ 'common.cancel' | t }}
-      </button>
-      <button hlmAlertDialogAction type="button" (click)="confirmDelete()">
-        {{ 'common.delete' | t }}
-      </button>
-    </hlm-alert-dialog-footer>
+    @if (deleting(); as user) {
+      <hlm-alert-dialog-header>
+        <h3 hlmAlertDialogTitle>{{ 'users.deleteTitle' | t: { name: user.userName } }}</h3>
+        <p hlmAlertDialogDescription>{{ 'users.deleteHelp' | t }}</p>
+      </hlm-alert-dialog-header>
+      <hlm-alert-dialog-footer>
+        <button hlmAlertDialogCancel type="button" (click)="deleting.set(null)">
+          {{ 'common.cancel' | t }}
+        </button>
+        @if (!user.isDisabled) {
+          <button
+            hlmBtn
+            variant="outline"
+            type="button"
+            (click)="deleting.set(null); toggling.set(user)"
+          >
+            {{ 'users.disableInstead' | t }}
+          </button>
+        }
+        <button hlmAlertDialogAction type="button" (click)="confirmDelete()">
+          {{ 'common.delete' | t }}
+        </button>
+      </hlm-alert-dialog-footer>
+    }
   </hlm-alert-dialog-content>
 </hlm-alert-dialog>

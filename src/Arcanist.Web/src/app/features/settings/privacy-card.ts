@@ -94,7 +94,10 @@ export class PrivacyCard implements OnInit {
   }
 
   protected async setAnonymous(on: boolean): Promise<void> {
-    await this.run(() => this.gql.mutate(SetAnonymousStatisticsMutation, { enabled: on }));
+    await this.run(async () => {
+      await this.gql.mutate(SetAnonymousStatisticsMutation, { enabled: on });
+      toast.success(this.i18n.t('common.saved'));
+    });
   }
 
   private async run(action: () => Promise<unknown>): Promise<void> {

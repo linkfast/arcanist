@@ -47,6 +47,10 @@ using Microsoft.AspNetCore.Identity;
 using Serilog;
 using Serilog.Events;
 
+// The .deb's update service, not the server: see SelfUpdateTool.
+if (args is [SelfUpdateTool.Argument])
+    Environment.Exit(SelfUpdateTool.RunAsync().GetAwaiter().GetResult());
+
 TextNormalizer.EnsureSupported();
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -189,6 +193,7 @@ builder.Services.AddHttpClient(UpdateChecker.HttpClientName, client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddSingleton<UpdateChecker>();
+builder.Services.AddSingleton<SelfUpdater>();
 builder.Services.AddScoped<UpdateService>();
 builder.Services.AddSingleton<HostPlatform>();
 builder.Services.AddScoped<HostService>();

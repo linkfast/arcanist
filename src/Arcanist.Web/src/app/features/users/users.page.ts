@@ -1,7 +1,16 @@
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideKeyRound, lucidePencil, lucidePlus, lucideTrash2 } from '@ng-icons/lucide';
+import {
+  lucideBan,
+  lucideCircleCheck,
+  lucideEllipsis,
+  lucideKeyRound,
+  lucidePencil,
+  lucidePlus,
+  lucideTrash2,
+} from '@ng-icons/lucide';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -14,9 +23,7 @@ import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
-import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { HlmTableImports } from '@spartan-ng/helm/table';
-import { HlmTabsImports } from '@spartan-ng/helm/tabs';
 import { ApiError, Permission, UserRole } from '../../core/api/rest';
 import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
@@ -33,25 +40,29 @@ import {
   UpdateUserMutation,
   UsersQuery,
 } from '../../graphql/operations';
-import { AccessLevels, LibraryAccessEditor, grantsOf, levelsOf } from './library-access-editor';
 import { RelativeTimePipe, searchKey } from '../../shared/format';
+import { AccessLevels, LibraryAccessEditor, grantsOf, levelsOf } from './library-access-editor';
 
 type User = UserFieldsFragment;
 type Library = UsersResult['libraries'][number];
+type UserFilter = 'all' | 'admins' | 'disabled';
+type FormTab = 'account' | 'permissions' | 'libraries';
 
-const allPermissions: Permission[] = [
-  'MANAGE_LIBRARIES',
-  'MANAGE_USERS',
-  'MANAGE_SETTINGS',
-  'RUN_SCANS',
-  'DOWNLOAD',
-  'VIEW_ALL_STATS',
-  'UPLOAD',
-  'PLAY_ON_SERVER',
-  'VIEW_ALL_WISHES',
-  'EDIT_METADATA',
-  'DELETE_TRACKS',
-  'SHARE_LINKS',
+/** The permissions by what they are about, as the user's page shows them. */
+const permissionGroups: { id: string; permissions: Permission[] }[] = [
+  { id: 'music', permissions: ['DOWNLOAD', 'UPLOAD', 'EDIT_METADATA', 'DELETE_TRACKS'] },
+  { id: 'sharing', permissions: ['SHARE_LINKS', 'PLAY_ON_SERVER'] },
+  {
+    id: 'server',
+    permissions: [
+      'MANAGE_LIBRARIES',
+      'RUN_SCANS',
+      'MANAGE_USERS',
+      'MANAGE_SETTINGS',
+      'VIEW_ALL_STATS',
+      'VIEW_ALL_WISHES',
+    ],
+  },
 ];
 
 interface UserForm {
@@ -62,34 +73,49 @@ interface UserForm {
   role: UserRole;
   permissions: Permission[];
   isDisabled: boolean;
-  /** For a new user: what they may do in each library. */
+  /** What they may do in each library. */
   levels: AccessLevels;
 }
 
+/**
+ * The server's accounts in one list. Each opens one page with all of it (the account, what it may do, its libraries),
+ * the same one that creates an account; the rest of what can be done to it is in its menu.
+ */
 @Component({
   selector: 'app-users-page',
   imports: [
     FormsModule,
     NgIcon,
+    CdkMenu,
+    CdkMenuItem,
+    CdkMenuTrigger,
     BrnDialogContent,
     BrnAlertDialogContent,
     HlmButtonImports,
     HlmBadgeImports,
     HlmTableImports,
-    HlmTabsImports,
     HlmDialogImports,
     HlmAlertDialogImports,
     HlmFieldImports,
     HlmInputImports,
     HlmCheckboxImports,
-    HlmSwitchImports,
     HlmNativeSelectImports,
     HlmSpinnerImports,
     TranslatePipe,
     RelativeTimePipe,
     LibraryAccessEditor,
   ],
-  providers: [provideIcons({ lucidePlus, lucidePencil, lucideTrash2, lucideKeyRound })],
+  providers: [
+    provideIcons({
+      lucidePlus,
+      lucidePencil,
+      lucideTrash2,
+      lucideKeyRound,
+      lucideEllipsis,
+      lucideBan,
+      lucideCircleCheck,
+    }),
+  ],
   templateUrl: './users.page.html',
 })
 export class UsersPage implements OnInit {
@@ -97,80 +123,82 @@ export class UsersPage implements OnInit {
   private readonly gql = inject(Gql);
   private readonly i18n = inject(I18n);
 
+  protected readonly menuItem =
+    'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left outline-none hover:bg-accent focus:bg-accent';
+
   protected readonly users = signal<User[] | null>(null);
   protected readonly libraries = signal<Library[]>([]);
   protected readonly busy = signal(false);
 
   protected readonly form = signal<UserForm | null>(null);
+  protected readonly formTabs: FormTab[] = ['account', 'permissions', 'libraries'];
+  protected readonly formTab = signal<FormTab>('account');
+  /** An administrator has everything: only the account has anything to choose. */
+  protected readonly visibleTab = computed<FormTab>(() =>
+    this.form()?.role === 'ADMIN' ? 'account' : this.formTab(),
+  );
   protected readonly formError = signal<string | null>(null);
+  /** Saving was tried: what is missing says so. */
+  protected readonly submitted = signal(false);
+  protected readonly passwordVisible = signal(false);
+
   protected readonly resetting = signal<User | null>(null);
   protected newPassword = '';
   protected readonly deleting = signal<User | null>(null);
+  protected readonly toggling = signal<User | null>(null);
 
   /** Permissions the current user may grant: all for administrators, their own otherwise. */
-  protected readonly grantable = computed(() => allPermissions.filter((p) => this.auth.can(p)));
+  protected readonly permissionGroups = computed(() =>
+    permissionGroups
+      .map((group) => ({
+        id: group.id,
+        permissions: group.permissions.filter((p) => this.auth.can(p)),
+      }))
+      .filter((group) => group.permissions.length > 0),
+  );
   /** Every library but users' personal ones: each user listens to it, adds to it, or (if restricted) neither. */
   protected readonly accessLibraries = computed(() => this.libraries().filter((l) => !l.personal));
 
-  /** A search for users appears from this many. */
-  protected readonly userSearchFrom = 10;
+  protected readonly filters: UserFilter[] = ['all', 'admins', 'disabled'];
+  protected readonly filter = signal<UserFilter>('all');
   protected readonly userQuery = signal('');
   protected readonly filteredUsers = computed(() => {
     const words = searchKey(this.userQuery()).trim().split(/\s+/).filter(Boolean);
+    const filter = this.filter();
     return (this.users() ?? []).filter((user) => {
+      if (filter === 'admins' && user.role !== 'ADMIN') return false;
+      if (filter === 'disabled' && !user.isDisabled) return false;
       const text = searchKey(`${user.userName} ${user.displayName ?? ''}`);
       return words.every((word) => text.includes(word));
     });
   });
 
-  /** The user whose access is being edited, and the levels chosen so far. */
-  protected readonly accessFor = signal<User | null>(null);
-  protected readonly accessDraft = signal<AccessLevels>({});
-
-  /** How many libraries a user reaches, and in how many they only listen. */
-  protected accessSummary(user: User): { count: number; total: number; listen: number } {
+  /** «5 of 8 libraries · 2 listen only», or that an administrator reaches them all. */
+  protected accessText(user: User): string {
+    if (user.role === 'ADMIN') return this.i18n.t('users.adminAccess');
     const levels = Object.values(
       levelsOf(this.accessLibraries(), user.libraryIds, user.readOnlyLibraryIds),
     );
-    return {
+    const summary = {
       count: levels.filter((l) => l !== 'none').length,
       total: levels.length,
       listen: levels.filter((l) => l === 'listen').length,
     };
+    const text = this.i18n.t('users.accessSummary', summary);
+    return summary.listen > 0
+      ? `${text} · ${this.i18n.t('users.accessListenOnly', summary)}`
+      : text;
   }
 
-  protected openAccess(user: User): void {
-    this.accessDraft.set(
-      levelsOf(this.accessLibraries(), user.libraryIds, user.readOnlyLibraryIds),
-    );
-    this.accessFor.set(user);
+  protected permissionText(user: User): string {
+    if (user.role === 'ADMIN') return this.i18n.t('users.allPermissions');
+    return user.permissions.length === 0
+      ? this.i18n.t('users.listenOnly')
+      : this.i18n.t('users.permissionCount', { count: user.permissions.length });
   }
 
-  /** Saves the user's access to every library at once. */
-  protected async saveAccess(): Promise<void> {
-    const user = this.accessFor();
-    if (!user) return;
-    await this.run(async () => {
-      const result = await this.gql.mutate(SetUserLibrariesMutation, {
-        id: user.id,
-        input: grantsOf(this.accessLibraries(), this.accessDraft()),
-      });
-      const account = result.setUserLibraries;
-      this.users.update(
-        (users) =>
-          users?.map((u) =>
-            u.id === user.id
-              ? {
-                  ...u,
-                  libraryIds: account.libraryIds,
-                  readOnlyLibraryIds: account.readOnlyLibraryIds,
-                }
-              : u,
-          ) ?? null,
-      );
-      this.accessFor.set(null);
-      toast.success(this.i18n.t('users.accessSaved', { name: user.userName }));
-    });
+  protected permissionNames(user: User): string {
+    return user.permissions.map((p) => this.i18n.t(`permissions.${p}`)).join(', ');
   }
 
   async ngOnInit(): Promise<void> {
@@ -181,9 +209,16 @@ export class UsersPage implements OnInit {
     return this.auth.isAdmin() || user.role !== 'ADMIN';
   }
 
-  protected openCreate(): void {
+  private openForm(form: UserForm): void {
     this.formError.set(null);
-    this.form.set({
+    this.submitted.set(false);
+    this.passwordVisible.set(false);
+    this.formTab.set('account');
+    this.form.set(form);
+  }
+
+  protected openCreate(): void {
+    this.openForm({
       id: null,
       userName: '',
       displayName: '',
@@ -196,8 +231,7 @@ export class UsersPage implements OnInit {
   }
 
   protected openEdit(user: User): void {
-    this.formError.set(null);
-    this.form.set({
+    this.openForm({
       id: user.id,
       userName: user.userName,
       displayName: user.displayName ?? '',
@@ -226,9 +260,35 @@ export class UsersPage implements OnInit {
     );
   }
 
+  /** A password to hand over, shown so it can be copied. */
+  protected generatePassword(): void {
+    const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const limit = 256 - (256 % alphabet.length);
+    let password = '';
+    while (password.length < 16) {
+      for (const byte of crypto.getRandomValues(new Uint8Array(32))) {
+        if (byte < limit && password.length < 16) password += alphabet[byte % alphabet.length];
+      }
+    }
+    this.updateForm({ password });
+    this.passwordVisible.set(true);
+  }
+
+  protected async copy(text: string): Promise<void> {
+    await navigator.clipboard.writeText(text);
+    toast.success(this.i18n.t('common.copied'));
+  }
+
   protected async saveForm(): Promise<void> {
     const form = this.form();
     if (!form) return;
+
+    this.submitted.set(true);
+    if (!form.userName.trim() || (!form.id && form.password.length < 8)) {
+      // What is missing is on the account's tab.
+      this.formTab.set('account');
+      return;
+    }
 
     this.busy.set(true);
     this.formError.set(null);
@@ -244,6 +304,12 @@ export class UsersPage implements OnInit {
             isDisabled: form.isDisabled,
           },
         });
+        if (form.role !== 'ADMIN') {
+          await this.gql.mutate(SetUserLibrariesMutation, {
+            id: form.id,
+            input: grantsOf(this.accessLibraries(), form.levels),
+          });
+        }
       } else {
         await this.gql.mutate(CreateUserMutation, {
           input: {
@@ -280,6 +346,27 @@ export class UsersPage implements OnInit {
       this.resetting.set(null);
       this.newPassword = '';
       toast.success(this.i18n.t('users.passwordReset', { name: user.userName }));
+    });
+  }
+
+  protected async confirmToggle(user: User): Promise<void> {
+    this.toggling.set(null);
+    await this.run(async () => {
+      await this.gql.mutate(UpdateUserMutation, {
+        id: user.id,
+        input: {
+          displayName: user.displayName ?? null,
+          role: user.role,
+          permissions: user.permissions,
+          isDisabled: !user.isDisabled,
+        },
+      });
+      toast.success(
+        this.i18n.t(user.isDisabled ? 'users.enabled' : 'users.disabledDone', {
+          name: user.userName,
+        }),
+      );
+      await this.load();
     });
   }
 

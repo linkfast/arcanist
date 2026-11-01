@@ -1,0 +1,9 @@
+# Starts arcanist-update.service when the server asks for an update from the panel.
+[Unit]
+Description=Arcanist: update requests from the panel
+
+[Path]
+PathExists=/var/lib/private/arcanist/update-request
+
+[Install]
+WantedBy=multi-user.target

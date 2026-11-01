@@ -86,6 +86,12 @@ export const routes: Routes = [
           import('./features/settings/settings.page').then((m) => m.SettingsPage),
       },
       {
+        path: 'settings/:section',
+        canActivate: [permissionGuard('MANAGE_SETTINGS')],
+        loadComponent: () =>
+          import('./features/settings/settings.page').then((m) => m.SettingsPage),
+      },
+      {
         path: 'transcoding',
         canActivate: [permissionGuard('MANAGE_SETTINGS')],
         loadComponent: () =>
@@ -148,6 +154,10 @@ export const routes: Routes = [
       {
         path: 'wishes',
         loadComponent: () => import('./features/wishes/wishes.page').then((m) => m.WishesPage),
+      },
+      {
+        path: 'account/:section',
+        loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
       },
       {
         path: 'account',

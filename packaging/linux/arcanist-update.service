@@ -1,0 +1,13 @@
+# Installs a release of Arcanist when the panel asks for it. As root, because it runs apt-get: it takes only a version
+# number from the request, downloads from the official repository and checks the package against its checksum.
+# It is a unit of its own so that it survives the restart of the server it replaces.
+[Unit]
+Description=Arcanist: installs an update asked for from the panel
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/arcanist/arcanist --self-update-apply
+TimeoutStartSec=20min
+PrivateTmp=yes

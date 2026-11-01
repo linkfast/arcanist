@@ -1198,6 +1198,27 @@ export const ServerUpdateFields = graphql(`
       dataInContainer
       mounts
       librariesOutsideMounts
+      selfUpdate
+    }
+  }
+`);
+
+export const ServerUpdateInstallQuery = graphql(`
+  query ServerUpdateInstall {
+    serverUpdateInstall {
+      state
+      version
+      errorCode
+    }
+  }
+`);
+
+export const InstallServerUpdateMutation = graphql(`
+  mutation InstallServerUpdate {
+    installServerUpdate {
+      state
+      version
+      errorCode
     }
   }
 `);

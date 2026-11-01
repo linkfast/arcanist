@@ -21,6 +21,7 @@ export const en: Dictionary = {
     no: 'No',
     actions: 'Actions',
     close: 'Close',
+    saved: 'Saved',
   },
   mstreamPage: {
     title: 'mStream',
@@ -620,6 +621,18 @@ export const en: Dictionary = {
       'Arcanist compares the acoustic fingerprint of every song when it analyzes it. Obvious copies are joined automatically; only doubtful cases show up here.',
   },
   settings: {
+    sections: {
+      general: 'General',
+      generalHint: 'Ratings and lyrics with timing',
+      privacy: 'Privacy and services',
+      privacyHint: 'What leaves this server and which online services it uses',
+      sharing: 'Sharing',
+      sharingHint: 'Public URL, links and guests',
+      server: 'This server',
+      serverHint: 'Updates, where it runs and open source',
+      maintenance: 'Maintenance',
+      maintenanceHint: 'Run the wizard and reset',
+    },
     openSource: {
       title: 'Open source',
       description:
@@ -655,6 +668,9 @@ export const en: Dictionary = {
       saved: 'Setting saved',
     },
     maintenance: {
+      danger: 'Danger zone',
+      dangerHelp:
+        'What is reset cannot be recovered. You will be asked to confirm it and for your password. Your music files are never touched.',
       title: 'Maintenance',
       description: 'Set the server up again, or reset it. Your music files are never touched.',
       wizard: 'Run the setup wizard again',
@@ -927,7 +943,29 @@ export const en: Dictionary = {
     subtitle: 'Accounts, permissions and library access.',
     create: 'New user',
     edit: 'Edit user',
-    tabs: { users: 'Users', access: 'Library access' },
+    tabs: { account: 'Account', permissions: 'Permissions', libraries: 'Libraries' },
+    filter: { label: 'Filter', all: 'All', admins: 'Administrators', disabled: 'Disabled' },
+    actionsFor: 'Actions for {name}',
+    permissionCount: '{count} permissions',
+    permissionGroups: {
+      music: 'With the music',
+      sharing: 'Sharing and playing',
+      server: 'Managing the server',
+    },
+    onlyListens: 'Without permissions, they only listen to the libraries they have access to.',
+    adminHelp: 'An administrator can do everything and reaches every library.',
+    nameRequired: 'Type a user name.',
+    generatePassword: 'Generate',
+    enable: 'Enable',
+    disable: 'Disable',
+    enabled: '{name} enabled',
+    disabledDone: '{name} disabled',
+    enableTitle: 'Enable {name}?',
+    enableHelp: 'They will be able to sign in again with their password.',
+    disableTitle: 'Disable {name}?',
+    disableHelp:
+      'They will not be able to sign in, and their sessions and apps stop working. Their playlists and ratings are kept, and the account can be enabled again.',
+    disableInstead: 'Disable instead',
     role: 'Role',
     roles: { USER: 'User', ADMIN: 'Administrator' },
     permissions: 'Permissions',
@@ -967,7 +1005,8 @@ export const en: Dictionary = {
     saved: 'User saved',
     deleted: 'User {name} deleted',
     deleteTitle: 'Delete {name}?',
-    deleteHelp: 'The account and its sessions are removed. This cannot be undone.',
+    deleteHelp:
+      'The account, its playlists, ratings and statistics are lost, and this cannot be undone. If they just should not sign in, disable it instead.',
   },
   permissions: {
     MANAGE_LIBRARIES: 'Manage libraries',
@@ -1004,6 +1043,26 @@ export const en: Dictionary = {
       'Make public links to their playlists (anyone with the link sees the songs and hears 30 seconds) and open their Jukebox Jams to guests without an account, when the server allows it (Settings → Sharing).',
   },
   account: {
+    sections: {
+      security: 'Security',
+      securityHint: 'Password and open sessions',
+      apps: 'Apps and devices',
+      appsHint: 'App passwords and your devices',
+      cloud: 'Ultimate Cloud',
+      cloudHint: 'Your Ultimate Cloud account',
+      preferences: 'Preferences',
+      preferencesHint: 'Language, theme, music videos and tours',
+      about: 'About',
+      aboutHint: 'Version, license and APIs',
+    },
+    password: 'Password',
+    passwordsDiffer: 'The passwords do not match.',
+    appearance: 'Language and theme',
+    appearanceHelp: 'Remembered in this browser.',
+    signOutOthers: 'Sign out of the other sessions',
+    confirmSignOut: 'Sign out of {device}?',
+    confirmOthers: 'Sign out of the other {count} sessions?',
+    confirmSignOutHelp: 'That device will have to sign in again to keep listening.',
     videos: {
       title: 'Music videos',
       description:
@@ -1060,6 +1119,9 @@ export const en: Dictionary = {
       name: 'Name',
       namePlaceholder: 'For example: Symfonium on my phone',
       create: 'Create',
+      createdTitle: 'Your app password',
+      confirm: 'Revoke “{name}”?',
+      confirmHelp: 'The app using it will stop connecting until you give it another.',
       created: 'Copy the password now: it will not be shown again.',
       howTo:
         'In the app, use {server} as the server, {user} as the user name and this password. OpenSubsonic apps also accept it as an API key.',
@@ -1755,6 +1817,8 @@ export const en: Dictionary = {
       publicUrlPlaceholder: 'https://music.yourdomain.com',
       publicUrlFromHere: 'Use this address',
       publicUrlSaved: 'Public URL saved',
+      publicUrlNeeded:
+        'Shared links will start with {origin}, which only works inside your network. To share them outside it, set the public URL below.',
       publicUrlEnvironment:
         'Set outside the panel (environment variable Arcanist__Network__PublicUrl): change it there.',
     },
@@ -1779,6 +1843,14 @@ export const en: Dictionary = {
       releasePage: 'See it on the version’s page',
       how: 'How to update',
       guide: 'Guide for this installation',
+      selfUpdate:
+        'Arcanist can install it for you: it downloads the official package, checks it is the one published and restarts. Anyone listening is cut off for a moment.',
+      installNow: 'Update now',
+      state: {
+        DOWNLOADING: 'Downloading the new version…',
+        INSTALLING: 'Installing…',
+        RESTARTING: 'Restarting the server…',
+      },
       dataInContainer:
         'Arcanist’s data is inside the container, not in a volume: recreating it deletes the data. Before updating, copy it to a volume and mount that on /data: the guide has the commands.',
       librariesOutside:
@@ -3384,6 +3456,11 @@ export const en: Dictionary = {
       'The downloaded package is not the one the catalog publishes (its SHA-256 does not match). It was not installed.',
     package_mismatch: 'The downloaded package holds a different extension than the catalog says.',
     update_check_failed: 'Could not check for a new version.',
+    update_self_unavailable: 'This server cannot be updated from the panel.',
+    update_install_failed:
+      'The update could not be installed. You can do it by hand with the steps below.',
+    update_checksum_mismatch:
+      'The package downloaded does not match the one published and was not installed. Try again later or install it by hand.',
     library_virtual:
       'It is a virtual library (All): nothing can be uploaded to it or changed in it.',
     plays_not_accepted: 'That server does not count the plays of this one.',

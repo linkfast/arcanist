@@ -203,6 +203,8 @@ type Query {
   openSourceMode: OpenSourceMode!
   "No telemetry, and which outside services the server may use. Requires MANAGE_SETTINGS."
   privacy: Privacy!
+  "Where an update being installed from the panel is. Administrators only."
+  serverUpdateInstall: ServerUpdateInstall!
   "Whether anonymous play counts go to Ultimate Cloud's global statistics. Requires MANAGE_SETTINGS."
   anonymousStatistics: Boolean!
   "Server audio: whether it plays, on which device, and the server's audio devices. Administrators only. The server plays through \"play to\" as the renderer \"server\"."
@@ -2699,6 +2701,7 @@ type UpdateInstall {
   dataInContainer: Boolean!
   mounts: [String!]!
   librariesOutsideMounts: [String!]!
+  selfUpdate: SelfUpdateMode!
 }
 
 type UpdateDownload {
@@ -2718,6 +2721,11 @@ enum UpdateCommandKind {
   DEBIAN_PACKAGE
   TARBALL
   HOMEBREW
+}
+
+enum SelfUpdateMode {
+  NONE
+  PANEL
 }
 
 type ServerHost {
@@ -2762,6 +2770,19 @@ enum ClosedComponentKind {
   EXTENSION
   PLAYER
   TOOL
+}
+
+type ServerUpdateInstall {
+  state: SelfUpdateState!
+  version: String
+  errorCode: String
+}
+
+enum SelfUpdateState {
+  IDLE
+  DOWNLOADING
+  INSTALLING
+  FAILED
 }
 
 type ServerAudioStatus {
@@ -3706,6 +3727,8 @@ type Mutation {
   cancelScan(id: ID!): Boolean!
   "Checks now for a newer Arcanist. Administrators only."
   checkServerUpdate: ServerUpdate!
+  "Installs the latest release where the installation lets the panel do it (install.selfUpdate is PANEL; update_self_unavailable otherwise). The server restarts by itself. Only the latest release of the official repository, checked against its checksum. Administrators only, with a recent authentication."
+  installServerUpdate: ServerUpdateInstall!
   "Switches the checks for newer versions on or off. Administrators only."
   setServerUpdateSettings(input: SetServerUpdateSettingsInput!): ServerUpdate!
   "The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg. Administrators only, with a recent authentication."

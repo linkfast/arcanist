@@ -84,6 +84,9 @@ public sealed class UpdateOptions
 
     /// <summary>The version to compare with; the running one when empty (tests set it).</summary>
     public string? CurrentVersion { get; set; }
+
+    /// <summary>The panel may install updates where the installation allows it (a managed deployment turns this off).</summary>
+    public bool AllowSelfUpdate { get; set; } = true;
 }
 
 /// <summary>The last check, kept in the settings so it survives restarts.</summary>
@@ -139,8 +142,7 @@ public sealed class UpdateChecker(
                     ? await ChangesAsync(latest.Version, cancellationToken)
                     : ([], false);
                 var assets = releases.FirstOrDefault(r => latest is not null && ArcanistVersion.TryNormalize(r.TagName, out var version) && version == latest.Version)?.Assets
-                    ?.Select(a => new ReleaseAsset(a.Name, a.BrowserDownloadUrl, a.Size, a.Digest?.StartsWith("sha256:", StringComparison.Ordinal) == true ? a.Digest["sha256:".Length..] : null))
-                    .ToList();
+                    ?.Select(ToAsset).ToList();
                 check = new StoredUpdateCheck(latest, time.GetUtcNow().UtcDateTime, null, assets, changes, more, Behind(releases, CurrentVersion), CurrentVersion);
             }
             catch (Exception e) when (e is HttpRequestException or JsonException or NotSupportedException
@@ -195,11 +197,10 @@ public sealed class UpdateChecker(
     /// </summary>
     private async Task<(IReadOnlyList<ArcanistChange> Changes, bool More)> ChangesAsync(string latest, CancellationToken cancellationToken)
     {
-        var repository = options.CurrentValue.ReleasesUrl.Split("/releases")[0];
         try
         {
             var comparison = await clients.CreateClient(HttpClientName).GetFromJsonAsync<GitHubComparison>(
-                $"{repository}/compare/v{CurrentVersion}...v{latest}", JsonSerializerOptions.Web, cancellationToken);
+                $"{RepositoryApi(options.CurrentValue.ReleasesUrl)}/compare/v{CurrentVersion}...v{latest}", JsonSerializerOptions.Web, cancellationToken);
             if (comparison?.Commits is null)
                 return ([], false);
             return (UpdateInstructions.Changes(comparison.Commits.Select(c => (c.Commit?.Message ?? "", c.HtmlUrl))),
@@ -257,6 +258,12 @@ public sealed class UpdateChecker(
         [property: JsonPropertyName("published_at")] DateTime? PublishedAt,
         List<GitHubAsset>? Assets = null);
 
+    /// <summary>The repository in GitHub's API, from its list of releases.</summary>
+    internal static string RepositoryApi(string releasesUrl) => releasesUrl.Split("/releases")[0];
+
+    internal static ReleaseAsset ToAsset(GitHubAsset asset) => new(asset.Name, asset.BrowserDownloadUrl, asset.Size,
+        asset.Digest?.StartsWith("sha256:", StringComparison.Ordinal) == true ? asset.Digest["sha256:".Length..] : null);
+
     internal sealed record GitHubAsset(
         string Name,
         [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl,
@@ -296,8 +303,30 @@ public sealed class UpdateCheckWorker(UpdateChecker checker, IOptionsMonitor<Set
 }
 
 /// <summary>New versions of Arcanist, for administrators.</summary>
-public sealed class UpdateService(AccessGuard guard, UpdateChecker checker, SettingsStore settings, HostPlatform platform, ArcanistDbContext db)
+public sealed class UpdateService(AccessGuard guard, UpdateChecker checker, SettingsStore settings, HostPlatform platform, SelfUpdater selfUpdater, ArcanistDbContext db)
 {
+    /// <summary>Where an update being installed from the panel is.</summary>
+    public ServerUpdateInstall InstallStatus()
+    {
+        guard.Admin();
+        return selfUpdater.Status(UpdateChecker.DetectInstallKind());
+    }
+
+    /// <summary>Installs the latest release, where the installation lets the panel do it. Never another version.</summary>
+    public async Task<ServerUpdateInstall> InstallAsync(CancellationToken cancellationToken)
+    {
+        guard.Admin();
+        guard.RecentAuthentication();
+        var kind = UpdateChecker.DetectInstallKind();
+        if (selfUpdater.Mode(kind) != SelfUpdateMode.Panel)
+            throw new ArcanistException.Conflict(ErrorCodes.UpdateSelfUnavailable);
+        var latest = await checker.EnabledAsync(cancellationToken) ? (await checker.LastAsync(cancellationToken))?.Latest : null;
+        if (latest is null || ArcanistVersion.Compare(latest.Version, checker.CurrentVersion) <= 0)
+            throw new ArcanistException.Conflict(ErrorCodes.UpdateSelfUnavailable);
+        await selfUpdater.RequestAsync(kind, latest.Version, cancellationToken);
+        return new ServerUpdateInstall(SelfUpdateState.Downloading, latest.Version, null);
+    }
+
     public async Task<ServerUpdate> GetAsync(CancellationToken cancellationToken)
     {
         guard.Admin();
@@ -334,7 +363,8 @@ public sealed class UpdateService(AccessGuard guard, UpdateChecker checker, Sett
 
     private async Task<UpdateInstall> InstallAsync(InstallKind kind, ArcanistRelease latest, StoredUpdateCheck check, CancellationToken cancellationToken)
     {
-        var install = UpdateInstructions.Build(kind, platform.Current.Architecture, latest.Version, latest.Url, check.Assets ?? [], Environment.MachineName);
+        var install = UpdateInstructions.Build(kind, platform.Current.Architecture, latest.Version, latest.Url, check.Assets ?? [], Environment.MachineName)
+            with { SelfUpdate = selfUpdater.Mode(kind) };
         if (kind != InstallKind.Docker || !File.Exists(MountInfoPath))
             return install;
 

@@ -21,6 +21,7 @@ export const es: Dictionary = {
     no: 'No',
     actions: 'Acciones',
     close: 'Cerrar',
+    saved: 'Guardado',
   },
   mstreamPage: {
     title: 'mStream',
@@ -633,6 +634,18 @@ export const es: Dictionary = {
       'Arcanist compara la huella acústica de cada canción al analizarla. Las copias evidentes se unen solas; aquí solo aparecen los casos dudosos.',
   },
   settings: {
+    sections: {
+      general: 'General',
+      generalHint: 'Valoraciones y letras con tiempos',
+      privacy: 'Privacidad y servicios',
+      privacyHint: 'Qué sale de este servidor y qué servicios en línea usa',
+      sharing: 'Compartir',
+      sharingHint: 'URL pública, enlaces e invitados',
+      server: 'Este servidor',
+      serverHint: 'Actualizaciones, dónde corre y código abierto',
+      maintenance: 'Mantenimiento',
+      maintenanceHint: 'Ejecutar el asistente y restablecer',
+    },
     openSource: {
       title: 'Open source',
       description:
@@ -668,6 +681,9 @@ export const es: Dictionary = {
       saved: 'Ajuste guardado',
     },
     maintenance: {
+      danger: 'Zona de peligro',
+      dangerHelp:
+        'Lo que se restablece no se puede recuperar. Se te pedirá que lo confirmes y tu contraseña. Tus archivos de música nunca se tocan.',
       title: 'Mantenimiento',
       description:
         'Volver a configurar el servidor o restablecerlo. Tus archivos de música nunca se tocan.',
@@ -940,7 +956,29 @@ export const es: Dictionary = {
     subtitle: 'Cuentas, permisos y acceso a bibliotecas.',
     create: 'Nuevo usuario',
     edit: 'Editar usuario',
-    tabs: { users: 'Usuarios', access: 'Acceso a bibliotecas' },
+    tabs: { account: 'Cuenta', permissions: 'Permisos', libraries: 'Bibliotecas' },
+    filter: { label: 'Filtrar', all: 'Todos', admins: 'Administradores', disabled: 'Desactivados' },
+    actionsFor: 'Acciones de {name}',
+    permissionCount: '{count} permisos',
+    permissionGroups: {
+      music: 'Con la música',
+      sharing: 'Compartir y reproducir',
+      server: 'Administrar el servidor',
+    },
+    onlyListens: 'Sin permisos, solo escucha las bibliotecas a las que tiene acceso.',
+    adminHelp: 'Un administrador puede hacer de todo y entra en todas las bibliotecas.',
+    nameRequired: 'Escribe un nombre de usuario.',
+    generatePassword: 'Generar',
+    enable: 'Reactivar',
+    disable: 'Desactivar',
+    enabled: '{name} reactivado',
+    disabledDone: '{name} desactivado',
+    enableTitle: '¿Reactivar a {name}?',
+    enableHelp: 'Podrá volver a iniciar sesión con su contraseña.',
+    disableTitle: '¿Desactivar a {name}?',
+    disableHelp:
+      'No podrá iniciar sesión y sus sesiones y apps dejarán de funcionar. Sus playlists y valoraciones se conservan, y se puede reactivar.',
+    disableInstead: 'Desactivar en su lugar',
     role: 'Rol',
     roles: { USER: 'Usuario', ADMIN: 'Administrador' },
     permissions: 'Permisos',
@@ -980,7 +1018,8 @@ export const es: Dictionary = {
     saved: 'Usuario guardado',
     deleted: 'Usuario {name} eliminado',
     deleteTitle: '¿Eliminar a {name}?',
-    deleteHelp: 'Se eliminará la cuenta y sus sesiones. No se puede deshacer.',
+    deleteHelp:
+      'Se perderán la cuenta, sus playlists, valoraciones y estadísticas, y no se puede deshacer. Si solo no debe entrar, mejor desactívala.',
   },
   permissions: {
     MANAGE_LIBRARIES: 'Gestionar bibliotecas',
@@ -1017,6 +1056,27 @@ export const es: Dictionary = {
       'Crear enlaces públicos de sus playlists (cualquiera con el enlace ve las canciones y oye 30 segundos) y abrir sus Jukebox Jams a invitados sin cuenta, si el servidor lo permite (Ajustes → Compartir).',
   },
   account: {
+    sections: {
+      security: 'Seguridad',
+      securityHint: 'Contraseña y sesiones abiertas',
+      apps: 'Apps y dispositivos',
+      appsHint: 'Contraseñas de aplicación y tus dispositivos',
+      cloud: 'Ultimate Cloud',
+      cloudHint: 'Tu cuenta de Ultimate Cloud',
+      preferences: 'Preferencias',
+      preferencesHint: 'Idioma, tema, videoclips y tours',
+      about: 'Acerca de',
+      aboutHint: 'Versión, licencia y APIs',
+    },
+    password: 'Contraseña',
+    passwordsDiffer: 'Las contraseñas no coinciden.',
+    appearance: 'Idioma y tema',
+    appearanceHelp: 'Se recuerdan en este navegador.',
+    signOutOthers: 'Cerrar las demás sesiones',
+    confirmSignOut: '¿Cerrar la sesión de {device}?',
+    confirmOthers: '¿Cerrar las otras {count} sesiones?',
+    confirmSignOutHelp:
+      'Ese dispositivo tendrá que volver a iniciar sesión para seguir escuchando.',
     videos: {
       title: 'Videoclips',
       description:
@@ -1075,6 +1135,9 @@ export const es: Dictionary = {
       name: 'Nombre',
       namePlaceholder: 'Por ejemplo: Symfonium en el móvil',
       create: 'Crear',
+      createdTitle: 'Tu contraseña de aplicación',
+      confirm: '¿Revocar «{name}»?',
+      confirmHelp: 'La app que la usa dejará de conectarse hasta que le pongas otra.',
       created: 'Copia la contraseña ahora: no se volverá a mostrar.',
       howTo:
         'En la app, usa {server} como servidor, {user} como usuario y esta contraseña. Las apps de OpenSubsonic también la aceptan como clave de API.',
@@ -1775,6 +1838,8 @@ export const es: Dictionary = {
       publicUrlPlaceholder: 'https://musica.tudominio.com',
       publicUrlFromHere: 'Usar esta dirección',
       publicUrlSaved: 'URL pública guardada',
+      publicUrlNeeded:
+        'Los enlaces que se compartan saldrán con {origin}, que solo funciona dentro de tu red. Si quieres compartirlos fuera, indica abajo la URL pública.',
       publicUrlEnvironment:
         'Fijada fuera del panel (variable de entorno Arcanist__Network__PublicUrl): cámbiala allí.',
     },
@@ -1799,6 +1864,14 @@ export const es: Dictionary = {
       releasePage: 'Verla en la página de la versión',
       how: 'Cómo actualizar',
       guide: 'Guía de esta instalación',
+      selfUpdate:
+        'Arcanist puede instalarla por ti: baja el paquete oficial, comprueba que es el publicado y se reinicia. Quien esté escuchando se cortará un momento.',
+      installNow: 'Actualizar ahora',
+      state: {
+        DOWNLOADING: 'Descargando la versión nueva…',
+        INSTALLING: 'Instalando…',
+        RESTARTING: 'Reiniciando el servidor…',
+      },
       dataInContainer:
         'Los datos de Arcanist están dentro del contenedor, no en un volumen: recrearlo los borra. Antes de actualizar, cópialos a un volumen y móntalo en /data: la guía tiene los comandos.',
       librariesOutside:
@@ -3429,6 +3502,11 @@ export const es: Dictionary = {
       'El paquete descargado no es el que publica el catálogo (su SHA-256 no coincide). No se ha instalado.',
     package_mismatch: 'El paquete descargado contiene otra extensión distinta de la del catálogo.',
     update_check_failed: 'No se pudo consultar si hay una versión nueva.',
+    update_self_unavailable: 'Este servidor no se puede actualizar desde el panel.',
+    update_install_failed:
+      'No se pudo instalar la actualización. Puedes hacerlo a mano con los pasos de abajo.',
+    update_checksum_mismatch:
+      'El paquete descargado no coincide con el publicado y no se instaló. Inténtalo más tarde o instálalo a mano.',
     library_virtual: 'Es una biblioteca virtual (Todo): no se le puede subir ni cambiar nada.',
     plays_not_accepted: 'Ese servidor no cuenta las reproducciones de este.',
     not_ffmpeg: 'Ese archivo no es un ffmpeg que funcione.',

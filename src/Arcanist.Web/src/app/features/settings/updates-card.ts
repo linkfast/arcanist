@@ -107,11 +107,13 @@ export class UpdatesCard implements OnInit {
   }
 
   protected setEnabled(enabled: boolean): Promise<void> {
-    return this.run(
-      async () =>
-        (await this.gql.mutate(SetServerUpdateSettingsMutation, { input: { enabled } }))
-          .setServerUpdateSettings,
-    );
+    return this.run(async () => {
+      const status = (
+        await this.gql.mutate(SetServerUpdateSettingsMutation, { input: { enabled } })
+      ).setServerUpdateSettings;
+      toast.success(this.i18n.t('common.saved'));
+      return status;
+    });
   }
 
   private async run(change: () => Promise<ServerUpdate>): Promise<void> {

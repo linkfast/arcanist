@@ -30,6 +30,10 @@ public sealed partial class Query
     public static Task<Privacy> Privacy([FromServices] PrivacyService privacy, CancellationToken cancellationToken) =>
         privacy.StatusAsync(cancellationToken);
 
+    [Name("serverUpdateInstall")]
+    [Description("Where an update being installed from the panel is. Administrators only.")]
+    public static ServerUpdateInstall ServerUpdateInstall([FromServices] UpdateService updates) => updates.InstallStatus();
+
     [Name("anonymousStatistics")]
     [Description("Whether anonymous play counts go to Ultimate Cloud's global statistics. Requires MANAGE_SETTINGS.")]
     public static Task<bool> AnonymousStatistics([FromServices] ServerAdminService admin, CancellationToken cancellationToken) =>
@@ -42,6 +46,11 @@ public sealed partial class Mutation
     [Description("Checks now for a newer Arcanist. Administrators only.")]
     public static Task<ServerUpdate> CheckServerUpdate([FromServices] UpdateService updates, CancellationToken cancellationToken) =>
         updates.CheckAsync(cancellationToken);
+
+    [Name("installServerUpdate")]
+    [Description("Installs the latest release where the installation lets the panel do it (install.selfUpdate is PANEL; update_self_unavailable otherwise). The server restarts by itself. Only the latest release of the official repository, checked against its checksum. Administrators only, with a recent authentication.")]
+    public static Task<ServerUpdateInstall> InstallServerUpdate([FromServices] UpdateService updates, CancellationToken cancellationToken) =>
+        updates.InstallAsync(cancellationToken);
 
     [Name("setServerUpdateSettings")]
     [Description("Switches the checks for newer versions on or off. Administrators only.")]

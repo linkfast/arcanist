@@ -205,6 +205,80 @@ public sealed class UpdateTests
     }
 
     [Fact]
+    public async Task The_panel_only_installs_where_the_installation_lets_it()
+    {
+        await using var factory = Create("0.1.0-alpha.1");
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+        await admin.PostAsync("/rest/v1/server/update/check", null, Cancel);
+
+        // On this machine's kind of installation there is no installer: it says so, and installs nothing.
+        var response = await admin.PostAsync("/rest/v1/server/update/install", null, Cancel);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("update_self_unavailable", (await response.Content.ReadFromJsonAsync<JsonElement>(ArcanistFactory.Json, Cancel)).GetProperty("code").GetString());
+        var status = await admin.GetFromJsonAsync<JsonElement>("/rest/v1/server/update/install", ArcanistFactory.Json, Cancel);
+        Assert.Equal("IDLE", status.GetProperty("state").GetString());
+
+        await factory.CreateUserAsync("listener");
+        var listener = await factory.CreateAuthenticatedClientAsync("listener");
+        Assert.Equal(HttpStatusCode.Forbidden, (await listener.PostAsync("/rest/v1/server/update/install", null, Cancel)).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("0.2.0", true)]
+    [InlineData("0.2.0-alpha.1", true)]
+    [InlineData("../../evil", false)]
+    [InlineData("0.2.0/../x", false)]
+    [InlineData("0.2.0 --force", false)]
+    [InlineData("", false)]
+    [InlineData("edge", false)]
+    public void The_update_service_only_takes_a_version_from_a_request(string request, bool valid) =>
+        Assert.Equal(valid, SelfUpdateTool.IsVersion(request));
+
+    [Fact]
+    public async Task A_package_is_only_kept_if_it_matches_its_published_checksum()
+    {
+        var folder = Directory.CreateTempSubdirectory("arcanist-update-").FullName;
+        byte[] content = "the package"u8.ToArray();
+        var sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(content));
+        try
+        {
+            async Task<List<string>> DownloadAsync(string digest)
+            {
+                var name = $"Arcanist_0.2.0_{(System.Runtime.InteropServices.RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "arm_64" : "x86_64")}.qpkg";
+                var handler = new FakePackages(name, content, digest);
+                using var http = new HttpClient(handler);
+                return await ReleasePackages.DownloadAsync(http, "https://github.test/repos/linkfast/arcanist", "0.2.0", InstallKind.Qnap, folder, Cancel);
+            }
+
+            Assert.Equal(content, await File.ReadAllBytesAsync((await DownloadAsync($"sha256:{sha256}")).Single(), Cancel));
+            var wrong = await Assert.ThrowsAsync<SelfUpdateException>(() => DownloadAsync("sha256:0000"));
+            Assert.Equal("update_checksum_mismatch", wrong.Code);
+            // Without a checksum there is nothing that says it is the one published.
+            Assert.Equal("update_checksum_mismatch", (await Assert.ThrowsAsync<SelfUpdateException>(() => DownloadAsync(""))).Code);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    private sealed class FakePackages(string name, byte[] content, string digest) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(request.RequestUri!.ToString().EndsWith("/releases/tags/v0.2.0", StringComparison.Ordinal)
+                ? new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        tag_name = "v0.2.0", html_url = "https://github.test/r", draft = false, prerelease = false,
+                        assets = new[] { new { name, browser_download_url = "https://github.test/package", size = content.Length, digest } },
+                    }),
+                }
+                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) });
+    }
+
+    [Fact]
     public async Task A_stable_server_only_follows_stable_releases()
     {
         await using var factory = Create("0.1.0");

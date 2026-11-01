@@ -8,8 +8,12 @@ import {
 } from '@ng-icons/lucide';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
+import { ApiError } from '../core/api/rest';
+import { Gql } from '../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../core/i18n/i18n';
 import type { ServerUpdateFieldsFragment as ServerUpdate } from '../graphql/generated/graphql';
+import { InstallServerUpdateMutation, ServerUpdateInstallQuery } from '../graphql/operations';
 import { BytesPipe } from './format';
 
 /** How many changes show before «See all». */
@@ -23,7 +27,7 @@ type Change = ServerUpdate['changes'][number];
  */
 @Component({
   selector: 'app-update-details',
-  imports: [HlmButtonImports, NgIcon, TranslatePipe, BytesPipe],
+  imports: [HlmButtonImports, HlmSpinnerImports, NgIcon, TranslatePipe, BytesPipe],
   providers: [
     provideIcons({ lucideCopy, lucideDownload, lucideExternalLink, lucideTriangleAlert }),
   ],
@@ -97,6 +101,31 @@ type Change = ServerUpdate['changes'][number];
           <p class="text-sm text-muted-foreground">
             {{ 'updates.howTo.' + update().installKind | t }}
           </p>
+
+          @if (install.selfUpdate === 'PANEL') {
+            <div class="grid gap-2 rounded-md border p-3">
+              <p class="text-sm">{{ 'updates.details.selfUpdate' | t }}</p>
+              @if (installing()) {
+                <p class="flex items-center gap-2 text-sm font-medium" role="status">
+                  <hlm-spinner class="size-4" />
+                  {{ 'updates.details.state.' + installing() | t }}
+                </p>
+              } @else {
+                <button
+                  hlmBtn
+                  type="button"
+                  class="justify-self-start gap-1"
+                  (click)="installNow()"
+                >
+                  <ng-icon name="lucideDownload" />
+                  {{ 'updates.details.installNow' | t }}
+                </button>
+              }
+              @if (installError(); as code) {
+                <p class="text-sm text-destructive" role="alert">{{ i18n.error(code) }}</p>
+              }
+            </div>
+          }
 
           @if (install.dataInContainer) {
             <p
@@ -200,12 +229,16 @@ type Change = ServerUpdate['changes'][number];
   `,
 })
 export class UpdateDetails {
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
+  private readonly gql = inject(Gql);
 
   readonly update = input.required<ServerUpdate>();
 
   protected readonly all = signal(false);
   protected readonly chosen = signal<string | null>(null);
+  /** Where installing from the panel is; null when it is not. */
+  protected readonly installing = signal<string | null>(null);
+  protected readonly installError = signal<string | null>(null);
 
   protected readonly hidden = computed(() =>
     this.all() ? 0 : Math.max(0, this.update().changes.length - FEW),
@@ -229,6 +262,49 @@ export class UpdateDetails {
     const commands = this.update().install?.commands ?? [];
     return commands.find((c) => c.kind === this.chosen()) ?? commands[0] ?? null;
   });
+
+  /** Installs the release from the panel, then follows it until the new version answers. */
+  protected async installNow(): Promise<void> {
+    this.installError.set(null);
+    this.installing.set('DOWNLOADING');
+    try {
+      const started = (await this.gql.mutate(InstallServerUpdateMutation)).installServerUpdate;
+      await this.follow(started.version);
+    } catch (error) {
+      this.installing.set(null);
+      this.installError.set(ApiError.from(error).code);
+    }
+  }
+
+  private async follow(version: string | null | undefined): Promise<void> {
+    const deadline = Date.now() + 25 * 60 * 1000;
+    let lost = false;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      try {
+        const status = (await this.gql.query(ServerUpdateInstallQuery)).serverUpdateInstall;
+        if (status.state === 'FAILED')
+          throw new ApiError(status.errorCode ?? 'update_install_failed');
+        // A server that was gone and is back, or that says it finished, is the new one.
+        if (lost || (status.state === 'IDLE' && status.version === version)) {
+          location.reload();
+          return;
+        }
+        if (status.state !== 'IDLE') this.installing.set(status.state);
+      } catch (error) {
+        const apiError = ApiError.from(error);
+        if (
+          apiError.code === 'update_install_failed' ||
+          apiError.code === 'update_checksum_mismatch'
+        )
+          throw error;
+        // Not answering: it is being replaced.
+        lost = true;
+        this.installing.set('RESTARTING');
+      }
+    }
+    throw new ApiError('update_install_failed');
+  }
 
   protected async copy(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);

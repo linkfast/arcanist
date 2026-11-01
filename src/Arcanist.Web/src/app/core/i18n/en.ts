@@ -1749,6 +1749,14 @@ export const en: Dictionary = {
       maxGuests: 'Guests per Jam',
       permission:
         'Each user also needs the “Share outside the server” permission (Users). Administrators always have it.',
+      publicUrl: 'Server’s public URL',
+      publicUrlHelp:
+        'The address Arcanist is reached at from outside your network, for example https://music.yourdomain.com (your domain, a reverse proxy or a tunnel). Playlist and Jukebox Jam links and their QR codes start with it. Empty, they use the address the player was opened with, which may be an IP of your local network.',
+      publicUrlPlaceholder: 'https://music.yourdomain.com',
+      publicUrlFromHere: 'Use this address',
+      publicUrlSaved: 'Public URL saved',
+      publicUrlEnvironment:
+        'Set outside the panel (environment variable Arcanist__Network__PublicUrl): change it there.',
     },
   },
   updates: {

@@ -150,6 +150,35 @@ public sealed class PlaylistSharingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task With_a_public_url_shared_links_start_with_it()
+    {
+        var owner = await _factory.CreateAuthenticatedClientAsync("sharer");
+        var id = (await CreateAsync(owner, "Party", "A")).GetProperty("id").GetString()!;
+        await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing", new { publicLinks = true, jamGuests = false, guestAddLimit = 5, maxGuests = 100 }, ArcanistFactory.Json, Cancel));
+        var token = (await OkAsync(owner.PostAsync($"/rest/v1/playlists/{id}/link", null, Cancel))).GetProperty("link").GetProperty("token").GetString()!;
+        Assert.StartsWith("/", await LinkAsync());
+
+        // A bare host is taken as https, and the trailing slash goes.
+        var set = await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing",
+            new { publicLinks = true, jamGuests = false, guestAddLimit = 5, maxGuests = 100, publicUrl = "music.example.com/" }, ArcanistFactory.Json, Cancel));
+        Assert.Equal(("https://music.example.com", false), (set.GetProperty("publicUrl").GetString(), set.GetProperty("publicUrlSetByEnvironment").GetBoolean()));
+        Assert.Matches($"^https://music\\.example\\.com/(players/[^/]+/)?#/s/{token}$", await LinkAsync());
+
+        // Saving without it keeps it; anything but an http(s) URL is refused; empty takes it off.
+        await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing", new { publicLinks = true, jamGuests = false, guestAddLimit = 5, maxGuests = 100 }, ArcanistFactory.Json, Cancel));
+        Assert.StartsWith("https://music.example.com/", await LinkAsync());
+        var wrong = await _admin.PutAsJsonAsync("/rest/v1/sharing",
+            new { publicLinks = true, jamGuests = false, guestAddLimit = 5, maxGuests = 100, publicUrl = "ftp://music.example.com" }, ArcanistFactory.Json, Cancel);
+        Assert.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
+        await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing",
+            new { publicLinks = true, jamGuests = false, guestAddLimit = 5, maxGuests = 100, publicUrl = "" }, ArcanistFactory.Json, Cancel));
+        Assert.StartsWith("/", await LinkAsync());
+
+        async Task<string> LinkAsync() =>
+            (await OkAsync(owner.GetAsync($"/rest/v1/playlists/{id}", Cancel))).GetProperty("link").GetProperty("url").GetString()!;
+    }
+
+    [Fact]
     public async Task A_preview_is_a_short_mp3_anyone_can_hear()
     {
         TestFfmpeg.Require();

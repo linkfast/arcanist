@@ -401,8 +401,11 @@ changed or was deleted: read it again. `playlists(changedSince:)` still works fo
 
 When an administrator allows it (`sharing.publicLinks`, Settings → Sharing; off at first) and the user has
 `SHARE_LINKS`, the owner or a manager gives a playlist a public link: `createPlaylistLink` (it returns the playlist with
-`link { token url createdAt }`; asking again returns the same one) and `revokePlaylistLink`. `link.url` is relative to
-the server: a player's page (`/players/<id>/#/s/<token>`, see `features` in [frontends.md](frontends.md)).
+`link { token url createdAt }`; asking again returns the same one) and `revokePlaylistLink`. `link.url` is a player's
+page (`/players/<id>/#/s/<token>`, see `features` in [frontends.md](frontends.md)). When the administrator sets the
+server's public URL (`sharing.publicUrl`, Settings → Sharing, or `Arcanist__Network__PublicUrl`) it is absolute and
+starts with it (`https://music.example.com/players/…`); otherwise it is relative to the server. Resolve it against the
+server's address (`new URL(link.url, origin)`), which leaves an absolute one as it is.
 
 Anyone with the token, without an account, reads `sharedPlaylist(token, after, first)` (or `GET
 /rest/v1/public/playlists/{token}`): the name, the owner's name, covers and the songs as the owner has them (title,

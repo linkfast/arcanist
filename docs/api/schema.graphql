@@ -2754,6 +2754,8 @@ type SharingStatus {
   guestAddLimit: Int!
   maxGuests: Int!
   canShareLinks: Boolean!
+  publicUrl: String
+  publicUrlSetByEnvironment: Boolean!
 }
 
 type SharedPlaylist {
@@ -4420,6 +4422,7 @@ input SharingSettingsInput {
   jamGuests: Boolean!
   guestAddLimit: Int!
   maxGuests: Int!
+  publicUrl: String
 }
 
 input TrackEditInput {

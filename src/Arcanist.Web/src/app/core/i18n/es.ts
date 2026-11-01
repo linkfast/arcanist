@@ -1769,6 +1769,14 @@ export const es: Dictionary = {
       maxGuests: 'Invitados por Jam',
       permission:
         'Además, cada usuario necesita el permiso «Compartir fuera del servidor» (Usuarios). Los administradores lo tienen siempre.',
+      publicUrl: 'URL pública del servidor',
+      publicUrlHelp:
+        'La dirección con la que se llega a Arcanist desde fuera de tu red, por ejemplo https://musica.tudominio.com (tu dominio, un proxy inverso o un túnel). Los enlaces de playlists y de Jukebox Jams y sus QR empiezan con ella. Vacía, usan la dirección con la que se abrió el reproductor, que puede ser una IP de tu red local.',
+      publicUrlPlaceholder: 'https://musica.tudominio.com',
+      publicUrlFromHere: 'Usar esta dirección',
+      publicUrlSaved: 'URL pública guardada',
+      publicUrlEnvironment:
+        'Fijada fuera del panel (variable de entorno Arcanist__Network__PublicUrl): cámbiala allí.',
     },
   },
   updates: {

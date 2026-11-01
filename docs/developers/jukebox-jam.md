@@ -30,8 +30,9 @@ the host's when the Jam ends, unless `saveAsPlaylist` is false (`JUKEBOX_JAM_SAV
 (all of them when null). `allowGuests` needs the server's setting (`sharing.jamGuests`, off at first) and the
 `SHARE_LINKS` permission. `allowReplace` (off by default) lets anyone taking part replace the song playing (below).
 
-`myJukeboxJams` lists the Jams the user hosts or takes part in. `jukeboxJam.url` is the Jam's link, relative to the
-server: share it or show it as a QR code. It opens the Jam's **client**, where those taking part follow it, vote and add
+`myJukeboxJams` lists the Jams the user hosts or takes part in. `jukeboxJam.url` is the Jam's link: absolute when the
+server has a public URL (`sharing.publicUrl`), relative to the server otherwise (resolve it against the server's
+address). Share it or show it as a QR code. It opens the Jam's **client**, where those taking part follow it, vote and add
 songs: Ultimate Web Player when it is installed and declares `"features": ["jukebox-jam"]`, otherwise the server's own
 generic client (`/players/jam/#/jam/<code>`, part of Arcanist: a Jam never depends on a player implementing one). Hosts
 link to it to add songs too; a player only has to play the Jam (the host API below).

@@ -87,6 +87,49 @@ import { SetSharingSettingsMutation, SharingQuery } from '../../graphql/operatio
             </div>
           }
           <p class="text-xs text-muted-foreground">{{ 'sharing.card.permission' | t }}</p>
+          <form class="grid gap-1 border-t pt-4" (ngSubmit)="savePublicUrl()">
+            <label class="font-medium" for="sharing-public-url">{{
+              'sharing.card.publicUrl' | t
+            }}</label>
+            <span class="text-muted-foreground">{{ 'sharing.card.publicUrlHelp' | t }}</span>
+            <div class="mt-1 flex flex-wrap gap-2">
+              <input
+                hlmInput
+                id="sharing-public-url"
+                name="publicUrl"
+                type="url"
+                class="min-w-0 flex-1"
+                [placeholder]="'sharing.card.publicUrlPlaceholder' | t"
+                [(ngModel)]="publicUrl"
+                [disabled]="busy() || s.publicUrlSetByEnvironment"
+              />
+              @if (!s.publicUrlSetByEnvironment) {
+                <button
+                  hlmBtn
+                  type="submit"
+                  [disabled]="busy() || publicUrl.trim() === (s.publicUrl ?? '')"
+                >
+                  {{ 'common.save' | t }}
+                </button>
+              }
+            </div>
+            @if (s.publicUrlSetByEnvironment) {
+              <span class="text-xs text-muted-foreground">{{
+                'sharing.card.publicUrlEnvironment' | t
+              }}</span>
+            } @else if (!s.publicUrl && !isLocal) {
+              <button
+                hlmBtn
+                variant="link"
+                size="sm"
+                type="button"
+                class="justify-self-start px-0"
+                (click)="publicUrl = origin"
+              >
+                {{ 'sharing.card.publicUrlFromHere' | t }} ({{ origin }})
+              </button>
+            }
+          </form>
         </div>
       }
     </section>
@@ -98,18 +141,33 @@ export class SharingCard implements OnInit {
 
   protected readonly status = signal<Sharing | null>(null);
   protected readonly busy = signal(false);
+  /** The public URL being edited. */
+  protected publicUrl = '';
+  protected readonly origin = window.location.origin;
+  /** The panel was opened by an IP or localhost: offering that address as the public one would not help. */
+  protected readonly isLocal =
+    /^(localhost|\[.*\]|[\d.]+)$/i.test(window.location.hostname) ||
+    window.location.hostname.endsWith('.local');
 
   async ngOnInit(): Promise<void> {
-    this.status.set((await this.gql.query(SharingQuery)).sharing);
+    this.show((await this.gql.query(SharingQuery)).sharing);
+  }
+
+  protected async savePublicUrl(): Promise<void> {
+    if (await this.save({ publicUrl: this.publicUrl.trim() }))
+      toast.success(this.i18n.t('sharing.card.publicUrlSaved'));
   }
 
   protected async save(
-    change: Partial<Omit<Sharing, 'canShareLinks' | '__typename'>>,
-  ): Promise<void> {
+    change: Partial<
+      Omit<Sharing, 'canShareLinks' | 'publicUrlSetByEnvironment' | 'publicUrl' | '__typename'>
+    > & { publicUrl?: string },
+  ): Promise<boolean> {
     const current = this.status();
-    if (!current) return;
+    if (!current) return false;
     this.busy.set(true);
     try {
+      // Without publicUrl the server keeps the one there is.
       const input = {
         publicLinks: current.publicLinks,
         jamGuests: current.jamGuests,
@@ -117,14 +175,19 @@ export class SharingCard implements OnInit {
         maxGuests: current.maxGuests,
         ...change,
       };
-      this.status.set(
-        (await this.gql.mutate(SetSharingSettingsMutation, { input })).setSharingSettings,
-      );
+      this.show((await this.gql.mutate(SetSharingSettingsMutation, { input })).setSharingSettings);
+      return true;
     } catch (error) {
       toast.error(this.i18n.error(ApiError.from(error).code));
       this.status.set({ ...current });
+      return false;
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private show(status: Sharing): void {
+    this.status.set(status);
+    this.publicUrl = status.publicUrl ?? '';
   }
 }

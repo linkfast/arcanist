@@ -113,7 +113,7 @@ type Documents = {
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.CheckServerUpdateDocument,
     "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.SetServerUpdateSettingsDocument,
-    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n  }\n": typeof types.SharingFieldsFragmentDoc,
+    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n": typeof types.SharingFieldsFragmentDoc,
     "\n  query Sharing {\n    sharing {\n      ...SharingFields\n    }\n  }\n": typeof types.SharingDocument,
     "\n  mutation SetSharingSettings($input: SharingSettingsInput!) {\n    setSharingSettings(input: $input) {\n      ...SharingFields\n    }\n  }\n": typeof types.SetSharingSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n        pricing\n        pricingUrl\n      }\n    }\n  }\n": typeof types.ExtensionMarketplaceDocument,
@@ -400,7 +400,7 @@ const documents: Documents = {
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.CheckServerUpdateDocument,
     "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": types.SetServerUpdateSettingsDocument,
-    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n  }\n": types.SharingFieldsFragmentDoc,
+    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n": types.SharingFieldsFragmentDoc,
     "\n  query Sharing {\n    sharing {\n      ...SharingFields\n    }\n  }\n": types.SharingDocument,
     "\n  mutation SetSharingSettings($input: SharingSettingsInput!) {\n    setSharingSettings(input: $input) {\n      ...SharingFields\n    }\n  }\n": types.SetSharingSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n        pricing\n        pricingUrl\n      }\n    }\n  }\n": types.ExtensionMarketplaceDocument,
@@ -1001,7 +1001,7 @@ export function graphql(source: "\n  mutation SetServerUpdateSettings($input: Se
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n  }\n"): (typeof documents)["\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n  }\n"];
+export function graphql(source: "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n"): (typeof documents)["\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

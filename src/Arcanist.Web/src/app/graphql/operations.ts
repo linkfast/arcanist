@@ -1210,6 +1210,8 @@ export const SharingFieldsFragment = graphql(`
     guestAddLimit
     maxGuests
     canShareLinks
+    publicUrl
+    publicUrlSetByEnvironment
   }
 `);
 

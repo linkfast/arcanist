@@ -41,6 +41,13 @@ public sealed record SharedPlaylistPage(IReadOnlyList<SharedPlaylistEntry> Items
 
 /// <summary>What the server lets its users share outside it, and what the user asking may do.</summary>
 /// <param name="CanShareLinks">The user may make public links and open Jams to guests (SHARE_LINKS) — with the settings on.</param>
-public sealed record SharingStatus(bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, bool CanShareLinks);
+/// <param name="PublicUrl">Where the server is reached from outside (<c>https://music.example.com</c>), without a trailing
+/// slash: shared links (playlists, Jams) start with it. Null: they are relative to the address the client uses.</param>
+/// <param name="PublicUrlSetByEnvironment">The public URL comes from the environment (Arcanist__Network__PublicUrl): the
+/// panel cannot change it.</param>
+public sealed record SharingStatus(
+    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, bool CanShareLinks, string? PublicUrl, bool PublicUrlSetByEnvironment);
 
-public sealed record SharingSettingsInput(bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests);
+/// <param name="PublicUrl">The server's public URL (http or https; a bare host is taken as https). Null keeps the one
+/// there is; empty takes it off.</param>
+public sealed record SharingSettingsInput(bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null);

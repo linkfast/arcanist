@@ -27443,6 +27443,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "publicUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -27452,7 +27458,9 @@
           "jamGuests",
           "guestAddLimit",
           "maxGuests",
-          "canShareLinks"
+          "canShareLinks",
+          "publicUrl",
+          "publicUrlSetByEnvironment"
         ],
         "type": "object",
         "properties": {
@@ -27479,6 +27487,15 @@
             "format": "int32"
           },
           "canShareLinks": {
+            "type": "boolean"
+          },
+          "publicUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publicUrlSetByEnvironment": {
             "type": "boolean"
           }
         }

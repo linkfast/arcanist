@@ -18,10 +18,20 @@ public sealed class SharingService(AccessGuard guard, SharingSettings settings)
     {
         guard.Admin();
         guard.RecentAuthentication();
-        var config = await settings.SetAsync(new SharingConfig(input.PublicLinks, input.JamGuests, input.GuestAddLimit, input.MaxGuests), cancellationToken);
+        var current = await settings.GetAsync(cancellationToken);
+        // Null keeps the public URL (clients from before it); empty takes it off.
+        var publicUrl = input.PublicUrl is null ? current.PublicUrl : SharingSettings.NormalizeUrl(input.PublicUrl);
+        if (publicUrl != current.PublicUrl && settings.EnvironmentPublicUrl is not null)
+            throw new ArcanistException.Conflict(ErrorCodes.SetByEnvironment);
+        var config = await settings.SetAsync(
+            new SharingConfig(input.PublicLinks, input.JamGuests, input.GuestAddLimit, input.MaxGuests, publicUrl), cancellationToken);
         return ToModel(config, true);
     }
 
-    private static SharingStatus ToModel(SharingConfig config, bool canShare) =>
-        new(config.PublicLinks, config.JamGuests, config.GuestAddLimit, config.MaxGuests, canShare && (config.PublicLinks || config.JamGuests));
+    private SharingStatus ToModel(SharingConfig config, bool canShare)
+    {
+        var environment = settings.EnvironmentPublicUrl;
+        return new(config.PublicLinks, config.JamGuests, config.GuestAddLimit, config.MaxGuests, canShare && (config.PublicLinks || config.JamGuests),
+            environment ?? config.PublicUrl, environment is not null);
+    }
 }

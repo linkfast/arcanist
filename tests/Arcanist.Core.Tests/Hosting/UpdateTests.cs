@@ -15,15 +15,35 @@ public sealed class FakeGitHubReleases : HttpMessageHandler
 
     public object[] Releases { get; set; } = [];
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-        Task.FromResult(Failing || request.RequestUri!.ToString() != Url
-            ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-            : new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Releases) });
+    /// <summary>GitHub's comparison of two tags, by the path after <c>/compare/</c>.</summary>
+    public Dictionary<string, object> Comparisons { get; } = [];
 
-    public static object Release(string tag, bool prerelease = false, bool draft = false) => new
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var url = request.RequestUri!.ToString();
+        object? content = Failing ? null
+            : url == Url ? Releases
+            : url.StartsWith(Url.Replace("/releases", "/compare/"), StringComparison.Ordinal) ? Comparisons.GetValueOrDefault(url.Split("/compare/")[1])
+            : null;
+        return Task.FromResult(content is null
+            ? new HttpResponseMessage(HttpStatusCode.NotFound)
+            : new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(content) });
+    }
+
+    public static object Release(string tag, bool prerelease = false, bool draft = false, string[]? assets = null) => new
     {
         tag_name = tag, name = $"Arcanist {tag.TrimStart('v')}", body = $"## What's changed\n* Things in {tag}",
         html_url = $"https://github.com/linkfast/arcanist/releases/tag/{tag}", draft, prerelease, published_at = "2026-10-19T12:00:00Z",
+        assets = (assets ?? []).Select(name => new
+        {
+            name, browser_download_url = $"https://github.com/linkfast/arcanist/releases/download/{tag}/{name}", size = 1000, digest = "sha256:abc",
+        }),
+    };
+
+    public static object Comparison(int? total, params string[] messages) => new
+    {
+        total_commits = total ?? messages.Length,
+        commits = messages.Select((message, i) => new { html_url = $"https://github.com/linkfast/arcanist/commit/{i}", commit = new { message } }),
     };
 }
 
@@ -77,6 +97,111 @@ public sealed class UpdateTests
         await factory.CreateUserAsync("listener");
         var listener = await factory.CreateAuthenticatedClientAsync("listener");
         Assert.Equal(HttpStatusCode.Forbidden, (await listener.GetAsync("/rest/v1/server/update", Cancel)).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_newer_version_says_what_it_changes_since_the_installed_one()
+    {
+        _github.Releases =
+        [
+            FakeGitHubReleases.Release("v0.1.0-alpha.1", prerelease: true),
+            FakeGitHubReleases.Release("v0.1.0-alpha.2", prerelease: true),
+            FakeGitHubReleases.Release("v0.1.0-alpha.3", prerelease: true),
+        ];
+        _github.Comparisons["v0.1.0-alpha.1...v0.1.0-alpha.3"] = FakeGitHubReleases.Comparison(300,
+            "Jukebox Jam: the host's own queue stays\n\nA longer body.",
+            "Tests: Ultimate Cloud's fake in a file of its own",
+            "Merge branch 'x'",
+            "CI: faster builds",
+            "Webamp 0.12.0-alpha.1: asks for the lyrics",
+            "Webamp for Arcanist 0.15.0-alpha.1",
+            "A subject without an area");
+
+        await using var factory = Create("0.1.0-alpha.1");
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+        var update = await (await admin.PostAsync("/rest/v1/server/update/check", null, Cancel)).Content.ReadFromJsonAsync<ServerUpdate>(ArcanistFactory.Json, Cancel);
+
+        // Newest first, without what only concerns the project's own work.
+        Assert.Equal(
+            [(null, "A subject without an area"), ("Webamp", "0.15.0-alpha.1"), ("Webamp", "asks for the lyrics"), ("Jukebox Jam", "the host's own queue stays")],
+            update!.Changes.Select(c => (c.Area, c.Text)));
+        Assert.Equal("https://github.com/linkfast/arcanist/commit/0", update.Changes[3].Url);
+        Assert.Equal((true, 2), (update.MoreChanges, update.VersionsBehind));
+
+        // What cannot be compared (no such tag) leaves the changes empty and the update known.
+        _github.Comparisons.Clear();
+        update = await (await admin.PostAsync("/rest/v1/server/update/check", null, Cancel)).Content.ReadFromJsonAsync<ServerUpdate>(ArcanistFactory.Json, Cancel);
+        Assert.True(update!.UpdateAvailable);
+        Assert.Empty(update.Changes);
+        Assert.Null(update.ErrorCode);
+    }
+
+    [Theory]
+    [InlineData(InstallKind.Synology, "x64", "arcanist_x64-7.2_0.2.0-1.spk")]
+    [InlineData(InstallKind.Synology, "arm64", "arcanist_aarch64-7.2_0.2.0-1.spk")]
+    [InlineData(InstallKind.Qnap, "x64", "Arcanist_0.2.0_x86_64.qpkg")]
+    [InlineData(InstallKind.Qnap, "arm64", "Arcanist_0.2.0_arm_64.qpkg")]
+    [InlineData(InstallKind.DebianPackage, "arm64", "arcanist_0.2.0-1_arm64.deb")]
+    [InlineData(InstallKind.OpenMediaVault, "x64", "arcanist_0.2.0-1_amd64.deb,openmediavault-arcanist_1.2_all.deb")]
+    [InlineData(InstallKind.Systemd, "x64", "arcanist-0.2.0-linux-x64.tar.gz")]
+    [InlineData(InstallKind.Windows, "x64", "Arcanist-win-Setup.exe")]
+    [InlineData(InstallKind.WindowsService, "arm64", "Arcanist-win-arm64-Setup.exe")]
+    [InlineData(InstallKind.MacOS, "arm64", "Arcanist-0.2.0-macos-arm64.dmg")]
+    [InlineData(InstallKind.Docker, "x64", "")]
+    [InlineData(InstallKind.TrueNas, "x64", "")]
+    [InlineData(InstallKind.Other, "x64", "")]
+    public void Each_installation_gets_the_file_of_its_architecture(InstallKind kind, string architecture, string expected)
+    {
+        string[] names =
+        [
+            "arcanist_x64-7.2_0.2.0-1.spk", "arcanist_aarch64-7.2_0.2.0-1.spk", "Arcanist_0.2.0_x86_64.qpkg", "Arcanist_0.2.0_arm_64.qpkg",
+            "arcanist_0.2.0-1_amd64.deb", "arcanist_0.2.0-1_arm64.deb", "openmediavault-arcanist_1.2_all.deb",
+            "arcanist-0.2.0-linux-x64.tar.gz", "arcanist-0.2.0-linux-x64-dotnet.tar.gz", "arcanist-0.2.0-linux-arm64.tar.gz",
+            "Arcanist-win-Setup.exe", "Arcanist-win-arm64-Setup.exe", "Arcanist-0.2.0-macos-arm64.dmg", "Arcanist-0.2.0-macos-x64.dmg",
+        ];
+        var install = UpdateInstructions.Build(kind, architecture, "0.2.0", "https://github.com/linkfast/arcanist/releases/tag/v0.2.0",
+            names.Select(n => new ReleaseAsset(n, $"https://example.test/{n}", 1, null)).ToList(), "abc123");
+        Assert.Equal(expected, string.Join(',', install.Downloads.Select(d => d.Name)));
+        Assert.Equal(kind is InstallKind.Windows or InstallKind.WindowsService or InstallKind.MacOS, install.UpdatesItself);
+    }
+
+    [Fact]
+    public void Commands_are_ready_to_paste_and_docker_keeps_what_the_container_has()
+    {
+        const string release = "https://github.com/linkfast/arcanist/releases/tag/v0.2.0";
+        ReleaseAsset[] assets = [new("arcanist_0.2.0-1_amd64.deb", "https://example.test/a.deb", 1, null)];
+
+        var deb = UpdateInstructions.Build(InstallKind.DebianPackage, "x64", "0.2.0", release, assets, "abc123").Commands.Single();
+        Assert.Equal("curl -fLO https://example.test/a.deb\nsudo apt install ./arcanist_0.2.0-1_amd64.deb", deb.Script);
+
+        var docker = UpdateInstructions.Build(InstallKind.Docker, "x64", "0.2.0", release, [], "abc123");
+        Assert.Equal([UpdateCommandKind.DockerCompose, UpdateCommandKind.DockerRun], docker.Commands.Select(c => c.Kind));
+        var run = docker.Commands[1].Script;
+        Assert.Contains("CONTAINER=abc123", run);
+        Assert.Contains("IMAGE=ghcr.io/linkfast/arcanist:0.2.0", run);
+        Assert.Contains("{{range .Mounts}}", run);
+        Assert.Equal("https://github.com/linkfast/arcanist/blob/v0.2.0/packaging/docker/README.md", docker.GuideUrl);
+    }
+
+    [Fact]
+    public void In_a_container_the_mounts_say_what_recreating_it_keeps()
+    {
+        const string mountInfo = """
+            610 500 0:50 / / rw,relatime - overlay overlay rw
+            611 610 0:53 / /proc rw - proc proc rw
+            612 610 0:54 / /dev rw - tmpfs tmpfs rw
+            613 612 0:55 / /dev/shm rw - tmpfs shm rw
+            620 610 8:1 /docker/volumes/data/_data /data rw - ext4 /dev/sda1 rw
+            621 610 8:1 /home/me/My\040Music /music/My\040Music ro - ext4 /dev/sda1 rw
+            622 610 8:1 /docker/containers/x/hosts /etc/hosts rw - ext4 /dev/sda1 rw
+            """;
+        var mounts = UpdateInstructions.MountsOf(mountInfo);
+        Assert.Equal(["/data", "/music/My Music"], mounts);
+        Assert.True(UpdateInstructions.IsMounted("/data", mounts));
+        Assert.True(UpdateInstructions.IsMounted("/music/My Music/Rock/", mounts));
+        Assert.False(UpdateInstructions.IsMounted("/database", mounts));
+        Assert.False(UpdateInstructions.IsMounted("/app/music", mounts));
     }
 
     [Fact]

@@ -1176,6 +1176,29 @@ export const ServerUpdateFields = graphql(`
       publishedAt
       prerelease
     }
+    changes {
+      area
+      text
+      url
+    }
+    moreChanges
+    versionsBehind
+    install {
+      downloads {
+        name
+        url
+        size
+      }
+      commands {
+        kind
+        script
+      }
+      guideUrl
+      updatesItself
+      dataInContainer
+      mounts
+      librariesOutsideMounts
+    }
   }
 `);
 

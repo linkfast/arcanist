@@ -1,6 +1,6 @@
 # Arcanist
 
-Arcanist is a self-hosted music server: your own personal and family "Spotify". It is an open source product of LinkFast. Point it at the folders where your music lives, and listen from every device at home or on the go — web, desktop, mobile, TV, and DLNA players.
+Arcanist is a self-hosted music server for you and your family. It is an open source product of LinkFast. Point it at the folders where your music lives, and listen from every device at home or on the go — web, desktop, mobile, TV, and DLNA players.
 
 > **Status:** early development. Nothing here is ready for use yet.
 
@@ -51,14 +51,30 @@ The setup code is in `journalctl -u arcanist`.
 ### Docker
 
 ```bash
-docker run -d --name arcanist --restart unless-stopped -p 8484:8484 -v arcanist-data:/data -v /path/to/music:/music:ro ghcr.io/linkfast/arcanist
+docker run -d --name arcanist --restart unless-stopped -p 8484:8484 \
+  -v arcanist-data:/data \
+  -v /path/to/music:/music:ro \
+  ghcr.io/linkfast/arcanist:preview
 ```
 
-The image supports linux/amd64 and linux/arm64. The setup code is in `docker logs arcanist`. Add `/music` as a
-library. Keep `/data` on a local disk: with SQLite, the database must not live on a network share (the music can).
-For server audio (playing through the host's sound card), add `--device /dev/snd --group-add audio`.
+The image supports linux/amd64 and linux/arm64, and `preview` is its newest release (there are only pre-releases for
+now). The setup code is in `docker logs arcanist`. Add `/music` as a library.
 
-With Docker Compose (SQLite or PostgreSQL): see [packaging/docker](packaging/docker/README.md).
+What is mounted is what survives the container, so mount everything Arcanist keeps:
+
+| In the container | What | Mode |
+|---|---|---|
+| `/data` | Its database, settings and caches. **Without it, updating deletes them.** Keep it on a local disk: with SQLite, the database must not live on a network share. | read and write |
+| `/music` (or `/music/rock`, `/music/jazz`… one `-v` per folder) | Your music; it can be on a network share. | `:ro` only plays it; without `:ro` Arcanist can also organize files and receive uploads |
+| `/drop` | A drop folder, if you use one. | read and write |
+| `/backups` | A folder for backups, if you use one. | read and write |
+
+Without `:ro`, the folders must be writable by the container's user (uid 1654). For server audio (playing through the
+host's sound card), add `--device /dev/snd --group-add audio`.
+
+To update, recreate the container with the same options. The update notice in the panel gives a command for this that
+reads them from Docker, so that no mount is lost; the steps are in [packaging/docker](packaging/docker/README.md),
+along with Docker Compose (SQLite or PostgreSQL).
 
 ### Synology
 

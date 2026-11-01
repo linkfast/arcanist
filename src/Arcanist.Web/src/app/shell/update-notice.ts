@@ -1,14 +1,16 @@
-import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucideArrowUpCircle } from '@ng-icons/lucide';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { AuthService } from '../core/auth/auth.service';
 import { Gql } from '../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../core/i18n/i18n';
+import { TourService } from '../core/tour/tour.service';
 import type { ServerUpdateFieldsFragment as ServerUpdate } from '../graphql/generated/graphql';
 import { ServerUpdateQuery } from '../graphql/operations';
-import { ReleaseNotes } from '../shared/release-notes';
+import { UpdateDetails } from '../shared/update-details';
 
 const snoozeKey = 'arcanist.update.snooze';
 const day = 24 * 60 * 60 * 1000;
@@ -37,8 +39,9 @@ function snooze(version: string): void {
 }
 
 /**
- * Tells administrators, once they open the panel, that a newer Arcanist is out: what changed, and how this server is
- * updated. "Remind me tomorrow" keeps it away for a day (for that version); going to the release page too.
+ * Tells administrators, once they open the panel, that a newer Arcanist is out: what it changes and how this server
+ * gets it. It waits for a tour to end, not to cover it. Closing it hides it until the panel opens again; only «Remind
+ * me tomorrow» keeps it away for a day (for that version).
  */
 @Component({
   selector: 'app-update-notice',
@@ -46,46 +49,33 @@ function snooze(version: string): void {
     BrnDialogContent,
     HlmDialogImports,
     HlmButtonImports,
+    NgIcon,
     TranslatePipe,
-    ReleaseNotes,
-    DatePipe,
+    UpdateDetails,
   ],
+  providers: [provideIcons({ lucideArrowUpCircle })],
   template: `
-    <hlm-dialog [state]="update() ? 'open' : 'closed'" (closed)="later()">
-      <hlm-dialog-content class="sm:max-w-lg" *brnDialogContent="let ctx">
+    <hlm-dialog [state]="visible() ? 'open' : 'closed'" (closed)="update.set(null)">
+      <hlm-dialog-content class="sm:max-w-xl" *brnDialogContent="let ctx">
         @if (update(); as u) {
           <hlm-dialog-header>
-            <h3 hlmDialogTitle>
+            <h3 hlmDialogTitle class="flex items-center gap-2">
+              <ng-icon name="lucideArrowUpCircle" class="shrink-0 text-primary" />
               {{ 'updates.notice.title' | t: { version: u.latest?.version ?? '' } }}
             </h3>
-            <p hlmDialogDescription>
-              {{
-                'updates.notice.current'
-                  | t
-                    : {
-                        current: u.currentVersion,
-                        date:
-                          (u.latest?.publishedAt
-                            | date: 'longDate' : undefined : i18n.language()) ?? '',
-                      }
-              }}
-            </p>
+            <p hlmDialogDescription>{{ summary() }}</p>
           </hlm-dialog-header>
-          @if (u.latest?.notes) {
-            <div class="max-h-72 overflow-y-auto rounded-md border p-3">
-              <app-release-notes [markdown]="u.latest!.notes" />
-            </div>
-          }
-          <p class="text-sm text-muted-foreground">
-            {{ 'updates.howTo.' + u.installKind | t }}
+          <p class="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+            {{ 'updates.notice.recommend' | t }}
           </p>
+          <app-update-details [update]="u" />
           <hlm-dialog-footer>
             <button hlmBtn variant="outline" type="button" (click)="later()">
               {{ 'updates.notice.later' | t }}
             </button>
-            <button hlmBtn type="button" (click)="open(u)">
+            <a hlmBtn variant="secondary" [href]="u.latest?.url" target="_blank" rel="noopener">
               {{ 'updates.notice.open' | t }}
-            </button>
+            </a>
           </hlm-dialog-footer>
         }
       </hlm-dialog-content>
@@ -96,8 +86,23 @@ export class UpdateNotice implements OnInit {
   protected readonly i18n = inject(I18n);
   private readonly gql = inject(Gql);
   private readonly auth = inject(AuthService);
+  private readonly tour = inject(TourService);
 
   protected readonly update = signal<ServerUpdate | null>(null);
+  protected readonly visible = computed(() => !!this.update() && !this.tour.active());
+
+  /** «You have X. Released on …, N versions on.» The date with Intl: Angular's pipe only knows locales registered with it. */
+  protected readonly summary = computed(() => {
+    const update = this.update();
+    if (!update?.latest) return '';
+    const date = new Intl.DateTimeFormat(this.i18n.language(), { dateStyle: 'long' }).format(
+      new Date(update.latest.publishedAt),
+    );
+    const parts = { current: update.currentVersion, date };
+    return update.versionsBehind > 1
+      ? this.i18n.t('updates.notice.currentBehind', { ...parts, count: update.versionsBehind })
+      : this.i18n.t('updates.notice.current', parts);
+  });
 
   async ngOnInit(): Promise<void> {
     if (!this.auth.isAdmin()) return;
@@ -114,10 +119,5 @@ export class UpdateNotice implements OnInit {
     const version = this.update()?.latest?.version;
     if (version) snooze(version);
     this.update.set(null);
-  }
-
-  protected open(update: ServerUpdate): void {
-    if (update.latest) window.open(update.latest.url, '_blank', 'noopener');
-    this.later();
   }
 }

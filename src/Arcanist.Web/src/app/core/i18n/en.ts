@@ -1763,20 +1763,54 @@ export const en: Dictionary = {
     notice: {
       title: 'Arcanist {version} is available',
       current: 'You have {current}. Released on {date}.',
+      currentBehind:
+        'You have {current}, {count} versions behind. The latest was released on {date}.',
+      recommend:
+        'We recommend updating soon: every version brings fixes and improvements. Your music and your data are kept.',
       later: 'Remind me tomorrow',
-      open: 'Go to the release page',
+      open: 'View on GitHub',
+    },
+    details: {
+      changes: 'What changes',
+      general: 'General',
+      seeAll: 'See all {count} changes',
+      more: 'There are more changes: see them all on GitHub',
+      noChanges: 'The list of changes could not be read.',
+      releasePage: 'See it on the version’s page',
+      how: 'How to update',
+      guide: 'Guide for this installation',
+      dataInContainer:
+        'Arcanist’s data is inside the container, not in a volume: recreating it deletes the data. Before updating, copy it to a volume and mount that on /data: the guide has the commands.',
+      librariesOutside:
+        'The folder of these libraries is in no mount and would be lost when recreating the container: {libraries}.',
+      mounts: 'The container’s mounts are kept: {mounts}.',
+      commands: {
+        DOCKER_COMPOSE: 'With Compose',
+        DOCKER_RUN: 'Without Compose',
+        DEBIAN_PACKAGE: 'Terminal',
+        TARBALL: 'Terminal',
+        HOMEBREW: 'Homebrew',
+      },
+      commandHelp: {
+        DOCKER_COMPOSE:
+          'In the folder of your compose.yaml. If you pinned a version with ARCANIST_TAG, change it first.',
+        DOCKER_RUN:
+          'On the machine that runs Docker (Linux, macOS, or WSL on Windows). It reads the current container’s mounts, ports and variables from Docker and creates it again with the new image. If you changed the container’s hostname, put its name in CONTAINER.',
+        DEBIAN_PACKAGE: 'Downloads the package and installs it: the service restarts by itself.',
+        TARBALL: 'If you installed the server somewhere other than /opt/arcanist, change that.',
+        HOMEBREW: 'If you installed the app with Homebrew.',
+      },
     },
     howTo: {
       WINDOWS:
         "The tray app installs the update (and the service's, if you use it): tray menu → Check for updates.",
-      DOCKER:
-        'Pull the new image and recreate the container: docker compose pull && docker compose up -d.',
-      SYNOLOGY: "Update it from DSM's Package Center once it is available there.",
-      DEBIAN_PACKAGE:
-        'Download the .deb from the release page and install it with sudo apt install ./arcanist_….deb: the service restarts by itself.',
+      DOCKER: 'Pull the new image and recreate the container; your volumes and folders are kept.',
+      SYNOLOGY:
+        'Download your NAS’s package and install it in DSM: Package Center → Manual Install. Your data is kept.',
+      DEBIAN_PACKAGE: 'Install the new package over the one you have: your data is kept.',
       OPEN_MEDIA_VAULT:
-        'Download the arcanist and openmediavault-arcanist .deb files from the release page and upload them in System → Plugins (or install them with apt install ./…deb): your data is kept.',
-      QNAP: "Download your NAS's .qpkg (x86_64 or arm_64) from the release page and install it in App Center → Install Manually: your data is kept.",
+        'Install both new packages (Arcanist and its plugin), from the terminal or in System → Plugins: your data is kept.',
+      QNAP: "Download your NAS's package and install it in App Center → Install Manually: your data is kept.",
       TRUE_NAS:
         'Update it in Apps when TrueNAS offers the new version (if you installed it with YAML, change the image tag or deploy it again).',
       UNRAID: 'On the Docker tab, press Check for updates and then Apply update on Arcanist.',
@@ -1786,9 +1820,8 @@ export const en: Dictionary = {
         'The tray app installs the update and updates the service: tray menu → Check for updates.',
       MAC_OS:
         'Arcanist.app updates itself: menu bar → Check for updates (or with Homebrew: brew upgrade --cask arcanist).',
-      SYSTEMD:
-        "Download the tarball from the release page, replace the server's folder and restart: sudo systemctl restart arcanist.",
-      OTHER: "Download your system's package from the release page.",
+      SYSTEMD: "Replace the server's folder with the new version's and restart it.",
+      OTHER: "Download your system's package from the version's page on GitHub.",
     },
     card: {
       title: 'Updates',

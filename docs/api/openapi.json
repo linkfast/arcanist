@@ -14027,6 +14027,31 @@
           }
         }
       },
+      "ArcanistChange": {
+        "required": [
+          "area",
+          "text",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ArcanistImportFailure": {
         "required": [
           "path",
@@ -26022,7 +26047,11 @@
           "latest",
           "updateAvailable",
           "checkedAt",
-          "errorCode"
+          "errorCode",
+          "changes",
+          "moreChanges",
+          "versionsBehind",
+          "install"
         ],
         "type": "object",
         "properties": {
@@ -26059,6 +26088,33 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArcanistChange"
+            }
+          },
+          "moreChanges": {
+            "type": "boolean"
+          },
+          "versionsBehind": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "install": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UpdateInstall"
+              }
             ]
           }
         }
@@ -30174,6 +30230,104 @@
           },
           "enabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "UpdateCommand": {
+        "required": [
+          "kind",
+          "script"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/UpdateCommandKind"
+          },
+          "script": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateCommandKind": {
+        "enum": [
+          "DOCKER_COMPOSE",
+          "DOCKER_RUN",
+          "DEBIAN_PACKAGE",
+          "TARBALL",
+          "HOMEBREW"
+        ]
+      },
+      "UpdateDownload": {
+        "required": [
+          "name",
+          "url",
+          "size"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "UpdateInstall": {
+        "required": [
+          "downloads",
+          "commands",
+          "guideUrl",
+          "updatesItself",
+          "dataInContainer",
+          "mounts",
+          "librariesOutsideMounts"
+        ],
+        "type": "object",
+        "properties": {
+          "downloads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateDownload"
+            }
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateCommand"
+            }
+          },
+          "guideUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "updatesItself": {
+            "type": "boolean"
+          },
+          "dataInContainer": {
+            "type": "boolean"
+          },
+          "mounts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "librariesOutsideMounts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

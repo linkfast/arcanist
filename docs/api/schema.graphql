@@ -2654,6 +2654,10 @@ type ServerUpdate {
   updateAvailable: Boolean!
   checkedAt: DateTime
   errorCode: String
+  changes: [ArcanistChange!]!
+  moreChanges: Boolean!
+  versionsBehind: Int!
+  install: UpdateInstall
 }
 
 enum InstallKind {
@@ -2679,6 +2683,41 @@ type ArcanistRelease {
   url: String!
   publishedAt: DateTime!
   prerelease: Boolean!
+}
+
+type ArcanistChange {
+  area: String
+  text: String!
+  url: String
+}
+
+type UpdateInstall {
+  downloads: [UpdateDownload!]!
+  commands: [UpdateCommand!]!
+  guideUrl: String
+  updatesItself: Boolean!
+  dataInContainer: Boolean!
+  mounts: [String!]!
+  librariesOutsideMounts: [String!]!
+}
+
+type UpdateDownload {
+  name: String!
+  url: String!
+  size: Long!
+}
+
+type UpdateCommand {
+  kind: UpdateCommandKind!
+  script: String!
+}
+
+enum UpdateCommandKind {
+  DOCKER_COMPOSE
+  DOCKER_RUN
+  DEBIAN_PACKAGE
+  TARBALL
+  HOMEBREW
 }
 
 type ServerHost {

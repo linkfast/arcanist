@@ -2,7 +2,9 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arcanist.Core.Data;
+using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Arcanist.Core.Application.Server;
@@ -47,6 +49,11 @@ public sealed record ArcanistRelease(string Version, string Name, string Notes, 
 /// <param name="Enabled">Checks are on (they are not with external services off in Privacy).</param>
 /// <param name="Latest">The newest release this server would update to: stable ones, and pre-releases too while it runs one.</param>
 /// <param name="ErrorCode">Why the last check failed, if it did.</param>
+/// <param name="Changes">What it brings over the installed version, newest first; empty when it could not be read
+/// (a build that is no release, GitHub out of reach): <see cref="ArcanistRelease.Url"/> says it then.</param>
+/// <param name="MoreChanges">There are more changes than <paramref name="Changes"/> lists: the release page has them.</param>
+/// <param name="VersionsBehind">Published versions between the installed one and the latest, this last included.</param>
+/// <param name="Install">How to update this server, while there is something to update to.</param>
 public sealed record ServerUpdate(
     bool Enabled,
     string CurrentVersion,
@@ -54,7 +61,11 @@ public sealed record ServerUpdate(
     ArcanistRelease? Latest,
     bool UpdateAvailable,
     DateTime? CheckedAt,
-    string? ErrorCode);
+    string? ErrorCode,
+    IReadOnlyList<ArcanistChange> Changes,
+    bool MoreChanges,
+    int VersionsBehind,
+    UpdateInstall? Install);
 
 public sealed record SetServerUpdateSettingsInput(bool Enabled);
 
@@ -76,7 +87,16 @@ public sealed class UpdateOptions
 }
 
 /// <summary>The last check, kept in the settings so it survives restarts.</summary>
-public sealed record StoredUpdateCheck(ArcanistRelease? Latest, DateTime CheckedAt, string? ErrorCode);
+/// <param name="ChangesFrom">The version <paramref name="Changes"/> counts from: after updating they no longer apply.</param>
+public sealed record StoredUpdateCheck(
+    ArcanistRelease? Latest,
+    DateTime CheckedAt,
+    string? ErrorCode,
+    IReadOnlyList<ReleaseAsset>? Assets = null,
+    IReadOnlyList<ArcanistChange>? Changes = null,
+    bool MoreChanges = false,
+    int VersionsBehind = 0,
+    string? ChangesFrom = null);
 
 /// <summary>Reads Arcanist's releases from GitHub and keeps the newest one that applies.</summary>
 public sealed class UpdateChecker(
@@ -114,14 +134,24 @@ public sealed class UpdateChecker(
             {
                 var releases = await clients.CreateClient(HttpClientName)
                     .GetFromJsonAsync<List<GitHubRelease>>(options.CurrentValue.ReleasesUrl, JsonSerializerOptions.Web, cancellationToken) ?? [];
-                check = new StoredUpdateCheck(Newest(releases, CurrentVersion), time.GetUtcNow().UtcDateTime, null);
+                var latest = Newest(releases, CurrentVersion);
+                var (changes, more) = latest is not null && ArcanistVersion.Compare(latest.Version, CurrentVersion) > 0
+                    ? await ChangesAsync(latest.Version, cancellationToken)
+                    : ([], false);
+                var assets = releases.FirstOrDefault(r => latest is not null && ArcanistVersion.TryNormalize(r.TagName, out var version) && version == latest.Version)?.Assets
+                    ?.Select(a => new ReleaseAsset(a.Name, a.BrowserDownloadUrl, a.Size, a.Digest?.StartsWith("sha256:", StringComparison.Ordinal) == true ? a.Digest["sha256:".Length..] : null))
+                    .ToList();
+                check = new StoredUpdateCheck(latest, time.GetUtcNow().UtcDateTime, null, assets, changes, more, Behind(releases, CurrentVersion), CurrentVersion);
             }
             catch (Exception e) when (e is HttpRequestException or JsonException or NotSupportedException
                                           or TaskCanceledException && !cancellationToken.IsCancellationRequested)
             {
                 logger.LogInformation("Could not check for a newer Arcanist: {Error}", e.Message);
                 // The release found before stays known.
-                check = new StoredUpdateCheck((await LastAsync(cancellationToken))?.Latest, time.GetUtcNow().UtcDateTime, ErrorCodes.UpdateCheckFailed);
+                var last = await LastAsync(cancellationToken);
+                check = last is null
+                    ? new StoredUpdateCheck(null, time.GetUtcNow().UtcDateTime, ErrorCodes.UpdateCheckFailed)
+                    : last with { CheckedAt = time.GetUtcNow().UtcDateTime, ErrorCode = ErrorCodes.UpdateCheckFailed };
             }
 
             await settings.SetAsync(SettingKeys.UpdatesLastCheck, check, cancellationToken);
@@ -137,7 +167,16 @@ public sealed class UpdateChecker(
     /// The newest published release a server on <paramref name="current"/> would update to: pre-releases only while
     /// it runs one, as the Windows tray app does.
     /// </summary>
-    internal static ArcanistRelease? Newest(IEnumerable<GitHubRelease> releases, string current)
+    internal static ArcanistRelease? Newest(IEnumerable<GitHubRelease> releases, string current) =>
+        Applicable(releases, current)
+            .OrderByDescending(r => r.Version, Comparer<string>.Create(ArcanistVersion.Compare))
+            .FirstOrDefault();
+
+    /// <summary>How many published versions a server on <paramref name="current"/> has yet to get to.</summary>
+    internal static int Behind(IEnumerable<GitHubRelease> releases, string current) =>
+        Applicable(releases, current).Count(r => ArcanistVersion.Compare(r.Version, current) > 0);
+
+    private static IEnumerable<ArcanistRelease> Applicable(IEnumerable<GitHubRelease> releases, string current)
     {
         var prerelease = ArcanistVersion.IsPrerelease(current);
         return releases
@@ -147,9 +186,31 @@ public sealed class UpdateChecker(
                 ArcanistVersion.TryNormalize(r.TagName, out var version);
                 return new ArcanistRelease(version, string.IsNullOrWhiteSpace(r.Name) ? $"Arcanist {version}" : r.Name,
                     r.Body ?? "", r.HtmlUrl, r.PublishedAt ?? DateTime.MinValue, r.Prerelease);
-            })
-            .OrderByDescending(r => r.Version, Comparer<string>.Create(ArcanistVersion.Compare))
-            .FirstOrDefault();
+            });
+    }
+
+    /// <summary>
+    /// What the versions between this one and <paramref name="latest"/> changed, from GitHub's comparison of their tags.
+    /// Never fails the check: a build that is no release has no tag to compare with.
+    /// </summary>
+    private async Task<(IReadOnlyList<ArcanistChange> Changes, bool More)> ChangesAsync(string latest, CancellationToken cancellationToken)
+    {
+        var repository = options.CurrentValue.ReleasesUrl.Split("/releases")[0];
+        try
+        {
+            var comparison = await clients.CreateClient(HttpClientName).GetFromJsonAsync<GitHubComparison>(
+                $"{repository}/compare/v{CurrentVersion}...v{latest}", JsonSerializerOptions.Web, cancellationToken);
+            if (comparison?.Commits is null)
+                return ([], false);
+            return (UpdateInstructions.Changes(comparison.Commits.Select(c => (c.Commit?.Message ?? "", c.HtmlUrl))),
+                comparison.TotalCommits > comparison.Commits.Count);
+        }
+        catch (Exception e) when (e is HttpRequestException or JsonException or NotSupportedException
+                                      or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation("Could not read what changed in Arcanist {Version}: {Error}", latest, e.Message);
+            return ([], false);
+        }
     }
 
     /// <summary>
@@ -193,7 +254,22 @@ public sealed class UpdateChecker(
         [property: JsonPropertyName("html_url")] string HtmlUrl,
         bool Draft,
         bool Prerelease,
-        [property: JsonPropertyName("published_at")] DateTime? PublishedAt);
+        [property: JsonPropertyName("published_at")] DateTime? PublishedAt,
+        List<GitHubAsset>? Assets = null);
+
+    internal sealed record GitHubAsset(
+        string Name,
+        [property: JsonPropertyName("browser_download_url")] string BrowserDownloadUrl,
+        long Size,
+        string? Digest);
+
+    private sealed record GitHubComparison(
+        [property: JsonPropertyName("total_commits")] int TotalCommits,
+        List<GitHubCommit>? Commits);
+
+    private sealed record GitHubCommit([property: JsonPropertyName("html_url")] string? HtmlUrl, GitHubCommitDetail? Commit);
+
+    private sealed record GitHubCommitDetail(string? Message);
 }
 
 /// <summary>Checks for a newer Arcanist a minute after starting, then every <see cref="UpdateOptions.Interval"/>.</summary>
@@ -220,19 +296,19 @@ public sealed class UpdateCheckWorker(UpdateChecker checker, IOptionsMonitor<Set
 }
 
 /// <summary>New versions of Arcanist, for administrators.</summary>
-public sealed class UpdateService(AccessGuard guard, UpdateChecker checker, SettingsStore settings)
+public sealed class UpdateService(AccessGuard guard, UpdateChecker checker, SettingsStore settings, HostPlatform platform, ArcanistDbContext db)
 {
     public async Task<ServerUpdate> GetAsync(CancellationToken cancellationToken)
     {
         guard.Admin();
-        return Model(await checker.EnabledAsync(cancellationToken), await checker.LastAsync(cancellationToken));
+        return await ModelAsync(await checker.EnabledAsync(cancellationToken), await checker.LastAsync(cancellationToken), cancellationToken);
     }
 
     public async Task<ServerUpdate> CheckAsync(CancellationToken cancellationToken)
     {
         guard.Admin();
         var check = await checker.CheckAsync(cancellationToken);
-        return Model(await checker.EnabledAsync(cancellationToken), check);
+        return await ModelAsync(await checker.EnabledAsync(cancellationToken), check, cancellationToken);
     }
 
     public async Task<ServerUpdate> SetSettingsAsync(SetServerUpdateSettingsInput input, CancellationToken cancellationToken)
@@ -242,11 +318,39 @@ public sealed class UpdateService(AccessGuard guard, UpdateChecker checker, Sett
         return input.Enabled ? await CheckAsync(cancellationToken) : await GetAsync(cancellationToken);
     }
 
-    private ServerUpdate Model(bool enabled, StoredUpdateCheck? check)
+    private async Task<ServerUpdate> ModelAsync(bool enabled, StoredUpdateCheck? check, CancellationToken cancellationToken)
     {
         var latest = enabled ? check?.Latest : null;
-        return new ServerUpdate(enabled, checker.CurrentVersion, UpdateChecker.DetectInstallKind(), latest,
-            latest is not null && ArcanistVersion.Compare(latest.Version, checker.CurrentVersion) > 0,
-            check?.CheckedAt, enabled ? check?.ErrorCode : null);
+        var available = latest is not null && ArcanistVersion.Compare(latest.Version, checker.CurrentVersion) > 0;
+        var kind = UpdateChecker.DetectInstallKind();
+        // What was counted from another version (the one before an update) no longer says anything.
+        var current = available && check?.ChangesFrom == checker.CurrentVersion;
+        return new ServerUpdate(enabled, checker.CurrentVersion, kind, latest, available, check?.CheckedAt, enabled ? check?.ErrorCode : null,
+            current ? check!.Changes ?? [] : [],
+            current && check!.MoreChanges,
+            current ? check!.VersionsBehind : 0,
+            available ? await InstallAsync(kind, latest!, check!, cancellationToken) : null);
     }
+
+    private async Task<UpdateInstall> InstallAsync(InstallKind kind, ArcanistRelease latest, StoredUpdateCheck check, CancellationToken cancellationToken)
+    {
+        var install = UpdateInstructions.Build(kind, platform.Current.Architecture, latest.Version, latest.Url, check.Assets ?? [], Environment.MachineName);
+        if (kind != InstallKind.Docker || !File.Exists(MountInfoPath))
+            return install;
+
+        // What recreating the container keeps, and what it would lose.
+        var mounts = UpdateInstructions.MountsOf(await File.ReadAllTextAsync(MountInfoPath, cancellationToken));
+        var folders = await db.LibrarySources.AsNoTracking()
+            .Where(s => s.Kind == LibrarySourceKind.Local)
+            .Select(s => new { s.Location, s.Library.Name })
+            .ToListAsync(cancellationToken);
+        return install with
+        {
+            DataInContainer = !UpdateInstructions.IsMounted(platform.Current.DataDirectory, mounts),
+            Mounts = mounts,
+            LibrariesOutsideMounts = folders.Where(f => !UpdateInstructions.IsMounted(f.Location, mounts)).Select(f => f.Name).Distinct().ToList(),
+        };
+    }
+
+    private const string MountInfoPath = "/proc/self/mountinfo";
 }

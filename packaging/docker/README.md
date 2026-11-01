@@ -17,10 +17,59 @@ docker run -d --name arcanist -p 8484:8484 -v arcanist-data:/data -v "D:\Music:/
 ```
 
 Open `http://localhost:8484/`, follow the setup wizard and add `/music` as a library. From another machine the
-wizard asks for the setup code: `docker logs arcanist`. To update: `docker pull ghcr.io/linkfast/arcanist:edge`, then
-remove the container (`docker rm -f arcanist`; the data stays in the volume) and run it again.
+wizard asks for the setup code: `docker logs arcanist`.
 
-To keep it running, use Compose (below) with `ARCANIST_TAG=edge` in `.env`.
+To keep it running, use Compose (below) with `ARCANIST_TAG=edge` in `.env`, or `docker run` with the next section.
+
+## Without Compose
+
+```bash
+docker run -d --name arcanist --restart unless-stopped -p 8484:8484 \
+  -v arcanist-data:/data \
+  -v /path/to/music:/music:ro \
+  ghcr.io/linkfast/arcanist:preview
+```
+
+### What to mount
+
+A container keeps nothing of its own when it is recreated, and updating recreates it: **whatever is not mounted is
+lost.**
+
+- **`/data`** (required): the database, settings, keys and caches. A named volume, or a folder of the host on a local
+  disk: with SQLite, the database must not live on a network share.
+- **Music:** one `-v` per folder, under any path (`/music/rock`, `/music/jazz`). `:ro` is enough to play it; drop it to
+  let Arcanist organize files, import from drop folders or receive uploads. A library's folder must be inside a mount.
+- **Optional:** `/drop` for a drop folder, `/backups` for backups. Both need writing.
+- **Permissions:** see [Folders and permissions](#folders-and-permissions); they are the same as with Compose.
+
+### Update
+
+The update notice in the panel (and Settings → This server → Updates) gives a command with this server's container and
+the new version already in it: it reads the mounts, ports, network, restart policy, devices, user and Arcanist's
+variables from Docker, then recreates the container. Run it on the machine that runs Docker (Linux, macOS, or WSL on
+Windows). Other variables you set by hand are not carried over.
+
+By hand, with the options you used to create it:
+
+```bash
+docker pull ghcr.io/linkfast/arcanist:preview
+docker stop arcanist
+docker rm arcanist
+docker run -d --name arcanist --restart unless-stopped -p 8484:8484 -v arcanist-data:/data -v /path/to/music:/music:ro ghcr.io/linkfast/arcanist:preview
+```
+
+`docker inspect arcanist --format '{{json .Mounts}}'` lists what it has mounted. The database is migrated when Arcanist
+starts.
+
+### If the data is not in a volume
+
+If `/data` was not mounted, the panel warns that the data is inside the container. Copy it out **before** updating,
+then create the new container with that volume:
+
+```bash
+docker stop arcanist
+docker run --rm --volumes-from arcanist -v arcanist-data:/new alpine cp -a /data/. /new/
+```
 
 ## Build the image yourself
 
@@ -127,6 +176,8 @@ The Compose files have commented lines for a drop folder (`/drop`) and a backup 
   not see. For DLNA, use `network_mode: host` instead of `ports` (Linux only).
 - **Behind a reverse proxy** (HTTPS): add its address or network to `environment`, so Arcanist sees the clients'
   real addresses: `Arcanist__Network__TrustedProxies__0: 172.18.0.0/16` (one entry per number: `__1`, `__2`…).
+  So that shared links start with your domain, set its address in Settings → Sharing, or fix it here:
+  `Arcanist__Network__PublicUrl: https://music.example.com`.
 
 ### Back up
 

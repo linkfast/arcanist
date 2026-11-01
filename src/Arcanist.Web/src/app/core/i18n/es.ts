@@ -1781,22 +1781,57 @@ export const es: Dictionary = {
   },
   updates: {
     notice: {
-      title: 'Arcanist {version} está disponible',
-      current: 'Tienes la {current}. Publicada el {date}.',
+      title: 'Arcanist {version} ya está disponible',
+      current: 'Tienes la {current}. Se publicó el {date}.',
+      currentBehind:
+        'Tienes la {current}, {count} versiones por detrás. La última se publicó el {date}.',
+      recommend:
+        'Te recomendamos actualizar pronto: cada versión trae correcciones y mejoras. Tu música y tus datos se conservan.',
       later: 'Recordarme mañana',
-      open: 'Ir a la página del release',
+      open: 'Ver en GitHub',
+    },
+    details: {
+      changes: 'Qué cambia',
+      general: 'General',
+      seeAll: 'Ver los {count} cambios',
+      more: 'Hay más cambios: verlos todos en GitHub',
+      noChanges: 'No se pudo leer la lista de cambios.',
+      releasePage: 'Verla en la página de la versión',
+      how: 'Cómo actualizar',
+      guide: 'Guía de esta instalación',
+      dataInContainer:
+        'Los datos de Arcanist están dentro del contenedor, no en un volumen: recrearlo los borra. Antes de actualizar, cópialos a un volumen y móntalo en /data: la guía tiene los comandos.',
+      librariesOutside:
+        'La carpeta de estas bibliotecas no está en ningún montaje y se perdería al recrear el contenedor: {libraries}.',
+      mounts: 'Se conservan los montajes del contenedor: {mounts}.',
+      commands: {
+        DOCKER_COMPOSE: 'Con Compose',
+        DOCKER_RUN: 'Sin Compose',
+        DEBIAN_PACKAGE: 'Terminal',
+        TARBALL: 'Terminal',
+        HOMEBREW: 'Homebrew',
+      },
+      commandHelp: {
+        DOCKER_COMPOSE:
+          'En la carpeta de tu compose.yaml. Si fijaste una versión con ARCANIST_TAG, cámbiala antes.',
+        DOCKER_RUN:
+          'En el equipo donde corre Docker (Linux, macOS, o WSL en Windows). Lee de Docker los montajes, puertos y variables del contenedor actual y lo vuelve a crear con la imagen nueva. Si le cambiaste el nombre de host al contenedor, pon su nombre en CONTAINER.',
+        DEBIAN_PACKAGE: 'Baja el paquete e instálalo: el servicio se reinicia solo.',
+        TARBALL: 'Si instalaste el servidor en otra carpeta que /opt/arcanist, cámbiala.',
+        HOMEBREW: 'Si instalaste la app con Homebrew.',
+      },
     },
     howTo: {
       WINDOWS:
         'La app de la bandeja instala la actualización (y la del servicio, si lo usas): menú de la bandeja → Buscar actualizaciones.',
       DOCKER:
-        'Baja la imagen nueva y vuelve a crear el contenedor: docker compose pull && docker compose up -d.',
-      SYNOLOGY: 'Actualízalo desde el Centro de paquetes de DSM cuando esté disponible allí.',
-      DEBIAN_PACKAGE:
-        'Descarga el .deb de la página del release e instálalo con sudo apt install ./arcanist_….deb: el servicio se reinicia solo.',
+        'Baja la imagen nueva y vuelve a crear el contenedor; tus volúmenes y carpetas se conservan.',
+      SYNOLOGY:
+        'Descarga el paquete de tu NAS e instálalo en DSM: Centro de paquetes → Instalación manual. Tus datos se conservan.',
+      DEBIAN_PACKAGE: 'Instala el paquete nuevo sobre el que tienes: tus datos se conservan.',
       OPEN_MEDIA_VAULT:
-        'Descarga los .deb de arcanist y openmediavault-arcanist de la página del release y súbelos en Sistema → Complementos (o instálalos con apt install ./…deb): tus datos se conservan.',
-      QNAP: 'Descarga el .qpkg de tu NAS (x86_64 o arm_64) de la página del release e instálalo en App Center → Instalar manualmente: tus datos se conservan.',
+        'Instala los dos paquetes nuevos (Arcanist y su complemento), con la terminal o en Sistema → Complementos: tus datos se conservan.',
+      QNAP: 'Descarga el paquete de tu NAS e instálalo en App Center → Instalar manualmente: tus datos se conservan.',
       TRUE_NAS:
         'Actualízala en Apps cuando TrueNAS ofrezca la versión nueva (si la instalaste con YAML, cambia la etiqueta de la imagen o vuelve a desplegarla).',
       UNRAID: 'En la pestaña Docker, pulsa Check for updates y luego Apply update en Arcanist.',
@@ -1806,9 +1841,8 @@ export const es: Dictionary = {
         'La app de la bandeja instala la actualización y actualiza el servicio: menú de la bandeja → Buscar actualizaciones.',
       MAC_OS:
         'Arcanist.app se actualiza sola: menú de la barra → Buscar actualizaciones (o con Homebrew: brew upgrade --cask arcanist).',
-      SYSTEMD:
-        'Descarga el tarball de la página del release, reemplaza la carpeta del servidor y reinicia: sudo systemctl restart arcanist.',
-      OTHER: 'Descarga el paquete de tu sistema desde la página del release.',
+      SYSTEMD: 'Reemplaza la carpeta del servidor por la de la versión nueva y reinícialo.',
+      OTHER: 'Descarga el paquete de tu sistema desde la página de la versión en GitHub.',
     },
     card: {
       title: 'Actualizaciones',

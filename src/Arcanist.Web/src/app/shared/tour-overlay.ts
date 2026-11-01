@@ -165,13 +165,13 @@ export class TourOverlay implements OnDestroy {
     this.timer = setTimeout(() => this.measure(), 350);
   }
 
-  /** The first visible element the selector matches. */
+  /** The first visible element the selector matches (the closed menu of a phone is beside the screen: not visible). */
   private element(target: string | null): HTMLElement | null {
     if (!target) return null;
     return (
       [...document.querySelectorAll<HTMLElement>(target)].find((e) => {
         const rect = e.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
+        return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.left < window.innerWidth;
       }) ?? null
     );
   }

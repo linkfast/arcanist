@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
@@ -20,6 +21,7 @@ import { SetSharingSettingsMutation, SharingQuery } from '../../graphql/operatio
   selector: 'app-sharing-card',
   imports: [
     HlmCardImports,
+    HlmSpinnerImports,
     HlmButtonImports,
     HlmInputImports,
     HlmSwitchImports,
@@ -139,6 +141,8 @@ import { SetSharingSettingsMutation, SharingQuery } from '../../graphql/operatio
             }
           </form>
         </div>
+      } @else {
+        <div hlmCardContent class="flex justify-center"><hlm-spinner class="size-5" /></div>
       }
     </section>
   `,

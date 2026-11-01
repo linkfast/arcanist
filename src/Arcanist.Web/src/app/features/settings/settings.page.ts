@@ -1,21 +1,6 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { provideIcons } from '@ng-icons/core';
-import {
-  lucideKeyRound,
-  lucideServer,
-  lucideShare2,
-  lucideShieldCheck,
-  lucideSlidersHorizontal,
-  lucideWrench,
-} from '@ng-icons/lucide';
 import { AuthService } from '../../core/auth/auth.service';
-import { TranslatePipe } from '../../core/i18n/i18n';
-import {
-  PanelSection,
-  SectionLayout,
-  activeSection,
-  wideScreen,
-} from '../../shared/section-layout';
+import { SectionLayout, activeSection, settingsSections } from '../../shared/section-layout';
 import { HostCard } from './host-card';
 import { LyricsTimingCard } from './lyrics-timing-card';
 import { MaintenanceCard } from './maintenance-card';
@@ -27,20 +12,11 @@ import { SecondFactorCard } from './second-factor-card';
 import { SharingCard } from './sharing-card';
 import { UpdatesCard } from './updates-card';
 
-function section(id: string, icon: string): PanelSection {
-  return { id, icon, label: `settings.sections.${id}`, hint: `settings.sections.${id}Hint` };
-}
-
-/**
- * Server-wide settings in sections, by what one comes to do: how the server behaves for everyone, what leaves it, what
- * its users may share, the server itself and its maintenance (conversion has its own page). Those who manage settings
- * without being administrators see the first two.
- */
+/** Server-wide settings, one section at a time: the side menu lists them (conversion has its own page). */
 @Component({
   selector: 'app-settings-page',
   imports: [
     SectionLayout,
-    TranslatePipe,
     LyricsTimingCard,
     PrivacyCard,
     OpenSourceCard,
@@ -52,24 +28,8 @@ function section(id: string, icon: string): PanelSection {
     UpdatesCard,
     HostCard,
   ],
-  providers: [
-    provideIcons({
-      lucideKeyRound,
-      lucideSlidersHorizontal,
-      lucideShieldCheck,
-      lucideShare2,
-      lucideServer,
-      lucideWrench,
-    }),
-  ],
   template: `
-    <app-section-layout
-      heading="settings.title"
-      [subtitle]="'settings.subtitle' | t"
-      base="/settings"
-      [sections]="sections()"
-      [active]="active()"
-    >
+    <app-section-layout heading="settings.title" [section]="active()">
       @switch (active()?.id) {
         @case ('general') {
           <app-rating-mode-card />
@@ -107,23 +67,8 @@ export class SettingsPage {
   /** From the URL (`/settings/<section>`). */
   readonly section = input<string>();
 
-  private readonly wide = wideScreen();
-
-  protected readonly sections = computed<PanelSection[]>(() => [
-    section('general', 'lucideSlidersHorizontal'),
-    section('privacy', 'lucideShieldCheck'),
-    ...(this.auth.isAdmin()
-      ? [
-          section('security', 'lucideKeyRound'),
-          section('sharing', 'lucideShare2'),
-          section('server', 'lucideServer'),
-          section('maintenance', 'lucideWrench'),
-        ]
-      : []),
-  ]);
-
   protected readonly active = computed(() =>
-    activeSection(this.sections(), this.section(), this.wide()),
+    activeSection(settingsSections(this.auth.isAdmin()), this.section()),
   );
 
   /** Remakes the online services card when the privacy choices change what it may turn on. */

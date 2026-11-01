@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
 import { Gql } from '../../core/graphql/gql.service';
@@ -20,6 +21,7 @@ import { UpdateDetails } from '../../shared/update-details';
   selector: 'app-updates-card',
   imports: [
     HlmCardImports,
+    HlmSpinnerImports,
     HlmButtonImports,
     HlmSwitchImports,
     TranslatePipe,
@@ -85,6 +87,8 @@ import { UpdateDetails } from '../../shared/update-details';
             </div>
           }
         </div>
+      } @else {
+        <div hlmCardContent class="flex justify-center"><hlm-spinner class="size-5" /></div>
       }
     </section>
   `,

@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, output, signal } from '@angular/core';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError, ExternalServicesMode } from '../../core/api/rest';
 import { EnabledExtensions } from '../../core/extensions/enabled-extensions';
@@ -25,7 +26,7 @@ interface State {
  */
 @Component({
   selector: 'app-privacy-card',
-  imports: [HlmCardImports, HlmSwitchImports, PrivacyLevel, TranslatePipe],
+  imports: [HlmCardImports, HlmSpinnerImports, HlmSwitchImports, PrivacyLevel, TranslatePipe],
   template: `
     <section hlmCard data-tour="settings-privacy">
       <div hlmCardHeader>
@@ -54,6 +55,8 @@ interface State {
             </div>
           }
         </div>
+      } @else {
+        <div hlmCardContent class="flex justify-center"><hlm-spinner class="size-5" /></div>
       }
     </section>
   `,

@@ -116,7 +116,7 @@ export const en: Dictionary = {
     videos: 'Music videos',
     lyricsReview: 'Review lyrics',
     transcoding: 'Transcoding',
-    extensionsToggle: 'Show or hide the extensions',
+    toggleGroup: 'Show or hide: {name}',
     ai: 'AI',
     backups: 'Backups',
     cloud: 'Ultimate Cloud',

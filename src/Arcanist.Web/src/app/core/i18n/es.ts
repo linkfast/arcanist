@@ -119,7 +119,7 @@ export const es: Dictionary = {
     videos: 'Videoclips',
     lyricsReview: 'Revisar letras',
     transcoding: 'Transcodificación',
-    extensionsToggle: 'Mostrar u ocultar las extensiones',
+    toggleGroup: 'Mostrar u ocultar: {name}',
     ai: 'AI',
     backups: 'Copias de seguridad',
     cloud: 'Ultimate Cloud',

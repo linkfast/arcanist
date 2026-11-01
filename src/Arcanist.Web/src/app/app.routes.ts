@@ -79,12 +79,7 @@ export const routes: Routes = [
         canActivate: [permissionGuard('MANAGE_USERS')],
         loadComponent: () => import('./features/users/users.page').then((m) => m.UsersPage),
       },
-      {
-        path: 'settings',
-        canActivate: [permissionGuard('MANAGE_SETTINGS')],
-        loadComponent: () =>
-          import('./features/settings/settings.page').then((m) => m.SettingsPage),
-      },
+      { path: 'settings', pathMatch: 'full', redirectTo: 'settings/general' },
       {
         path: 'settings/:section',
         canActivate: [permissionGuard('MANAGE_SETTINGS')],
@@ -159,10 +154,7 @@ export const routes: Routes = [
         path: 'account/:section',
         loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
       },
-      {
-        path: 'account',
-        loadComponent: () => import('./features/account/account.page').then((m) => m.AccountPage),
-      },
+      { path: 'account', pathMatch: 'full', redirectTo: 'account/security' },
     ],
   },
   { path: '**', redirectTo: '' },

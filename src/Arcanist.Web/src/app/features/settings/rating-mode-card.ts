@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmRadioGroupImports } from '@spartan-ng/helm/radio-group';
 import { ApiError, RatingMode } from '../../core/api/rest';
 import { Gql } from '../../core/graphql/gql.service';
@@ -11,7 +12,7 @@ import { RatingModeQuery, SetRatingModeMutation } from '../../graphql/operations
 /** How users rate tracks on this server: five stars or a single star. */
 @Component({
   selector: 'app-rating-mode-card',
-  imports: [FormsModule, HlmCardImports, HlmRadioGroupImports, TranslatePipe],
+  imports: [FormsModule, HlmCardImports, HlmSpinnerImports, HlmRadioGroupImports, TranslatePipe],
   template: `
     <section hlmCard data-tour="settings-ratings">
       <div hlmCardHeader>
@@ -38,6 +39,8 @@ import { RatingModeQuery, SetRatingModeMutation } from '../../graphql/operations
           </hlm-radio-group>
           <p class="text-xs text-muted-foreground">{{ 'settings.ratings.help' | t }}</p>
         </div>
+      } @else {
+        <div hlmCardContent class="flex justify-center"><hlm-spinner class="size-5" /></div>
       }
     </section>
   `,

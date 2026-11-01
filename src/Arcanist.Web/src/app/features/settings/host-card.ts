@@ -1,12 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { TranslatePipe } from '../../core/i18n/i18n';
 import { Host } from '../../core/server/host';
 
 /** Where and how the server runs: how it was installed, its system, user and data folder. Administrators only. */
 @Component({
   selector: 'app-host-card',
-  imports: [HlmCardImports, TranslatePipe],
+  imports: [HlmCardImports, HlmSpinnerImports, TranslatePipe],
   template: `
     <section hlmCard>
       <div hlmCardHeader>
@@ -28,6 +29,8 @@ import { Host } from '../../core/server/host';
           <dt class="text-muted-foreground">{{ 'host.card.data' | t }}</dt>
           <dd class="font-mono text-xs">{{ current.dataDirectory }}</dd>
         </dl>
+      } @else {
+        <div hlmCardContent class="flex justify-center"><hlm-spinner class="size-5" /></div>
       }
     </section>
   `,

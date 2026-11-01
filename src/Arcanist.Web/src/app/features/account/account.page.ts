@@ -1,13 +1,5 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { provideIcons } from '@ng-icons/core';
-import {
-  lucideCloud,
-  lucideInfo,
-  lucideSettings2,
-  lucideShieldCheck,
-  lucideSmartphone,
-} from '@ng-icons/lucide';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -41,12 +33,7 @@ import {
 } from '../../graphql/operations';
 import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
 import { LanguageSelect } from '../../shared/language-select';
-import {
-  PanelSection,
-  SectionLayout,
-  activeSection,
-  wideScreen,
-} from '../../shared/section-layout';
+import { SectionLayout, accountSections, activeSection } from '../../shared/section-layout';
 import { ThemeSelect } from '../../shared/theme-select';
 import { MyCloud } from './my-cloud';
 import { MyDevices } from './my-devices';
@@ -64,11 +51,7 @@ type Pending =
   | { kind: 'others'; count: number }
   | { kind: 'appPassword'; password: AppPassword };
 
-function section(id: string, icon: string): PanelSection {
-  return { id, icon, label: `account.sections.${id}`, hint: `account.sections.${id}Hint` };
-}
-
-/** What is each person's own on this server, in sections: security, apps and devices, their cloud, preferences. */
+/** What is each person's own on this server, one section at a time: the side menu lists them. */
 @Component({
   selector: 'app-account-page',
   imports: [
@@ -96,25 +79,8 @@ function section(id: string, icon: string): PanelSection {
     MyVideos,
     MyTours,
   ],
-  providers: [
-    provideIcons({
-      lucideShieldCheck,
-      lucideSmartphone,
-      lucideCloud,
-      lucideSettings2,
-      lucideInfo,
-    }),
-  ],
   template: `
-    <app-section-layout
-      heading="account.title"
-      [subtitle]="
-        (auth.user()?.userName ?? '') + ' · ' + ('users.roles.' + (auth.user()?.role ?? 'USER') | t)
-      "
-      base="/account"
-      [sections]="sections()"
-      [active]="active()"
-    >
+    <app-section-layout heading="account.title" [section]="active()">
       @switch (active()?.id) {
         @case ('security') {
           <section hlmCard>
@@ -470,18 +436,8 @@ export class AccountPage implements OnInit {
   /** From the URL (`/account/<section>`). */
   readonly section = input<string>();
 
-  private readonly wide = wideScreen();
-
-  protected readonly sections = computed<PanelSection[]>(() => [
-    section('security', 'lucideShieldCheck'),
-    section('apps', 'lucideSmartphone'),
-    ...(this.extensions.has('ultimate-cloud') ? [section('cloud', 'lucideCloud')] : []),
-    section('preferences', 'lucideSettings2'),
-    section('about', 'lucideInfo'),
-  ]);
-
   protected readonly active = computed(() =>
-    activeSection(this.sections(), this.section(), this.wide()),
+    activeSection(accountSections(this.extensions.has('ultimate-cloud')), this.section()),
   );
 
   /** Null until they load, so an empty list only says so when it is. */

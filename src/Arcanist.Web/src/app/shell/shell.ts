@@ -11,6 +11,16 @@ import {
   lucideCast,
   lucideChartColumn,
   lucideGift,
+  lucideInfo,
+  lucideKeyRound,
+  lucideLock,
+  lucideServer,
+  lucideSettings2,
+  lucideShare2,
+  lucideShieldCheck,
+  lucideSlidersHorizontal,
+  lucideSmartphone,
+  lucideWrench,
   lucideCircleHelp,
   lucideChevronDown,
   lucideCloud,
@@ -37,6 +47,12 @@ import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { AuthService } from '../core/auth/auth.service';
 import { EnabledExtensions } from '../core/extensions/enabled-extensions';
 import { I18n, TranslatePipe } from '../core/i18n/i18n';
+import {
+  PanelSection,
+  accountSections,
+  isWithin,
+  settingsSections,
+} from '../shared/section-layout';
 import { LanguageSelect } from '../shared/language-select';
 import { Brand } from '../shared/brand';
 import { ThemeSelect } from '../shared/theme-select';
@@ -67,6 +83,16 @@ import { UpdateNotice } from './update-notice';
       lucideCast,
       lucideChartColumn,
       lucideGift,
+      lucideInfo,
+      lucideKeyRound,
+      lucideLock,
+      lucideServer,
+      lucideSettings2,
+      lucideShare2,
+      lucideShieldCheck,
+      lucideSlidersHorizontal,
+      lucideSmartphone,
+      lucideWrench,
       lucideCircleHelp,
       lucideChevronDown,
       lucideCloud,
@@ -143,43 +169,43 @@ import { UpdateNotice } from './update-notice';
 
         <nav class="flex flex-col gap-1" data-tour="nav">
           @for (item of navigation(); track item.path) {
-            @if (item.path === '/extensions') {
-              <!-- Extensions: their list, and below it the pages that manage each one. -->
+            @if (groups()[item.path]; as children) {
+              <!-- A page with others under it: Extensions, and the sections of Settings and My account. -->
               <div class="flex items-center">
                 <a
                   hlmBtn
                   variant="ghost"
                   class="flex-1 justify-start gap-2"
-                  routerLink="/extensions"
+                  [routerLink]="item.path"
                   routerLinkActive="bg-accent text-accent-foreground"
                   [routerLinkActiveOptions]="{ exact: true }"
-                  (click)="extensionsOpen.set(true)"
+                  (click)="reopen(item.path)"
                 >
-                  <ng-icon name="lucidePuzzle" />
-                  {{ 'nav.extensions' | t }}
+                  <ng-icon [name]="item.icon" />
+                  {{ item.label | t }}
                 </a>
-                @if (extensionPages().length > 0) {
+                @if (children.length > 0) {
                   <button
                     hlmBtn
                     variant="ghost"
                     size="icon"
                     type="button"
                     class="shrink-0"
-                    [attr.aria-expanded]="extensionsExpanded()"
-                    [attr.aria-label]="'nav.extensionsToggle' | t"
-                    (click)="toggleExtensions()"
+                    [attr.aria-expanded]="isOpen(item.path)"
+                    [attr.aria-label]="'nav.toggleGroup' | t: { name: item.label | t }"
+                    (click)="toggle(item.path)"
                   >
                     <ng-icon
                       name="lucideChevronDown"
                       class="transition-transform"
-                      [class.-rotate-90]="!extensionsExpanded()"
+                      [class.-rotate-90]="!isOpen(item.path)"
                     />
                   </button>
                 }
               </div>
-              @if (extensionsExpanded()) {
+              @if (isOpen(item.path)) {
                 <div class="ml-4 flex flex-col gap-1 border-l pl-2">
-                  @for (page of extensionPages(); track page.path) {
+                  @for (page of children; track page.path) {
                     <a
                       hlmBtn
                       variant="ghost"
@@ -187,6 +213,8 @@ import { UpdateNotice } from './update-notice';
                       class="justify-start gap-2"
                       [routerLink]="page.path"
                       routerLinkActive="bg-accent text-accent-foreground"
+                      ariaCurrentWhenActive="page"
+                      [attr.data-tour]="page.tour"
                     >
                       @if (page.iconUrl) {
                         <img [src]="page.iconUrl" alt="" class="size-4 rounded-sm" />
@@ -300,11 +328,8 @@ export class Shell {
     });
   });
 
-  /** The Extensions group, opened or closed by the user (remembered). */
-  protected readonly extensionsOpen = signal(readOpen());
-
   /** The pages that manage extensions, under Extensions: built-in ones while they are on, then installed ones. */
-  protected readonly extensionPages = computed(() => {
+  private readonly extensionPages = computed<MenuPage[]>(() => {
     if (!this.auth.isAdmin()) return [];
     this.i18n.language();
     const builtIn = [
@@ -313,6 +338,7 @@ export class Shell {
         label: this.i18n.t('nav.dlna'),
         icon: 'lucideCast',
         iconUrl: null,
+        tour: null,
         visible: true,
       },
       {
@@ -320,6 +346,7 @@ export class Shell {
         label: this.i18n.t('nav.serverAudio'),
         icon: 'lucideSpeaker',
         iconUrl: null,
+        tour: null,
         visible: this.extensions.has('server-audio'),
       },
       {
@@ -327,6 +354,7 @@ export class Shell {
         label: this.i18n.t('nav.mstream'),
         icon: 'lucideMusic',
         iconUrl: null,
+        tour: null,
         visible: this.extensions.has('mstream'),
       },
     ].filter((page) => page.visible);
@@ -335,23 +363,76 @@ export class Shell {
       label: extension.name,
       icon: 'lucidePuzzle',
       iconUrl: extension.iconUrl ?? null,
+      tour: null,
       visible: true,
     }));
     return [...builtIn, ...installed];
   });
 
-  /** Open when the user opened it, or while one of its pages is shown. */
-  protected readonly extensionsExpanded = computed(
-    () =>
-      this.extensionsOpen() ||
-      this.extensionPages().some((page) => this.url().startsWith(page.path)),
-  );
+  /** The pages with others under them in the menu, and those others. */
+  protected readonly groups = computed<Record<string, MenuPage[]>>(() => {
+    this.i18n.language();
+    const sections = (path: string, list: PanelSection[]): MenuPage[] =>
+      list.map((section) => ({
+        path: `${path}/${section.id}`,
+        label: this.i18n.t(section.label),
+        icon: section.icon,
+        iconUrl: null,
+        tour: `section-${section.id}`,
+      }));
+    return {
+      '/settings': sections('/settings', settingsSections(this.auth.isAdmin())),
+      '/extensions': this.extensionPages(),
+      '/account': sections('/account', accountSections(this.extensions.has('ultimate-cloud'))),
+    };
+  });
 
-  protected toggleExtensions(): void {
-    const open = !this.extensionsExpanded();
-    this.extensionsOpen.set(open);
+  /** The group that has the page in view. */
+  private readonly currentGroup = computed(() => {
+    const url = this.url();
+    const inGroup = Object.entries(this.groups()).find(
+      ([path, pages]) => isWithin(url, path) || pages.some((page) => isWithin(url, page.path)),
+    );
+    return inGroup?.[0] ?? null;
+  });
+
+  /** Which groups stay open wherever one is, as the user left them. Extensions, unless they closed it. */
+  private readonly keptOpen = signal(readOpenGroups());
+
+  /** The group in view, if the user closed it: it opens again on coming back. */
+  private readonly closedHere = signal<string | null>(null);
+
+  private readonly forgetClosed = effect(() => {
+    this.currentGroup();
+    untracked(() => this.closedHere.set(null));
+  });
+
+  /** The last groups open below the fold of a long menu: the page in view stays in sight. */
+  private readonly showCurrentPage = effect(() => {
+    this.url();
+    setTimeout(() =>
+      document
+        .querySelector('aside nav [aria-current="page"]')
+        ?.scrollIntoView({ block: 'nearest' }),
+    );
+  });
+
+  /** A group is open while its page is in view, or if it was left open with its arrow. */
+  protected isOpen(path: string): boolean {
+    if (this.closedHere() === path) return false;
+    return this.currentGroup() === path || (this.keptOpen()[path] ?? path === '/extensions');
+  }
+
+  protected reopen(path: string): void {
+    if (this.closedHere() === path) this.closedHere.set(null);
+  }
+
+  protected toggle(path: string): void {
+    const open = !this.isOpen(path);
+    this.closedHere.set(!open && this.currentGroup() === path ? path : null);
+    this.keptOpen.update((groups) => ({ ...groups, [path]: open }));
     try {
-      localStorage.setItem(OPEN_KEY, open ? '1' : '0');
+      localStorage.setItem(OPEN_KEY, JSON.stringify(this.keptOpen()));
     } catch {
       // Without storage it is remembered while the page is open.
     }
@@ -458,12 +539,22 @@ export class Shell {
   );
 }
 
-const OPEN_KEY = 'arcanist.nav.extensions';
+const OPEN_KEY = 'arcanist.nav.groups';
 
-function readOpen(): boolean {
+/** A page under another in the side menu. */
+interface MenuPage {
+  path: string;
+  label: string;
+  icon: string;
+  iconUrl: string | null;
+  /** What its tour points at. */
+  tour: string | null;
+}
+
+function readOpenGroups(): Record<string, boolean> {
   try {
-    return localStorage.getItem(OPEN_KEY) !== '0';
+    return JSON.parse(localStorage.getItem(OPEN_KEY) ?? '{}') as Record<string, boolean>;
   } catch {
-    return true;
+    return {};
   }
 }

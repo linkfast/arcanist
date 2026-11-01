@@ -4,6 +4,7 @@ import { toast } from '@spartan-ng/brain/sonner';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
@@ -37,6 +38,7 @@ const SETTING_OF: Record<OnlineService, SettingKey> = {
   imports: [
     FormsModule,
     HlmCardImports,
+    HlmSpinnerImports,
     HlmButtonImports,
     HlmBadgeImports,
     HlmFieldImports,
@@ -151,6 +153,8 @@ const SETTING_OF: Record<OnlineService, SettingKey> = {
             <p class="text-sm text-destructive">{{ error() }}</p>
           }
         </div>
+      } @else {
+        <div hlmCardContent class="flex justify-center"><hlm-spinner class="size-5" /></div>
       }
     </section>
   `,

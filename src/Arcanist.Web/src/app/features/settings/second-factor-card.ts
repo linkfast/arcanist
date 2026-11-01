@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
 import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmSpinnerImports } from '@spartan-ng/helm/spinner';
 import { HlmSwitchImports } from '@spartan-ng/helm/switch';
 import { ApiError } from '../../core/api/rest';
 import { Gql } from '../../core/graphql/gql.service';
@@ -14,7 +15,7 @@ type Policy = PolicyResult['secondFactorPolicy'];
 /** Whether everyone signs in with a second factor: who has none pairs one at their next sign-in. */
 @Component({
   selector: 'app-second-factor-card',
-  imports: [HlmBadgeImports, HlmCardImports, HlmSwitchImports, TranslatePipe],
+  imports: [HlmBadgeImports, HlmCardImports, HlmSpinnerImports, HlmSwitchImports, TranslatePipe],
   template: `
     <section hlmCard data-tour="settings-second-factor">
       <div hlmCardHeader>
@@ -51,6 +52,8 @@ type Policy = PolicyResult['secondFactorPolicy'];
             </p>
           }
         </div>
+      } @else {
+        <div hlmCardContent class="flex justify-center"><hlm-spinner class="size-5" /></div>
       }
     </section>
   `,

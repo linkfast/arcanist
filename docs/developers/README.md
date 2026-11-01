@@ -42,7 +42,40 @@ Send the access token as `Authorization: Bearer <token>` on every API call.
 - **Signing out:** `POST /rest/v1/auth/logout` with the refresh token revokes the session.
 - **Sensitive actions** (managing users and deleting libraries) need the password to have been entered in the last
   10 minutes. Otherwise they fail with `reauthentication_required`; call `POST /rest/v1/auth/reauthenticate` with
-  `{ "password": "…" }`, use the access token it returns, and retry.
+  `{ "password": "…" }`, use the access token it returns, and retry. A user with a second factor sends it there too
+  (see below).
+
+### Two-step verification
+
+Servers that list `SECOND_FACTOR` in `serverInfo.features` may ask for more than the password. Clients that do not
+handle it show the error: signing in never skips it. With the right password, the login answers `401` and:
+
+```json
+{ "code": "second_factor_required", "challenge": "…", "methods": ["TOTP", "PASSKEY", "RECOVERY_CODE"], "passkeyDomains": ["music.example.com"] }
+```
+
+- **`second_factor_required`:** finish with the `challenge`, valid for 5 minutes. `POST /rest/v1/auth/login/second-factor`
+  with `{ "challenge", "code" }` takes a 6-digit code from the authenticator app or a recovery code; a code never works
+  twice. The answer is the login's, with tokens (and the cookie, if the login asked for it). Too many wrong codes answer
+  `429 too_many_requests`, and an old challenge `second_factor_expired`: start again from the password.
+- **`second_factor_setup_required`:** the user must pair a factor to sign in. `POST /rest/v1/auth/login/setup/totp`
+  with `{ "challenge" }` gives `secret` and `uri` (for a QR code), and `POST /rest/v1/auth/login/setup/totp/confirm` with
+  `{ "challenge", "code" }` signs in; its answer has `recoveryCodes`, shown only that once. A client that does not want to
+  pair factors can send the user to `/admin/login`: the refresh cookie is shared with players on the same server.
+- **Passkeys (WebAuthn):** `POST /rest/v1/auth/login/passkey/options` with `{ "challenge" }` gives `options`, the JSON
+  for `navigator.credentials.get`; `POST /rest/v1/auth/login/passkey` takes `{ "challenge", "assertion" }`, the answer as
+  JSON text (the base64url fields of `PublicKeyCredential.toJSON()`). To pair one: `…/login/setup/passkey/options` and
+  `…/login/setup/passkey` with `{ "challenge", "name", "attestation" }`. A passkey belongs to the domain it was made on:
+  `passkey_other_domain` means this address is not one, and browsers need HTTPS (or `localhost`) and a name, not an IP.
+  Native apps need their own association with that domain (Apple's associated domains, Android's asset links), so most
+  will offer codes.
+- **Step-up:** `POST /rest/v1/auth/reauthenticate` with only the password answers `401 second_factor_required` with the
+  `methods` for such a user. Send it again with `code`, or with `passkey` after
+  `POST /rest/v1/auth/reauthenticate/passkey/options`.
+
+Users manage theirs with `mySecondFactor` and its mutations (`startTotpSetup`, `confirmTotpSetup`, `registerPasskey`…;
+REST under `/rest/v1/me/second-factor`). App passwords for Subsonic and mStream apps keep working without a second
+factor: making one takes a step-up.
 
 A `401` with code `unauthorized` (REST) or an error with that code (GraphQL) means the access token is missing,
 expired or revoked: refresh once and retry, and sign in again if refreshing fails. Login attempts are rate-limited

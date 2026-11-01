@@ -138,6 +138,72 @@ export const en: Dictionary = {
     player: 'Open the player',
     logout: 'Sign out',
   },
+  secondFactor: {
+    codeLabel: 'Verification code',
+    codeHelp: 'The 6 digits of your authenticator app, or one of your recovery codes.',
+    verify: 'Verify',
+    verifyHelp: 'One more step: confirm it is you.',
+    usePasskey: 'Use a passkey',
+    passkeyElsewhere:
+      'Your passkeys work on {domains}: sign in at that address to use them, or use a code.',
+    startOver: 'Start over',
+    setupHelp:
+      'This server asks for a second step when signing in. Choose how you want to confirm it is you.',
+    appOption: 'Authenticator app',
+    appOptionHelp:
+      'Google Authenticator, Microsoft Authenticator, 1Password, Aegis…: a code that changes every 30 seconds.',
+    passkeyOption: 'Passkey or security key',
+    passkeyOptionHelp:
+      'Your fingerprint, your face or a USB key. It will only work when signing in at {domain}.',
+    passkeyUnavailable:
+      'Passkeys need HTTPS and a domain name: they cannot be used at this address.',
+    scan: 'Scan this code with your app.',
+    manual: 'Or type this key by hand:',
+    confirmCode: 'Type the code the app shows',
+    confirm: 'Turn on',
+    passkeyName: 'Name',
+    passkeyNamePlaceholder: 'My laptop, USB key…',
+    passkeyCreate: 'Create passkey',
+    codesTitle: 'Save your recovery codes',
+    codesHelp:
+      'If you lose your phone or key, each code lets you in once. Keep them somewhere safe: they will not be shown again.',
+    download: 'Download .txt',
+    saved: 'I saved them',
+    continue: 'Continue',
+    card: {
+      title: 'Two-step verification',
+      description: 'A second step when signing in, besides the password.',
+      on: 'On',
+      off: 'Off',
+      required: 'This server requires it: you will have to set it up the next time you sign in.',
+      since: 'Turned on',
+      setUp: 'Set up',
+      passkeys: 'Passkeys and security keys',
+      passkeysHelp: 'Each one works only at the address where it was created.',
+      addPasskey: 'Add',
+      codes: 'Recovery codes',
+      codesLeft: 'You have {count} left.',
+      regenerate: 'Generate new ones',
+      confirmApp: 'Remove the authenticator app?',
+      confirmPasskey: 'Remove “{name}”?',
+      confirmRemoveHelp:
+        'It will stop working for signing in, and your sessions on other devices will end.',
+      confirmCodes: 'Generate new codes?',
+      confirmCodesHelp: 'The ones you have now will stop working.',
+    },
+    policy: {
+      title: 'Two-step verification',
+      description: 'Protects accounts even if someone finds out a password.',
+      switch: 'Require it of every user',
+      help: 'Who does not have it sets it up at their next sign-in. Open sessions go on; Subsonic and mStream apps keep their app passwords.',
+      usersWithout: 'Active users who do not have it yet: {count}.',
+    },
+    wizard: {
+      switch: 'Require two-step verification',
+      help: 'Protects every account even if someone finds out a password. You will set yours up at the end, and each user theirs when signing in.',
+      setUpTitle: 'Protect your account',
+    },
+  },
   login: {
     restoredTitle: 'Server restored',
     restored: 'The server is back as it was in the backup: sign in with an account from then.',
@@ -326,6 +392,10 @@ export const en: Dictionary = {
       required: 'You need to accept the terms and the disclaimer to go on.',
     },
     steps: {
+      secondFactor: {
+        title: 'Protect your account',
+        description: 'You chose to require two-step verification: yours comes first.',
+      },
       ultimate: {
         title: 'Ultimate',
         description: 'The official players, and your music in the cloud.',
@@ -530,6 +600,9 @@ export const en: Dictionary = {
       },
     },
     review: {
+      secondFactor: 'Two-step verification',
+      secondFactorOn: 'Required of everyone',
+      secondFactorOff: 'Optional',
       privacy: 'Privacy',
       privacyDefault: 'No restrictions',
       users: 'Other users',
@@ -626,6 +699,8 @@ export const en: Dictionary = {
       generalHint: 'Ratings and lyrics with timing',
       privacy: 'Privacy and services',
       privacyHint: 'What leaves this server and which online services it uses',
+      security: 'Security',
+      securityHint: 'Two-step verification',
       sharing: 'Sharing',
       sharingHint: 'Public URL, links and guests',
       server: 'This server',
@@ -1001,6 +1076,13 @@ export const en: Dictionary = {
     resetPassword: 'Reset password',
     resetPasswordFor: 'New password for {name}',
     resetPasswordHelp: 'All their open sessions will be signed out.',
+    secondFactorBadge: '2-step',
+    secondFactorBadgeHelp: 'Signs in with two-step verification.',
+    resetSecondFactor: 'Reset two-step verification',
+    resetSecondFactorConfirm: 'Reset the two-step verification of {name}?',
+    resetSecondFactorHelp:
+      'For who lost their phone or key: their app, passkeys and codes are removed, all their sessions end, and they set up a new one when signing in.',
+    secondFactorReset: 'Two-step verification of {name} reset',
     passwordReset: 'Password of {name} reset',
     saved: 'User saved',
     deleted: 'User {name} deleted',
@@ -3486,6 +3568,17 @@ export const en: Dictionary = {
     route_conflict: 'Another enabled extension already uses those routes.',
     extension_managed:
       'Installed by the server’s configuration: it cannot be switched off or uninstalled here.',
+    second_factor_required: 'The second verification step is missing.',
+    second_factor_setup_required: 'This server requires setting up two-step verification.',
+    invalid_second_factor: 'That code is wrong or was already used.',
+    second_factor_expired: 'That took too long. Type your password again.',
+    passkey_failed: 'The passkey could not be used. Try again or use a code.',
+    passkey_other_domain:
+      'Your passkeys were created at another address of this server: sign in there or use a code.',
+    second_factor_last:
+      'This server requires two-step verification: add another method before removing the last one.',
+    totp_already_enabled:
+      'You already have an authenticator app: remove it before setting up another.',
     set_by_environment:
       'That setting comes from the environment (variables or configuration files) and cannot be changed from the panel.',
     too_many: 'You reached the maximum allowed.',

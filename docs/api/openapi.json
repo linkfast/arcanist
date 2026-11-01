@@ -489,12 +489,230 @@
         "tags": [
           "Authentication"
         ],
+        "description": "With a second factor, the answer is 401 with \u0060code\u0060 \u0060second_factor_required\u0060 (or \u0060second_factor_setup_required\u0060), \u0060challenge\u0060, \u0060methods\u0060 and \u0060passkeyDomains\u0060: the login goes on below.",
         "operationId": "Login",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/login/second-factor": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Finishes a sign-in with a code from the authenticator app or a recovery code, which is then spent.",
+        "operationId": "LoginWithSecondFactor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecondFactorCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/login/passkey/options": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "What the passkey has to answer to finish a sign-in.",
+        "operationId": "LoginPasskeyOptions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecondFactorChallengeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/login/passkey": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Finishes a sign-in with a passkey.",
+        "operationId": "LoginWithPasskey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/login/setup/totp": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "A secret for an authenticator app, for a user who must pair a second factor to sign in.",
+        "operationId": "LoginSetupTotp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecondFactorChallengeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpSetupResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/login/setup/totp/confirm": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Pairs the authenticator app with its first code and signs the user in; the answer has their recovery codes.",
+        "operationId": "LoginSetupTotpConfirm",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecondFactorCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/login/setup/passkey/options": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "What a browser needs to create a passkey, for a user who must pair a second factor to sign in.",
+        "operationId": "LoginSetupPasskeyOptions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecondFactorChallengeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/login/setup/passkey": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Pairs a passkey and signs the user in; the answer has their recovery codes.",
+        "operationId": "LoginSetupPasskey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeySetupRequest"
               }
             }
           },
@@ -584,6 +802,7 @@
         "tags": [
           "Authentication"
         ],
+        "description": "Who has a second factor sends it too: without it the answer is 401 with \u0060code\u0060 \u0060second_factor_required\u0060, \u0060methods\u0060 and \u0060passkeyDomains\u0060.",
         "operationId": "Reauthenticate",
         "requestBody": {
           "content": {
@@ -602,6 +821,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/reauthenticate/passkey/options": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "What the passkey has to answer to confirm a re-authentication.",
+        "operationId": "ReauthenticatePasskeyOptions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptionsResponse"
                 }
               }
             }
@@ -2426,6 +2666,81 @@
                   "items": {
                     "$ref": "#/components/schemas/ExtensionAppInfo"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/users/{id}/second-factor": {
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "For who lost their factors: removes them all and signs the user out; they pair one again at their next sign-in. Needs MANAGE_USERS and a recent authentication.",
+        "operationId": "ResetUserSecondFactor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/server/second-factor": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Whether the server requires a second factor of everyone, and who still has none. Administrators only.",
+        "operationId": "SecondFactorPolicy",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecondFactorPolicy"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Server"
+        ],
+        "summary": "Whether the server requires a second factor of everyone: who has none pairs one at their next sign-in. Administrators only, with a recent authentication.",
+        "operationId": "SetSecondFactorPolicy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetSecondFactorPolicyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecondFactorPolicy"
                 }
               }
             }
@@ -7406,6 +7721,231 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "The user\u0027s second factors: the authenticator app, passkeys and how many recovery codes are left.",
+        "operationId": "MySecondFactor",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySecondFactor"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor/totp": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "A secret for an authenticator app; confirming a code enables it. Needs a recent authentication.",
+        "operationId": "StartTotpSetup",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpSetup"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Removes the authenticator app. Needs a recent authentication; not the user\u0027s last factor if the server requires one.",
+        "operationId": "DisableTotp",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor/totp/confirm": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Enables the authenticator app with its first code. With the user\u0027s first factor come their recovery codes, shown only now. Signs their other devices out.",
+        "operationId": "ConfirmTotpSetup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmTotpInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor/passkeys/options": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "What navigator.credentials.create needs, as JSON. Needs a recent authentication.",
+        "operationId": "PasskeyRegistrationOptions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyRegistration"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor/passkeys": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Adds a passkey from the browser\u0027s answer, as JSON. With the user\u0027s first factor come their recovery codes, shown only now. Signs their other devices out.",
+        "operationId": "RegisterPasskey",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPasskeyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredPasskey"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor/passkeys/{id}/name": {
+      "put": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Renames one of the user\u0027s passkeys.",
+        "operationId": "RenamePasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenamePasskeyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Passkey"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor/passkeys/{id}": {
+      "delete": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Removes one of the user\u0027s passkeys. Needs a recent authentication; not their last factor if the server requires one.",
+        "operationId": "RemovePasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/me/second-factor/recovery-codes": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "New recovery codes, shown only now; the old ones stop working. Needs a recent authentication.",
+        "operationId": "RegenerateRecoveryCodes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
+                }
+              }
+            }
           }
         }
       }
@@ -14034,6 +14574,7 @@
           "JUKEBOX_JAM_BROWSE",
           "JUKEBOX_JAM_REPLACE",
           "JUKEBOX_JAM_SAVE_AS_PLAYLIST",
+          "SECOND_FACTOR",
           "AVAILABLE_PLAYERS",
           "WISH_LIST_CLOUD_SYNC"
         ]
@@ -16139,6 +16680,17 @@
           "FREE",
           "PAID"
         ]
+      },
+      "ConfirmTotpInput": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
       },
       "ControlDlnaRendererInput": {
         "required": [
@@ -22583,6 +23135,49 @@
           }
         }
       },
+      "MySecondFactor": {
+        "required": [
+          "enabled",
+          "totpEnabled",
+          "totpEnabledAt",
+          "passkeys",
+          "recoveryCodesLeft",
+          "required"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "totpEnabled": {
+            "type": "boolean"
+          },
+          "totpEnabledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "passkeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Passkey"
+            }
+          },
+          "recoveryCodesLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      },
       "MyStorage": {
         "required": [
           "libraries",
@@ -23739,6 +24334,110 @@
           }
         }
       },
+      "Passkey": {
+        "required": [
+          "id",
+          "name",
+          "rpId",
+          "createdAt",
+          "lastUsedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rpId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PasskeyLoginRequest": {
+        "required": [
+          "challenge",
+          "assertion"
+        ],
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assertion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PasskeyOptionsResponse": {
+        "required": [
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "PasskeyRegistration": {
+        "required": [
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "string"
+          }
+        }
+      },
+      "PasskeySetupRequest": {
+        "required": [
+          "challenge",
+          "name",
+          "attestation"
+        ],
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attestation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PeerAnalysesRequest": {
         "required": [
           "hashes"
@@ -24879,6 +25578,18 @@
               "null",
               "string"
             ]
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "passkey": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -24987,6 +25698,12 @@
                 "$ref": "#/components/schemas/SetPrivacyInput"
               }
             ]
+          },
+          "requireSecondFactor": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -25050,6 +25767,20 @@
           }
         }
       },
+      "RecoveryCodes": {
+        "required": [
+          "codes"
+        ],
+        "type": "object",
+        "properties": {
+          "codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "RefreshRequest": {
         "required": [
           "refreshToken"
@@ -25061,6 +25792,42 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "RegisteredPasskey": {
+        "required": [
+          "passkey",
+          "recoveryCodes"
+        ],
+        "type": "object",
+        "properties": {
+          "passkey": {
+            "$ref": "#/components/schemas/Passkey"
+          },
+          "recoveryCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RegisterPasskeyInput": {
+        "required": [
+          "name",
+          "attestation"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attestation": {
+            "type": "string"
           }
         }
       },
@@ -25123,6 +25890,17 @@
         ]
       },
       "RenameLibraryInput": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "RenamePasskeyInput": {
         "required": [
           "name"
         ],
@@ -25717,6 +26495,65 @@
           }
         }
       },
+      "SecondFactorChallengeRequest": {
+        "required": [
+          "challenge"
+        ],
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SecondFactorCodeRequest": {
+        "required": [
+          "challenge",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "challenge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SecondFactorPolicy": {
+        "required": [
+          "required",
+          "setByEnvironment",
+          "usersWithout"
+        ],
+        "type": "object",
+        "properties": {
+          "required": {
+            "type": "boolean"
+          },
+          "setByEnvironment": {
+            "type": "boolean"
+          },
+          "usersWithout": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "SelfUpdateMode": {
         "enum": [
           "NONE",
@@ -25870,6 +26707,10 @@
           },
           "privacy": {
             "$ref": "#/components/schemas/Privacy"
+          },
+          "requireSecondFactor": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -26586,6 +27427,17 @@
           }
         }
       },
+      "SetSecondFactorPolicyInput": {
+        "required": [
+          "required"
+        ],
+        "type": "object",
+        "properties": {
+          "required": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetServerUpdateSettingsInput": {
         "required": [
           "enabled"
@@ -27167,6 +28019,12 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "requireSecondFactor": {
+            "type": [
+              "null",
+              "boolean"
             ]
           }
         }
@@ -28421,6 +29279,45 @@
           },
           "user": {
             "$ref": "#/components/schemas/UserAccount"
+          },
+          "recoveryCodes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TotpSetup": {
+        "required": [
+          "secret",
+          "uri"
+        ],
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          }
+        }
+      },
+      "TotpSetupResponse": {
+        "required": [
+          "secret",
+          "uri"
+        ],
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
           }
         }
       },
@@ -30891,6 +31788,10 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "hasSecondFactor": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -32055,6 +32956,9 @@
       "name": "Extensions"
     },
     {
+      "name": "Users"
+    },
+    {
       "name": "DLNA"
     },
     {
@@ -32074,9 +32978,6 @@
     },
     {
       "name": "Me"
-    },
-    {
-      "name": "Users"
     },
     {
       "name": "Analysis"

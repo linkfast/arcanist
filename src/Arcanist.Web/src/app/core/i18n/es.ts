@@ -141,6 +141,72 @@ export const es: Dictionary = {
     player: 'Abrir el reproductor',
     logout: 'Cerrar sesión',
   },
+  secondFactor: {
+    codeLabel: 'Código de verificación',
+    codeHelp: 'Las 6 cifras de tu app de autenticación, o uno de tus códigos de recuperación.',
+    verify: 'Verificar',
+    verifyHelp: 'Falta un paso: confirma que eres tú.',
+    usePasskey: 'Usar una passkey',
+    passkeyElsewhere:
+      'Tus passkeys funcionan en {domains}: entra por esa dirección para usarlas, o usa un código.',
+    startOver: 'Volver a empezar',
+    setupHelp:
+      'Este servidor pide un segundo paso al iniciar sesión. Elige cómo quieres confirmar que eres tú.',
+    appOption: 'App de autenticación',
+    appOptionHelp:
+      'Google Authenticator, Microsoft Authenticator, 1Password, Aegis…: un código que cambia cada 30 segundos.',
+    passkeyOption: 'Passkey o llave de seguridad',
+    passkeyOptionHelp: 'Tu huella, tu cara o una llave USB. Solo funcionará entrando por {domain}.',
+    passkeyUnavailable:
+      'Las passkeys necesitan HTTPS y un nombre de dominio: entrando por esta dirección no se pueden usar.',
+    scan: 'Escanea este código con tu app.',
+    manual: 'O escribe esta clave a mano:',
+    confirmCode: 'Escribe el código que muestra la app',
+    confirm: 'Activar',
+    passkeyName: 'Nombre',
+    passkeyNamePlaceholder: 'Mi portátil, llave USB…',
+    passkeyCreate: 'Crear passkey',
+    codesTitle: 'Guarda tus códigos de recuperación',
+    codesHelp:
+      'Si pierdes el móvil o la llave, cada código te deja entrar una vez. Guárdalos en un lugar seguro: no volverán a mostrarse.',
+    download: 'Descargar .txt',
+    saved: 'Los he guardado',
+    continue: 'Continuar',
+    card: {
+      title: 'Verificación en dos pasos',
+      description: 'Además de la contraseña, un segundo paso al iniciar sesión.',
+      on: 'Activada',
+      off: 'Desactivada',
+      required:
+        'Este servidor la exige: la próxima vez que inicies sesión tendrás que configurarla.',
+      since: 'Activada',
+      setUp: 'Configurar',
+      passkeys: 'Passkeys y llaves de seguridad',
+      passkeysHelp: 'Cada una funciona solo en la dirección donde se creó.',
+      addPasskey: 'Añadir',
+      codes: 'Códigos de recuperación',
+      codesLeft: 'Te quedan {count}.',
+      regenerate: 'Generar nuevos',
+      confirmApp: '¿Quitar la app de autenticación?',
+      confirmPasskey: '¿Quitar «{name}»?',
+      confirmRemoveHelp:
+        'Dejará de servir para iniciar sesión, y se cerrarán tus sesiones en otros dispositivos.',
+      confirmCodes: '¿Generar códigos nuevos?',
+      confirmCodesHelp: 'Los que tienes ahora dejarán de funcionar.',
+    },
+    policy: {
+      title: 'Verificación en dos pasos',
+      description: 'Protege las cuentas aunque alguien averigüe una contraseña.',
+      switch: 'Exigirla a todos los usuarios',
+      help: 'Quien no la tenga la configurará en su siguiente inicio de sesión. Las sesiones abiertas siguen; las apps de Subsonic y mStream siguen con sus contraseñas de aplicación.',
+      usersWithout: 'Usuarios activos que aún no la tienen: {count}.',
+    },
+    wizard: {
+      switch: 'Exigir verificación en dos pasos',
+      help: 'Protege todas las cuentas aunque alguien averigüe una contraseña. Configurarás la tuya al terminar, y cada usuario la suya al iniciar sesión.',
+      setUpTitle: 'Protege tu cuenta',
+    },
+  },
   login: {
     restoredTitle: 'Servidor restaurado',
     restored:
@@ -334,6 +400,10 @@ export const es: Dictionary = {
       required: 'Tienes que aceptar los términos y el descargo de responsabilidad para continuar.',
     },
     steps: {
+      secondFactor: {
+        title: 'Protege tu cuenta',
+        description: 'Elegiste exigir verificación en dos pasos: la tuya es la primera.',
+      },
       ultimate: {
         title: 'Ultimate',
         description: 'Los reproductores oficiales y la nube de tu música.',
@@ -543,6 +613,9 @@ export const es: Dictionary = {
       },
     },
     review: {
+      secondFactor: 'Verificación en dos pasos',
+      secondFactorOn: 'Exigida a todos',
+      secondFactorOff: 'Opcional',
       privacy: 'Privacidad',
       privacyDefault: 'Sin restricciones',
       users: 'Otros usuarios',
@@ -639,6 +712,8 @@ export const es: Dictionary = {
       generalHint: 'Valoraciones y letras con tiempos',
       privacy: 'Privacidad y servicios',
       privacyHint: 'Qué sale de este servidor y qué servicios en línea usa',
+      security: 'Seguridad',
+      securityHint: 'Verificación en dos pasos',
       sharing: 'Compartir',
       sharingHint: 'URL pública, enlaces e invitados',
       server: 'Este servidor',
@@ -1014,6 +1089,13 @@ export const es: Dictionary = {
     resetPassword: 'Restablecer contraseña',
     resetPasswordFor: 'Nueva contraseña para {name}',
     resetPasswordHelp: 'Se cerrarán todas sus sesiones abiertas.',
+    secondFactorBadge: '2 pasos',
+    secondFactorBadgeHelp: 'Inicia sesión con verificación en dos pasos.',
+    resetSecondFactor: 'Restablecer verificación en dos pasos',
+    resetSecondFactorConfirm: '¿Restablecer la verificación en dos pasos de {name}?',
+    resetSecondFactorHelp:
+      'Para quien perdió su móvil o su llave: se quitan su app, sus passkeys y sus códigos, se cierran todas sus sesiones y configurará una nueva al iniciar sesión.',
+    secondFactorReset: 'Verificación en dos pasos de {name} restablecida',
     passwordReset: 'Contraseña de {name} restablecida',
     saved: 'Usuario guardado',
     deleted: 'Usuario {name} eliminado',
@@ -3532,6 +3614,16 @@ export const es: Dictionary = {
     route_conflict: 'Otra extensión activa ya usa esas rutas.',
     extension_managed:
       'La instaló la configuración del servidor: no se puede desactivar ni desinstalar desde aquí.',
+    second_factor_required: 'Falta el segundo paso de la verificación.',
+    second_factor_setup_required: 'Este servidor exige configurar la verificación en dos pasos.',
+    invalid_second_factor: 'Ese código no es correcto o ya se usó.',
+    second_factor_expired: 'Pasó demasiado tiempo. Vuelve a escribir tu contraseña.',
+    passkey_failed: 'La passkey no se pudo usar. Inténtalo otra vez o usa un código.',
+    passkey_other_domain:
+      'Tus passkeys se crearon en otra dirección de este servidor: entra por ella o usa un código.',
+    second_factor_last:
+      'Este servidor exige verificación en dos pasos: añade otro método antes de quitar el último.',
+    totp_already_enabled: 'Ya tienes una app de autenticación: quítala antes de configurar otra.',
     set_by_environment:
       'Ese ajuste viene del entorno (variables o archivos de configuración) y no se puede cambiar desde el panel.',
     too_many: 'Has llegado al máximo permitido.',

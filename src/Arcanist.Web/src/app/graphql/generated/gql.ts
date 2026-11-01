@@ -32,7 +32,7 @@ type Documents = {
     "\n  mutation StartScan($libraryId: ID!, $full: Boolean!) {\n    startScan(libraryId: $libraryId, full: $full) {\n      ...ScanJobFields\n    }\n  }\n": typeof types.StartScanDocument,
     "\n  mutation CancelScan($id: ID!) {\n    cancelScan(id: $id)\n  }\n": typeof types.CancelScanDocument,
     "\n  subscription ScanJobUpdated {\n    scanJobUpdated {\n      ...ScanJobFields\n    }\n  }\n": typeof types.ScanJobUpdatedDocument,
-    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n": typeof types.UserFieldsFragmentDoc,
+    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n": typeof types.UserFieldsFragmentDoc,
     "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n": typeof types.UsersDocument,
     "\n  mutation CreateUser($input: CreateUserInput!) {\n    createUser(input: $input) {\n      id\n    }\n  }\n": typeof types.CreateUserDocument,
     "\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\n    updateUser(id: $id, input: $input) {\n      id\n    }\n  }\n": typeof types.UpdateUserDocument,
@@ -47,7 +47,7 @@ type Documents = {
     "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.SetAnalysisEnabledDocument,
     "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": typeof types.AnalysisProgressChangedDocument,
     "\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    outdated\n    recommendedVersion\n    downloaded\n    features {\n      kind\n      encoder\n    }\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n": typeof types.FfmpegStatusFieldsFragmentDoc,
-    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n": typeof types.ServerConfigurationFieldsFragmentDoc,
+    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    requireSecondFactor\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n": typeof types.ServerConfigurationFieldsFragmentDoc,
     "\n  query Privacy {\n    privacy {\n      noTelemetry\n      externalServices\n    }\n    anonymousStatistics\n  }\n": typeof types.PrivacyDocument,
     "\n  mutation SetPrivacy($input: SetPrivacyInput!) {\n    setPrivacy(input: $input) {\n      noTelemetry\n      externalServices\n    }\n  }\n": typeof types.SetPrivacyDocument,
     "\n  query SetupExtras {\n    users {\n      id\n      userName\n      displayName\n      role\n    }\n    p2pStatus {\n      enabled\n      customName\n      relay\n      relayUrl\n      bandwidthKbps\n      maxStreams\n    }\n    extensions {\n      id\n      builtIn\n      enabled\n    }\n  }\n": typeof types.SetupExtrasDocument,
@@ -94,6 +94,19 @@ type Documents = {
     "\n  query ServerStats($period: StatsPeriod!, $timeZone: String, $libraryId: ID) {\n    serverStats(period: $period, timeZone: $timeZone, libraryId: $libraryId) {\n      addedTracks\n      remotePlays\n      remoteListenedMs\n      library {\n        artists\n        albums\n        tracks\n        files\n        durationMs\n        sizeBytes\n        formats {\n          format\n          files\n          sizeBytes\n        }\n      }\n      listening {\n        period\n        from\n        plays\n        listenedMs\n        distinctTracks\n        skips\n        listeners\n        activeDays\n        playsByHour\n        playsByWeekday\n        topGenres {\n          genre\n          plays\n        }\n        bucket\n        timeline {\n          start\n          plays\n          listenedMs\n        }\n        topTracks {\n          plays\n          track {\n            ...StatsTrackFields\n          }\n        }\n        topArtists {\n          plays\n          artist {\n            id\n            name\n          }\n        }\n        topAlbums {\n          plays\n          album {\n            id\n            title\n            artworkId\n            artist {\n              id\n              name\n            }\n          }\n        }\n      }\n      users {\n        userId\n        userName\n        displayName\n        plays\n        listenedMs\n        lastPlayedAt\n        remote\n        server\n      }\n    }\n  }\n": typeof types.ServerStatsDocument,
     "\n  query LibrarySummaries {\n    librarySummaries {\n      libraryId\n      tracks\n      albums\n      files\n      sizeBytes\n      durationMs\n      plays\n      listeners\n      lastPlayedAt\n    }\n  }\n": typeof types.LibrarySummariesDocument,
     "\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n": typeof types.AppPasswordFieldsFragmentDoc,
+    "\n  fragment SecondFactorFields on MySecondFactor {\n    enabled\n    totpEnabled\n    totpEnabledAt\n    recoveryCodesLeft\n    required\n    passkeys {\n      id\n      name\n      rpId\n      createdAt\n      lastUsedAt\n    }\n  }\n": typeof types.SecondFactorFieldsFragmentDoc,
+    "\n  query MySecondFactor {\n    mySecondFactor {\n      ...SecondFactorFields\n    }\n  }\n": typeof types.MySecondFactorDocument,
+    "\n  mutation StartTotpSetup {\n    startTotpSetup {\n      secret\n      uri\n    }\n  }\n": typeof types.StartTotpSetupDocument,
+    "\n  mutation ConfirmTotpSetup($code: String!) {\n    confirmTotpSetup(code: $code) {\n      codes\n    }\n  }\n": typeof types.ConfirmTotpSetupDocument,
+    "\n  mutation DisableTotp {\n    disableTotp\n  }\n": typeof types.DisableTotpDocument,
+    "\n  mutation PasskeyRegistrationOptions {\n    passkeyRegistrationOptions {\n      options\n    }\n  }\n": typeof types.PasskeyRegistrationOptionsDocument,
+    "\n  mutation RegisterPasskey($name: String, $attestation: String!) {\n    registerPasskey(name: $name, attestation: $attestation) {\n      recoveryCodes\n    }\n  }\n": typeof types.RegisterPasskeyDocument,
+    "\n  mutation RenamePasskey($id: ID!, $name: String!) {\n    renamePasskey(id: $id, name: $name) {\n      id\n    }\n  }\n": typeof types.RenamePasskeyDocument,
+    "\n  mutation RemovePasskey($id: ID!) {\n    removePasskey(id: $id)\n  }\n": typeof types.RemovePasskeyDocument,
+    "\n  mutation RegenerateRecoveryCodes {\n    regenerateRecoveryCodes {\n      codes\n    }\n  }\n": typeof types.RegenerateRecoveryCodesDocument,
+    "\n  mutation ResetUserSecondFactor($userId: ID!) {\n    resetUserSecondFactor(userId: $userId)\n  }\n": typeof types.ResetUserSecondFactorDocument,
+    "\n  query SecondFactorPolicy {\n    secondFactorPolicy {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n": typeof types.SecondFactorPolicyDocument,
+    "\n  mutation SetSecondFactorPolicy($required: Boolean!) {\n    setSecondFactorPolicy(required: $required) {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n": typeof types.SetSecondFactorPolicyDocument,
     "\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n": typeof types.AppPasswordsDocument,
     "\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n": typeof types.CreateAppPasswordDocument,
     "\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n": typeof types.DeleteAppPasswordDocument,
@@ -321,7 +334,7 @@ const documents: Documents = {
     "\n  mutation StartScan($libraryId: ID!, $full: Boolean!) {\n    startScan(libraryId: $libraryId, full: $full) {\n      ...ScanJobFields\n    }\n  }\n": types.StartScanDocument,
     "\n  mutation CancelScan($id: ID!) {\n    cancelScan(id: $id)\n  }\n": types.CancelScanDocument,
     "\n  subscription ScanJobUpdated {\n    scanJobUpdated {\n      ...ScanJobFields\n    }\n  }\n": types.ScanJobUpdatedDocument,
-    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n": types.UserFieldsFragmentDoc,
+    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n": types.UserFieldsFragmentDoc,
     "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n": types.UsersDocument,
     "\n  mutation CreateUser($input: CreateUserInput!) {\n    createUser(input: $input) {\n      id\n    }\n  }\n": types.CreateUserDocument,
     "\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\n    updateUser(id: $id, input: $input) {\n      id\n    }\n  }\n": types.UpdateUserDocument,
@@ -336,7 +349,7 @@ const documents: Documents = {
     "\n  mutation SetAnalysisEnabled($enabled: Boolean!) {\n    setAnalysisEnabled(enabled: $enabled) {\n      ...AnalysisProgressFields\n    }\n  }\n": types.SetAnalysisEnabledDocument,
     "\n  subscription AnalysisProgressChanged {\n    analysisProgressChanged {\n      ...AnalysisProgressFields\n    }\n  }\n": types.AnalysisProgressChangedDocument,
     "\n  fragment FfmpegStatusFields on FfmpegStatus {\n    available\n    path\n    version\n    source\n    configuredPath\n    configuredPathWorks\n    canDownload\n    outdated\n    recommendedVersion\n    downloaded\n    features {\n      kind\n      encoder\n    }\n    download {\n      state\n      bytesReceived\n      totalBytes\n      version\n      error\n    }\n  }\n": types.FfmpegStatusFieldsFragmentDoc,
-    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n": types.ServerConfigurationFieldsFragmentDoc,
+    "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    requireSecondFactor\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n": types.ServerConfigurationFieldsFragmentDoc,
     "\n  query Privacy {\n    privacy {\n      noTelemetry\n      externalServices\n    }\n    anonymousStatistics\n  }\n": types.PrivacyDocument,
     "\n  mutation SetPrivacy($input: SetPrivacyInput!) {\n    setPrivacy(input: $input) {\n      noTelemetry\n      externalServices\n    }\n  }\n": types.SetPrivacyDocument,
     "\n  query SetupExtras {\n    users {\n      id\n      userName\n      displayName\n      role\n    }\n    p2pStatus {\n      enabled\n      customName\n      relay\n      relayUrl\n      bandwidthKbps\n      maxStreams\n    }\n    extensions {\n      id\n      builtIn\n      enabled\n    }\n  }\n": types.SetupExtrasDocument,
@@ -383,6 +396,19 @@ const documents: Documents = {
     "\n  query ServerStats($period: StatsPeriod!, $timeZone: String, $libraryId: ID) {\n    serverStats(period: $period, timeZone: $timeZone, libraryId: $libraryId) {\n      addedTracks\n      remotePlays\n      remoteListenedMs\n      library {\n        artists\n        albums\n        tracks\n        files\n        durationMs\n        sizeBytes\n        formats {\n          format\n          files\n          sizeBytes\n        }\n      }\n      listening {\n        period\n        from\n        plays\n        listenedMs\n        distinctTracks\n        skips\n        listeners\n        activeDays\n        playsByHour\n        playsByWeekday\n        topGenres {\n          genre\n          plays\n        }\n        bucket\n        timeline {\n          start\n          plays\n          listenedMs\n        }\n        topTracks {\n          plays\n          track {\n            ...StatsTrackFields\n          }\n        }\n        topArtists {\n          plays\n          artist {\n            id\n            name\n          }\n        }\n        topAlbums {\n          plays\n          album {\n            id\n            title\n            artworkId\n            artist {\n              id\n              name\n            }\n          }\n        }\n      }\n      users {\n        userId\n        userName\n        displayName\n        plays\n        listenedMs\n        lastPlayedAt\n        remote\n        server\n      }\n    }\n  }\n": types.ServerStatsDocument,
     "\n  query LibrarySummaries {\n    librarySummaries {\n      libraryId\n      tracks\n      albums\n      files\n      sizeBytes\n      durationMs\n      plays\n      listeners\n      lastPlayedAt\n    }\n  }\n": types.LibrarySummariesDocument,
     "\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n": types.AppPasswordFieldsFragmentDoc,
+    "\n  fragment SecondFactorFields on MySecondFactor {\n    enabled\n    totpEnabled\n    totpEnabledAt\n    recoveryCodesLeft\n    required\n    passkeys {\n      id\n      name\n      rpId\n      createdAt\n      lastUsedAt\n    }\n  }\n": types.SecondFactorFieldsFragmentDoc,
+    "\n  query MySecondFactor {\n    mySecondFactor {\n      ...SecondFactorFields\n    }\n  }\n": types.MySecondFactorDocument,
+    "\n  mutation StartTotpSetup {\n    startTotpSetup {\n      secret\n      uri\n    }\n  }\n": types.StartTotpSetupDocument,
+    "\n  mutation ConfirmTotpSetup($code: String!) {\n    confirmTotpSetup(code: $code) {\n      codes\n    }\n  }\n": types.ConfirmTotpSetupDocument,
+    "\n  mutation DisableTotp {\n    disableTotp\n  }\n": types.DisableTotpDocument,
+    "\n  mutation PasskeyRegistrationOptions {\n    passkeyRegistrationOptions {\n      options\n    }\n  }\n": types.PasskeyRegistrationOptionsDocument,
+    "\n  mutation RegisterPasskey($name: String, $attestation: String!) {\n    registerPasskey(name: $name, attestation: $attestation) {\n      recoveryCodes\n    }\n  }\n": types.RegisterPasskeyDocument,
+    "\n  mutation RenamePasskey($id: ID!, $name: String!) {\n    renamePasskey(id: $id, name: $name) {\n      id\n    }\n  }\n": types.RenamePasskeyDocument,
+    "\n  mutation RemovePasskey($id: ID!) {\n    removePasskey(id: $id)\n  }\n": types.RemovePasskeyDocument,
+    "\n  mutation RegenerateRecoveryCodes {\n    regenerateRecoveryCodes {\n      codes\n    }\n  }\n": types.RegenerateRecoveryCodesDocument,
+    "\n  mutation ResetUserSecondFactor($userId: ID!) {\n    resetUserSecondFactor(userId: $userId)\n  }\n": types.ResetUserSecondFactorDocument,
+    "\n  query SecondFactorPolicy {\n    secondFactorPolicy {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n": types.SecondFactorPolicyDocument,
+    "\n  mutation SetSecondFactorPolicy($required: Boolean!) {\n    setSecondFactorPolicy(required: $required) {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n": types.SetSecondFactorPolicyDocument,
     "\n  query AppPasswords {\n    appPasswords {\n      ...AppPasswordFields\n    }\n  }\n": types.AppPasswordsDocument,
     "\n  mutation CreateAppPassword($name: String!) {\n    createAppPassword(name: $name) {\n      secret\n      appPassword {\n        ...AppPasswordFields\n      }\n    }\n  }\n": types.CreateAppPasswordDocument,
     "\n  mutation DeleteAppPassword($id: ID!) {\n    deleteAppPassword(id: $id)\n  }\n": types.DeleteAppPasswordDocument,
@@ -681,7 +707,7 @@ export function graphql(source: "\n  subscription ScanJobUpdated {\n    scanJobU
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n"): (typeof documents)["\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n  }\n"];
+export function graphql(source: "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n"): (typeof documents)["\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -741,7 +767,7 @@ export function graphql(source: "\n  fragment FfmpegStatusFields on FfmpegStatus
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n"): (typeof documents)["\n  fragment ServerConfigurationFields on ServerConfiguration {\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n"];
+export function graphql(source: "\n  fragment ServerConfigurationFields on ServerConfiguration {\n    requireSecondFactor\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n"): (typeof documents)["\n  fragment ServerConfigurationFields on ServerConfiguration {\n    requireSecondFactor\n    defaultLanguage\n    ratingMode\n    shareAnonymousStatistics\n    ffmpegPath\n    onlineServices {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    privacy {\n      noTelemetry\n      externalServices\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -926,6 +952,58 @@ export function graphql(source: "\n  query LibrarySummaries {\n    librarySummar
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n"): (typeof documents)["\n  fragment AppPasswordFields on AppPassword {\n    id\n    name\n    createdAt\n    lastUsedAt\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  fragment SecondFactorFields on MySecondFactor {\n    enabled\n    totpEnabled\n    totpEnabledAt\n    recoveryCodesLeft\n    required\n    passkeys {\n      id\n      name\n      rpId\n      createdAt\n      lastUsedAt\n    }\n  }\n"): (typeof documents)["\n  fragment SecondFactorFields on MySecondFactor {\n    enabled\n    totpEnabled\n    totpEnabledAt\n    recoveryCodesLeft\n    required\n    passkeys {\n      id\n      name\n      rpId\n      createdAt\n      lastUsedAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query MySecondFactor {\n    mySecondFactor {\n      ...SecondFactorFields\n    }\n  }\n"): (typeof documents)["\n  query MySecondFactor {\n    mySecondFactor {\n      ...SecondFactorFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation StartTotpSetup {\n    startTotpSetup {\n      secret\n      uri\n    }\n  }\n"): (typeof documents)["\n  mutation StartTotpSetup {\n    startTotpSetup {\n      secret\n      uri\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ConfirmTotpSetup($code: String!) {\n    confirmTotpSetup(code: $code) {\n      codes\n    }\n  }\n"): (typeof documents)["\n  mutation ConfirmTotpSetup($code: String!) {\n    confirmTotpSetup(code: $code) {\n      codes\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DisableTotp {\n    disableTotp\n  }\n"): (typeof documents)["\n  mutation DisableTotp {\n    disableTotp\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation PasskeyRegistrationOptions {\n    passkeyRegistrationOptions {\n      options\n    }\n  }\n"): (typeof documents)["\n  mutation PasskeyRegistrationOptions {\n    passkeyRegistrationOptions {\n      options\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RegisterPasskey($name: String, $attestation: String!) {\n    registerPasskey(name: $name, attestation: $attestation) {\n      recoveryCodes\n    }\n  }\n"): (typeof documents)["\n  mutation RegisterPasskey($name: String, $attestation: String!) {\n    registerPasskey(name: $name, attestation: $attestation) {\n      recoveryCodes\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RenamePasskey($id: ID!, $name: String!) {\n    renamePasskey(id: $id, name: $name) {\n      id\n    }\n  }\n"): (typeof documents)["\n  mutation RenamePasskey($id: ID!, $name: String!) {\n    renamePasskey(id: $id, name: $name) {\n      id\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RemovePasskey($id: ID!) {\n    removePasskey(id: $id)\n  }\n"): (typeof documents)["\n  mutation RemovePasskey($id: ID!) {\n    removePasskey(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RegenerateRecoveryCodes {\n    regenerateRecoveryCodes {\n      codes\n    }\n  }\n"): (typeof documents)["\n  mutation RegenerateRecoveryCodes {\n    regenerateRecoveryCodes {\n      codes\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ResetUserSecondFactor($userId: ID!) {\n    resetUserSecondFactor(userId: $userId)\n  }\n"): (typeof documents)["\n  mutation ResetUserSecondFactor($userId: ID!) {\n    resetUserSecondFactor(userId: $userId)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query SecondFactorPolicy {\n    secondFactorPolicy {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n"): (typeof documents)["\n  query SecondFactorPolicy {\n    secondFactorPolicy {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SetSecondFactorPolicy($required: Boolean!) {\n    setSecondFactorPolicy(required: $required) {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n"): (typeof documents)["\n  mutation SetSecondFactorPolicy($required: Boolean!) {\n    setSecondFactorPolicy(required: $required) {\n      required\n      setByEnvironment\n      usersWithout\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

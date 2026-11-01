@@ -199,6 +199,7 @@ builder.Services.AddSingleton<HostPlatform>();
 builder.Services.AddScoped<HostService>();
 builder.Services.AddHostedService<UpdateCheckWorker>();
 builder.Services.AddScoped<AppPasswordService>();
+builder.Services.AddScoped<SecondFactorService>();
 builder.Services.AddHttpClient(FrontendService.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddSingleton<RatingSettings>();
 builder.Services.AddHostedService<RatingSettingsWarmup>();

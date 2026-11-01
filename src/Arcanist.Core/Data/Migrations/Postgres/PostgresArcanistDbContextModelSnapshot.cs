@@ -2892,11 +2892,17 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<bool>("HasSecondFactor")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDisabled")
                         .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("MustSetUpSecondFactor")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("NormalizedUserName")
                         .IsRequired()
@@ -2920,6 +2926,16 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<DateTime?>("TotpEnabledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("TotpLastStep")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TotpSecret")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<string>("UserName")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -2931,6 +2947,82 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserPasskey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AaGuid")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("CredentialId")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<byte[]>("PublicKey")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("RpId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("SignCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Transports")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CredentialId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPasskeys");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserRecoveryCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CodeHash")
+                        .IsUnique();
+
+                    b.ToTable("UserRecoveryCodes");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.UserSession", b =>
@@ -3797,6 +3889,28 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Track");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserPasskey", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserRecoveryCode", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

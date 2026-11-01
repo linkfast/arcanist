@@ -87,6 +87,7 @@ public sealed record SetupDlnaImport(string? Location, IReadOnlyList<DlnaFolderI
 /// <param name="Dlna">A media server to copy music from, or null; its progress shows in <c>dlnaImports</c>.</param>
 /// <param name="AcceptedTerms">The version of the terms and the disclaimer the administrator accepted
 /// (<c>legalTerms</c>); setup does not complete without the current one (<c>terms_not_accepted</c>).</param>
+/// <param name="RequireSecondFactor">Everyone signs in with a second factor: the administrator pairs theirs at the first sign-in. Off when null.</param>
 public sealed record SetupRequest(
     SetupDatabase? Database,
     SetupAdmin? Admin,
@@ -101,7 +102,8 @@ public sealed record SetupRequest(
     bool OpenSourceOnly = false,
     SetupArcanistImport? Arcanist = null,
     SetupDlnaImport? Dlna = null,
-    string? AcceptedTerms = null);
+    string? AcceptedTerms = null,
+    bool? RequireSecondFactor = null);
 
 /// <summary>What the wizard shows about ffmpeg: the one at the given path, or the one found automatically.</summary>
 public sealed record SetupFfmpegCheck(bool Available, string? Path, string? Version, FfmpegSource? Source);
@@ -500,6 +502,9 @@ public sealed class SetupService(
             Value = JsonSerializer.Serialize(new Legal.LegalAcceptance(request.AcceptedTerms!, time.GetUtcNow().UtcDateTime, admin.UserName),
                 JsonSerializerOptions.Web),
         });
+
+        if (request.RequireSecondFactor == true)
+            db.Settings.Add(new Setting { Key = SettingKeys.SecondFactor, Value = JsonSerializer.Serialize(new Auth.SecondFactor.SecondFactorConfig(true), JsonSerializerOptions.Web) });
 
         db.Settings.Add(new Setting { Key = SettingKeys.RatingMode, Value = JsonSerializer.Serialize(request.RatingMode ?? Application.Listening.RatingSettings.Default, JsonSerializerOptions.Web) });
 

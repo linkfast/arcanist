@@ -6,8 +6,9 @@ import { HlmDialogImports } from '@spartan-ng/helm/dialog';
 import { HlmFieldImports } from '@spartan-ng/helm/field';
 import { HlmInputImports } from '@spartan-ng/helm/input';
 import { ApiError } from '../core/api/rest';
-import { AuthService } from '../core/auth/auth.service';
+import { AuthService, SecondFactorAnswer } from '../core/auth/auth.service';
 import { ReauthService } from '../core/auth/reauth.service';
+import { passkeysUsable } from '../core/auth/webauthn';
 import { I18n, TranslatePipe } from '../core/i18n/i18n';
 
 /** Password confirmation for sensitive actions, opened by ReauthService. */
@@ -41,15 +42,46 @@ import { I18n, TranslatePipe } from '../core/i18n/i18n';
               [(ngModel)]="password"
               required
             />
-            @if (error()) {
+            @if (error() && !factor()) {
               <hlm-field-error>{{ error() }}</hlm-field-error>
             }
           </hlm-field>
+          @if (factor(); as asked) {
+            <hlm-field>
+              <label hlmFieldLabel for="reauth-code">{{ 'secondFactor.codeLabel' | t }}</label>
+              <input
+                hlmInput
+                id="reauth-code"
+                name="code"
+                autocomplete="one-time-code"
+                [(ngModel)]="code"
+              />
+              <p hlmFieldDescription>{{ 'secondFactor.codeHelp' | t }}</p>
+              @if (error()) {
+                <hlm-field-error>{{ error() }}</hlm-field-error>
+              }
+            </hlm-field>
+            @if (canUsePasskey(asked)) {
+              <button
+                hlmBtn
+                variant="outline"
+                type="button"
+                [disabled]="busy()"
+                (click)="usePasskey()"
+              >
+                {{ 'secondFactor.usePasskey' | t }}
+              </button>
+            }
+          }
           <hlm-dialog-footer>
             <button hlmBtn variant="outline" type="button" (click)="cancel()">
               {{ 'common.cancel' | t }}
             </button>
-            <button hlmBtn type="submit" [disabled]="busy() || !password">
+            <button
+              hlmBtn
+              type="submit"
+              [disabled]="busy() || !password || (factor() && !code.trim())"
+            >
               {{ 'reauth.confirm' | t }}
             </button>
           </hlm-dialog-footer>
@@ -64,20 +96,41 @@ export class ReauthDialog {
   private readonly i18n = inject(I18n);
 
   protected password = '';
+  protected code = '';
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** The password was right, and the server asks for the second factor too. */
+  protected readonly factor = signal<SecondFactorAnswer | null>(null);
 
-  protected async confirm(): Promise<void> {
+  protected canUsePasskey(asked: SecondFactorAnswer): boolean {
+    return passkeysUsable() && asked.passkeyDomains.includes(window.location.hostname);
+  }
+
+  protected confirm(): Promise<void> {
+    return this.run(() => this.auth.reauthenticate(this.password, this.code.trim() || undefined));
+  }
+
+  protected usePasskey(): Promise<void> {
+    return this.run(() => this.auth.reauthenticateWithPasskey(this.password));
+  }
+
+  private async run(attempt: () => Promise<boolean | SecondFactorAnswer>): Promise<void> {
     this.busy.set(true);
     this.error.set(null);
     try {
-      if (await this.auth.reauthenticate(this.password)) {
+      const answer = await attempt();
+      if (answer === true) {
         this.reset();
         this.reauth.settle(true);
-      } else {
+      } else if (answer === false) {
+        this.factor.set(null);
+        this.code = '';
         this.error.set(this.i18n.error('invalid_credentials'));
+      } else {
+        this.factor.set(answer);
       }
     } catch (error) {
+      this.code = '';
       this.error.set(this.i18n.error(ApiError.from(error).code));
     } finally {
       this.busy.set(false);
@@ -92,6 +145,8 @@ export class ReauthDialog {
 
   private reset(): void {
     this.password = '';
+    this.code = '';
+    this.factor.set(null);
     this.error.set(null);
   }
 }

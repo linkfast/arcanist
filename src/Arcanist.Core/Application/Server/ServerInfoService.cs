@@ -199,6 +199,12 @@ public enum ApiFeature
     /// <summary>A Jam says whether what played stays as a playlist when it ends (<c>saveAsPlaylist</c>, on by default).</summary>
     JukeboxJamSaveAsPlaylist,
 
+    /// <summary>
+    /// Signing in takes more than the password for some users: the login answers <c>second_factor_required</c> or
+    /// <c>second_factor_setup_required</c> (see the developers' guide); <c>mySecondFactor</c> manages theirs.
+    /// </summary>
+    SecondFactor,
+
     /// <summary><c>availablePlayers</c>: the web players any user can open.</summary>
     AvailablePlayers,
 

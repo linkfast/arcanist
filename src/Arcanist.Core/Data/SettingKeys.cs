@@ -12,6 +12,9 @@ public static class SettingKeys
     /// <summary>No telemetry, and which outside services may be used (<c>Privacy</c>).</summary>
     public const string Privacy = "privacy.settings";
 
+    /// <summary>Whether every user must sign in with a second factor (<c>SecondFactorConfig</c>).</summary>
+    public const string SecondFactor = "auth.secondFactor";
+
     /// <summary>Default UI language for new users, as a BCP 47 tag.</summary>
     public const string DefaultLanguage = "ui.defaultLanguage";
 

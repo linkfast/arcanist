@@ -263,6 +263,8 @@ internal sealed class ArcanistImportWorker(
         await Refresh(SettingKeys.RemoteLibraries, RemoteLibrariesConfig.Default, config => remote.SetAsync(config, cancellationToken));
         var ai = scope.GetRequiredService<Ai.AiSettings>();
         await Refresh(SettingKeys.Ai, Ai.AiConfig.Default, config => ai.SetAsync(config, cancellationToken));
+        if (values.ContainsKey(SettingKeys.SecondFactor))
+            scope.GetRequiredService<Auth.SecondFactor.SecondFactorSettings>().Invalidate();
         // Privacy turns off what it leaves out (online services, the Ultimate Cloud extension).
         await Refresh(SettingKeys.Privacy, Application.Server.PrivacySettings.Default,
             choice => scope.GetRequiredService<Application.Server.PrivacyService>().ApplyAsync(choice, cancellationToken));

@@ -221,6 +221,7 @@ export const UserFields = graphql(`
     lastLoginAt
     libraryIds
     readOnlyLibraryIds
+    hasSecondFactor
   }
 `);
 
@@ -369,6 +370,7 @@ export const FfmpegStatusFields = graphql(`
 
 export const ServerConfigurationFields = graphql(`
   fragment ServerConfigurationFields on ServerConfiguration {
+    requireSecondFactor
     defaultLanguage
     ratingMode
     shareAnonymousStatistics
@@ -990,6 +992,118 @@ export const AppPasswordFields = graphql(`
     name
     createdAt
     lastUsedAt
+  }
+`);
+
+export const SecondFactorFields = graphql(`
+  fragment SecondFactorFields on MySecondFactor {
+    enabled
+    totpEnabled
+    totpEnabledAt
+    recoveryCodesLeft
+    required
+    passkeys {
+      id
+      name
+      rpId
+      createdAt
+      lastUsedAt
+    }
+  }
+`);
+
+export const MySecondFactorQuery = graphql(`
+  query MySecondFactor {
+    mySecondFactor {
+      ...SecondFactorFields
+    }
+  }
+`);
+
+export const StartTotpSetupMutation = graphql(`
+  mutation StartTotpSetup {
+    startTotpSetup {
+      secret
+      uri
+    }
+  }
+`);
+
+export const ConfirmTotpSetupMutation = graphql(`
+  mutation ConfirmTotpSetup($code: String!) {
+    confirmTotpSetup(code: $code) {
+      codes
+    }
+  }
+`);
+
+export const DisableTotpMutation = graphql(`
+  mutation DisableTotp {
+    disableTotp
+  }
+`);
+
+export const PasskeyRegistrationOptionsMutation = graphql(`
+  mutation PasskeyRegistrationOptions {
+    passkeyRegistrationOptions {
+      options
+    }
+  }
+`);
+
+export const RegisterPasskeyMutation = graphql(`
+  mutation RegisterPasskey($name: String, $attestation: String!) {
+    registerPasskey(name: $name, attestation: $attestation) {
+      recoveryCodes
+    }
+  }
+`);
+
+export const RenamePasskeyMutation = graphql(`
+  mutation RenamePasskey($id: ID!, $name: String!) {
+    renamePasskey(id: $id, name: $name) {
+      id
+    }
+  }
+`);
+
+export const RemovePasskeyMutation = graphql(`
+  mutation RemovePasskey($id: ID!) {
+    removePasskey(id: $id)
+  }
+`);
+
+export const RegenerateRecoveryCodesMutation = graphql(`
+  mutation RegenerateRecoveryCodes {
+    regenerateRecoveryCodes {
+      codes
+    }
+  }
+`);
+
+export const ResetUserSecondFactorMutation = graphql(`
+  mutation ResetUserSecondFactor($userId: ID!) {
+    resetUserSecondFactor(userId: $userId)
+  }
+`);
+
+export const SecondFactorPolicyQuery = graphql(`
+  query SecondFactorPolicy {
+    secondFactorPolicy {
+      required
+      setByEnvironment
+      usersWithout
+    }
+  }
+`);
+
+export const SetSecondFactorPolicyMutation = graphql(`
+  mutation SetSecondFactorPolicy($required: Boolean!) {
+    setSecondFactorPolicy(required: $required) {
+      required
+      setByEnvironment
+      usersWithout
+    }
   }
 `);
 

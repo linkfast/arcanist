@@ -51,6 +51,7 @@ import { ThemeSelect } from '../../shared/theme-select';
 import { MyCloud } from './my-cloud';
 import { MyDevices } from './my-devices';
 import { MyDlna } from './my-dlna';
+import { MySecondFactor } from './my-second-factor';
 import { MyTours } from './my-tours';
 import { MyVideos } from './my-videos';
 import { describeDevice } from './user-agent';
@@ -91,6 +92,7 @@ function section(id: string, icon: string): PanelSection {
     MyCloud,
     MyDevices,
     MyDlna,
+    MySecondFactor,
     MyVideos,
     MyTours,
   ],
@@ -126,6 +128,8 @@ function section(id: string, icon: string): PanelSection {
               </button>
             </div>
           </section>
+
+          <app-my-second-factor />
 
           <section hlmCard data-tour="account-sessions">
             <div hlmCardHeader>

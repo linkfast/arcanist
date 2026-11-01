@@ -103,6 +103,8 @@ import {
   WIZARD_EXTENSIONS,
   applySetupExtras,
 } from './setup-extras';
+import type { SecondFactorPairing } from '../../core/auth/auth.service';
+import { RequireSecondFactor, SecondFactorSetup } from '../../shared/second-factor-setup';
 import { SetupUltimateStep } from './setup-ultimate';
 import { SetupAddonsStep, SetupP2PStep, SetupUsersStep } from './setup-steps';
 import { SetupRestoreDialog, SetupRestoring } from './setup-restore';
@@ -131,6 +133,7 @@ type Step =
   | 'ultimate'
   | 'addons'
   | 'review'
+  | 'secondFactor'
   | 'progress';
 
 interface DraftLibrary {
@@ -176,6 +179,8 @@ const PROGRESS_MS = 1500;
     SetupUsersStep,
     SetupP2PStep,
     SetupAddonsStep,
+    RequireSecondFactor,
+    SecondFactorSetup,
     SetupUltimateStep,
     SetupRestoreDialog,
     SetupRestoring,
@@ -293,6 +298,10 @@ export class SetupPage implements OnInit {
   protected displayName = '';
   protected password = '';
   protected passwordConfirmation = '';
+  /** Everyone signs in with a second factor: recommended, so it starts on. */
+  protected requireSecondFactor = true;
+  /** How the administrator pairs theirs, right after setup. */
+  protected readonly secondFactorPairing = signal<SecondFactorPairing | null>(null);
   protected readonly libraries = signal<DraftLibrary[]>([
     { name: '', folders: [], visibleToAll: true },
   ]);
@@ -625,6 +634,7 @@ export class SetupPage implements OnInit {
       // The answers as they are now.
       const current = (await this.gql.query(ServerConfigurationQuery)).serverConfiguration;
       this.ratingMode = current.ratingMode;
+      this.requireSecondFactor = current.requireSecondFactor;
       this.shareStatistics = current.shareAnonymousStatistics ? 'yes' : 'no';
       this.ffmpegPath = current.ffmpegPath ?? '';
       const { __typename, ...online } = current.onlineServices as typeof current.onlineServices & {
@@ -728,6 +738,7 @@ export class SetupPage implements OnInit {
       noTelemetry: this.noTelemetry,
       externalServices: this.externalServices,
       openSourceOnly: this.openSourceOnly,
+      requireSecondFactor: this.requireSecondFactor,
       shareStatistics: this.shareStatistics,
       extras: {
         users: this.extras.users().map((u) => ({ ...u, password: '' })),
@@ -807,6 +818,7 @@ export class SetupPage implements OnInit {
     this.noTelemetry = draft.noTelemetry ?? false;
     this.externalServices = draft.externalServices ?? 'ALL';
     this.openSourceOnly = draft.openSourceOnly ?? false;
+    this.requireSecondFactor = draft.requireSecondFactor ?? true;
     this.shareStatistics = draft.shareStatistics ?? 'yes';
     const extras = draft.extras ?? {};
     this.extras.users.set(extras.users ?? []);
@@ -1163,6 +1175,7 @@ export class SetupPage implements OnInit {
           shareAnonymousStatistics: this.shareStatistics === 'yes',
           ffmpegPath: this.ffmpegPath.trim() || null,
           privacy: { noTelemetry: this.noTelemetry, externalServices: this.externalServices },
+          requireSecondFactor: this.requireSecondFactor,
         },
       });
       if (this.openSourceOnly !== this.edition.openSourceOnly())
@@ -1239,6 +1252,7 @@ export class SetupPage implements OnInit {
         privacy: { noTelemetry: this.noTelemetry, externalServices: this.externalServices },
         openSourceOnly: this.openSourceOnly,
         acceptedTerms: this.termsAccepted ? (this.terms()?.version ?? null) : null,
+        requireSecondFactor: this.requireSecondFactor,
         mstream:
           this.migrateFrom === 'mstream' && this.mstream.analyzed
             ? {
@@ -1272,16 +1286,14 @@ export class SetupPage implements OnInit {
 
       this.forgetDraft();
       await this.setup.loadStatus();
-      await this.auth.login(this.userName.trim(), this.password);
-      await this.applyExtras();
-      // The import runs on the server now; the wizard follows it until it ends (a reload comes back here).
-      this.importing = this.migrateFrom !== 'none';
-      if (!this.importing && !this.libraries().some((library) => library.folders.length > 0)) {
-        await this.router.navigateByUrl('/libraries');
+      const challenge = await this.auth.login(this.userName.trim(), this.password);
+      if (challenge) {
+        // The administrator chose it for everyone: theirs comes first.
+        this.secondFactorPairing.set(this.auth.pairingAtLogin(challenge.challenge));
+        this.step.set('secondFactor');
         return;
       }
-      this.step.set('progress');
-      await this.followProgress();
+      await this.afterSignIn();
     } catch (error) {
       const apiError = ApiError.from(error);
       this.fieldErrors.set(apiError.fields);
@@ -1305,6 +1317,20 @@ export class SetupPage implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** Signed in: the choices that need a session, then the progress of what started. */
+  protected async afterSignIn(): Promise<void> {
+    this.secondFactorPairing.set(null);
+    await this.applyExtras();
+    // The import runs on the server now; the wizard follows it until it ends (a reload comes back here).
+    this.importing = this.migrateFrom !== 'none';
+    if (!this.importing && !this.libraries().some((library) => library.folders.length > 0)) {
+      await this.router.navigateByUrl('/libraries');
+      return;
+    }
+    this.step.set('progress');
+    await this.followProgress();
   }
 
   /** What a reload left out (passwords are never kept), and the step that asks for it again. */

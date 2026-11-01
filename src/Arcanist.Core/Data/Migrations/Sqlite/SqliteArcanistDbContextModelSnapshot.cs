@@ -2887,11 +2887,17 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("HasSecondFactor")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsDisabled")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("MustSetUpSecondFactor")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NormalizedUserName")
                         .IsRequired()
@@ -2915,6 +2921,16 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("TotpEnabledAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TotpLastStep")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TotpSecret")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("UserName")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -2926,6 +2942,82 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserPasskey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("AaGuid")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("CredentialId")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("PublicKey")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("RpId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SignCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Transports")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CredentialId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserPasskeys");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserRecoveryCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CodeHash")
+                        .IsUnique();
+
+                    b.ToTable("UserRecoveryCodes");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.UserSession", b =>
@@ -3792,6 +3884,28 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Track");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserPasskey", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.UserRecoveryCode", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

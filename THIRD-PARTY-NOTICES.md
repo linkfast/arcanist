@@ -20,6 +20,9 @@ Arcanist includes or depends on the following third-party components. Each is us
 | SkiaSharp (including `SkiaSharp.NativeAssets.Linux.NoDependencies`) | MIT |
 | SharpCompress (XZ decompression of downloaded ffmpeg builds) | MIT |
 | Skia | BSD-3-Clause |
+| Fido2NetLib (`Fido2`, `Fido2.Models`: passkeys) | MIT |
+| NSec.Cryptography (with Fido2NetLib) | MIT |
+| libsodium (with NSec.Cryptography) | ISC |
 
 ffmpeg is not shipped. When an administrator asks for it, the server downloads a static GPL build from
 [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds), whose releases link to the corresponding source code.

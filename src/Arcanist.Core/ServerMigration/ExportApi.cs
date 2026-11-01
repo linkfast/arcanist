@@ -87,7 +87,7 @@ internal static class ExportApi
     [
         SettingKeys.RatingMode, SettingKeys.Privacy, SettingKeys.ShareAnonymousStatistics, SettingKeys.OnlineServices, SettingKeys.AcoustIdKey,
         SettingKeys.DefaultLanguage, SettingKeys.AnalysisEnabled, SettingKeys.UpdatesEnabled, SettingKeys.Dlna, SettingKeys.Mstream,
-        SettingKeys.Transcoding, SettingKeys.StreamingDefaults, SettingKeys.RemoteLibraries, SettingKeys.Ai, SettingKeys.Sharing,
+        SettingKeys.Transcoding, SettingKeys.StreamingDefaults, SettingKeys.RemoteLibraries, SettingKeys.Ai, SettingKeys.Sharing, SettingKeys.SecondFactor,
     ];
 
     public static IEndpointRouteBuilder MapExportApi(this IEndpointRouteBuilder app)
@@ -191,7 +191,7 @@ internal static class ExportApi
                 u.LibraryAccess.Where(a => ids.Contains(a.LibraryId)).Select(a => a.LibraryId).ToList(),
                 u.LibraryAccess.Where(a => a.ReadOnly && ids.Contains(a.LibraryId)).Select(a => a.LibraryId).ToList(),
                 u.PasswordHash.Length > 0,
-                SecondFactor: false)).ToList(),
+                u.HasSecondFactor)).ToList(),
             host.Extensions.Select(e => new ExportComponent(e.Manifest.Id, e.Manifest.Name, e.Manifest.Version, host.IsEnabled(e.Manifest.Id), e.BuiltIn,
                 e.BuiltIn || OpenSource.IsOpenLicense(e.Manifest.License), !e.BuiltIn && e.Root is not null)).ToList(),
             frontends.List().Select(f => new ExportComponent(f.Manifest.Id, f.Manifest.Name, f.Manifest.Version, true, f.BuiltIn,

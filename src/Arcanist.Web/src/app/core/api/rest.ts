@@ -30,6 +30,7 @@ export interface UserAccount {
   createdAt: string;
   lastLoginAt: string | null;
   libraryIds: string[];
+  hasSecondFactor?: boolean;
 }
 
 export interface TokenResponse {
@@ -38,6 +39,8 @@ export interface TokenResponse {
   refreshToken: string | null;
   sessionExpiresAt: string;
   user: UserAccount;
+  /** The new recovery codes, when pairing the first factor signed the user in. Shown only now. */
+  recoveryCodes?: string[] | null;
 }
 
 export interface SetupStatus {
@@ -94,6 +97,8 @@ export interface SetupRequest {
   } | null;
   /** The version of the terms and the disclaimer the administrator accepted. */
   acceptedTerms: string | null;
+  /** Everyone signs in with a second factor; the administrator pairs theirs right after setup. */
+  requireSecondFactor: boolean;
   /** Folders of a DLNA media server to copy into one of the folders of `libraries`. */
   dlna: { location: string; folders: { id: string; title: string }[]; folder: string } | null;
 }

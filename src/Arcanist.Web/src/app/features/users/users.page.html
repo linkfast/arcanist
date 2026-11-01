@@ -77,6 +77,14 @@
                   @if (user.isDisabled) {
                     <span hlmBadge variant="destructive">{{ 'users.disabled' | t }}</span>
                   }
+                  @if (user.hasSecondFactor) {
+                    <span
+                      hlmBadge
+                      variant="secondary"
+                      [title]="'users.secondFactorBadgeHelp' | t"
+                      >{{ 'users.secondFactorBadge' | t }}</span
+                    >
+                  }
                 </div>
                 <div class="mt-1 text-xs text-muted-foreground md:hidden">
                   {{ accessText(user) }}
@@ -129,6 +137,17 @@
                         <ng-icon name="lucideKeyRound" /> {{ 'users.resetPassword' | t }}
                       </button>
                       @if (user.id !== auth.user()?.id) {
+                        @if (user.hasSecondFactor) {
+                          <button
+                            cdkMenuItem
+                            [class]="menuItem"
+                            type="button"
+                            (cdkMenuItemTriggered)="resettingFactor.set(user)"
+                          >
+                            <ng-icon name="lucideShieldOff" />
+                            {{ 'users.resetSecondFactor' | t }}
+                          </button>
+                        }
                         <button
                           cdkMenuItem
                           [class]="menuItem"
@@ -381,6 +400,30 @@
 </hlm-dialog>
 
 <!-- Disable or enable -->
+<hlm-alert-dialog
+  [state]="resettingFactor() ? 'open' : 'closed'"
+  (closed)="resettingFactor.set(null)"
+>
+  <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
+    @if (resettingFactor(); as user) {
+      <hlm-alert-dialog-header>
+        <h3 hlmAlertDialogTitle>
+          {{ 'users.resetSecondFactorConfirm' | t: { name: user.userName } }}
+        </h3>
+        <p hlmAlertDialogDescription>{{ 'users.resetSecondFactorHelp' | t }}</p>
+      </hlm-alert-dialog-header>
+      <hlm-alert-dialog-footer>
+        <button hlmAlertDialogCancel type="button" (click)="resettingFactor.set(null)">
+          {{ 'common.cancel' | t }}
+        </button>
+        <button hlmAlertDialogAction type="button" (click)="confirmResetFactor(user)">
+          {{ 'users.resetSecondFactor' | t }}
+        </button>
+      </hlm-alert-dialog-footer>
+    }
+  </hlm-alert-dialog-content>
+</hlm-alert-dialog>
+
 <hlm-alert-dialog [state]="toggling() ? 'open' : 'closed'" (closed)="toggling.set(null)">
   <hlm-alert-dialog-content *brnAlertDialogContent="let ctx">
     @if (toggling(); as user) {

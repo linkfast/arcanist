@@ -49,6 +49,10 @@ public static class AuthServiceCollectionExtensions
         services.AddSingleton<LoginThrottle>();
         services.AddSingleton<UserAccessCache>();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
+        services.AddSingleton<SecondFactor.SecondFactorSettings>();
+        services.AddSingleton<SecondFactor.SecondFactorChallenges>();
+        services.AddSingleton<SecondFactor.Passkeys>();
+        services.AddScoped<SecondFactor.SecondFactors>();
         services.AddScoped<AuthService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();

@@ -7,6 +7,7 @@ import {
   lucideCircleCheck,
   lucideEllipsis,
   lucideKeyRound,
+  lucideShieldOff,
   lucidePencil,
   lucidePlus,
   lucideTrash2,
@@ -36,6 +37,7 @@ import {
   CreateUserMutation,
   DeleteUserMutation,
   ResetUserPasswordMutation,
+  ResetUserSecondFactorMutation,
   SetUserLibrariesMutation,
   UpdateUserMutation,
   UsersQuery,
@@ -111,6 +113,7 @@ interface UserForm {
       lucidePencil,
       lucideTrash2,
       lucideKeyRound,
+      lucideShieldOff,
       lucideEllipsis,
       lucideBan,
       lucideCircleCheck,
@@ -146,6 +149,7 @@ export class UsersPage implements OnInit {
   protected newPassword = '';
   protected readonly deleting = signal<User | null>(null);
   protected readonly toggling = signal<User | null>(null);
+  protected readonly resettingFactor = signal<User | null>(null);
 
   /** Permissions the current user may grant: all for administrators, their own otherwise. */
   protected readonly permissionGroups = computed(() =>
@@ -346,6 +350,15 @@ export class UsersPage implements OnInit {
       this.resetting.set(null);
       this.newPassword = '';
       toast.success(this.i18n.t('users.passwordReset', { name: user.userName }));
+    });
+  }
+
+  protected async confirmResetFactor(user: User): Promise<void> {
+    this.resettingFactor.set(null);
+    await this.run(async () => {
+      await this.gql.mutate(ResetUserSecondFactorMutation, { userId: user.id });
+      toast.success(this.i18n.t('users.secondFactorReset', { name: user.userName }));
+      await this.load();
     });
   }
 

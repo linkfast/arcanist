@@ -5,7 +5,7 @@
     <section hlmCard class="w-full max-w-2xl">
       <div hlmCardHeader>
         <app-brand class="mb-2" [edition]="'setup.edition' | t" />
-        @if (step() !== 'progress') {
+        @if (step() !== 'progress' && step() !== 'secondFactor') {
           <p class="text-xs text-muted-foreground">
             {{ 'setup.stepOf' | t: { current: stepIndex() + 1, total: steps().length } }}
           </p>
@@ -243,6 +243,7 @@
                 />
               </hlm-field>
             </div>
+            <app-require-second-factor class="mt-4 block" [(value)]="requireSecondFactor" />
           }
 
           @case ('import') {
@@ -537,7 +538,16 @@
             <p class="text-xs text-muted-foreground">{{ 'setup.ratings.later' | t }}</p>
           }
 
+          @case ('secondFactor') {
+            @if (secondFactorPairing(); as pairing) {
+              <app-second-factor-setup [pairing]="pairing" (finished)="afterSignIn()" />
+            }
+          }
+
           @case ('privacy') {
+            @if (reconfigure) {
+              <app-require-second-factor class="mb-4 block" [(value)]="requireSecondFactor" />
+            }
             <app-privacy-level
               [value]="{ noTelemetry: noTelemetry, externalServices: externalServices }"
               (changed)="setPrivacy($event)"
@@ -638,6 +648,18 @@
                 <dt class="text-muted-foreground">{{ 'setup.review.admin' | t }}</dt>
                 <dd class="flex items-center justify-between gap-2">
                   <span>{{ userName }}</span>
+                  <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('admin')">
+                    {{ 'common.edit' | t }}
+                  </button>
+                </dd>
+                <dt class="text-muted-foreground">{{ 'setup.review.secondFactor' | t }}</dt>
+                <dd class="flex items-center justify-between gap-2">
+                  <span>{{
+                    (requireSecondFactor
+                      ? 'setup.review.secondFactorOn'
+                      : 'setup.review.secondFactorOff'
+                    ) | t
+                  }}</span>
                   <button hlmBtn variant="link" size="sm" type="button" (click)="goTo('admin')">
                     {{ 'common.edit' | t }}
                   </button>
@@ -931,7 +953,11 @@
         }
       </div>
 
-      <div hlmCardFooter class="flex-wrap justify-between gap-2">
+      <div
+        hlmCardFooter
+        class="flex-wrap justify-between gap-2"
+        [class.hidden]="step() === 'secondFactor'"
+      >
         @if (step() === 'progress') {
           <span></span>
           <button

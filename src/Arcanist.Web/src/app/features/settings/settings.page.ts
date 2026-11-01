@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { provideIcons } from '@ng-icons/core';
 import {
+  lucideKeyRound,
   lucideServer,
   lucideShare2,
   lucideShieldCheck,
@@ -22,6 +23,7 @@ import { OnlineServicesCard } from './online-services-card';
 import { OpenSourceCard } from './open-source-card';
 import { PrivacyCard } from './privacy-card';
 import { RatingModeCard } from './rating-mode-card';
+import { SecondFactorCard } from './second-factor-card';
 import { SharingCard } from './sharing-card';
 import { UpdatesCard } from './updates-card';
 
@@ -45,12 +47,14 @@ function section(id: string, icon: string): PanelSection {
     MaintenanceCard,
     OnlineServicesCard,
     RatingModeCard,
+    SecondFactorCard,
     SharingCard,
     UpdatesCard,
     HostCard,
   ],
   providers: [
     provideIcons({
+      lucideKeyRound,
       lucideSlidersHorizontal,
       lucideShieldCheck,
       lucideShare2,
@@ -78,6 +82,9 @@ function section(id: string, icon: string): PanelSection {
           @for (version of [privacyVersion()]; track version) {
             <app-online-services-card />
           }
+        }
+        @case ('security') {
+          <app-second-factor-card />
         }
         @case ('sharing') {
           <app-sharing-card />
@@ -107,6 +114,7 @@ export class SettingsPage {
     section('privacy', 'lucideShieldCheck'),
     ...(this.auth.isAdmin()
       ? [
+          section('security', 'lucideKeyRound'),
           section('sharing', 'lucideShare2'),
           section('server', 'lucideServer'),
           section('maintenance', 'lucideWrench'),

@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fido2" Version="4.3.2" />
     <PackageReference Include="GraphQL" Version="8.8.5" />
     <PackageReference Include="GraphQL.Server.Transports.AspNetCore" Version="8.3.3" />
     <PackageReference Include="GraphQL.SystemTextJson" Version="8.8.5" />

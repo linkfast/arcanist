@@ -193,6 +193,10 @@ type Query {
   scanJob(id: ID!): ScanJob!
   "Artists, albums, tracks and playlists matching every word of the query (as word starts, ignoring accents and case), best first. first is per kind: 10 by default, at most 50."
   search(query: String!, first: Int): SearchResults!
+  "The user's second factors: the authenticator app, passkeys and how many recovery codes are left."
+  mySecondFactor: MySecondFactor!
+  "Whether the server requires a second factor of everyone, and who still has none. Administrators only."
+  secondFactorPolicy: SecondFactorPolicy!
   "What the setup wizard chose, as it is now, to run it again. Administrators only."
   serverConfiguration: ServerConfiguration!
   "Whether there is a newer Arcanist (checked on GitHub every 12 hours), with what changed and how this server is updated. Administrators only."
@@ -2623,6 +2627,29 @@ type SearchResults {
   playlists: [Playlist!]!
 }
 
+type MySecondFactor {
+  enabled: Boolean!
+  totpEnabled: Boolean!
+  totpEnabledAt: DateTime
+  passkeys: [Passkey!]!
+  recoveryCodesLeft: Int!
+  required: Boolean!
+}
+
+type Passkey {
+  id: ID!
+  name: String!
+  rpId: String!
+  createdAt: DateTime!
+  lastUsedAt: DateTime
+}
+
+type SecondFactorPolicy {
+  required: Boolean!
+  setByEnvironment: Boolean!
+  usersWithout: Int!
+}
+
 type ServerConfiguration {
   defaultLanguage: String
   ratingMode: RatingMode!
@@ -2630,6 +2657,7 @@ type ServerConfiguration {
   shareAnonymousStatistics: Boolean!
   ffmpegPath: String
   privacy: Privacy!
+  requireSecondFactor: Boolean!
 }
 
 enum RatingMode {
@@ -3268,6 +3296,7 @@ enum ApiFeature {
   JUKEBOX_JAM_BROWSE
   JUKEBOX_JAM_REPLACE
   JUKEBOX_JAM_SAVE_AS_PLAYLIST
+  SECOND_FACTOR
   AVAILABLE_PLAYERS
   WISH_LIST_CLOUD_SYNC
 }
@@ -3311,6 +3340,7 @@ type UserAccount {
   lastLoginAt: DateTime
   libraryIds: [ID!]!
   readOnlyLibraryIds: [ID!]!
+  hasSecondFactor: Boolean!
 }
 
 enum Permission {
@@ -3725,6 +3755,26 @@ type Mutation {
   startScan(libraryId: ID!, full: Boolean!): ScanJob!
   "Requires RUN_SCANS."
   cancelScan(id: ID!): Boolean!
+  "A secret for an authenticator app; confirmTotpSetup enables it. Needs a recent authentication."
+  startTotpSetup: TotpSetup!
+  "Enables the authenticator app with its first code. With the user's first factor come their recovery codes, shown only now. Signs their other devices out."
+  confirmTotpSetup(code: String!): RecoveryCodes!
+  "Removes the authenticator app. Needs a recent authentication; not the user's last factor if the server requires one."
+  disableTotp: Boolean!
+  "What navigator.credentials.create needs, as JSON; registerPasskey takes its answer. Needs a recent authentication."
+  passkeyRegistrationOptions: PasskeyRegistration!
+  "Adds a passkey from the browser's answer, as JSON. With the user's first factor come their recovery codes, shown only now. Signs their other devices out."
+  registerPasskey(name: String, attestation: String!): RegisteredPasskey!
+  "Renames one of the user's passkeys."
+  renamePasskey(id: ID!, name: String!): Passkey!
+  "Removes one of the user's passkeys. Needs a recent authentication; not their last factor if the server requires one."
+  removePasskey(id: ID!): Boolean!
+  "New recovery codes, shown only now; the old ones stop working. Needs a recent authentication."
+  regenerateRecoveryCodes: RecoveryCodes!
+  "For who lost their factors: removes them all and signs the user out; they pair one again at their next sign-in. Needs MANAGE_USERS and a recent authentication."
+  resetUserSecondFactor(userId: ID!): Boolean!
+  "Whether the server requires a second factor of everyone: who has none pairs one at their next sign-in. Administrators only, with a recent authentication."
+  setSecondFactorPolicy(required: Boolean!): SecondFactorPolicy!
   "Checks now for a newer Arcanist. Administrators only."
   checkServerUpdate: ServerUpdate!
   "Installs the latest release where the installation lets the panel do it (install.selfUpdate is PANEL; update_self_unavailable otherwise). The server restarts by itself. Only the latest release of the official repository, checked against its checksum. Administrators only, with a recent authentication."
@@ -4444,6 +4494,24 @@ input CreateS3LibraryInput {
   encryptionKey: String
 }
 
+type TotpSetup {
+  secret: String!
+  uri: String!
+}
+
+type RecoveryCodes {
+  codes: [String!]!
+}
+
+type PasskeyRegistration {
+  options: String!
+}
+
+type RegisteredPasskey {
+  passkey: Passkey!
+  recoveryCodes: [String!]!
+}
+
 input SetServerUpdateSettingsInput {
   enabled: Boolean!
 }
@@ -4455,6 +4523,7 @@ input ReconfigureServerInput {
   shareAnonymousStatistics: Boolean!
   ffmpegPath: String
   privacy: SetPrivacyInput
+  requireSecondFactor: Boolean
 }
 
 input SetPrivacyInput {

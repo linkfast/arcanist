@@ -321,6 +321,14 @@ export const TOURS: Record<string, Tour> = {
         },
       },
       {
+        target: '[data-tour="section-security"]',
+        title: { es: 'Seguridad', en: 'Security' },
+        body: {
+          es: 'Si todos deben iniciar sesión con verificación en dos pasos. Quien no la tenga la configurará al entrar.',
+          en: 'Whether everyone must sign in with two-step verification. Who does not have it sets it up when signing in.',
+        },
+      },
+      {
         target: '[data-tour="section-sharing"]',
         title: { es: 'Compartir', en: 'Sharing' },
         body: {
@@ -792,8 +800,8 @@ export const TOURS: Record<string, Tour> = {
         target: '[data-tour="section-security"]',
         title: { es: 'Seguridad', en: 'Security' },
         body: {
-          es: 'Tu contraseña y dónde tienes la sesión iniciada. Cierra las sesiones que no reconozcas.',
-          en: 'Your password and where you are signed in. Sign out of any session you do not recognise.',
+          es: 'Tu contraseña, la verificación en dos pasos y dónde tienes la sesión iniciada. Cierra las sesiones que no reconozcas.',
+          en: 'Your password, two-step verification and where you are signed in. Sign out of any session you do not recognise.',
         },
       },
       {

@@ -511,9 +511,10 @@ public sealed class ArcanistImportService(
                 Role = input.Permissions ? user.Role : UserRole.User,
                 Permissions = input.Permissions ? PermissionMapping.ToFlags(user.Permissions) : Permissions.Download,
                 // Hashes are ASP.NET Core Identity's, as here: they verify as they are. Second factors are never
-                // brought: when Arcanist has them, a user who had one pairs it again at their first sign-in.
+                // brought: a user who had one pairs it again at their first sign-in.
                 PasswordHash = input.CopyPasswords ? passwords.GetValueOrDefault(user.Id) ?? "" : "",
                 IsDisabled = user.IsDisabled,
+                MustSetUpSecondFactor = user.SecondFactor,
                 CreatedAt = now,
             };
             if (input.Permissions && user.Role != UserRole.Admin)

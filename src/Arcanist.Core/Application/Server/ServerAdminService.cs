@@ -22,7 +22,8 @@ public sealed record ServerConfiguration(
     OnlineServicesSettings OnlineServices,
     bool ShareAnonymousStatistics,
     string? FfmpegPath,
-    Privacy Privacy);
+    Privacy Privacy,
+    bool RequireSecondFactor = false);
 
 /// <summary>The setup wizard's answers, run again on a server that is already set up. Libraries are added apart.</summary>
 /// <param name="Privacy">Applied first: what it leaves out stays off whatever the rest says.</param>
@@ -32,7 +33,8 @@ public sealed record ReconfigureServerInput(
     SetOnlineServicesInput OnlineServices,
     bool ShareAnonymousStatistics,
     string? FfmpegPath,
-    SetPrivacyInput? Privacy = null);
+    SetPrivacyInput? Privacy = null,
+    bool? RequireSecondFactor = null);
 
 /// <param name="RemoveAddons">Also the installed players and extensions (with their data) and the downloaded tools
 /// (ffmpeg, ultimate-audio).</param>
@@ -70,7 +72,8 @@ public sealed class ServerAdminService(
             await settings.GetAsync(SettingKeys.OnlineServices, OnlineServicesSettings.None, cancellationToken),
             await settings.GetAsync(SettingKeys.ShareAnonymousStatistics, false, cancellationToken),
             await settings.GetAsync<string?>(SettingKeys.FfmpegPath, null, cancellationToken),
-            await services.GetRequiredService<PrivacySettings>().GetAsync(cancellationToken));
+            await services.GetRequiredService<PrivacySettings>().GetAsync(cancellationToken),
+            await services.GetRequiredService<Auth.SecondFactor.SecondFactorSettings>().RequiredAsync(cancellationToken));
     }
 
     /// <summary>The setup wizard's answers again: language, ratings, online services, anonymous statistics and ffmpeg.</summary>
@@ -94,6 +97,9 @@ public sealed class ServerAdminService(
         await settings.SetAsync(SettingKeys.ShareAnonymousStatistics,
             input.ShareAnonymousStatistics && privacy is { NoTelemetry: false, ExternalServices: not ExternalServices.None }, cancellationToken);
         await services.GetRequiredService<Media.FfmpegService>().SetPathAsync(input.FfmpegPath, cancellationToken);
+        var secondFactor = services.GetRequiredService<Auth.SecondFactor.SecondFactorSettings>();
+        if (input.RequireSecondFactor is { } required && secondFactor.Environment is null)
+            await secondFactor.SetAsync(required, cancellationToken);
         WakeReporter();
         return await ConfigurationAsync(cancellationToken);
     }
@@ -143,6 +149,7 @@ public sealed class ServerAdminService(
         await services.GetRequiredService<Core.Media.StreamingDefaultsSettings>().SetAsync(Core.Media.StreamingDefaults.Default, cancellationToken);
         await services.GetRequiredService<Core.P2P.RemoteLibrariesSettings>().SetAsync(Core.P2P.RemoteLibrariesConfig.Default, cancellationToken);
         await services.GetRequiredService<Sharing.SharingSettings>().SetAsync(Sharing.SharingConfig.Default, cancellationToken);
+        await services.GetRequiredService<Auth.SecondFactor.SecondFactorSettings>().SetAsync(Auth.SecondFactor.SecondFactorConfig.Default.Required, cancellationToken);
         services.GetRequiredService<Core.P2P.P2PNode>().Changed();
         services.GetRequiredService<Core.Cloud.UltimateCloudAccount>().Wake();
 

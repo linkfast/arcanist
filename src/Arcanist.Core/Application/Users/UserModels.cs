@@ -43,6 +43,7 @@ public enum Permission
 /// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed,
 /// unless the user is only a listener there.</param>
 /// <param name="ReadOnlyLibraryIds">Of those, the ones the user listens to but adds nothing to (no uploads).</param>
+/// <param name="HasSecondFactor">They sign in with an authenticator app or a passkey too.</param>
 public sealed record UserAccount(
     Guid Id,
     string UserName,
@@ -53,7 +54,8 @@ public sealed record UserAccount(
     DateTime CreatedAt,
     DateTime? LastLoginAt,
     IReadOnlyList<Guid> LibraryIds,
-    IReadOnlyList<Guid> ReadOnlyLibraryIds);
+    IReadOnlyList<Guid> ReadOnlyLibraryIds,
+    bool HasSecondFactor = false);
 
 /// <summary>A signed-in device of the current user.</summary>
 public sealed record Session(
@@ -118,7 +120,7 @@ public static class PermissionMapping
 
     public static UserAccount ToAccount(this User user, IReadOnlyList<Guid> libraryIds, IReadOnlyList<Guid>? readOnlyLibraryIds = null) => new(
         user.Id, user.UserName, user.DisplayName, user.Role, ToList(user.Permissions),
-        user.IsDisabled, user.CreatedAt, user.LastLoginAt, libraryIds, readOnlyLibraryIds ?? []);
+        user.IsDisabled, user.CreatedAt, user.LastLoginAt, libraryIds, readOnlyLibraryIds ?? [], user.HasSecondFactor);
 
     /// <summary>The account with its grants as stored: every row is a library, and some are read only.</summary>
     public static UserAccount ToAccount(this User user, IEnumerable<LibraryAccess> grants)

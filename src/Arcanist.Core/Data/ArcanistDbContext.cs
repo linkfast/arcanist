@@ -47,6 +47,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<OrganizeRun> OrganizeRuns => Set<OrganizeRun>();
     public DbSet<OrganizeMove> OrganizeMoves => Set<OrganizeMove>();
     public DbSet<AppPassword> AppPasswords => Set<AppPassword>();
+    public DbSet<UserRecoveryCode> UserRecoveryCodes => Set<UserRecoveryCode>();
+    public DbSet<UserPasskey> UserPasskeys => Set<UserPasskey>();
     public DbSet<MstreamImport> MstreamImports => Set<MstreamImport>();
     public DbSet<MstreamImportFile> MstreamImportFiles => Set<MstreamImportFile>();
 
@@ -260,6 +262,25 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             password.Property(p => p.SecretHash).HasMaxLength(64);
             password.HasIndex(p => p.SecretHash).IsUnique();
             password.HasIndex(p => p.UserId);
+        });
+
+        modelBuilder.Entity<User>().Property(u => u.TotpSecret).HasMaxLength(1000);
+
+        modelBuilder.Entity<UserRecoveryCode>(code =>
+        {
+            code.HasOne(c => c.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            code.Property(c => c.CodeHash).HasMaxLength(64);
+            code.HasIndex(c => new { c.UserId, c.CodeHash }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserPasskey>(passkey =>
+        {
+            passkey.HasOne(p => p.User).WithMany().OnDelete(DeleteBehavior.Cascade);
+            passkey.Property(p => p.Name).HasMaxLength(NameLength);
+            passkey.Property(p => p.RpId).HasMaxLength(255);
+            passkey.Property(p => p.Transports).HasMaxLength(200);
+            passkey.HasIndex(p => p.CredentialId).IsUnique();
+            passkey.HasIndex(p => p.UserId);
         });
 
         modelBuilder.Entity<MstreamImport>(import =>

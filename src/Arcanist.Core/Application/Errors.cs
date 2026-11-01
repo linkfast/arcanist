@@ -92,6 +92,22 @@ public static class ErrorCodes
     /// <summary>The setting comes from the environment (variables, appsettings, command line): the panel cannot change it.</summary>
     public const string SetByEnvironment = "set_by_environment";
     public const string ExtensionManaged = "extension_managed";
+    /// <summary>The password was right: a second factor finishes the sign-in (or the step-up).</summary>
+    public const string SecondFactorRequired = "second_factor_required";
+    /// <summary>The password was right, and the user must pair a second factor to sign in.</summary>
+    public const string SecondFactorSetupRequired = "second_factor_setup_required";
+    /// <summary>That code is wrong, or was already used.</summary>
+    public const string InvalidSecondFactor = "invalid_second_factor";
+    /// <summary>The sign-in took too long, or what it was waiting for changed: it starts again from the password.</summary>
+    public const string SecondFactorExpired = "second_factor_expired";
+    /// <summary>The passkey's answer did not check out, or the browser could not create one.</summary>
+    public const string PasskeyFailed = "passkey_failed";
+    /// <summary>The user's passkeys belong to another address of this server: passkeys only work on the domain they were created on.</summary>
+    public const string PasskeyOtherDomain = "passkey_other_domain";
+    /// <summary>The server requires a second factor, and this is the user's last one.</summary>
+    public const string SecondFactorLast = "second_factor_last";
+    /// <summary>The user already has an authenticator app: they remove it first.</summary>
+    public const string TotpAlreadyEnabled = "totp_already_enabled";
     /// <summary>The limit of items of that kind was reached (e.g. 50 app passwords per user).</summary>
     public const string TooMany = "too_many";
     /// <summary>A playlist holds at most 10,000 tracks.</summary>

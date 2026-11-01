@@ -185,6 +185,7 @@ internal sealed partial class MstreamExtension : IBuiltInExtension
                 return (await call.Service<MstreamSettings>().GetAsync(call.Cancellation)).PasswordSignIn
                        && await ExtensionAuthentication.SignInAsync(call.Http, user.UserId, "mstream", call.Cancellation)
                        && call.Access.SecurityStamp == user.SecurityStamp
+                       && await call.Service<AuthService>().PasswordAloneIsEnoughAsync(user.UserId, call.Cancellation)
                        && await PasswordHashAsync(call, user.UserId) is { } hash
                        && MstreamTokenSubject.Fingerprint(hash) == user.PasswordFingerprint;
             default:

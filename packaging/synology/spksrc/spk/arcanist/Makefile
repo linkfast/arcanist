@@ -17,8 +17,8 @@ UNSUPPORTED_ARCHS = $(32bit_ARCHS)
 
 MAINTAINER = linkfast
 MAINTAINER_URL = https://github.com/linkfast/arcanist
-DESCRIPTION = Self-hosted music server: your own Spotify for the whole family. Create libraries from your shared folders and listen from any browser or device.
-DESCRIPTION_SPN = Servidor de música autoalojado: tu propio Spotify para toda la familia. Crea bibliotecas a partir de tus carpetas compartidas y escúchalas desde cualquier navegador o dispositivo.
+DESCRIPTION = Self-hosted music server for you and your family. Create libraries from your shared folders and listen from any browser or device.
+DESCRIPTION_SPN = Servidor de música autoalojado para ti y tu familia. Crea bibliotecas a partir de tus carpetas compartidas y escúchalas desde cualquier navegador o dispositivo.
 DISPLAY_NAME = Arcanist
 CHANGELOG = "Initial release."
 HOMEPAGE = https://github.com/linkfast/arcanist

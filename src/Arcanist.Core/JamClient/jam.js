@@ -11,22 +11,25 @@
         title: 'Jukebox Jam', noCode: 'Abre el enlace o el QR de un Jam para entrar.', ended: 'Este Jam terminó.',
         gone: 'Este Jam no existe o ya terminó.', hostedBy: 'de', join: 'Unirme', yourName: 'Tu nombre',
         joinText: 'Ponte un nombre para añadir canciones y votar.', joinAccount: 'Entra con tu cuenta para unirte a este Jam.',
+        goneOrAccount: 'Este Jam pide entrar con una cuenta, o ya terminó.',
+        hostGone: 'El anfitrión se desconectó: la música no avanza hasta que vuelva.', endJam: 'Terminar el Jam',
+        endConfirm: '¿Terminar el Jam para todos?', suggested: 'sugerida', likes: (names) => `le gusta a ${names.join(', ')}`, up: 'Subir', down: 'Bajar',
         signIn: 'Iniciar sesión', nothing: 'No suena nada ahora.', hostSong: 'Del anfitrión', paused: 'En pausa',
         queue: 'Cola', add: 'Añadir', invite: 'Invitar', upNext: 'A continuación', empty: 'La cola está vacía: ¡añade algo!',
+        unvote: 'Quitar mi voto',
         played: 'Ya sonaron', pinned: 'suena a continuación', search: 'Buscar canciones, artistas o álbumes', artists: 'Artistas', albums: 'Álbumes',
         recent: 'Recientes', songs: 'Canciones', addBtn: 'Añadir', added: 'En la cola', playNow: 'Que suene ya',
         addAll: 'Añadir todas', back: 'Atrás', more: 'Ver más', vote: 'Votar', votes: (n) => `${n} ${n === 1 ? 'voto' : 'votos'}`,
         addedBy: 'añadida por', dj: 'AI DJ de Ultimate', link: 'Enlace para entrar', copy: 'Copiar', copied: 'Copiado',
         share: 'Compartir', skip: 'Saltar', pause: 'Pausar', resume: 'Seguir', remove: 'Quitar', pin: 'Que sea la siguiente',
-        addsLeft: (n) => `Puedes añadir ${n} más ahora`, waitVote: (s) => `Podrás votar de nuevo en ${s} s`,
-        waitReplace: (s) => `Podrás cambiar la que suena en ${s} s`, you: 'Tú',
+        addsLeft: (n) => `Puedes añadir ${n} más ahora`, you: 'Tú',
         errors: {
           jam_ended: 'Este Jam terminó.', jam_full: 'Este Jam ya no admite más invitados.',
           jam_guest_limit: 'Ya añadiste varias canciones: espera un poco para añadir más.',
           jam_guest_removed: 'El anfitrión te sacó de este Jam.', jam_guests_disabled: 'Este Jam no admite invitados sin cuenta.',
-          jam_track_not_allowed: 'Esa canción no se puede añadir a este Jam.', jam_vote_too_soon: 'Espera un poco para volver a votar.',
+          jam_track_not_allowed: 'Esa canción no se puede añadir a este Jam.',
           jam_voting_off: 'Este Jam no tiene votaciones.', jam_replace_off: 'En este Jam no se puede cambiar la que suena.',
-          jam_replace_too_soon: 'Alguien acaba de cambiar la que suena: espera un poco.', not_found: 'No se encontró.',
+          not_found: 'No se encontró.',
           forbidden: 'No puedes hacer eso.', rate_limited: 'Demasiadas peticiones: espera un momento.',
           validation_failed: 'Revisa lo que escribiste.', default: 'Algo salió mal. Inténtalo de nuevo.',
         },
@@ -35,22 +38,25 @@
         title: 'Jukebox Jam', noCode: 'Open a Jam\'s link or QR code to join it.', ended: 'This Jam has ended.',
         gone: 'This Jam does not exist or has ended.', hostedBy: 'by', join: 'Join', yourName: 'Your name',
         joinText: 'Give yourself a name to add songs and vote.', joinAccount: 'Sign in with your account to join this Jam.',
+        goneOrAccount: 'This Jam asks you to sign in with an account, or it has ended.',
+        hostGone: 'The host went offline: the music will not move on until they are back.', endJam: 'End the Jam',
+        endConfirm: 'End the Jam for everyone?', suggested: 'suggested', likes: (names) => `${names.join(', ')} liked it`, up: 'Move up', down: 'Move down',
         signIn: 'Sign in', nothing: 'Nothing is playing now.', hostSong: 'From the host', paused: 'Paused',
         queue: 'Queue', add: 'Add', invite: 'Invite', upNext: 'Up next', empty: 'The queue is empty: add something!',
+        unvote: 'Take my vote back',
         played: 'Played', pinned: 'plays next', search: 'Search songs, artists or albums', artists: 'Artists', albums: 'Albums',
         recent: 'Recent', songs: 'Songs', addBtn: 'Add', added: 'Queued', playNow: 'Play now',
         addAll: 'Add all', back: 'Back', more: 'Show more', vote: 'Vote', votes: (n) => `${n} ${n === 1 ? 'vote' : 'votes'}`,
         addedBy: 'added by', dj: 'Ultimate AI DJ', link: 'Link to join', copy: 'Copy', copied: 'Copied',
         share: 'Share', skip: 'Skip', pause: 'Pause', resume: 'Resume', remove: 'Remove', pin: 'Play next',
-        addsLeft: (n) => `You can add ${n} more now`, waitVote: (s) => `You can vote again in ${s} s`,
-        waitReplace: (s) => `You can change the song playing in ${s} s`, you: 'You',
+        addsLeft: (n) => `You can add ${n} more now`, you: 'You',
         errors: {
           jam_ended: 'This Jam has ended.', jam_full: 'This Jam takes no more guests.',
           jam_guest_limit: 'You added several songs: wait a little to add more.',
           jam_guest_removed: 'The host took you out of this Jam.', jam_guests_disabled: 'This Jam takes no guests without an account.',
-          jam_track_not_allowed: 'That song cannot be added to this Jam.', jam_vote_too_soon: 'Wait a little to vote again.',
+          jam_track_not_allowed: 'That song cannot be added to this Jam.',
           jam_voting_off: 'This Jam has no voting.', jam_replace_off: 'The song playing cannot be changed in this Jam.',
-          jam_replace_too_soon: 'Someone just changed the song playing: wait a little.', not_found: 'Not found.',
+          not_found: 'Not found.',
           forbidden: 'You cannot do that.', rate_limited: 'Too many requests: wait a moment.',
           validation_failed: 'Check what you wrote.', default: 'Something went wrong. Try again.',
         },
@@ -107,8 +113,6 @@
     return body;
   }
   function explain(error) {
-    if (error.code === 'jam_vote_too_soon' && error.body?.retryAfterSeconds) return T.waitVote(error.body.retryAfterSeconds);
-    if (error.code === 'jam_replace_too_soon' && error.body?.retryAfterSeconds) return T.waitReplace(error.body.retryAfterSeconds);
     return T.errors[error.code] || T.errors.default;
   }
   async function act(work) {
@@ -172,6 +176,9 @@
   setInterval(() => { const bar = document.querySelector('.progress > div'); if (bar) bar.style.width = `${progress()}%`; }, 1000);
 
   // —— Views ——
+  /** Signing in comes back to this Jam. */
+  const signInLink = () => h('a', { class: 'btn primary', href: `/admin/login?returnUrl=${encodeURIComponent(`${location.pathname}#/jam/${code}`)}` }, T.signIn);
+
   function render() {
     const app = document.getElementById('app');
     app.replaceChildren(...view().filter(Boolean));
@@ -179,6 +186,9 @@
 
   function view() {
     if (!code) return [h('p', { class: 'center muted' }, T.noCode)];
+    // Without a session, a Jam closed to guests answers as if it did not exist: it may just need an account.
+    if (state.error && !state.jam && state.error.status === 404 && !state.token)
+      return [h('div', { class: 'center' }, h('p', { class: 'muted' }, T.goneOrAccount), h('p', { style: 'margin-top:12px' }, signInLink()))];
     if (state.error && !state.jam) return [h('p', { class: 'center muted' }, state.error.status === 404 ? T.gone : explain(state.error))];
     const jam = state.jam;
     if (!jam) return [h('p', { class: 'center muted' }, '…')];
@@ -193,7 +203,15 @@
         h('button', { role: 'tab', 'aria-selected': String(state.tab === id), onclick: () => { state.tab = id; state.browser = null; render(); } }, label)));
     // The browser keeps what it shows (and what is being typed) while the Jam changes.
     const body = state.tab === 'add' ? (state.browser ??= browser(jam)) : state.tab === 'invite' ? invite(jam) : queue(jam);
-    return [head, nowPlaying(jam), controls(jam), tabs, body];
+    return [head, hostGone(jam), nowPlaying(jam), controls(jam), tabs, body];
+  }
+
+  function hostGone(jam) {
+    if (!jam.hostGone) return null;
+    return h('div', { class: 'card notice' }, h('p', {}, T.hostGone),
+      jam.you.canManage
+        ? h('p', { style: 'margin-top:8px' }, h('button', { class: 'btn small', onclick: () => { if (confirm(T.endConfirm)) act(() => api('/end', { method: 'POST' })); } }, T.endJam))
+        : null);
   }
 
   function progress() {
@@ -232,7 +250,7 @@
       return h('div', { style: 'margin-top:16px' }, h('button', { class: 'btn primary', onclick: () => act(() => api('/join', { method: 'POST', body: {} })) }, T.join));
     if (!jam.allowGuests)
       return h('div', { class: 'card', style: 'margin-top:16px' }, h('p', {}, T.joinAccount),
-        h('p', { style: 'margin-top:12px' }, h('a', { class: 'btn primary', href: '/admin/' }, T.signIn)));
+        h('p', { style: 'margin-top:12px' }, signInLink()));
     const name = h('input', { type: 'text', maxlength: '50', placeholder: T.yourName, autocomplete: 'nickname', required: true, value: read('arcanist.jam.name') || '' });
     return h('form', {
       class: 'join card', onsubmit: (event) => {
@@ -250,8 +268,14 @@
     const you = jam.you;
     const actions = [];
     if (waiting && jam.voting)
-      actions.push(h('button', { class: 'btn small', title: T.vote, onclick: () => act(() => api('/votes', { method: 'POST', body: { entryId: entry.id } })) }, `▲ ${entry.votes}`));
+      actions.push(h('button', { class: `btn small${entry.votedByYou ? ' primary' : ''}`, title: entry.votedByYou ? T.unvote : T.vote, 'aria-pressed': String(entry.votedByYou), onclick: () => act(() => api('/votes', { method: 'POST', body: { entryId: entry.id } })) }, `▲ ${entry.votes}`));
     if (waiting && you.canControl) {
+      if (!jam.voting && !jam.dj) {
+        const index = jam.queue.indexOf(entry);
+        const move = (position) => act(() => api('/control', { method: 'POST', body: { action: 'MOVE', entryId: entry.id, position } }));
+        actions.push(h('button', { class: 'btn small', title: T.up, 'aria-label': T.up, disabled: index === 0, onclick: () => move(index - 1) }, '↑'));
+        actions.push(h('button', { class: 'btn small', title: T.down, 'aria-label': T.down, disabled: index === jam.queue.length - 1, onclick: () => move(index + 1) }, '↓'));
+      }
       actions.push(h('button', { class: 'btn small', title: T.pin, onclick: () => act(() => api('/control', { method: 'POST', body: { action: 'PIN', entryId: entry.id } })) }, '⤒'));
       actions.push(h('button', { class: 'btn small', title: T.remove, onclick: () => act(() => api('/control', { method: 'POST', body: { action: 'REMOVE', entryId: entry.id } })) }, '✕'));
     }
@@ -259,7 +283,8 @@
       h('div', { class: 'grow' },
         h('p', { class: 'ellipsis' }, entry.song.title),
         h('p', { class: 'muted ellipsis' }, [entry.song.artists.join(', '),
-          entry.addedByYou ? ` · ${T.you}` : entry.addedBy ? ` · ${entry.addedBy}` : entry.addedByDj ? ` · ${T.dj}` : '',
+          entry.addedByYou ? ` · ${T.you}` : entry.addedBy ? ` · ${entry.addedBy}` : entry.addedByDj ? ` · ${T.dj}` : entry.suggested ? ` · ${T.suggested}` : '',
+          entry.suggested && entry.likedBy?.length ? ` · ${T.likes(entry.likedBy)}` : '',
           waiting && entry.pinned ? ` · ${T.pinned}` : '',
           waiting && jam.voting && !actions.length ? ` · ${T.votes(entry.votes)}` : ''].join(''))),
       ...actions);

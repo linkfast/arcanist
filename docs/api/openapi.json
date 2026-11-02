@@ -6101,7 +6101,7 @@
         "tags": [
           "Jukebox Jam"
         ],
-        "summary": "Changes a Jam\u0027s name, voting, guests, whether anyone may replace the song playing, and libraries. Host only.",
+        "summary": "Changes a Jam\u0027s name, voting, guests, whether anyone may change what plays, suggestions, and libraries. Host only.",
         "operationId": "UpdateJukeboxJam",
         "parameters": [
           {
@@ -6491,7 +6491,7 @@
         "tags": [
           "Jukebox Jam"
         ],
-        "summary": "Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise), once every 60 seconds in the whole Jam (jam_replace_too_soon with retryAfterSeconds); the host and those who manage it always. For guests it counts as one of their songs.",
+        "summary": "Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise); the host and those who manage it always. For guests it counts as one of their songs.",
         "operationId": "ReplaceJukeboxJamNowPlaying",
         "parameters": [
           {
@@ -6539,7 +6539,7 @@
         "tags": [
           "Jukebox Jam"
         ],
-        "summary": "A vote for a waiting song (voting Jams). As often as one likes, but once every 30 seconds in the whole Jam: sooner is jam_vote_too_soon with retryAfterSeconds.",
+        "summary": "A vote for a waiting song (voting Jams), or taking it back: one per person and song. Votes order what comes after the next song, never in its place.",
         "operationId": "VoteJukeboxJam",
         "parameters": [
           {
@@ -6587,13 +6587,20 @@
         "tags": [
           "Jukebox Jam"
         ],
-        "summary": "Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist.",
+        "summary": "Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist, and anyone taking part while the Jam shares it (allowReplace; guests with X-Arcanist-Guest).",
         "operationId": "ControlJukeboxJam",
         "parameters": [
           {
             "name": "code",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Arcanist-Guest",
+            "in": "header",
             "schema": {
               "type": "string"
             }
@@ -6668,8 +6675,39 @@
         "tags": [
           "Jukebox Jam"
         ],
-        "summary": "Ends a Jam: its code no longer works and what played stays as a playlist of the host\u0027s. Host only.",
+        "summary": "Ends a Jam: its code no longer works and what played stays as a playlist of the host\u0027s. The host; those who manage it when the host\u0027s client is gone.",
         "operationId": "EndJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/jams/{code}/take-over": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "The one asking plays the Jam from now on, when its host\u0027s client is gone (hostGone; jam_host_online otherwise): they become its host, then claim it as any host. With an account.",
+        "operationId": "TakeOverJukeboxJam",
         "parameters": [
           {
             "name": "code",
@@ -14574,6 +14612,9 @@
           "JUKEBOX_JAM_BROWSE",
           "JUKEBOX_JAM_REPLACE",
           "JUKEBOX_JAM_SAVE_AS_PLAYLIST",
+          "JUKEBOX_JAM_SHARED_CONTROL",
+          "JUKEBOX_JAM_SUGGESTIONS",
+          "JUKEBOX_JAM_TAKE_OVER",
           "SECOND_FACTOR",
           "AVAILABLE_PLAYERS",
           "WISH_LIST_CLOUD_SYNC"
@@ -19856,6 +19897,14 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "suggestions": {
+            "type": "boolean",
+            "default": false
+          },
+          "hostGone": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -20128,6 +20177,23 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "suggested": {
+            "type": "boolean",
+            "default": false
+          },
+          "likedBy": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "votedByYou": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -20594,6 +20660,14 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "canManage": {
+            "type": "boolean",
+            "default": false
+          },
+          "canTakeOver": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -25967,6 +26041,15 @@
               "string"
             ],
             "format": "int32"
+          },
+          "ownSongsLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -28758,10 +28841,16 @@
             ]
           },
           "voting": {
-            "type": "boolean"
+            "type": [
+              "null",
+              "boolean"
+            ]
           },
           "allowGuests": {
-            "type": "boolean"
+            "type": [
+              "null",
+              "boolean"
+            ]
           },
           "guestLibraryIds": {
             "type": [
@@ -28784,6 +28873,22 @@
               "null",
               "boolean"
             ]
+          },
+          "suggestions": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "queueTrackIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -31355,6 +31460,12 @@
             ]
           },
           "saveAsPlaylist": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "suggestions": {
             "type": [
               "null",
               "boolean"

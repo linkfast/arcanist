@@ -1183,6 +1183,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("Suggestions")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Target")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -2399,6 +2402,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
 
                     b.Property<int>("Position")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("Suggested")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("TrackId")
                         .HasColumnType("uuid");

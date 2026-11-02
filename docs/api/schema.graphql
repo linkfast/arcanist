@@ -1487,6 +1487,8 @@ type JukeboxJam {
   guestLibraryIds: [ID!]
   startedAt: DateTime!
   endedAt: DateTime
+  suggestions: Boolean!
+  hostGone: Boolean!
 }
 
 type JukeboxJamHostClient {
@@ -1537,6 +1539,9 @@ type JukeboxJamEntry {
   pinned: Boolean!
   addedAt: DateTime!
   playedAt: DateTime
+  suggested: Boolean!
+  likedBy: [String!]
+  votedByYou: Boolean!
 }
 
 type JukeboxJamSong {
@@ -1564,6 +1569,8 @@ type JukeboxJamYou {
   addsLeft: Int
   canReplace: Boolean!
   nextReplaceAt: DateTime
+  canManage: Boolean!
+  canTakeOver: Boolean!
 }
 
 enum JukeboxJamParticipation {
@@ -3296,6 +3303,9 @@ enum ApiFeature {
   JUKEBOX_JAM_BROWSE
   JUKEBOX_JAM_REPLACE
   JUKEBOX_JAM_SAVE_AS_PLAYLIST
+  JUKEBOX_JAM_SHARED_CONTROL
+  JUKEBOX_JAM_SUGGESTIONS
+  JUKEBOX_JAM_TAKE_OVER
   SECOND_FACTOR
   AVAILABLE_PLAYERS
   WISH_LIST_CLOUD_SYNC
@@ -3584,18 +3594,20 @@ type Mutation {
   joinJukeboxJam(code: String!, name: String): JukeboxJamGuestSession
   "Adds songs to a Jam's queue (at most 50 at once). Guests within their limit (jam_guest_limit, with retryAfterSeconds); in voting Jams each comes with a vote of whoever adds it. `source: DJ` is the host's DJ: no limit and no vote."
   addToJukeboxJam(code: String!, trackIds: [ID!]!, source: JukeboxJamAddSource, guestToken: String): JukeboxJam!
-  "Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise), once every 60 seconds in the whole Jam (jam_replace_too_soon with retryAfterSeconds); the host and those who manage it always. For guests it counts as one of their songs."
+  "Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise); the host and those who manage it always. For guests it counts as one of their songs."
   replaceJukeboxJamNowPlaying(code: String!, trackId: ID!, guestToken: String): JukeboxJam!
-  "A vote for a waiting song (voting Jams). As often as one likes, but once every 30 seconds in the whole Jam: sooner is jam_vote_too_soon with retryAfterSeconds."
+  "A vote for a waiting song (voting Jams), or taking it back: one per person and song. Votes order what comes after the next song, never in its place."
   voteJukeboxJam(code: String!, entryId: ID!, guestToken: String): JukeboxJam!
-  "Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist."
-  controlJukeboxJam(code: String!, input: ControlJukeboxJamInput!): JukeboxJam!
-  "Changes a Jam's name, voting, guests, whether anyone may replace the song playing, and libraries. Host only."
+  "Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist, and anyone taking part while the Jam shares it (allowReplace; guests with `guestToken`)."
+  controlJukeboxJam(code: String!, input: ControlJukeboxJamInput!, guestToken: String): JukeboxJam!
+  "Changes a Jam's name, voting, guests, whether anyone may change what plays, suggestions, and libraries. Host only."
   updateJukeboxJam(code: String!, input: UpdateJukeboxJamInput!): JukeboxJam!
   "Takes a guest out of a Jam: their session no longer works. The host and those who manage it."
   removeJukeboxJamGuest(code: String!, guestId: ID!): JukeboxJam!
-  "Ends a Jam: its code no longer works and what played stays as a playlist of the host's. Host only."
+  "Ends a Jam: its code no longer works and what played stays as a playlist of the host's. The host; those who manage it when the host's client is gone."
   endJukeboxJam(code: String!): JukeboxJam!
+  "The one asking plays the Jam from now on, when its host's client is gone (hostGone; jam_host_online otherwise): they become its host, then claim it as any host. With an account."
+  takeOverJukeboxJam(code: String!): JukeboxJam!
   "Host API: this client (a web player tab, Ultimate Desktop) plays the Jam; another one claiming it takes over (the one before gets a HOST change with the new device). Host only, for Jams that play on a client."
   claimJukeboxJamHost(code: String!, input: ClaimJukeboxJamHostInput!): JukeboxJam!
   "Host API: what the host's client plays (an entry of the Jam, which leaves the queue; a song not on the server; or nothing), paused or not and where. Every 5 seconds and on every change, from the device that claimed it (jam_not_host otherwise)."
@@ -4082,11 +4094,13 @@ input StartJukeboxJamInput {
   name: String!
   playsOn: JukeboxJamPlaysOn!
   rendererId: String
-  voting: Boolean!
-  allowGuests: Boolean!
+  voting: Boolean
+  allowGuests: Boolean
   guestLibraryIds: [ID!]
   allowReplace: Boolean
   saveAsPlaylist: Boolean
+  suggestions: Boolean
+  queueTrackIds: [ID!]
 }
 
 type JukeboxJamGuestSession {
@@ -4124,6 +4138,7 @@ input UpdateJukeboxJamInput {
   guestLibraryIds: [ID!]
   allowReplace: Boolean
   saveAsPlaylist: Boolean
+  suggestions: Boolean
 }
 
 input ClaimJukeboxJamHostInput {
@@ -4140,6 +4155,7 @@ input ReportJukeboxJamPlaybackInput {
   external: JukeboxJamExternalSongInput
   state: JukeboxJamPlaybackState!
   positionMs: Int!
+  ownSongsLeft: Int
 }
 
 input JukeboxJamExternalSongInput {

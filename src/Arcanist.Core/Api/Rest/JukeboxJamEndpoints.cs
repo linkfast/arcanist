@@ -76,21 +76,21 @@ public static class JukeboxJamEndpoints
         jams.MapPost("/now-playing", (string code, JukeboxJamReplaceInput input, [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service,
                 CancellationToken ct) => service.ReplaceAsync(code, input.TrackId, guest, ct))
             .WithName("ReplaceJukeboxJamNowPlaying")
-            .WithSummary("Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise), once every 60 seconds in the whole Jam (jam_replace_too_soon with retryAfterSeconds); the host and those who manage it always. For guests it counts as one of their songs.");
+            .WithSummary("Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise); the host and those who manage it always. For guests it counts as one of their songs.");
 
         jams.MapPost("/votes", (string code, JukeboxJamVoteInput input, [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service,
                 CancellationToken ct) => service.VoteAsync(code, input.EntryId, guest, ct))
             .WithName("VoteJukeboxJam")
-            .WithSummary("A vote for a waiting song (voting Jams). As often as one likes, but once every 30 seconds in the whole Jam: sooner is jam_vote_too_soon with retryAfterSeconds.");
+            .WithSummary("A vote for a waiting song (voting Jams), or taking it back: one per person and song. Votes order what comes after the next song, never in its place.");
 
-        jams.MapPost("/control", (string code, ControlJukeboxJamInput input, JukeboxJamService service, CancellationToken ct) =>
-                service.ControlAsync(code, input, ct))
+        jams.MapPost("/control", (string code, ControlJukeboxJamInput input, [FromHeader(Name = GuestHeader)] string? guest, JukeboxJamService service,
+                CancellationToken ct) => service.ControlAsync(code, input, guest, ct))
             .WithName("ControlJukeboxJam")
-            .WithSummary("Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist.");
+            .WithSummary("Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist, and anyone taking part while the Jam shares it (allowReplace; guests with X-Arcanist-Guest).");
 
         jams.MapPut("", (string code, UpdateJukeboxJamInput input, JukeboxJamService service, CancellationToken ct) => service.UpdateAsync(code, input, ct))
             .WithName("UpdateJukeboxJam")
-            .WithSummary("Changes a Jam's name, voting, guests, whether anyone may replace the song playing, and libraries. Host only.");
+            .WithSummary("Changes a Jam's name, voting, guests, whether anyone may change what plays, suggestions, and libraries. Host only.");
 
         jams.MapDelete("/guests/{guestId:guid}", (string code, Guid guestId, JukeboxJamService service, CancellationToken ct) =>
                 service.RemoveGuestAsync(code, guestId, ct))
@@ -99,7 +99,11 @@ public static class JukeboxJamEndpoints
 
         jams.MapPost("/end", (string code, JukeboxJamService service, CancellationToken ct) => service.EndAsync(code, ct))
             .WithName("EndJukeboxJam")
-            .WithSummary("Ends a Jam: its code no longer works and what played stays as a playlist of the host's. Host only.");
+            .WithSummary("Ends a Jam: its code no longer works and what played stays as a playlist of the host's. The host; those who manage it when the host's client is gone.");
+
+        jams.MapPost("/take-over", (string code, JukeboxJamService service, CancellationToken ct) => service.TakeOverAsync(code, ct))
+            .WithName("TakeOverJukeboxJam")
+            .WithSummary("The one asking plays the Jam from now on, when its host's client is gone (hostGone; jam_host_online otherwise): they become its host, then claim it as any host. With an account.");
 
         jams.MapPost("/host", (string code, ClaimJukeboxJamHostInput input, JukeboxJamService service, CancellationToken ct) =>
                 service.ClaimHostAsync(code, input, ct))

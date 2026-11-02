@@ -436,6 +436,58 @@ public sealed class DiscoveryService(
     }
 
     /// <summary>
+    /// Songs for a group listening together (a Jukebox Jam whose queue ran out): close to what just played, in artist
+    /// and genre, and likelier when someone there likes them. Nothing anyone rated low or keeps skipping, nothing
+    /// already heard or left out; different albums while there are; in the order that follows best from the last song heard.
+    /// </summary>
+    /// <param name="pool">The songs that can be chosen.</param>
+    /// <param name="people">Those listening, by account.</param>
+    /// <param name="heard">What the group heard, latest first.</param>
+    /// <param name="excluded">Tracks not to suggest.</param>
+    internal async Task<List<Guid>> ForGroupAsync(IQueryable<TrackEntity> pool, IReadOnlyCollection<Guid> people, IReadOnlyList<Guid> heard,
+        IReadOnlyCollection<Guid> excluded, int count, CancellationToken cancellationToken)
+    {
+        var recent = heard.Take(10).ToList();
+        var artists = await db.Tracks.Where(t => recent.Contains(t.Id)).SelectMany(t => t.Artists).Where(a => a.Role == ArtistRole.Primary)
+            .Select(a => a.ArtistId).Distinct().ToListAsync(cancellationToken);
+        var genres = await db.Tracks.Where(t => recent.Contains(t.Id)).SelectMany(t => t.Genres).Select(g => g.GenreId).Distinct().ToListAsync(cancellationToken);
+        var heardIds = heard.Concat(excluded).Distinct().ToList();
+        var heardRecordings = await db.Tracks.Where(t => heardIds.Contains(t.Id)).Select(t => t.RecordingId).Distinct().ToListAsync(cancellationToken);
+
+        var fresh = pool.Where(t => !heardRecordings.Contains(t.RecordingId));
+        // Mostly what is close to the group's music; the rest of the library only if that runs out.
+        var close = fresh.Where(t => t.Artists.Any(a => artists.Contains(a.ArtistId)) || t.Genres.Any(g => genres.Contains(g.GenreId))
+            || db.TrackRatings.Any(r => people.Contains(r.UserId) && r.TrackId == t.Id && r.Rating >= 4));
+        var source = await close.CountAsync(cancellationToken) >= count * 2 ? close : fresh;
+        var candidates = await source.OrderBy(_ => EF.Functions.Random()).Take(MaxPool).Select(t => new
+            {
+                t.Id,
+                t.AlbumId,
+                SameArtist = t.Artists.Any(a => artists.Contains(a.ArtistId)),
+                SameGenre = t.Genres.Any(g => genres.Contains(g.GenreId)),
+                Plays = db.TrackPlayStats.Where(s => people.Contains(s.UserId) && s.TrackId == t.Id).Sum(s => s.PlayCount),
+                Skips = db.TrackPlayStats.Where(s => people.Contains(s.UserId) && s.TrackId == t.Id).Sum(s => s.SkipCount),
+                Likes = db.TrackRatings.Count(r => people.Contains(r.UserId) && r.TrackId == t.Id && r.Rating >= 4),
+                Dislikes = db.TrackRatings.Count(r => people.Contains(r.UserId) && r.TrackId == t.Id && r.Rating <= 2),
+            })
+            .ToListAsync(cancellationToken);
+
+        var random = Random.Shared;
+        var ranked = candidates
+            .Where(c => c.Dislikes == 0 && !(c.Skips >= 3 && c.Skips > c.Plays))
+            .Select(c => (c.Id, c.AlbumId, Score: random.NextDouble() + c.Likes * 0.6 + (c.SameArtist ? 0.3 : 0) + (c.SameGenre ? 0.3 : 0) + (c.Plays > 0 ? 0.15 : 0)))
+            .OrderByDescending(c => c.Score)
+            .ToList();
+        var picks = ranked.DistinctBy(c => c.AlbumId).Concat(ranked).Select(c => c.Id).Distinct().Take(count * 4).ToList();
+        if (picks.Count == 0)
+            return [];
+        if (heard.Count == 0)
+            return picks.Take(count).ToList();
+        var flow = await FlowAsync([heard[0], .. picks], random.Next(), keepFirst: true, cancellationToken);
+        return flow.Skip(1).Take(count).ToList();
+    }
+
+    /// <summary>
     /// Orders tracks so each leads into the next: close tempos and compatible keys (neighbors on the Camelot
     /// wheel) when analyzed, and never the same artist or album twice in a row when that can be avoided.
     /// </summary>

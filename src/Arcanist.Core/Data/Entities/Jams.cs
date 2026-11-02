@@ -11,7 +11,8 @@ public sealed class JamSession : Entity
 
     public Playlist Playlist { get; init; } = null!;
 
-    public Guid HostUserId { get; init; }
+    /// <summary>Who plays it: the one who started it, or someone who took over when their client was gone.</summary>
+    public Guid HostUserId { get; set; }
 
     /// <summary>The public code of its link (random, base64url). Nobody can join once it ended.</summary>
     public required string Code { get; init; }
@@ -63,11 +64,17 @@ public sealed class JamSession : Entity
     /// <summary>An entry the host chose to play next, whatever the votes say.</summary>
     public Guid? PinnedEntryId { get; set; }
 
-    /// <summary>Anyone taking part may replace the song playing with one of theirs (the host and its managers always can).</summary>
+    /// <summary>
+    /// Anyone taking part changes what plays: replaces the song playing, pauses, skips, reorders and removes (the host
+    /// and its managers always can).
+    /// </summary>
     public bool AllowReplace { get; set; }
 
-    /// <summary>When someone last replaced the song playing: others wait a while before doing it again.</summary>
+    /// <summary>Not used since there is no wait to replace the song playing.</summary>
     public DateTime? LastReplacedAt { get; set; }
+
+    /// <summary>When the queue runs out, the server adds songs for the group, marked as suggestions.</summary>
+    public bool Suggestions { get; set; } = true;
 
     /// <summary>When it ends, what played stays as a playlist of the host's; otherwise the playlist goes with it.</summary>
     public bool SaveAsPlaylist { get; set; } = true;

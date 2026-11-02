@@ -98,7 +98,7 @@ public sealed class JukeboxJamTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Guests_join_add_songs_within_their_limit_and_vote_every_30_seconds()
+    public async Task Guests_join_add_songs_within_their_limit_and_vote_once_per_song()
     {
         var jam = await StartAsync(new { name = "Friday", playsOn = "CLIENT", voting = true, allowGuests = true, guestLibraryIds = new[] { _sharedLibrary } });
         var code = jam.GetProperty("code").GetString()!;
@@ -128,36 +128,36 @@ public sealed class JukeboxJamTests : IAsyncLifetime
         Assert.Equal((HttpStatusCode.TooManyRequests, "jam_guest_limit"), (limited.Status, limited.Code));
         Assert.InRange(limited.RetryAfter!.Value, 1, 600);
 
-        // A user of the server adds too; votes order the queue, one every 30 seconds.
+        // A user of the server adds too. Votes order what comes after the next song, which stays: it may be on its way.
         await _factory.CreateUserAsync("luis");
         var luis = await _factory.CreateAuthenticatedClientAsync("luis");
         var withCharlie = await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/tracks", new { trackIds = new[] { _tracks["Charlie"] } }, ArcanistFactory.Json, Cancel));
-        var charlie = withCharlie.GetProperty("queue").EnumerateArray().First(e => e.GetProperty("song").GetProperty("title").GetString() == "Charlie").GetProperty("id").GetString();
+        Assert.Equal(["Alpha", "Bravo", "Charlie"], Queue(withCharlie));
+        Assert.True(withCharlie.GetProperty("queue")[0].GetProperty("pinned").GetBoolean());
+        var charlie = withCharlie.GetProperty("queue")[2].GetProperty("id").GetString();
         var voted = await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/votes", new { entryId = charlie }, ArcanistFactory.Json, Cancel));
-        Assert.Equal(["Charlie", "Alpha", "Bravo"], Queue(voted));
-        Assert.Equal(2, voted.GetProperty("queue")[0].GetProperty("votes").GetInt32());
-        var bravo = voted.GetProperty("queue")[2].GetProperty("id").GetString();
-        var tooSoon = await FailAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/votes", new { entryId = bravo }, ArcanistFactory.Json, Cancel));
-        Assert.Equal((HttpStatusCode.TooManyRequests, "jam_vote_too_soon", 30), tooSoon);
-        _time.Advance(TimeSpan.FromSeconds(31));
-        await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/votes", new { entryId = bravo }, ArcanistFactory.Json, Cancel));
-        // Bravo now has as many votes as Charlie, and came first.
-        Assert.Equal(["Bravo", "Charlie", "Alpha"], Queue(await OkAsync(luis.GetAsync($"/rest/v1/public/jams/{code}", Cancel))));
-        var luisVote = await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/votes", new { entryId = charlie }, ArcanistFactory.Json, Cancel));
-        Assert.Equal(["Charlie", "Bravo", "Alpha"], Queue(luisVote));
+        Assert.Equal(["Alpha", "Charlie", "Bravo"], Queue(voted));
+        Assert.Equal((2, true), (voted.GetProperty("queue")[1].GetProperty("votes").GetInt32(), voted.GetProperty("queue")[1].GetProperty("votedByYou").GetBoolean()));
+
+        // One vote per person and song, without waiting: voting again takes it back.
+        var charlieBack = await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/votes", new { entryId = charlie }, ArcanistFactory.Json, Cancel));
+        var charlieEntry = charlieBack.GetProperty("queue").EnumerateArray().First(e => e.GetProperty("id").GetString() == charlie);
+        Assert.Equal((1, false), (charlieEntry.GetProperty("votes").GetInt32(), charlieEntry.GetProperty("votedByYou").GetBoolean()));
+        var again = await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/votes", new { entryId = charlie }, ArcanistFactory.Json, Cancel));
+        Assert.Equal(["Alpha", "Charlie", "Bravo"], Queue(again));
         Assert.Equal("MEMBER", (await OkAsync(luis.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("you").GetProperty("participation").GetString());
 
         // The host's client plays what the server says, and what plays leaves the queue.
         await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/host", new { deviceId = "tab-1", kind = "WEB", playerId = "webamp", name = "Webamp" }, ArcanistFactory.Json, Cancel));
         var next = await OkAsync(_admin.GetAsync($"/rest/v1/public/jams/{code}/next", Cancel));
-        Assert.Equal("Charlie", next.GetProperty("track").GetProperty("title").GetString());
+        Assert.Equal("Alpha", next.GetProperty("track").GetProperty("title").GetString());
         Assert.False(string.IsNullOrEmpty(next.GetProperty("track").GetProperty("streamUrl").GetString()));
         Assert.Equal((HttpStatusCode.Conflict, "jam_not_host", null), await FailAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
             new { deviceId = "tab-2", entryId = next.GetProperty("entryId").GetString(), state = "PLAYING", positionMs = 0 }, ArcanistFactory.Json, Cancel)));
         var playing = await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
             new { deviceId = "tab-1", entryId = next.GetProperty("entryId").GetString(), state = "PLAYING", positionMs = 1200 }, ArcanistFactory.Json, Cancel));
-        Assert.Equal("Charlie", playing.GetProperty("nowPlaying").GetProperty("entry").GetProperty("song").GetProperty("title").GetString());
-        Assert.Equal(["Bravo", "Alpha"], Queue(playing));
+        Assert.Equal("Alpha", playing.GetProperty("nowPlaying").GetProperty("entry").GetProperty("song").GetProperty("title").GetString());
+        Assert.Equal(["Charlie", "Bravo"], Queue(playing));
         Assert.True(playing.GetProperty("hostClient").GetProperty("online").GetBoolean());
 
         // The host takes a guest out, and ends the Jam: what played stays as a playlist.
@@ -174,7 +174,7 @@ public sealed class JukeboxJamTests : IAsyncLifetime
     [Fact]
     public async Task Guests_browse_the_jams_artists_and_albums_and_replace_what_plays_when_allowed()
     {
-        var jam = await StartAsync(new { name = "Party", playsOn = "CLIENT", voting = false, allowGuests = true, guestLibraryIds = new[] { _sharedLibrary } });
+        var jam = await StartAsync(new { name = "Party", playsOn = "CLIENT", voting = false, allowGuests = true, allowReplace = false, guestLibraryIds = new[] { _sharedLibrary } });
         var code = jam.GetProperty("code").GetString()!;
         Assert.False(jam.GetProperty("allowReplace").GetBoolean());
         var session = await OkAsync(_factory.CreateClient().PostAsJsonAsync($"/rest/v1/public/jams/{code}/join", new { name = "Ana" }, ArcanistFactory.Json, Cancel));
@@ -211,19 +211,155 @@ public sealed class JukeboxJamTests : IAsyncLifetime
         var replaced = await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/now-playing", new { trackId = _tracks["Delta"] }, ArcanistFactory.Json, Cancel));
         Assert.Equal("Delta", Queue(replaced)[0]);
         Assert.True(replaced.GetProperty("queue")[0].GetProperty("pinned").GetBoolean());
-        Assert.NotEqual(JsonValueKind.Null, replaced.GetProperty("you").GetProperty("nextReplaceAt").ValueKind);
         Assert.Equal("Delta", (await OkAsync(_admin.GetAsync($"/rest/v1/public/jams/{code}/next", Cancel))).GetProperty("track").GetProperty("title").GetString());
 
-        // Not again for a minute (the host can), and it counts against a guest's songs.
-        Assert.Equal((HttpStatusCode.TooManyRequests, "jam_replace_too_soon", 60), await FailAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/now-playing",
-            new { trackId = _tracks["Charlie"] }, ArcanistFactory.Json, Cancel)));
-        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/now-playing", new { trackId = _tracks["Charlie"] }, ArcanistFactory.Json, Cancel));
-        _time.Advance(TimeSpan.FromSeconds(61));
-        Assert.Equal(0, (await OkAsync(ana.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("you").GetProperty("addsLeft").GetInt32() - 1);
-        await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/now-playing", new { trackId = _tracks["Bravo"] }, ArcanistFactory.Json, Cancel));
+        // Without waiting; for a guest it counts as one of their songs.
+        Assert.Equal(1, replaced.GetProperty("you").GetProperty("addsLeft").GetInt32());
+        await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/now-playing", new { trackId = _tracks["Charlie"] }, ArcanistFactory.Json, Cancel));
         var limited = await FailAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/tracks", new { trackIds = new[] { _tracks["Alpha"] } }, ArcanistFactory.Json, Cancel));
         Assert.Equal((HttpStatusCode.TooManyRequests, "jam_guest_limit"), (limited.Status, limited.Code));
     }
+
+    [Fact]
+    public async Task Anyone_taking_part_changes_what_plays_until_the_host_says_otherwise()
+    {
+        // Only a name: shared, without voting or guests.
+        var jam = await StartAsync(new { name = "Sunday", playsOn = "CLIENT" });
+        var code = jam.GetProperty("code").GetString()!;
+        Assert.Equal((true, false, false, true), (jam.GetProperty("allowReplace").GetBoolean(), jam.GetProperty("voting").GetBoolean(),
+            jam.GetProperty("allowGuests").GetBoolean(), jam.GetProperty("suggestions").GetBoolean()));
+        await _factory.CreateUserAsync("luis");
+        var luis = await _factory.CreateAuthenticatedClientAsync("luis");
+
+        // Before joining it, they are nobody; once in, they can do what the host does with the music.
+        Assert.False((await OkAsync(luis.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("you").GetProperty("canControl").GetBoolean());
+        await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/join", new { }, ArcanistFactory.Json, Cancel));
+        var added = await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/tracks", new { trackIds = new[] { _tracks["Alpha"], _tracks["Bravo"], _tracks["Charlie"] } }, ArcanistFactory.Json, Cancel));
+        Assert.Equal((true, false), (added.GetProperty("you").GetProperty("canControl").GetBoolean(), added.GetProperty("you").GetProperty("canManage").GetBoolean()));
+        var moved = await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/control",
+            new { action = "MOVE", entryId = added.GetProperty("queue")[2].GetProperty("id").GetString(), position = 0 }, ArcanistFactory.Json, Cancel));
+        Assert.Equal(["Charlie", "Alpha", "Bravo"], Queue(moved));
+        var removed = await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/control",
+            new { action = "REMOVE", entryId = moved.GetProperty("queue")[2].GetProperty("id").GetString() }, ArcanistFactory.Json, Cancel));
+        Assert.Equal(["Charlie", "Alpha"], Queue(removed));
+        await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/control", new { action = "SKIP" }, ArcanistFactory.Json, Cancel));
+
+        // Guests too, but managing the Jam stays with the host.
+        await OkAsync(_admin.PutAsJsonAsync($"/rest/v1/public/jams/{code}", new { allowGuests = true }, ArcanistFactory.Json, Cancel));
+        var session = await OkAsync(_factory.CreateClient().PostAsJsonAsync($"/rest/v1/public/jams/{code}/join", new { name = "Ana" }, ArcanistFactory.Json, Cancel));
+        var ana = Guest(session.GetProperty("token").GetString()!);
+        await OkAsync(ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/control", new { action = "PAUSE" }, ArcanistFactory.Json, Cancel));
+        var guestId = session.GetProperty("guestId").GetString();
+        Assert.Equal(HttpStatusCode.Forbidden, (await luis.DeleteAsync($"/rest/v1/public/jams/{code}/guests/{guestId}", Cancel)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await luis.PutAsJsonAsync($"/rest/v1/public/jams/{code}", new { allowReplace = false }, ArcanistFactory.Json, Cancel)).StatusCode);
+        Assert.Equal(JsonValueKind.Null, (await OkAsync(luis.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("guests").ValueKind);
+
+        // With the host's switch off, they only add songs.
+        await OkAsync(_admin.PutAsJsonAsync($"/rest/v1/public/jams/{code}", new { allowReplace = false }, ArcanistFactory.Json, Cancel));
+        Assert.False((await OkAsync(luis.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("you").GetProperty("canControl").GetBoolean());
+        Assert.Equal(HttpStatusCode.Forbidden, (await luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/control", new { action = "SKIP" }, ArcanistFactory.Json, Cancel)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await ana.PostAsJsonAsync($"/rest/v1/public/jams/{code}/control", new { action = "RESUME" }, ArcanistFactory.Json, Cancel)).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_jam_starts_from_what_plays_and_the_queue_runs_on_with_suggestions_for_the_group()
+    {
+        // What the host was playing becomes the queue; a song it cannot have stays out.
+        var jam = await StartAsync(new { name = "Now", playsOn = "CLIENT", guestLibraryIds = new[] { _sharedLibrary },
+            queueTrackIds = new[] { _tracks["Alpha"], _tracks["Secret"], _tracks["Bravo"] } });
+        var code = jam.GetProperty("code").GetString()!;
+        Assert.Equal(["Alpha", "Bravo"], Queue(jam));
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/host", new { deviceId = "tab", kind = "WEB" }, ArcanistFactory.Json, Cancel));
+        await _factory.CreateUserAsync("luis");
+        var luis = await _factory.CreateAuthenticatedClientAsync("luis");
+        await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/join", new { }, ArcanistFactory.Json, Cancel));
+        await OkAsync(luis.PutAsJsonAsync($"/rest/v1/tracks/{_tracks["Charlie"]}/rating", new { rating = 5 }, ArcanistFactory.Json, Cancel));
+
+        async Task<JsonElement> PlayAsync(string title, int? ownLeft) => await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback", new
+        {
+            deviceId = "tab",
+            entryId = (await OkAsync(_admin.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("queue").EnumerateArray()
+                .First(e => e.GetProperty("song").GetProperty("title").GetString() == title).GetProperty("id").GetString(),
+            state = "PLAYING",
+            positionMs = 0,
+            ownSongsLeft = ownLeft,
+        }, ArcanistFactory.Json, Cancel));
+
+        // While songs wait, none are suggested; nor while the host has songs of their own coming, or does not say.
+        Assert.Equal(["Bravo"], Queue(await PlayAsync("Alpha", 0)));
+        var last = await PlayAsync("Bravo", 2);
+        Assert.Empty(Queue(last));
+        var report = new { deviceId = "tab", entryId = last.GetProperty("nowPlaying").GetProperty("entry").GetProperty("id").GetString(), state = "PLAYING", positionMs = 1000 };
+        Assert.Empty(Queue(await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback", report, ArcanistFactory.Json, Cancel))));
+
+        // The queue ran out: the two songs not heard, of this Jam's libraries, marked as suggestions.
+        var suggested = await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+            new { report.deviceId, report.entryId, report.state, report.positionMs, ownSongsLeft = 0 }, ArcanistFactory.Json, Cancel));
+        Assert.Equal(["Charlie", "Delta"], Queue(suggested).Order());
+        Assert.All(suggested.GetProperty("queue").EnumerateArray(), e =>
+            Assert.Equal((true, JsonValueKind.Null), (e.GetProperty("suggested").GetBoolean(), e.GetProperty("addedBy").ValueKind)));
+        var charlie = suggested.GetProperty("queue").EnumerateArray().First(e => e.GetProperty("song").GetProperty("title").GetString() == "Charlie");
+        Assert.Equal(["luis"], charlie.GetProperty("likedBy").EnumerateArray().Select(n => n.GetString()));
+
+        // What someone asks for goes before them.
+        var asked = await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/tracks", new { trackIds = new[] { _tracks["Alpha"] } }, ArcanistFactory.Json, Cancel));
+        Assert.Equal("Alpha", Queue(asked)[0]);
+        Assert.False(asked.GetProperty("queue")[0].GetProperty("suggested").GetBoolean());
+
+        // Guests are not told about the tastes of the server's users.
+        await OkAsync(_admin.PutAsJsonAsync($"/rest/v1/public/jams/{code}", new { allowGuests = true }, ArcanistFactory.Json, Cancel));
+        var ana = Guest((await OkAsync(_factory.CreateClient().PostAsJsonAsync($"/rest/v1/public/jams/{code}/join", new { name = "Ana" }, ArcanistFactory.Json, Cancel))).GetProperty("token").GetString()!);
+        Assert.All((await OkAsync(ana.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("queue").EnumerateArray(), e => Assert.Equal(0, e.GetProperty("likedBy").GetArrayLength()));
+
+        // A suggestion taken out does not come back.
+        var delta = asked.GetProperty("queue").EnumerateArray().First(e => e.GetProperty("song").GetProperty("title").GetString() == "Delta").GetProperty("id").GetString();
+        await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/control", new { action = "REMOVE", entryId = delta }, ArcanistFactory.Json, Cancel));
+        await PlayAsync("Alpha", 0);
+        var charlieLast = await PlayAsync("Charlie", 0);
+        Assert.DoesNotContain("Delta", Queue(charlieLast));
+
+        // Off, the queue stays empty; and a new Jam nothing played on does not start by itself.
+        var quiet = (await StartAsync(new { name = "Quiet", playsOn = "CLIENT" })).GetProperty("code").GetString()!;
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{quiet}/host", new { deviceId = "tab", kind = "WEB" }, ArcanistFactory.Json, Cancel));
+        Assert.Empty(Queue(await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{quiet}/playback", new { deviceId = "tab", state = "STOPPED", positionMs = 0, ownSongsLeft = 0 }, ArcanistFactory.Json, Cancel))));
+    }
+
+    [Fact]
+    public async Task When_the_hosts_client_is_gone_someone_else_plays_the_jam_or_it_ends()
+    {
+        var jam = await StartAsync(new { name = "Handover", playsOn = "CLIENT" });
+        var code = jam.GetProperty("code").GetString()!;
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/host", new { deviceId = "tab", kind = "WEB" }, ArcanistFactory.Json, Cancel));
+        await _factory.CreateUserAsync("luis");
+        var luis = await _factory.CreateAuthenticatedClientAsync("luis");
+        await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/join", new { }, ArcanistFactory.Json, Cancel));
+
+        // While it reports, nobody can.
+        Assert.Equal((HttpStatusCode.Conflict, "jam_host_online", null), await FailAsync(luis.PostAsync($"/rest/v1/public/jams/{code}/take-over", null, Cancel)));
+        _time.Advance(TimeSpan.FromMinutes(3));
+        var seen = await OkAsync(luis.GetAsync($"/rest/v1/public/jams/{code}", Cancel));
+        Assert.Equal((true, true), (seen.GetProperty("hostGone").GetBoolean(), seen.GetProperty("you").GetProperty("canTakeOver").GetBoolean()));
+
+        // Luis plays it from now on: the one who started it can no longer report, and keeps managing it.
+        var taken = await OkAsync(luis.PostAsync($"/rest/v1/public/jams/{code}/take-over", null, Cancel));
+        Assert.Equal(("HOST", "luis", false), (taken.GetProperty("you").GetProperty("participation").GetString(), taken.GetProperty("host").GetString(), taken.GetProperty("hostGone").GetBoolean()));
+        await OkAsync(luis.PostAsJsonAsync($"/rest/v1/public/jams/{code}/host", new { deviceId = "phone", kind = "MOBILE" }, ArcanistFactory.Json, Cancel));
+        Assert.Equal((HttpStatusCode.Forbidden, "jam_not_host", null), await FailAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+            new { deviceId = "tab", state = "PLAYING", positionMs = 0 }, ArcanistFactory.Json, Cancel)));
+        Assert.Equal("MANAGER", (await OkAsync(_admin.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("you").GetProperty("participation").GetString());
+
+        // Those who manage it end it once its client is gone; and after an hour like this, it ends by itself.
+        Assert.Equal(HttpStatusCode.Forbidden, (await _admin.PostAsync($"/rest/v1/public/jams/{code}/end", null, Cancel)).StatusCode);
+        var other = (await StartAsync(new { name = "Other", playsOn = "CLIENT" })).GetProperty("code").GetString()!;
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{other}/host", new { deviceId = "tab", kind = "WEB" }, ArcanistFactory.Json, Cancel));
+        _time.Advance(TimeSpan.FromMinutes(3));
+        Assert.NotEqual(JsonValueKind.Null, (await OkAsync(_admin.PostAsync($"/rest/v1/public/jams/{code}/end", null, Cancel))).GetProperty("endedAt").ValueKind);
+        _time.Advance(TimeSpan.FromMinutes(61));
+        var later = await _factory.CreateAuthenticatedClientAsync();
+        await Until(async () => (await OkAsync(later.GetAsync($"/rest/v1/public/jams/{other}", Cancel))).GetProperty("endedAt").ValueKind != JsonValueKind.Null,
+            "a Jam whose host is gone for an hour ends");
+    }
+
     [Fact]
     public async Task Guests_need_the_servers_setting_and_the_hosts_permission()
     {

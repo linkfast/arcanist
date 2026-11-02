@@ -143,6 +143,9 @@ public sealed class PlaylistEntry : Entity
     /// <summary>Added to a Jukebox Jam by the host's DJ (Ultimate's AI DJ), not asked for by anyone.</summary>
     public bool AddedByDj { get; init; }
 
+    /// <summary>Added to a Jukebox Jam by the server when its queue ran out, not asked for by anyone.</summary>
+    public bool Suggested { get; init; }
+
     /// <summary>In a Jukebox Jam, when it started playing: it is no longer waiting in the queue.</summary>
     public DateTime? PlayedAt { get; set; }
 }

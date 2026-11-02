@@ -1909,7 +1909,7 @@ export const es: Dictionary = {
         'Quien tenga el enlace ve el nombre, las canciones y las carátulas de la playlist y escucha 30 segundos de cada una, sin cuenta. Solo quien inicia sesión y tiene acceso a una canción la escucha entera. Apagarlo corta al momento todos los enlaces.',
       jamGuests: 'Invitados sin cuenta en los Jukebox Jams',
       jamGuestsHelp:
-        'Con el enlace o el QR de un Jam, cualquiera pone un nombre, busca en sus bibliotecas y añade canciones (y vota). No escucha nada: la música suena en el reproductor del anfitrión. Apagarlo corta al momento a todos los invitados.',
+        'Con el enlace o el QR de un Jam, cualquiera pone un nombre, busca en sus bibliotecas y añade canciones (y vota), y si el anfitrión lo deja cambia lo que suena. No escucha nada: la música suena en el reproductor del anfitrión. Apagarlo corta al momento a todos los invitados.',
       guestAddLimit: 'Canciones por invitado cada 10 minutos',
       maxGuests: 'Invitados por Jam',
       permission:
@@ -3543,10 +3543,9 @@ export const es: Dictionary = {
     jam_guest_limit: 'Ya añadiste todas las canciones que puedes por ahora; espera un poco.',
     jam_guest_removed: 'El anfitrión te sacó de este Jam.',
     jam_track_not_allowed: 'Esa canción no está en las bibliotecas del Jam.',
-    jam_vote_too_soon: 'Puedes votar una vez cada 30 segundos.',
     jam_voting_off: 'En este Jam no se vota.',
     jam_replace_off: 'En este Jam no se puede cambiar la canción que suena.',
-    jam_replace_too_soon: 'Alguien acaba de cambiar la canción que suena; espera un momento.',
+    jam_host_online: 'El anfitrión sigue conectado: nadie más puede hacer sonar este Jam.',
     jam_not_host: 'Solo el anfitrión (el reproductor donde suena) puede hacer eso.',
     playlist_is_jam: 'Es la cola de un Jukebox Jam: cámbiala desde el Jam.',
     unexpected: 'Algo salió mal. Inténtalo de nuevo.',

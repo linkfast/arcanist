@@ -213,7 +213,10 @@ export class LoginPage {
   }
 
   protected async enter(): Promise<void> {
-    await this.router.navigateByUrl(this.returnUrl() || '/');
+    const target = this.returnUrl() || '/';
+    // A web player or the Jam's client that sent someone here to sign in: back to that page of this server.
+    if (/^\/players\/[^/\\]/.test(target)) window.location.assign(target);
+    else await this.router.navigateByUrl(target);
   }
 
   protected startOver(): void {

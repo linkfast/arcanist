@@ -15,7 +15,8 @@ namespace Arcanist.Core.Jams;
 /// Plays the Jukebox Jams that play on the server's audio or on a DLNA renderer: it gives the renderer the next song
 /// (and the one after, to play without a gap), follows what it plays, and does what the host asks (skip, pause). It
 /// acts as the host, through "play to", so plays count for them. It also looks after every Jam: a DJ whose host's
-/// client is gone for 5 minutes is taken off, and a Jam without activity for 12 hours ends.
+/// client is gone for 5 minutes is taken off, a Jam whose host's client is gone for an hour ends, and a Jam without
+/// activity for 12 hours ends.
 /// </summary>
 public sealed class JukeboxJamPlayer(
     IServiceScopeFactory scopes,
@@ -27,6 +28,7 @@ public sealed class JukeboxJamPlayer(
     ILogger<JukeboxJamPlayer> logger) : BackgroundService
 {
     public static readonly TimeSpan DjTimeout = TimeSpan.FromMinutes(5);
+    public static readonly TimeSpan HostGoneTimeout = TimeSpan.FromHours(1);
     public static readonly TimeSpan IdleTimeout = TimeSpan.FromHours(12);
 
     /// <summary>How often renderers are followed (tests make it shorter).</summary>
@@ -196,6 +198,10 @@ public sealed class JukeboxJamPlayer(
             feed.Next = (following.Id, following.TrackId);
         }
 
+        // Nothing more from the Jam or from the host: songs for the group, so the music does not stop.
+        if (allWaiting.Count == 0 && (!HasQueue(state) || state.QueueIndex + 1 >= state.Queue.Count))
+            await jams.SuggestAsync(jam, cancellationToken);
+
         // A song of the host's own playing is shown as such; nothing playing is nothing.
         var hostSong = current is null && Active(state) ? JukeboxJamService.HostSong(state.Track) : null;
         var playback = current is null && hostSong is null ? JukeboxJamPlaybackState.Stopped
@@ -244,7 +250,7 @@ public sealed class JukeboxJamPlayer(
         return null;
     }
 
-    /// <summary>DJs of hosts gone for 5 minutes are taken off; Jams without activity for 12 hours end.</summary>
+    /// <summary>DJs of hosts gone for 5 minutes are taken off; Jams whose host's client is gone for an hour, or without activity for 12 hours, end.</summary>
     private async Task LookAfterAsync(CancellationToken cancellationToken)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -264,7 +270,8 @@ public sealed class JukeboxJamPlayer(
         foreach (var jam in djs)
             signals.Publish(jam.Id, new JukeboxJamChange(jam.Code, JukeboxJamChangeKind.Dj, null, null, now));
 
-        var idle = await db.JamSessions.Include(j => j.Playlist).Where(j => j.EndedAt == null && j.LastActivityAt < now - IdleTimeout).ToListAsync(cancellationToken);
+        var idle = await db.JamSessions.Include(j => j.Playlist).Where(j => j.EndedAt == null && (j.LastActivityAt < now - IdleTimeout
+                || (j.Target == JamTarget.Client && j.HostSeenAt != null && j.HostSeenAt < now - HostGoneTimeout))).ToListAsync(cancellationToken);
         foreach (var jam in idle)
         {
             await JukeboxJamService.EndOrDiscardAsync(db, jam, now, cancellationToken);

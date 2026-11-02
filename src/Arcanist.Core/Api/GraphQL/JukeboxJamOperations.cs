@@ -65,25 +65,25 @@ public sealed partial class Mutation
         jams.AddAsync(code, trackIds, source, guestToken, cancellationToken);
 
     [Name("replaceJukeboxJamNowPlaying")]
-    [Description("Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise), once every 60 seconds in the whole Jam (jam_replace_too_soon with retryAfterSeconds); the host and those who manage it always. For guests it counts as one of their songs.")]
+    [Description("Plays a song now in place of the one playing (which ends). Anyone taking part when the Jam allows it (allowReplace; jam_replace_off otherwise); the host and those who manage it always. For guests it counts as one of their songs.")]
     public static Task<JukeboxJam> ReplaceJukeboxJamNowPlaying(string code, [Id] Guid trackId, string? guestToken, [FromServices] JukeboxJamService jams,
         CancellationToken cancellationToken) =>
         jams.ReplaceAsync(code, trackId, guestToken, cancellationToken);
 
     [Name("voteJukeboxJam")]
-    [Description("A vote for a waiting song (voting Jams). As often as one likes, but once every 30 seconds in the whole Jam: sooner is jam_vote_too_soon with retryAfterSeconds.")]
+    [Description("A vote for a waiting song (voting Jams), or taking it back: one per person and song. Votes order what comes after the next song, never in its place.")]
     public static Task<JukeboxJam> VoteJukeboxJam(string code, [Id] Guid entryId, string? guestToken, [FromServices] JukeboxJamService jams,
         CancellationToken cancellationToken) =>
         jams.VoteAsync(code, entryId, guestToken, cancellationToken);
 
     [Name("controlJukeboxJam")]
-    [Description("Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist.")]
-    public static Task<JukeboxJam> ControlJukeboxJam(string code, ControlJukeboxJamInput input, [FromServices] JukeboxJamService jams,
+    [Description("Skips, pauses, resumes, removes, pins or moves (Jams without voting) songs. The host and those who manage its playlist, and anyone taking part while the Jam shares it (allowReplace; guests with `guestToken`).")]
+    public static Task<JukeboxJam> ControlJukeboxJam(string code, ControlJukeboxJamInput input, string? guestToken, [FromServices] JukeboxJamService jams,
         CancellationToken cancellationToken) =>
-        jams.ControlAsync(code, input, cancellationToken);
+        jams.ControlAsync(code, input, guestToken, cancellationToken);
 
     [Name("updateJukeboxJam")]
-    [Description("Changes a Jam's name, voting, guests, whether anyone may replace the song playing, and libraries. Host only.")]
+    [Description("Changes a Jam's name, voting, guests, whether anyone may change what plays, suggestions, and libraries. Host only.")]
     public static Task<JukeboxJam> UpdateJukeboxJam(string code, UpdateJukeboxJamInput input, [FromServices] JukeboxJamService jams,
         CancellationToken cancellationToken) =>
         jams.UpdateAsync(code, input, cancellationToken);
@@ -95,9 +95,14 @@ public sealed partial class Mutation
         jams.RemoveGuestAsync(code, guestId, cancellationToken);
 
     [Name("endJukeboxJam")]
-    [Description("Ends a Jam: its code no longer works and what played stays as a playlist of the host's. Host only.")]
+    [Description("Ends a Jam: its code no longer works and what played stays as a playlist of the host's. The host; those who manage it when the host's client is gone.")]
     public static Task<JukeboxJam> EndJukeboxJam(string code, [FromServices] JukeboxJamService jams, CancellationToken cancellationToken) =>
         jams.EndAsync(code, cancellationToken);
+
+    [Name("takeOverJukeboxJam")]
+    [Description("The one asking plays the Jam from now on, when its host's client is gone (hostGone; jam_host_online otherwise): they become its host, then claim it as any host. With an account.")]
+    public static Task<JukeboxJam> TakeOverJukeboxJam(string code, [FromServices] JukeboxJamService jams, CancellationToken cancellationToken) =>
+        jams.TakeOverAsync(code, cancellationToken);
 
     [Name("claimJukeboxJamHost")]
     [Description("Host API: this client (a web player tab, Ultimate Desktop) plays the Jam; another one claiming it takes over (the one before gets a HOST change with the new device). Host only, for Jams that play on a client.")]

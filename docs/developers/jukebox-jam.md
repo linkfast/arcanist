@@ -1,17 +1,25 @@
 # Jukebox Jams
 
-A Jukebox Jam is a live queue several people add songs to while it plays on **one** player of the host's. Users of the
-server take part with their account; when the server allows it, guests without one join with the Jam's link or QR
-code. A Jam can be voted on (the most voted songs play first), and its host can be Ultimate Desktop running its AI DJ,
-which everyone in the Jam is told about.
+A Jukebox Jam is a shared listening session: a live queue several people add songs to and change while it plays on
+**one** player of the host's. Users of the server take part with their account; when the server allows it, guests
+without one join with the Jam's link or QR code. By default everyone changes what plays, and when the queue runs out
+the server suggests songs for the group, so the music does not stop. A Jam can also be voted on, and its host can be
+Ultimate Desktop running its AI DJ, which everyone in the Jam is told about.
 
-The server has it when `serverInfo.features` lists `JUKEBOX_JAM` (and `JUKEBOX_JAM_AI_DJ` for the DJ session). Every
+The server has it when `serverInfo.features` lists `JUKEBOX_JAM` (and `JUKEBOX_JAM_AI_DJ` for the DJ session;
+`JUKEBOX_JAM_SHARED_CONTROL`, `JUKEBOX_JAM_SUGGESTIONS` and `JUKEBOX_JAM_TAKE_OVER` for what this page says about them). Every
 operation is in GraphQL and, for clients that cannot use it, in REST under `/rest/v1/jams` and
 `/rest/v1/public/jams/{code}` (see `/rest/docs`). Errors come as codes (see [README.md](README.md#errors)).
 
 ## Starting one
 
-`startJukeboxJam(input: {name, playsOn, rendererId, voting, allowGuests, guestLibraryIds, allowReplace, saveAsPlaylist})`, for any user:
+`startJukeboxJam(input: {name, playsOn, rendererId, voting, allowGuests, guestLibraryIds, allowReplace, saveAsPlaylist, suggestions, queueTrackIds})`,
+for any user. Only `name` and `playsOn` are needed: **start it with one tap, from what plays**, and leave the rest for later
+(`updateJukeboxJam`).
+
+`queueTrackIds` is the queue it starts with: the song playing and what comes after it in the client's list. A client that
+hosts it reports the first entry as playing, without stopping it, and takes the rest out of its own list: they now wait
+in the Jam, where everyone sees and changes them. Songs the Jam cannot have stay out; start with nothing when nothing plays.
 
 | `playsOn` | Where it plays |
 |---|---|
@@ -27,8 +35,9 @@ Jam has nothing waiting; meanwhile `nowPlaying.external` shows the host's song. 
 The Jam has a playlist of its own (`playlistId`, of type `JUKEBOX_JAM`): what played stays there as a normal playlist of
 the host's when the Jam ends, unless `saveAsPlaylist` is false (`JUKEBOX_JAM_SAVE_AS_PLAYLIST`; true by default, and
 `updateJukeboxJam` changes it): then the playlist and the Jam are deleted when it ends. `guestLibraryIds` limits the songs that can be added to some of the host's libraries
-(all of them when null). `allowGuests` needs the server's setting (`sharing.jamGuests`, off at first) and the
-`SHARE_LINKS` permission. `allowReplace` (off by default) lets anyone taking part replace the song playing (below).
+(all of them when null). `allowGuests` (off by default) needs the server's setting (`sharing.jamGuests`, off at first) and the
+`SHARE_LINKS` permission. `voting` is off by default. `allowReplace` (**on by default**) lets anyone taking part change
+what plays (below): the host's switch "let others change what plays". `suggestions` (on by default) is below too.
 
 `myJukeboxJams` lists the Jams the user hosts or takes part in. `jukeboxJam.url` is the Jam's link: absolute when the
 server has a public URL (`sharing.publicUrl`), relative to the server otherwise (resolve it against the server's
@@ -44,14 +53,15 @@ link to it to add songs too; a player only has to play the Jam (the host API bel
 - `nowPlaying`: the entry playing (or `external`: a song the host plays that is not on the server), whether it is
   paused, and `positionMs` at `at` (it moves on from there while it plays).
 - `queue`: the songs waiting, in the order they will play: pinned first, then (voting Jams) the most voted, then by
-  arrival. Each entry has its song (title, artists, album, duration, artwork), who asked for it, its votes, whether
-  the DJ added it.
+  their place. Each entry has its song (title, artists, album, duration, artwork), who asked for it, its votes
+  (`votedByYou`), whether the DJ added it, and whether it is a suggestion (`suggested`, `likedBy`).
 - `played`: the last songs played.
 - `dj`: the DJ session, if there is one (below).
-- `you`: who is asking (`HOST`, `MANAGER`, `MEMBER`, `GUEST`, `VISITOR`), whether they can control it, when they can
-  vote again (`nextVoteAt`), whether they can replace the song playing (`canReplace`, and when again: `nextReplaceAt`)
-  and, for a guest, how many songs they can still add (`addsLeft`).
-- To those who control it: `guests` and `guestLibraryIds`.
+- `hostGone`: it plays on a client that stopped reporting (below).
+- `you`: who is asking (`HOST`, `MANAGER`, `MEMBER`, `GUEST`, `VISITOR`), whether they change what plays (`canControl`,
+  `canReplace`), manage it (`canManage`) or can take over (`canTakeOver`), and, for a guest, how many songs they can still
+  add (`addsLeft`). `voteIntervalSeconds`, `nextVoteAt` and `nextReplaceAt` are always 0 or null: there is no wait any more.
+- To those who manage it: `guests` and `guestLibraryIds`.
 
 A signed-in user calls `joinJukeboxJam(code)` (it returns null) and becomes a member of its playlist. Someone without
 an account calls `joinJukeboxJam(code, name)` and gets a guest session: send its `token` as `guestToken` (GraphQL) or
@@ -66,18 +76,32 @@ otherwise); a guest the host removed gets `jam_guest_removed`.
   without an account.
 - `addToJukeboxJam(code, trackIds)`: up to 50 at once. A guest adds a few every 10 minutes (the server's setting);
   more is `jam_guest_limit` with `retryAfterSeconds`.
-- `voteJukeboxJam(code, entryId)`: voting Jams only (`jam_voting_off`). Anyone taking part votes as often as they like,
-  but **once every 30 seconds** in the whole Jam: sooner is `jam_vote_too_soon` (HTTP 429) with `retryAfterSeconds`.
-  A song added in a voting Jam comes with a vote of whoever added it, which does not make them wait.
+- `voteJukeboxJam(code, entryId)`: voting Jams only (`jam_voting_off`). **One vote per person and song**, without waiting:
+  voting again takes it back (`votedByYou`). A song added in a voting Jam comes with a vote of whoever added it. Votes order
+  what comes after the next song: **the song already next stays next**, because it may be on its way on the host's client
+  (it shows as `pinned` until it plays).
 - `replaceJukeboxJamNowPlaying(code, trackId)` (`JUKEBOX_JAM_REPLACE`): the song plays **now**, in place of the one
-  playing. Anyone taking part when the Jam has `allowReplace` (`jam_replace_off` otherwise), once every 60 seconds in
-  the whole Jam (`jam_replace_too_soon`, HTTP 429, with `retryAfterSeconds`); the host and those who manage it always.
-  It is added pinned and the host's client gets a `SKIP` command, so it plays next right away. For a guest it counts as
-  one of their songs.
+  playing. Anyone taking part when the Jam has `allowReplace` (`jam_replace_off` otherwise), without waiting; the host and
+  those who manage it always. It is added pinned and the host's client gets a `SKIP` command, so it plays next right away.
+  For a guest it counts as one of their songs.
 
-The host and those who manage the playlist control it: `controlJukeboxJam(code, {action, entryId, position})` with
-`SKIP`, `PAUSE`, `RESUME`, `REMOVE`, `PIN` (plays next, whatever the votes say), `UNPIN` and `MOVE` (Jams without
-voting); `removeJukeboxJamGuest`; and the host `updateJukeboxJam` (name, voting, guests, `allowReplace`, libraries) and `endJukeboxJam`.
+`controlJukeboxJam(code, {action, entryId, position}, guestToken)` with `SKIP`, `PAUSE`, `RESUME`, `REMOVE`, `PIN` (plays
+next, whatever the votes say), `UNPIN` and `MOVE` (Jams without voting) is for the host and those who manage the playlist,
+and for **anyone taking part while the Jam has `allowReplace`**, guests too: with it off they only add songs and vote.
+Managing it stays with them: `removeJukeboxJamGuest`; and the host `updateJukeboxJam` (name, voting, guests, `allowReplace`,
+`suggestions`, libraries) and `endJukeboxJam`.
+
+### When the queue runs out
+
+With `suggestions` on (`JUKEBOX_JAM_SUGGESTIONS`), when nothing is waiting and something has played the server adds a few
+songs for the group: entries with `suggested` and no `addedBy`. They follow from what just played (artist, genre, tempo and
+key) and from the tastes of the host and the members: what someone likes is likelier, what someone rated low or keeps
+skipping stays out. `likedBy` names who likes them, except to guests, who are not told about the tastes of the server's
+users. What someone asks for goes before them, and a suggestion someone removes is not suggested again in that Jam. There
+are none while a DJ chooses, and a new Jam nothing has played on does not start by itself.
+
+A host client says it has nothing of its own left with `ownSongsLeft: 0` in its reports (below): the server never suggests
+to a client that does not say so, nor while it has songs of its own coming.
 
 ### Following it live
 
@@ -97,10 +121,10 @@ Any client of the host's can play a `CLIENT` Jam, in this cycle:
    the song playing** in the client's own queue, without replacing it: the host may be playing something of theirs, or
    have songs of their own coming; those go on after the Jam's when it has none waiting. Nothing playing: start it.
    Keep it ready before the one playing ends, to play without a gap.
-3. `reportJukeboxJamPlayback(code, {deviceId, entryId, external, state, positionMs})` every 5 seconds and on every
-   change (`PLAYING`, `PAUSED`, `STOPPED`). Reporting an entry takes it out of the queue: it is playing. A song of
-   the host's own is `external` (title, artists, album, duration, artwork URL), shown to everyone. Reports from
-   another device are `jam_not_host`.
+3. `reportJukeboxJamPlayback(code, {deviceId, entryId, external, state, positionMs, ownSongsLeft})` every 5 seconds and on
+   every change (`PLAYING`, `PAUSED`, `STOPPED`). Reporting an entry takes it out of the queue: it is playing. A song of
+   the host's own is `external` (title, artists, album, duration, artwork URL), shown to everyone. `ownSongsLeft` is how many
+   songs of the host's own are still to play, besides the Jam's (see above). Reports from another device are `jam_not_host`.
 4. On a `COMMAND` change, do `command`: `SKIP` (to the Jam's next song now: ask `jukeboxJamNext` first, a song
    someone chose to play now comes first), `PAUSE`, `RESUME`.
 5. On `ENDED`, stop.
@@ -142,6 +166,17 @@ playNext();
 A web player that implements it declares `"features": ["jukebox-jam-host"]` in its manifest
 ([frontends.md](frontends.md)).
 
+### When the host's client is gone
+
+A `CLIENT` Jam whose client has not reported for 2 minutes has `hostGone`: nothing moves on, and everyone should be told.
+Then (`JUKEBOX_JAM_TAKE_OVER`):
+
+- Anyone with an account taking part may play it: `takeOverJukeboxJam(code)` (`you.canTakeOver`; `jam_host_online` while
+  the client still reports), then claim it as any host. They become its host, and the songs are those they can listen to. The
+  one who started it keeps the playlist and manages it (`MANAGER`), and their client gets `jam_not_host` if it comes back.
+- Those who manage it may end it.
+- After an hour like this it ends by itself.
+
 ## Sessions with Ultimate's AI DJ
 
 Ultimate Desktop can host a Jam and let its AI DJ run it (`JUKEBOX_JAM_AI_DJ`):
@@ -163,6 +198,6 @@ ULTIMATE's colors above the queue.
 
 ## Ending
 
-`endJukeboxJam(code)` (host), or 12 hours without activity: the code no longer works (`jam_ended` for changes;
+`endJukeboxJam(code)` (the host; those who manage it when the host's client is gone), an hour with that client gone, or 12 hours without activity: the code no longer works (`jam_ended` for changes;
 `jukeboxJam` still answers with `endedAt`), what was waiting is dropped, and what played stays as a normal playlist of
 the host's (members keep it). With `saveAsPlaylist` false the playlist goes too, and the code answers not found.

@@ -65,7 +65,10 @@ public sealed record JukeboxJamSong(Guid? TrackId, string Title, IReadOnlyList<s
 
 /// <param name="AddedBy">The name of who asked for it (a user's or a guest's); null when the DJ put it.</param>
 /// <param name="Votes">Votes it has while it waits (voting Jams).</param>
-/// <param name="Pinned">The host chose it to play next.</param>
+/// <param name="Pinned">It plays next: someone chose it, or it was already next when votes came.</param>
+/// <param name="Suggested">The server suggested it for the group when the queue ran out; nobody asked for it.</param>
+/// <param name="LikedBy">For suggestions: who taking part likes it (not told to guests, nor about the one asking).</param>
+/// <param name="VotedByYou">The one asking voted for it: voting again takes it back.</param>
 public sealed record JukeboxJamEntry(
     Guid Id,
     JukeboxJamSong Song,
@@ -77,7 +80,10 @@ public sealed record JukeboxJamEntry(
     int Votes,
     bool Pinned,
     DateTime AddedAt,
-    DateTime? PlayedAt);
+    DateTime? PlayedAt,
+    bool Suggested = false,
+    IReadOnlyList<string>? LikedBy = null,
+    bool VotedByYou = false);
 
 /// <param name="Entry">The entry playing, when it is one of the Jam's.</param>
 /// <param name="External">A song the host plays that is not on the server (from Ultimate Desktop's own library).</param>
@@ -94,12 +100,15 @@ public sealed record JukeboxJamDjSession(JukeboxJamDjKind Kind, string? Name, st
 public sealed record JukeboxJamGuestInfo(Guid Id, string Name, DateTime JoinedAt, int SongsAdded, bool Removed);
 
 /// <param name="Name">The user's or guest's name.</param>
-/// <param name="NextVoteAt">When they can vote again (voting Jams); null: now.</param>
+/// <param name="CanControl">They may pause, skip, reorder and remove (<c>controlJukeboxJam</c>): those who manage it, and anyone taking part while the Jam shares it.</param>
+/// <param name="NextVoteAt">Always null: there is no wait to vote any more.</param>
 /// <param name="AddsLeft">Songs a guest can still add in these 10 minutes (null: no limit).</param>
 /// <param name="CanReplace">They may replace the song playing with one of theirs (<c>replaceJukeboxJamNowPlaying</c>).</param>
-/// <param name="NextReplaceAt">When they can replace it again (someone just did); null: now.</param>
+/// <param name="NextReplaceAt">Always null: there is no wait to replace it any more.</param>
+/// <param name="CanManage">The host or someone who manages its playlist: they see and remove guests.</param>
+/// <param name="CanTakeOver">The host's client is gone and they have an account: they may play it (<c>takeOverJukeboxJam</c>).</param>
 public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string? Name, Guid? GuestId, bool CanControl, DateTime? NextVoteAt, int? AddsLeft,
-    bool CanReplace, DateTime? NextReplaceAt);
+    bool CanReplace, DateTime? NextReplaceAt, bool CanManage = false, bool CanTakeOver = false);
 
 /// <summary>A Jukebox Jam as the one asking sees it.</summary>
 /// <param name="Url">Its link (relative to the server): the same for everyone; a QR code of it lets others join.</param>
@@ -108,7 +117,10 @@ public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string
 /// <param name="Played">The last songs played, latest first.</param>
 /// <param name="Guests">Its guests, to those who control it.</param>
 /// <param name="GuestLibraryIds">Libraries songs are added from, to those who control it; null: all the host's.</param>
-/// <param name="AllowReplace">Anyone taking part may replace the song playing (the host and its managers always can).</param>
+/// <param name="VoteIntervalSeconds">Always 0: there is no wait to vote any more.</param>
+/// <param name="AllowReplace">Anyone taking part changes what plays: replaces the song playing, pauses, skips, reorders and removes (the host and its managers always can).</param>
+/// <param name="Suggestions">When the queue runs out, the server adds songs for the group, marked as suggestions.</param>
+/// <param name="HostGone">It plays on a client that stopped reporting 2 minutes ago: nothing advances until it is back or someone takes over. It ends by itself after an hour like this.</param>
 /// <param name="SaveAsPlaylist">When it ends, what played stays as a playlist of the host's (by default); otherwise it is deleted.</param>
 public sealed record JukeboxJam(
     string Code,
@@ -132,16 +144,22 @@ public sealed record JukeboxJam(
     IReadOnlyList<JukeboxJamGuestInfo>? Guests,
     IReadOnlyList<Guid>? GuestLibraryIds,
     DateTime StartedAt,
-    DateTime? EndedAt);
+    DateTime? EndedAt,
+    bool Suggestions = false,
+    bool HostGone = false);
 
 /// <param name="RendererId">For <see cref="JukeboxJamPlaysOn.Dlna"/>: the renderer (<c>server</c> also works for the server's audio).</param>
 /// <param name="GuestLibraryIds">Libraries songs are added from; all the host's when null or empty.</param>
-/// <param name="AllowReplace">Anyone taking part may replace the song playing; off when null.</param>
-public sealed record StartJukeboxJamInput(string Name, JukeboxJamPlaysOn PlaysOn, string? RendererId, bool Voting, bool AllowGuests,
-    IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null, bool? SaveAsPlaylist = null);
+/// <param name="Voting">The most voted play first; off when null.</param>
+/// <param name="AllowGuests">Guests without an account may join; off when null.</param>
+/// <param name="AllowReplace">Anyone taking part changes what plays; on when null.</param>
+/// <param name="Suggestions">The server adds songs for the group when the queue runs out; on when null.</param>
+/// <param name="QueueTrackIds">The queue it starts with, in order: what the host was playing (the first one is the song playing, which the client reports). Those it cannot have are left out.</param>
+public sealed record StartJukeboxJamInput(string Name, JukeboxJamPlaysOn PlaysOn, string? RendererId, bool? Voting, bool? AllowGuests,
+    IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null, bool? SaveAsPlaylist = null, bool? Suggestions = null, IReadOnlyList<Guid>? QueueTrackIds = null);
 
 public sealed record UpdateJukeboxJamInput(string? Name, bool? Voting, bool? AllowGuests, IReadOnlyList<Guid>? GuestLibraryIds, bool? AllowReplace = null,
-    bool? SaveAsPlaylist = null);
+    bool? SaveAsPlaylist = null, bool? Suggestions = null);
 
 /// <summary>A guest's session: send <see cref="Token"/> with every request of theirs (<c>guestToken</c>, or <c>X-Arcanist-Guest</c> in REST).</summary>
 public sealed record JukeboxJamGuestSession(string Token, Guid GuestId, string Name, JukeboxJam Jam);
@@ -190,7 +208,9 @@ public enum JukeboxJamPlaybackState
 public sealed record JukeboxJamExternalSongInput(string Title, IReadOnlyList<string>? Artists, string? Album, int? DurationMs, string? ArtworkUrl);
 
 /// <param name="EntryId">The entry playing (it leaves the queue); null with <see cref="External"/> or when nothing plays.</param>
-public sealed record ReportJukeboxJamPlaybackInput(string DeviceId, Guid? EntryId, JukeboxJamExternalSongInput? External, JukeboxJamPlaybackState State, int PositionMs);
+/// <param name="OwnSongsLeft">Songs of the host's own still to play on this client, besides the Jam's. At 0 the server may add suggestions when the queue runs out; null (not told): it never does.</param>
+public sealed record ReportJukeboxJamPlaybackInput(string DeviceId, Guid? EntryId, JukeboxJamExternalSongInput? External, JukeboxJamPlaybackState State, int PositionMs,
+    int? OwnSongsLeft = null);
 
 public sealed record SetJukeboxJamDjInput(JukeboxJamDjKind Kind, string? Name, string? Message);
 

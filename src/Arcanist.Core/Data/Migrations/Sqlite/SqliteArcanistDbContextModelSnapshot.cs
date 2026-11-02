@@ -1178,6 +1178,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Suggestions")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Target")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -2393,6 +2396,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Position")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Suggested")
                         .HasColumnType("INTEGER");
 
                     b.Property<Guid>("TrackId")

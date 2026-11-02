@@ -200,6 +200,19 @@ public enum ApiFeature
     JukeboxJamSaveAsPlaylist,
 
     /// <summary>
+    /// Jams play as shared sessions: while <c>allowReplace</c> is on (the default), anyone taking part pauses, skips,
+    /// reorders and removes with <c>controlJukeboxJam</c>, guests too (<c>guestToken</c>); votes are one per person and
+    /// song and have no wait; and they never change the song already next.
+    /// </summary>
+    JukeboxJamSharedControl,
+
+    /// <summary>When a Jam's queue runs out, the server adds songs for the group (<c>suggestions</c>, <c>ownSongsLeft</c>).</summary>
+    JukeboxJamSuggestions,
+
+    /// <summary>When the host's client is gone (<c>hostGone</c>), someone with an account plays the Jam (<c>takeOverJukeboxJam</c>).</summary>
+    JukeboxJamTakeOver,
+
+    /// <summary>
     /// Signing in takes more than the password for some users: the login answers <c>second_factor_required</c> or
     /// <c>second_factor_setup_required</c> (see the developers' guide); <c>mySecondFactor</c> manages theirs.
     /// </summary>

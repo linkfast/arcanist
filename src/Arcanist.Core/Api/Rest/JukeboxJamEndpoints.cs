@@ -105,6 +105,14 @@ public static class JukeboxJamEndpoints
             .WithName("TakeOverJukeboxJam")
             .WithSummary("The one asking plays the Jam from now on, when its host's client is gone (hostGone; jam_host_online otherwise): they become its host, then claim it as any host. With an account.");
 
+        jams.MapPost("/listen", (string code, JukeboxJamService service, CancellationToken ct) => service.ListenAsync(code, ct))
+            .WithName("ListenToJukeboxJam")
+            .WithSummary("The one asking hears the Jam where they are, in step with its host: what to play now. Ask every 15 seconds and whenever it changes. With an account (jam_listen_account), and only the songs they can listen to themselves.");
+
+        jams.MapDelete("/listen", (string code, JukeboxJamService service, CancellationToken ct) => service.StopListeningAsync(code, ct))
+            .WithName("StopListeningToJukeboxJam")
+            .WithSummary("The one asking no longer hears the Jam; without this, they count as gone 45 seconds after they last asked.");
+
         jams.MapPost("/host", (string code, ClaimJukeboxJamHostInput input, JukeboxJamService service, CancellationToken ct) =>
                 service.ClaimHostAsync(code, input, ct))
             .WithName("ClaimJukeboxJamHost")

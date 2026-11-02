@@ -104,6 +104,16 @@ public sealed partial class Mutation
     public static Task<JukeboxJam> TakeOverJukeboxJam(string code, [FromServices] JukeboxJamService jams, CancellationToken cancellationToken) =>
         jams.TakeOverAsync(code, cancellationToken);
 
+    [Name("listenToJukeboxJam")]
+    [Description("The one asking hears the Jam where they are, in step with its host: what to play now. Ask every 15 seconds and whenever it changes. With an account (jam_listen_account), and only the songs they can listen to themselves.")]
+    public static Task<JukeboxJamListen> ListenToJukeboxJam(string code, [FromServices] JukeboxJamService jams, CancellationToken cancellationToken) =>
+        jams.ListenAsync(code, cancellationToken);
+
+    [Name("stopListeningToJukeboxJam")]
+    [Description("The one asking no longer hears the Jam; without this, they count as gone 45 seconds after they last asked.")]
+    public static Task<JukeboxJam> StopListeningToJukeboxJam(string code, [FromServices] JukeboxJamService jams, CancellationToken cancellationToken) =>
+        jams.StopListeningAsync(code, cancellationToken);
+
     [Name("claimJukeboxJamHost")]
     [Description("Host API: this client (a web player tab, Ultimate Desktop) plays the Jam; another one claiming it takes over (the one before gets a HOST change with the new device). Host only, for Jams that play on a client.")]
     public static Task<JukeboxJam> ClaimJukeboxJamHost(string code, ClaimJukeboxJamHostInput input, [FromServices] JukeboxJamService jams,

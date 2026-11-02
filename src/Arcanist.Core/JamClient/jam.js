@@ -1,4 +1,5 @@
-// Arcanist's own Jukebox Jam client (/players/jam/#/jam/<code>): follow a Jam, vote, browse its music and add songs.
+// Arcanist's own Jukebox Jam client (/players/jam/#/jam/<code>): follow a Jam, vote, browse its music and add songs;
+// with an account, also hear it from here, in step with its host.
 // With an account (the panel's session cookie) or as a guest. No dependencies; the server's REST API, and the
 // jukeboxJamChanged subscription (GraphQL over WebSocket, open without an account) to know when to read it again.
 'use strict';
@@ -23,11 +24,15 @@
         addedBy: 'añadida por', dj: 'AI DJ de Ultimate', link: 'Enlace para entrar', copy: 'Copiar', copied: 'Copiado',
         share: 'Compartir', skip: 'Saltar', pause: 'Pausar', resume: 'Seguir', remove: 'Quitar', pin: 'Que sea la siguiente',
         addsLeft: (n) => `Puedes añadir ${n} más ahora`, you: 'Tú',
+        listen: 'Escuchar aquí', stopListening: 'Dejar de escuchar', volume: 'Volumen', listeners: (names) => `Lo escuchan: ${names.join(', ')}`,
+        listenAccount: 'Con una cuenta también puedes oírlo desde donde estés.', notYours: 'Esta canción no está en tus bibliotecas: sigue la música con la próxima.',
+        tapToPlay: 'Pulsa para seguir escuchando', cannotPlay: 'Este navegador no puede reproducir esta canción.', listenWaiting: 'Ahora no suena nada.',
         errors: {
           jam_ended: 'Este Jam terminó.', jam_full: 'Este Jam ya no admite más invitados.',
           jam_guest_limit: 'Ya añadiste varias canciones: espera un poco para añadir más.',
           jam_guest_removed: 'El anfitrión te sacó de este Jam.', jam_guests_disabled: 'Este Jam no admite invitados sin cuenta.',
           jam_track_not_allowed: 'Esa canción no se puede añadir a este Jam.',
+          jam_listen_account: 'Para escucharlo desde aquí hace falta una cuenta.',
           jam_voting_off: 'Este Jam no tiene votaciones.', jam_replace_off: 'En este Jam no se puede cambiar la que suena.',
           not_found: 'No se encontró.',
           forbidden: 'No puedes hacer eso.', rate_limited: 'Demasiadas peticiones: espera un momento.',
@@ -50,11 +55,15 @@
         addedBy: 'added by', dj: 'Ultimate AI DJ', link: 'Link to join', copy: 'Copy', copied: 'Copied',
         share: 'Share', skip: 'Skip', pause: 'Pause', resume: 'Resume', remove: 'Remove', pin: 'Play next',
         addsLeft: (n) => `You can add ${n} more now`, you: 'You',
+        listen: 'Listen here', stopListening: 'Stop listening', volume: 'Volume', listeners: (names) => `Listening: ${names.join(', ')}`,
+        listenAccount: 'With an account you can also hear it from where you are.', notYours: 'This song is not in your libraries: the music comes back with the next one.',
+        tapToPlay: 'Tap to keep listening', cannotPlay: 'This browser cannot play this song.', listenWaiting: 'Nothing is playing right now.',
         errors: {
           jam_ended: 'This Jam has ended.', jam_full: 'This Jam takes no more guests.',
           jam_guest_limit: 'You added several songs: wait a little to add more.',
           jam_guest_removed: 'The host took you out of this Jam.', jam_guests_disabled: 'This Jam takes no guests without an account.',
           jam_track_not_allowed: 'That song cannot be added to this Jam.',
+          jam_listen_account: 'Hearing it from here takes an account.',
           jam_voting_off: 'This Jam has no voting.', jam_replace_off: 'The song playing cannot be changed in this Jam.',
           not_found: 'Not found.',
           forbidden: 'You cannot do that.', rate_limited: 'Too many requests: wait a moment.',
@@ -106,7 +115,7 @@
     else if (state.guest) headers['X-Arcanist-Guest'] = state.guest;
     // The Jam's own routes are relative to it (`/tracks`); the rest of the API is given whole.
     const response = await fetch(path.startsWith(`${API}/`) ? path : `${API}/public/jams/${code}${path}`, {
-      method: options.method || 'GET', headers, credentials: 'same-origin', body: options.body ? JSON.stringify(options.body) : undefined,
+      method: options.method || 'GET', headers, credentials: 'same-origin', body: options.body ? JSON.stringify(options.body) : undefined, keepalive: options.keepalive,
     });
     const body = response.status === 204 ? null : await response.json().catch(() => null);
     if (!response.ok) throw new ApiError(body?.code || (response.status === 429 ? 'rate_limited' : response.status === 404 ? 'not_found' : 'default'), response.status, body);
@@ -165,7 +174,7 @@
       else if (data.type === 'ping') socket.send(JSON.stringify({ type: 'pong' }));
       else if (data.type === 'next') {
         clearTimeout(reread);
-        reread = setTimeout(load, 250);
+        reread = setTimeout(() => { load(); if (listening.on) askWhatPlays(); }, 250);
       }
     };
     socket.onclose = () => setTimeout(live, 5000);
@@ -174,6 +183,170 @@
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') load(); });
   // The song's position moves on between updates.
   setInterval(() => { const bar = document.querySelector('.progress > div'); if (bar) bar.style.width = `${progress()}%`; }, 1000);
+
+  // —— Hearing it from here: the server says what plays and where; this keeps a player there. ——
+  const SEEK_AT = 2; // seconds off: jump there
+  const NUDGE_AT = 0.15; // seconds off: speed up or slow down a little, which nobody hears
+  const listening = {
+    on: false, audio: null, what: null, clockOffset: 0, key: null, url: null, base: 0, fallback: false, failed: false, blocked: false,
+    reloadedAt: 0, heardMs: 0, heardTrack: null, volume: Number(read('arcanist.jam.volume') ?? 1), warmed: null, warmer: null,
+  };
+
+  function startListening() {
+    // Created and started inside the tap: browsers then let this same player go on by itself.
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio.volume = listening.volume;
+    audio.addEventListener('error', onPlayerError);
+    audio.play().catch(() => {});
+    Object.assign(listening, { on: true, audio, key: null, blocked: false, failed: false });
+    askWhatPlays();
+    render();
+  }
+
+  function stopListening() {
+    reportHeard();
+    listening.audio?.pause();
+    listening.audio?.removeAttribute('src');
+    Object.assign(listening, { on: false, audio: null, what: null, key: null, warmer: null, warmed: null });
+    act(() => api('/listen', { method: 'DELETE' }));
+  }
+
+  let asking = false;
+  async function askWhatPlays() {
+    if (asking) return;
+    asking = true;
+    try {
+      const what = await api('/listen', { method: 'POST' });
+      if (listening.on) {
+        listening.what = what;
+        listening.clockOffset = new Date(what.serverTime).getTime() - Date.now();
+        follow();
+      }
+    } catch (error) {
+      if (error.code === 'jam_ended' || error.status === 404) stopPlayerOnly();
+    } finally {
+      asking = false;
+    }
+  }
+
+  function stopPlayerOnly() {
+    reportHeard();
+    listening.audio?.pause();
+    Object.assign(listening, { on: false, audio: null, what: null, key: null });
+    render();
+  }
+
+  /** Where the song should be now, in seconds. */
+  function shouldBeAt(what) {
+    const moved = what.state === 'PLAYING' && what.at ? Date.now() + listening.clockOffset - new Date(what.at).getTime() : 0;
+    const position = what.positionMs + Math.max(0, moved);
+    return (what.durationMs ? Math.min(position, what.durationMs) : position) / 1000;
+  }
+
+  /**
+   * Opens the song with the quality the server gives web players. An original opens at its start and jumps with
+   * Range; a conversion has nothing to jump to, so it is asked to start further on (`converted`). Only after an error
+   * does it ask for a format every browser plays.
+   */
+  function openSong(at, converted) {
+    const audio = listening.audio;
+    const params = ['client=WEB'];
+    if (listening.fallback) params.push('format=mp3');
+    if (converted && at > 0.5) params.push(`timeOffset=${at.toFixed(1)}`);
+    listening.base = converted ? at : 0;
+    listening.reloadedAt = Date.now();
+    audio.src = `${listening.url}&${params.join('&')}`;
+    audio.playbackRate = 1;
+    audio.load();
+  }
+
+  function onPlayerError() {
+    if (!listening.on || !listening.what?.streamUrl) return;
+    if (!listening.fallback) {
+      listening.fallback = true;
+      openSong(shouldBeAt(listening.what), true);
+    } else {
+      listening.failed = true;
+      render();
+    }
+  }
+
+  function canJumpTo(at) {
+    const audio = listening.audio;
+    const { seekable } = audio;
+    return Number.isFinite(audio.duration) && seekable.length > 0 && at - listening.base <= seekable.end(seekable.length - 1) && at >= listening.base;
+  }
+
+  /** Called every second and with every answer: changes song, starts, pauses, and corrects the distance to the host. */
+  function follow() {
+    const { what, audio } = listening;
+    if (!listening.on || !what) return;
+    const hearing = what.state === 'PLAYING' || what.state === 'PAUSED';
+    if (!hearing) {
+      reportHeard();
+      if (!audio.paused) audio.pause();
+      if (listening.key) { listening.key = null; audio.removeAttribute('src'); }
+      return;
+    }
+
+    const key = what.entryId || what.trackId;
+    const target = shouldBeAt(what);
+    if (key !== listening.key) {
+      reportHeard();
+      Object.assign(listening, { key, url: what.streamUrl, fallback: false, failed: false, heardTrack: what.trackId });
+      openSong(target, false);
+      render();
+    }
+    warmNext(what);
+    if (listening.failed || audio.readyState < 1) return;
+
+    const off = listening.base + audio.currentTime - target;
+    if (what.state === 'PAUSED') {
+      if (!audio.paused) audio.pause();
+      if (Math.abs(off) > 1 && canJumpTo(target)) audio.currentTime = target - listening.base;
+      return;
+    }
+    if (audio.ended) return; // Its end came before the host's: the next song arrives with the next answer.
+    if (audio.paused) {
+      audio.play().then(() => { if (listening.blocked) { listening.blocked = false; render(); } }).catch(() => { if (!listening.blocked) { listening.blocked = true; render(); } });
+    }
+    if (Math.abs(off) > SEEK_AT) {
+      audio.playbackRate = 1;
+      if (canJumpTo(target)) audio.currentTime = target - listening.base;
+      // Starts again where it should be; once that was tried, not more than every so often.
+      else if (listening.base === 0 || Date.now() - listening.reloadedAt > 20_000) openSong(target, true);
+    } else if (Math.abs(off) > NUDGE_AT) {
+      audio.playbackRate = off > 0 ? 0.97 : 1.03;
+    } else {
+      audio.playbackRate = 1;
+    }
+  }
+
+  /** The next song starts sooner when the browser already has its beginning. */
+  function warmNext(what) {
+    if (!what.nextTrackId || listening.warmed === what.nextTrackId) return;
+    listening.warmed = what.nextTrackId;
+    listening.warmer = new Audio(`${what.nextStreamUrl}&client=WEB`);
+    listening.warmer.preload = 'auto';
+    listening.warmer.muted = true;
+  }
+
+  /** What was heard counts for this user, as with any player; the server decides whether it is a play. */
+  function reportHeard() {
+    const { heardMs, heardTrack } = listening;
+    listening.heardMs = 0;
+    if (heardTrack && heardMs >= 1000)
+      api(`${API}/plays`, { method: 'POST', keepalive: true, body: { trackId: heardTrack, playedMs: Math.round(heardMs), client: 'Jukebox Jam' } }).catch(() => {});
+  }
+
+  setInterval(() => {
+    if (!listening.on) return;
+    if (listening.audio && !listening.audio.paused && !listening.audio.ended) listening.heardMs += 1000;
+    follow();
+  }, 1000);
+  setInterval(() => { if (listening.on) askWhatPlays(); }, 15_000);
+  addEventListener('pagehide', () => { if (listening.on) reportHeard(); });
 
   // —— Views ——
   /** Signing in comes back to this Jam. */
@@ -203,7 +376,7 @@
         h('button', { role: 'tab', 'aria-selected': String(state.tab === id), onclick: () => { state.tab = id; state.browser = null; render(); } }, label)));
     // The browser keeps what it shows (and what is being typed) while the Jam changes.
     const body = state.tab === 'add' ? (state.browser ??= browser(jam)) : state.tab === 'invite' ? invite(jam) : queue(jam);
-    return [head, hostGone(jam), nowPlaying(jam), controls(jam), tabs, body];
+    return [head, hostGone(jam), nowPlaying(jam), controls(jam), listenBar(jam), tabs, body];
   }
 
   function hostGone(jam) {
@@ -242,6 +415,36 @@
     return h('div', { class: 'row', style: 'margin-top:8px' },
       h('button', { class: 'btn small', onclick: () => act(() => api('/control', { method: 'POST', body: { action: paused ? 'RESUME' : 'PAUSE' } })) }, paused ? T.resume : T.pause),
       h('button', { class: 'btn small', onclick: () => act(() => api('/control', { method: 'POST', body: { action: 'SKIP' } })) }, T.skip));
+  }
+
+  function listenBar(jam) {
+    if (!jam.you.canListen) return jam.you.participation === 'GUEST' ? h('p', { class: 'muted listen' }, T.listenAccount) : null;
+    if (!listening.on) return h('div', { class: 'row listen' }, h('button', { class: 'btn small primary', onclick: startListening }, `🎧 ${T.listen}`), listenersLine(jam));
+    const what = listening.what;
+    const note = listening.failed ? T.cannotPlay
+      : listening.blocked ? null
+      : what?.state === 'UNAVAILABLE' ? T.notYours
+      : what?.state === 'NOTHING' ? T.listenWaiting
+      : null;
+    const volume = h('input', {
+      type: 'range', min: '0', max: '1', step: '0.05', value: String(listening.volume), 'aria-label': T.volume, title: T.volume,
+      oninput: (event) => {
+        listening.volume = Number(event.target.value);
+        if (listening.audio) listening.audio.volume = listening.volume;
+        write('arcanist.jam.volume', String(listening.volume));
+      },
+    });
+    return h('div', { class: 'listen' },
+      h('div', { class: 'row' },
+        h('button', { class: 'btn small', onclick: stopListening }, T.stopListening),
+        volume,
+        listening.blocked ? h('button', { class: 'btn small primary', onclick: () => { listening.audio.play().catch(() => {}); listening.blocked = false; render(); } }, T.tapToPlay) : null),
+      note ? h('p', { class: 'muted' }, note) : null,
+      listenersLine(jam));
+  }
+
+  function listenersLine(jam) {
+    return jam.listeners?.length ? h('p', { class: 'muted' }, T.listeners(jam.listeners)) : null;
   }
 
   function joinForm(jam) {

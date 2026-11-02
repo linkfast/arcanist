@@ -1489,6 +1489,7 @@ type JukeboxJam {
   endedAt: DateTime
   suggestions: Boolean!
   hostGone: Boolean!
+  listeners: [String!]
 }
 
 type JukeboxJamHostClient {
@@ -1571,6 +1572,7 @@ type JukeboxJamYou {
   nextReplaceAt: DateTime
   canManage: Boolean!
   canTakeOver: Boolean!
+  canListen: Boolean!
 }
 
 enum JukeboxJamParticipation {
@@ -3306,6 +3308,7 @@ enum ApiFeature {
   JUKEBOX_JAM_SHARED_CONTROL
   JUKEBOX_JAM_SUGGESTIONS
   JUKEBOX_JAM_TAKE_OVER
+  JUKEBOX_JAM_LISTEN
   SECOND_FACTOR
   AVAILABLE_PLAYERS
   WISH_LIST_CLOUD_SYNC
@@ -3608,6 +3611,10 @@ type Mutation {
   endJukeboxJam(code: String!): JukeboxJam!
   "The one asking plays the Jam from now on, when its host's client is gone (hostGone; jam_host_online otherwise): they become its host, then claim it as any host. With an account."
   takeOverJukeboxJam(code: String!): JukeboxJam!
+  "The one asking hears the Jam where they are, in step with its host: what to play now. Ask every 15 seconds and whenever it changes. With an account (jam_listen_account), and only the songs they can listen to themselves."
+  listenToJukeboxJam(code: String!): JukeboxJamListen!
+  "The one asking no longer hears the Jam; without this, they count as gone 45 seconds after they last asked."
+  stopListeningToJukeboxJam(code: String!): JukeboxJam!
   "Host API: this client (a web player tab, Ultimate Desktop) plays the Jam; another one claiming it takes over (the one before gets a HOST change with the new device). Host only, for Jams that play on a client."
   claimJukeboxJamHost(code: String!, input: ClaimJukeboxJamHostInput!): JukeboxJam!
   "Host API: what the host's client plays (an entry of the Jam, which leaves the queue; a song not on the server; or nothing), paused or not and where. Every 5 seconds and on every change, from the device that claimed it (jam_not_host otherwise)."
@@ -4139,6 +4146,26 @@ input UpdateJukeboxJamInput {
   allowReplace: Boolean
   saveAsPlaylist: Boolean
   suggestions: Boolean
+}
+
+type JukeboxJamListen {
+  state: JukeboxJamListenState!
+  entryId: ID
+  trackId: ID
+  streamUrl: String
+  durationMs: Int!
+  positionMs: Int!
+  at: DateTime
+  serverTime: DateTime!
+  nextTrackId: ID
+  nextStreamUrl: String
+}
+
+enum JukeboxJamListenState {
+  PLAYING
+  PAUSED
+  NOTHING
+  UNAVAILABLE
 }
 
 input ClaimJukeboxJamHostInput {

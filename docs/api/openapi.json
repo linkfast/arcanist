@@ -6732,6 +6732,66 @@
         }
       }
     },
+    "/rest/v1/public/jams/{code}/listen": {
+      "post": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "The one asking hears the Jam where they are, in step with its host: what to play now. Ask every 15 seconds and whenever it changes. With an account (jam_listen_account), and only the songs they can listen to themselves.",
+        "operationId": "ListenToJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJamListen"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Jukebox Jam"
+        ],
+        "summary": "The one asking no longer hears the Jam; without this, they count as gone 45 seconds after they last asked.",
+        "operationId": "StopListeningToJukeboxJam",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JukeboxJam"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/public/jams/{code}/host": {
       "post": {
         "tags": [
@@ -14615,6 +14675,7 @@
           "JUKEBOX_JAM_SHARED_CONTROL",
           "JUKEBOX_JAM_SUGGESTIONS",
           "JUKEBOX_JAM_TAKE_OVER",
+          "JUKEBOX_JAM_LISTEN",
           "SECOND_FACTOR",
           "AVAILABLE_PLAYERS",
           "WISH_LIST_CLOUD_SYNC"
@@ -19905,6 +19966,15 @@
           "hostGone": {
             "type": "boolean",
             "default": false
+          },
+          "listeners": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -20351,6 +20421,94 @@
           }
         }
       },
+      "JukeboxJamListen": {
+        "required": [
+          "state",
+          "entryId",
+          "trackId",
+          "streamUrl",
+          "durationMs",
+          "positionMs",
+          "at",
+          "serverTime",
+          "nextTrackId",
+          "nextStreamUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/JukeboxJamListenState"
+          },
+          "entryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "trackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "streamUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "positionMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nextTrackId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "nextStreamUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "JukeboxJamListenState": {
+        "enum": [
+          "PLAYING",
+          "PAUSED",
+          "NOTHING",
+          "UNAVAILABLE"
+        ]
+      },
       "JukeboxJamNext": {
         "required": [
           "entryId",
@@ -20666,6 +20824,10 @@
             "default": false
           },
           "canTakeOver": {
+            "type": "boolean",
+            "default": false
+          },
+          "canListen": {
             "type": "boolean",
             "default": false
           }

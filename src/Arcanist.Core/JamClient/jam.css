@@ -74,3 +74,6 @@ form.join { display: grid; gap: 12px; margin-top: 16px; }
 #toast { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); margin: 0 auto; width: fit-content; max-width: 560px; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 0.875rem; text-align: center; }
 .error { color: var(--bad); }
 .notice { margin-top: 12px; border-color: #d97706; }
+.listen { margin-top: 8px; }
+.listen p { margin-top: 4px; font-size: 0.85em; }
+.listen input[type='range'] { flex: 1 1 80px; min-width: 60px; max-width: 200px; padding: 0; }

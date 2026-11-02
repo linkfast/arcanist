@@ -42,6 +42,12 @@ public sealed class JukeboxJamService(
 
     /// <summary>Suggestions added at a time when the queue runs out.</summary>
     public const int SuggestionsAtATime = 3;
+
+    /// <summary>Someone hearing it from elsewhere counts as gone this long after they last asked what plays.</summary>
+    public static readonly TimeSpan ListenerSeen = TimeSpan.FromSeconds(45);
+
+    /// <summary>A report further than this from where the song should be is the host moving within it, not a clock's wobble.</summary>
+    private static readonly TimeSpan SeekTolerance = TimeSpan.FromSeconds(2);
     public const int MaxAddsPerCall = 50;
     public const int MaxWaiting = 1000;
     public const int GuestNameMaxLength = 40;
@@ -664,6 +670,51 @@ public sealed class JukeboxJamService(
         return await ToModelAsync(jam, new Caller(user, null, JukeboxJamParticipation.Host), cancellationToken);
     }
 
+    // —— Hearing it from where one is. ——
+
+    /// <summary>
+    /// The one asking hears the Jam where they are, in step with its host: what to play now, for their own clients to
+    /// call every so often and whenever it changes. With an account, and only what they can listen to themselves: a
+    /// Jam does not widen who hears a library. What they hear counts for them when their client reports it.
+    /// </summary>
+    public async Task<JukeboxJamListen> ListenAsync(string code, CancellationToken cancellationToken)
+    {
+        var (jam, caller) = await OpenAsync(code, null, cancellationToken);
+        RequireOpen(jam);
+        if (caller.User is not { } user)
+            throw new ArcanistException.Forbidden(ErrorCodes.JamListenAccount);
+        await EnsureMemberAsync(jam, user, cancellationToken);
+
+        var now = Now();
+        if (signals.Listening(jam.Id, user.UserId, now, now + ListenerSeen))
+            Publish(jam, JukeboxJamChangeKind.Guests);
+
+        var playing = jam.CurrentEntryId is { } current
+            ? await db.PlaylistEntries.AsNoTracking().Where(e => e.Id == current).Select(e => (Guid?)e.TrackId).SingleOrDefaultAsync(cancellationToken)
+            : jam.ExternalNowPlaying is { } json ? JsonSerializer.Deserialize<JukeboxJamSong>(json, Json)?.TrackId : null;
+        var something = jam.CurrentEntryId is not null || jam.ExternalNowPlaying is not null;
+
+        var upcoming = (await WaitingAsync(jam, cancellationToken)).Take(5).Select(e => e.TrackId).Where(t => t != playing).Distinct().ToList();
+        var tracks = await catalog.VisibleTracksAsync(user, upcoming.Concat(playing is { } id ? [id] : []).Distinct().ToList(), cancellationToken);
+        var track = playing is { } song && tracks.TryGetValue(song, out var found) && found.Files.Count > 0 ? found : null;
+        var next = upcoming.Where(tracks.ContainsKey).Select(t => tracks[t]).FirstOrDefault(t => t.Files.Count > 0);
+
+        var state = !something ? JukeboxJamListenState.Nothing
+            : track is null ? JukeboxJamListenState.Unavailable
+            : jam.Paused || IsHostGone(jam) ? JukeboxJamListenState.Paused
+            : JukeboxJamListenState.Playing;
+        return new JukeboxJamListen(state, jam.CurrentEntryId, track?.Id, track?.StreamUrl, track?.DurationMs ?? 0, jam.PositionMs, jam.PositionAt, now, next?.Id, next?.StreamUrl);
+    }
+
+    /// <summary>The one asking no longer hears the Jam (a client that just goes away counts as gone in a moment).</summary>
+    public async Task<JukeboxJam> StopListeningAsync(string code, CancellationToken cancellationToken)
+    {
+        var (jam, caller) = await OpenAsync(code, null, cancellationToken);
+        if (caller.User is { } user && signals.StoppedListening(jam.Id, user.UserId, Now()))
+            Publish(jam, JukeboxJamChangeKind.Guests);
+        return await ToModelAsync(jam, caller, cancellationToken);
+    }
+
     // —— The host API: the client of the host's that plays the Jam. ——
 
     /// <summary>
@@ -783,6 +834,9 @@ public sealed class JukeboxJamService(
     {
         var now = Now();
         var changed = jam.CurrentEntryId != entryId || jam.ExternalNowPlaying != external || jam.Paused != (state != JukeboxJamPlaybackState.Playing);
+        // Whoever hears it from elsewhere needs to know at once when the host moves within the song.
+        if (!changed && jam.PositionAt is { } at)
+            changed = Math.Abs(jam.PositionMs + (jam.Paused ? 0 : (now - at).TotalMilliseconds) - positionMs) > SeekTolerance.TotalMilliseconds;
         if (entryId is { } id && id != jam.CurrentEntryId)
         {
             var entry = await db.PlaylistEntries.SingleOrDefaultAsync(e => e.Id == id && e.PlaylistId == jam.PlaylistId, cancellationToken)
@@ -1130,6 +1184,8 @@ public sealed class JukeboxJamService(
         }
 
         var external = jam.ExternalNowPlaying is { } json ? JsonSerializer.Deserialize<JukeboxJamSong>(json, Json) : null;
+        var listeners = signals.Listeners(jam.Id, Now()).Where(u => u != jam.HostUserId).ToList();
+        var listenerNames = listeners.Count == 0 ? [] : await playlists.UsersAsync(listeners, cancellationToken);
         return new JukeboxJam(
             jam.Code,
             jam.Playlist.Name,
@@ -1153,13 +1209,15 @@ public sealed class JukeboxJamService(
                 caller.CanManage || (jam.AllowReplace && (caller.User is not null || caller.Guest is not null)),
                 null,
                 caller.CanManage,
-                caller.User is not null && caller.Participation != JukeboxJamParticipation.Host && IsHostGone(jam)),
+                caller.User is not null && caller.Participation != JukeboxJamParticipation.Host && IsHostGone(jam),
+                caller.User is not null),
             guests,
             caller.CanManage ? LibrariesOf(jam) : null,
             jam.StartedAt,
             jam.EndedAt,
             jam.Suggestions,
-            IsHostGone(jam));
+            IsHostGone(jam),
+            listeners.Select(u => listenerNames.GetValueOrDefault(u)?.Name).OfType<string>().Order(StringComparer.CurrentCulture).ToList());
     }
 
     private static JukeboxJamPlaysOn ToModel(JamTarget target) => target switch

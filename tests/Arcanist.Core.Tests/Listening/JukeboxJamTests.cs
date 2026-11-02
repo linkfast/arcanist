@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Arcanist.Core.Application.Jams;
 using Arcanist.Core.Data.Entities;
 using Arcanist.Core.Jams;
 using Arcanist.Core.ServerAudio;
@@ -358,6 +359,86 @@ public sealed class JukeboxJamTests : IAsyncLifetime
         var later = await _factory.CreateAuthenticatedClientAsync();
         await Until(async () => (await OkAsync(later.GetAsync($"/rest/v1/public/jams/{other}", Cancel))).GetProperty("endedAt").ValueKind != JsonValueKind.Null,
             "a Jam whose host is gone for an hour ends");
+    }
+
+    [Fact]
+    public async Task With_an_account_one_hears_the_jam_from_elsewhere_in_step_and_only_what_they_can_listen_to()
+    {
+        var jam = await StartAsync(new { name = "Far away", playsOn = "CLIENT", voting = false, allowGuests = true });
+        var code = jam.GetProperty("code").GetString()!;
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/host", new { deviceId = "tab", kind = "WEB" }, ArcanistFactory.Json, Cancel));
+        var added = await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/tracks",
+            new { trackIds = new[] { _tracks["Alpha"], _tracks["Secret"], _tracks["Bravo"] } }, ArcanistFactory.Json, Cancel));
+        var first = added.GetProperty("queue")[0].GetProperty("id").GetString();
+        var secret = added.GetProperty("queue")[1].GetProperty("id").GetString();
+
+        await _factory.CreateUserAsync("luis");
+        var luis = await _factory.CreateAuthenticatedClientAsync("luis");
+        var idle = await OkAsync(luis.PostAsync($"/rest/v1/public/jams/{code}/listen", null, Cancel));
+        Assert.Equal("NOTHING", idle.GetProperty("state").GetString());
+        var seen = await OkAsync(_admin.GetAsync($"/rest/v1/public/jams/{code}", Cancel));
+        Assert.Equal(["luis"], seen.GetProperty("listeners").EnumerateArray().Select(l => l.GetString()));
+
+        // A guest follows it without hearing anything.
+        var guest = _factory.CreateClient();
+        var token = (await OkAsync(guest.PostAsJsonAsync($"/rest/v1/public/jams/{code}/join", new { name = "Eva" }, ArcanistFactory.Json, Cancel))).GetProperty("token").GetString();
+        guest.DefaultRequestHeaders.Add("X-Arcanist-Guest", token);
+        Assert.Equal((HttpStatusCode.Forbidden, "jam_listen_account", null), await FailAsync(guest.PostAsync($"/rest/v1/public/jams/{code}/listen", null, Cancel)));
+        Assert.False((await OkAsync(guest.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("you").GetProperty("canListen").GetBoolean());
+
+        // It plays: where it is, by the server's clock, with the next one they can hear ready; a stream of their own that works.
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+            new { deviceId = "tab", entryId = first, state = "PLAYING", positionMs = 10_000 }, ArcanistFactory.Json, Cancel));
+        _time.Advance(TimeSpan.FromSeconds(3));
+        var what = await OkAsync(luis.PostAsync($"/rest/v1/public/jams/{code}/listen", null, Cancel));
+        Assert.Equal(("PLAYING", _tracks["Alpha"], 10_000), (what.GetProperty("state").GetString(), what.GetProperty("trackId").GetGuid(), what.GetProperty("positionMs").GetInt32()));
+        Assert.Equal(TimeSpan.FromSeconds(3), what.GetProperty("serverTime").GetDateTime() - what.GetProperty("at").GetDateTime());
+        Assert.Equal(_tracks["Bravo"], what.GetProperty("nextTrackId").GetGuid());
+        var stream = await _factory.CreateClient().GetAsync(what.GetProperty("streamUrl").GetString(), HttpCompletionOption.ResponseHeadersRead, Cancel);
+        Assert.Equal(HttpStatusCode.OK, stream.StatusCode);
+
+        // The host moving within the song is told at once, unlike the same place reported on time.
+        var told = new List<string>();
+        var signals = _factory.Services.GetRequiredService<JukeboxJamSignals>();
+        Action<Guid, JukeboxJamChange> onChange = (_, change) => { if (change.Code == code) lock (told) told.Add(change.Kind.ToString()); };
+        signals.Changed += onChange;
+        try
+        {
+            await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+                new { deviceId = "tab", entryId = first, state = "PLAYING", positionMs = 13_000 }, ArcanistFactory.Json, Cancel));
+            Assert.DoesNotContain("NowPlaying", told);
+            await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+                new { deviceId = "tab", entryId = first, state = "PLAYING", positionMs = 60_000 }, ArcanistFactory.Json, Cancel));
+            Assert.Contains("NowPlaying", told);
+        }
+        finally
+        {
+            signals.Changed -= onChange;
+        }
+
+        // Paused, it waits; with the host's client gone too, so the music does not run ahead of nobody.
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+            new { deviceId = "tab", entryId = first, state = "PAUSED", positionMs = 60_000 }, ArcanistFactory.Json, Cancel));
+        Assert.Equal("PAUSED", (await OkAsync(luis.PostAsync($"/rest/v1/public/jams/{code}/listen", null, Cancel))).GetProperty("state").GetString());
+        await OkAsync(_admin.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+            new { deviceId = "tab", entryId = first, state = "PLAYING", positionMs = 60_000 }, ArcanistFactory.Json, Cancel));
+        _time.Advance(TimeSpan.FromMinutes(3));
+        var later = await _factory.CreateAuthenticatedClientAsync("luis");
+        Assert.Equal("PAUSED", (await OkAsync(later.PostAsync($"/rest/v1/public/jams/{code}/listen", null, Cancel))).GetProperty("state").GetString());
+
+        // A Jam does not widen who hears a library: a song of one they have no access to is silence, and no stream.
+        var host = await _factory.CreateAuthenticatedClientAsync();
+        await OkAsync(host.PostAsJsonAsync($"/rest/v1/public/jams/{code}/playback",
+            new { deviceId = "tab", entryId = secret, state = "PLAYING", positionMs = 0 }, ArcanistFactory.Json, Cancel));
+        var silence = await OkAsync(later.PostAsync($"/rest/v1/public/jams/{code}/listen", null, Cancel));
+        Assert.Equal(("UNAVAILABLE", JsonValueKind.Null, JsonValueKind.Null), (silence.GetProperty("state").GetString(), silence.GetProperty("trackId").ValueKind, silence.GetProperty("streamUrl").ValueKind));
+
+        // Stopping takes them off the list, and so does going away.
+        var stopped = await OkAsync(later.DeleteAsync($"/rest/v1/public/jams/{code}/listen", Cancel));
+        Assert.DoesNotContain("luis", stopped.GetProperty("listeners").EnumerateArray().Select(l => l.GetString()));
+        _time.Advance(TimeSpan.FromMinutes(1));
+        var afterwards = await _factory.CreateAuthenticatedClientAsync();
+        Assert.Empty((await OkAsync(afterwards.GetAsync($"/rest/v1/public/jams/{code}", Cancel))).GetProperty("listeners").EnumerateArray());
     }
 
     [Fact]

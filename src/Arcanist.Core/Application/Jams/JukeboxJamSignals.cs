@@ -13,6 +13,7 @@ public sealed class JukeboxJamSignals
     private readonly LiveFeed<(Guid JamId, JukeboxJamChange Change)> _feed = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _locks = new();
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, byte>> _rejected = new();
+    private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, DateTime>> _listeners = new();
 
     /// <summary>A Jam changed (its id and the change).</summary>
     public event Action<Guid, JukeboxJamChange>? Changed;
@@ -32,6 +33,29 @@ public sealed class JukeboxJamSignals
 
     internal IReadOnlyCollection<Guid> RejectedSuggestions(Guid jamId) =>
         _rejected.TryGetValue(jamId, out var rejected) ? rejected.Keys.ToList() : [];
+
+    /// <summary>Someone is hearing the Jam from where they are, until <paramref name="until"/>; whether they just arrived (in memory: their clients say it again).</summary>
+    internal bool Listening(Guid jamId, Guid userId, DateTime now, DateTime until)
+    {
+        var listeners = _listeners.GetOrAdd(jamId, _ => new());
+        var arrived = !listeners.TryGetValue(userId, out var was) || was <= now;
+        listeners[userId] = until;
+        return arrived;
+    }
+
+    /// <summary>They stopped; whether they were listening.</summary>
+    internal bool StoppedListening(Guid jamId, Guid userId, DateTime now) =>
+        _listeners.TryGetValue(jamId, out var listeners) && listeners.TryRemove(userId, out var until) && until > now;
+
+    internal IReadOnlyList<Guid> Listeners(Guid jamId, DateTime now)
+    {
+        if (!_listeners.TryGetValue(jamId, out var listeners))
+            return [];
+        foreach (var (user, until) in listeners)
+            if (until <= now)
+                listeners.TryRemove(user, out _);
+        return listeners.Keys.ToList();
+    }
 
     internal async Task<IDisposable> LockAsync(Guid jamId, CancellationToken cancellationToken)
     {

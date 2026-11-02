@@ -3499,6 +3499,7 @@ export const en: Dictionary = {
     jam_track_not_allowed: 'That song is not in the Jam’s libraries.',
     jam_voting_off: 'This Jam is not voted on.',
     jam_replace_off: 'In this Jam the song playing cannot be changed.',
+    jam_listen_account: 'Hearing the Jam from where you are takes an account.',
     jam_host_online: 'The host is still connected: nobody else can play this Jam.',
     jam_not_host: 'Only the host (the player it plays on) can do that.',
     playlist_is_jam: 'It is the queue of a Jukebox Jam: change it from the Jam.',

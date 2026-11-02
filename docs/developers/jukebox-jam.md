@@ -108,6 +108,34 @@ to a client that does not say so, nor while it has songs of its own coming.
 The subscription `jukeboxJamChanged(code)` (anyone with the code, also without an account: send `connection_init`
 without a token) says what changed: `QUEUE`, `NOW_PLAYING`, `SETTINGS`, `DJ`, `HOST`, `GUESTS`, `ENDED` or `COMMAND`.
 Read the Jam again with `jukeboxJam`. Clients that cannot subscribe poll `GET /rest/v1/public/jams/{code}`.
+`NOW_PLAYING` also arrives when the host moves within a song; `GUESTS`, when someone starts or stops hearing it.
+
+### Hearing it from where you are
+
+Anyone with an account (`you.canListen`, `JUKEBOX_JAM_LISTEN`) can hear the Jam on their own device, in step with its host.
+Guests without an account follow it but hear nothing (`jam_listen_account`). Arcanist's Jam client does all of this with
+its «Listen here» button; for another client:
+
+1. Call `listenToJukeboxJam(code)` (`POST /rest/v1/public/jams/{code}/listen`) when the person asks to listen, every 15
+   seconds, and on every `NOW_PLAYING` or `QUEUE` change. It also makes them a member, and `jam.listeners` shows them to
+   everyone. They count as gone 45 seconds after the last call, or at once with `stopListeningToJukeboxJam`.
+2. Do what `state` says:
+   - `PLAYING`: play `streamUrl`. The song should be at `positionMs + (now - at)`, where `now` is your clock corrected by
+     `serverTime`: the device's clock may be wrong.
+   - `PAUSED`: hold it at `positionMs`. It is also this while the host's client is gone (`hostGone`).
+   - `NOTHING`: silence.
+   - `UNAVAILABLE`: silence until the next song. It is a song this user cannot hear.
+3. Change song when `entryId` changes (it is null for a song of the host's own: then use `trackId`). `nextTrackId` and
+   `nextStreamUrl` are the next song this user can hear, to have it ready; the queue may still change.
+4. Correct the distance. The Jam client lets a small one go (under 150 ms), plays 3 % faster or slower up to 2 seconds,
+   and jumps beyond that. An original jumps with `Range`; a converted stream has nothing to jump to, so ask for it again
+   with `timeOffset`, and not too often.
+5. Report what was heard with `recordPlay`, as with any song: it counts for this user, who heard it, and the server
+   decides whether it is a play.
+
+A Jam does not widen who hears a library: the stream is the listener's own, with their libraries and the server's quality
+for their client. In browsers, start the player from the person's tap, or autoplay rules will stop it. The position comes
+from the host's reports, so the distance to the host also depends on how long their own output takes.
 
 ## The host API: playing a Jam on a client
 

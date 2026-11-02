@@ -212,6 +212,9 @@ public enum ApiFeature
     /// <summary>When the host's client is gone (<c>hostGone</c>), someone with an account plays the Jam (<c>takeOverJukeboxJam</c>).</summary>
     JukeboxJamTakeOver,
 
+    /// <summary>Anyone with an account hears the Jam from where they are, in step with its host (<c>listenToJukeboxJam</c>).</summary>
+    JukeboxJamListen,
+
     /// <summary>
     /// Signing in takes more than the password for some users: the login answers <c>second_factor_required</c> or
     /// <c>second_factor_setup_required</c> (see the developers' guide); <c>mySecondFactor</c> manages theirs.

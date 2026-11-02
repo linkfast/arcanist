@@ -107,8 +107,9 @@ public sealed record JukeboxJamGuestInfo(Guid Id, string Name, DateTime JoinedAt
 /// <param name="NextReplaceAt">Always null: there is no wait to replace it any more.</param>
 /// <param name="CanManage">The host or someone who manages its playlist: they see and remove guests.</param>
 /// <param name="CanTakeOver">The host's client is gone and they have an account: they may play it (<c>takeOverJukeboxJam</c>).</param>
+/// <param name="CanListen">They have an account: they may hear it where they are (<c>listenToJukeboxJam</c>).</param>
 public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string? Name, Guid? GuestId, bool CanControl, DateTime? NextVoteAt, int? AddsLeft,
-    bool CanReplace, DateTime? NextReplaceAt, bool CanManage = false, bool CanTakeOver = false);
+    bool CanReplace, DateTime? NextReplaceAt, bool CanManage = false, bool CanTakeOver = false, bool CanListen = false);
 
 /// <summary>A Jukebox Jam as the one asking sees it.</summary>
 /// <param name="Url">Its link (relative to the server): the same for everyone; a QR code of it lets others join.</param>
@@ -122,6 +123,7 @@ public sealed record JukeboxJamYou(JukeboxJamParticipation Participation, string
 /// <param name="Suggestions">When the queue runs out, the server adds songs for the group, marked as suggestions.</param>
 /// <param name="HostGone">It plays on a client that stopped reporting 2 minutes ago: nothing advances until it is back or someone takes over. It ends by itself after an hour like this.</param>
 /// <param name="SaveAsPlaylist">When it ends, what played stays as a playlist of the host's (by default); otherwise it is deleted.</param>
+/// <param name="Listeners">Who is hearing it from where they are (<c>listenToJukeboxJam</c>), besides the host.</param>
 public sealed record JukeboxJam(
     string Code,
     string Name,
@@ -146,7 +148,42 @@ public sealed record JukeboxJam(
     DateTime StartedAt,
     DateTime? EndedAt,
     bool Suggestions = false,
-    bool HostGone = false);
+    bool HostGone = false,
+    IReadOnlyList<string>? Listeners = null);
+
+/// <summary>What someone hearing a Jam from where they are does now.</summary>
+public enum JukeboxJamListenState
+{
+    /// <summary>Play <see cref="JukeboxJamListen.StreamUrl"/> at the position.</summary>
+    Playing,
+
+    /// <summary>The song waits at the position: paused, or the host's client is gone.</summary>
+    Paused,
+
+    /// <summary>Nothing plays.</summary>
+    Nothing,
+
+    /// <summary>A song plays that this user cannot hear: not in their libraries, or not on the server. Silence until the next one.</summary>
+    Unavailable,
+}
+
+/// <summary>What to play to hear a Jam in step with its host.</summary>
+/// <param name="EntryId">The entry playing; null for a song of the host's own.</param>
+/// <param name="StreamUrl">Its stream for this user; null unless <see cref="State"/> is playing or paused. Relative to the server; append <c>format</c> and <c>timeOffset</c> as with any stream.</param>
+/// <param name="PositionMs">Where the song was at <see cref="At"/>; while playing, add the time since then (by <see cref="ServerTime"/>, not the device's clock).</param>
+/// <param name="ServerTime">The server's clock when it answered, to compare with <see cref="At"/>.</param>
+/// <param name="NextTrackId">The song most likely next that this user can hear, to have it ready; the queue may change.</param>
+public sealed record JukeboxJamListen(
+    JukeboxJamListenState State,
+    Guid? EntryId,
+    Guid? TrackId,
+    string? StreamUrl,
+    int DurationMs,
+    int PositionMs,
+    DateTime? At,
+    DateTime ServerTime,
+    Guid? NextTrackId,
+    string? NextStreamUrl);
 
 /// <param name="RendererId">For <see cref="JukeboxJamPlaysOn.Dlna"/>: the renderer (<c>server</c> also works for the server's audio).</param>
 /// <param name="GuestLibraryIds">Libraries songs are added from; all the host's when null or empty.</param>

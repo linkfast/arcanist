@@ -324,6 +324,8 @@ public static class ErrorCodes
     public const string JamReplaceOff = "jam_replace_off";
     /// <summary>The host's client is still playing the Jukebox Jam: nobody can take over.</summary>
     public const string JamHostOnline = "jam_host_online";
+    /// <summary>Hearing a Jukebox Jam from where one is takes an account.</summary>
+    public const string JamListenAccount = "jam_listen_account";
     /// <summary>Only the host (its playing client) does that.</summary>
     public const string JamNotHost = "jam_not_host";
     /// <summary>The playlist is the queue of a Jukebox Jam: change it through the Jam.</summary>

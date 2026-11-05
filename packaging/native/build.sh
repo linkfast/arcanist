@@ -33,10 +33,13 @@ alsa_sysroot() {
         rm -rf "$sysroot"
         mkdir -p "$sysroot"
         snapshot=https://snapshot.debian.org/archive/debian/20230701T000000Z/pool/main/a/alsa-lib
+        # snapshot.debian.org goes down at times; the checksums below make any source safe.
+        mirror=https://deb.debian.org/debian/pool/main/a/alsa-lib
         while read -r package sum; do
             [ -n "$package" ] || continue
             file="$sysroot/$package.deb"
-            curl -fsSL --retry 3 -o "$file" "$snapshot/$package.deb"
+            curl -fsSL --retry 3 -o "$file" "$snapshot/$package.deb" ||
+                curl -fsSL --retry 3 -o "$file" "$mirror/$package.deb"
             echo "$sum  $file" | sha256sum -c - >/dev/null
             if command -v dpkg-deb >/dev/null; then
                 dpkg-deb -x "$file" "$sysroot"

@@ -20,9 +20,9 @@ public sealed partial class Query
         listening.RatedTracksAsync(minRating, after, first, cancellationToken);
 
     [Name("playHistory")]
-    [Description("The user's counted plays, newest first.")]
-    public static Task<PlayHistoryPage> PlayHistory(string? after, int? first, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
-        listening.HistoryAsync(after, first, cancellationToken);
+    [Description("The user's counted plays, newest first; with search, of the songs that match.")]
+    public static Task<PlayHistoryPage> PlayHistory(string? after, int? first, string? search, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
+        listening.HistoryAsync(after, first, cancellationToken, search);
 
     [Name("listeningStats")]
     [Description("Listening over a period: the user's own, or another user's with VIEW_ALL_STATS. timeZone is an IANA id (UTC by default) for days and months.")]
@@ -72,6 +72,16 @@ public sealed partial class Mutation
     [Description("Reports that the user listened to a track. The server decides whether it counts as a play (30 seconds, and half the track or four minutes) or a skip.")]
     public static Task<RecordedPlay> RecordPlay(RecordPlayInput input, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
         listening.RecordPlayAsync(input, cancellationToken);
+
+    [Name("deletePlays")]
+    [Description("Takes single plays, or whole songs, from the user's history and statistics (at most 1000 of each). What was reported elsewhere stays there.")]
+    public static Task<DeletedPlays> DeletePlays(DeletePlaysInput input, [FromServices] ListeningService listening, CancellationToken cancellationToken) =>
+        listening.DeletePlaysAsync(input, cancellationToken);
+
+    [Name("clearPlayHistory")]
+    [Description("Empties the user's history and play counts. What was reported elsewhere stays there.")]
+    public static Task<DeletedPlays> ClearPlayHistory([FromServices] ListeningService listening, CancellationToken cancellationToken) =>
+        listening.ClearPlayHistoryAsync(cancellationToken);
 
     [Name("setRatingMode")]
     [Description("Chooses how users rate tracks: STARS (one to five, five being a StarTrack) or STAR (the StarTrack alone, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS.")]

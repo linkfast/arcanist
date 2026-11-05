@@ -32,10 +32,20 @@ public sealed record RecordPlayInput(Guid TrackId, int PlayedMs, DateTime? Playe
 public sealed record RecordedPlay(Guid Id, bool Counted, bool Skipped, bool Duplicate = false);
 
 /// <summary>A counted play in the user's history.</summary>
-public sealed record PlayHistoryItem(Guid Id, Track Track, DateTime PlayedAt, int PlayedMs);
+/// <param name="Client">The player that reported it, as it names itself.</param>
+public sealed record PlayHistoryItem(Guid Id, Track Track, DateTime PlayedAt, int PlayedMs, string? Client = null);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get older plays; null on the last page.</param>
-public sealed record PlayHistoryPage(IReadOnlyList<PlayHistoryItem> Items, string? NextCursor);
+/// <param name="TotalCount">Plays that match, on every page.</param>
+public sealed record PlayHistoryPage(IReadOnlyList<PlayHistoryItem> Items, string? NextCursor, int TotalCount = 0);
+
+/// <summary>What to take from the user's history. At most 1000 of each.</summary>
+/// <param name="PlayIds">Single plays: the song's play count goes down by them.</param>
+/// <param name="TrackIds">Whole songs: all their plays and skips, and their counters.</param>
+public sealed record DeletePlaysInput(IReadOnlyList<Guid>? PlayIds, IReadOnlyList<Guid>? TrackIds);
+
+/// <param name="Deleted">The plays and skips that are gone.</param>
+public sealed record DeletedPlays(int Deleted);
 
 /// <summary>A rated track (five stars: a StarTrack).</summary>
 public sealed record RatedTrack(Track Track, int Rating, DateTime RatedAt);

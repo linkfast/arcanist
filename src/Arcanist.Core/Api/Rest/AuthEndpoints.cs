@@ -148,7 +148,76 @@ public static class AuthEndpoints
             .WithSummary("What the passkey has to answer to confirm a re-authentication.")
             .Produces<PasskeyOptionsResponse>();
 
+        MapBrowserLogin(auth);
+
         return rest;
+    }
+
+    /// <summary>Signing an app in through the browser (the developers' guide tells the steps).</summary>
+    private static void MapBrowserLogin(RouteGroupBuilder auth)
+    {
+        auth.MapGet("/browser", async (BrowserLoginService service, CancellationToken ct) => await service.InfoAsync(ct))
+            .RequireRateLimiting(AuthServiceCollectionExtensions.PublicRateLimit)
+            .WithName("BrowserLoginInfo")
+            .WithSummary("Where an app opens the browser to sign in. Relative without a public URL: to the address the app uses.");
+
+        auth.MapPost("/browser/check", (BrowserLoginRequest request, BrowserLoginService service) => service.Check(request))
+            .RequireRateLimiting(AuthServiceCollectionExtensions.PublicRateLimit)
+            .WithName("CheckBrowserLogin")
+            .WithSummary("Whether a link to the authorize page can be honoured.");
+
+        auth.MapPost("/browser/approve", async (BrowserLoginRequest request, BrowserLoginService service, CancellationToken ct) =>
+                await service.ApproveAsync(request, ct))
+            .RequireAuthorization()
+            .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit)
+            .WithName("ApproveBrowserLogin")
+            .WithSummary("The signed-in user lets the app in: where the browser goes next, with a code for the app.");
+
+        auth.MapPost("/browser/token", async (BrowserLoginTokenRequest request, HttpContext context, BrowserLoginService service, CancellationToken ct) =>
+                ToResponse(await service.RedeemAsync(request, Client(context), ct), context, useCookie: false))
+            .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit)
+            .WithName("RedeemBrowserLogin")
+            .WithSummary("Trades the code and the PKCE verifier for tokens. The code works once, for 60 seconds.")
+            .Produces<TokenResponse>();
+
+        auth.MapPost("/device", async (DeviceLoginStartRequest request, HttpContext context, BrowserLoginService service, CancellationToken ct) =>
+                await service.StartDeviceAsync(request, context.Connection.RemoteIpAddress?.ToString(), ct))
+            .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit)
+            .WithName("StartDeviceLogin")
+            .WithSummary("A code for the person to approve from a browser, for 10 minutes.");
+
+        // Its own limit: a device asks every few seconds, and that must not use up the logins of its address.
+        auth.MapPost("/device/token", async (DeviceLoginTokenRequest request, HttpContext context, BrowserLoginService service, CancellationToken ct) =>
+                ToResponse(await service.PollDeviceAsync(request, Client(context), ct), context, useCookie: false))
+            .RequireRateLimiting(AuthServiceCollectionExtensions.PublicRateLimit)
+            .WithName("PollDeviceLogin")
+            .WithDescription("Until someone answers, `409 browser_login_pending`. `429 browser_login_slow_down` means asking too often; `409 browser_login_denied` and `409 browser_login_expired` end it.")
+            .Produces<TokenResponse>();
+
+        auth.MapPost("/device/lookup", (DeviceLoginCodeRequest request, BrowserLoginService service) => service.LookUpDevice(request))
+            .RequireAuthorization()
+            .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit)
+            .WithName("LookUpDeviceLogin")
+            .WithSummary("Which device a code is for, before approving it.");
+
+        auth.MapPost("/device/approve", async (DeviceLoginCodeRequest request, BrowserLoginService service, CancellationToken ct) =>
+            {
+                await service.ApproveDeviceAsync(request, ct);
+                return Results.NoContent();
+            })
+            .RequireAuthorization()
+            .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit)
+            .WithName("ApproveDeviceLogin")
+            .WithSummary("Lets the device in. Needs a recent password.");
+
+        auth.MapPost("/device/deny", (DeviceLoginCodeRequest request, BrowserLoginService service) =>
+            {
+                service.DenyDevice(request);
+                return Results.NoContent();
+            })
+            .RequireAuthorization()
+            .RequireRateLimiting(AuthServiceCollectionExtensions.AuthRateLimit)
+            .WithName("DenyDeviceLogin");
     }
 
     private static ClientInfo Client(HttpContext context, string? deviceName = null) => new(

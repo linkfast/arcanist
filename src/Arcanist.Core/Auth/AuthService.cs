@@ -209,7 +209,20 @@ public sealed class AuthService(
 
     public static string SessionAskedBy(Guid sessionId) => "session:" + sessionId;
 
-    private async Task<AuthResult.Success> StartSessionAsync(User user, ClientInfo client, CancellationToken cancellationToken)
+    /// <summary>
+    /// Starts an app's session from what its user approved in the browser. It has their password as recent as the
+    /// session that approved it: approving is not typing it, so it never extends a step-up. A change to the password
+    /// or the stamp since then, or a disabled account, ends it.
+    /// </summary>
+    public async Task<AuthResult> SignInApprovedAsync(BrowserApproval approval, ClientInfo client, CancellationToken cancellationToken)
+    {
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == approval.UserId, cancellationToken);
+        if (user is null || user.IsDisabled || SecondFactorChallenges.Fingerprint(user) != approval.Fingerprint)
+            throw new ArcanistException.Conflict(ErrorCodes.BrowserLoginExpired);
+        return await StartSessionAsync(user, client, cancellationToken, approval.AuthenticatedAt);
+    }
+
+    private async Task<AuthResult.Success> StartSessionAsync(User user, ClientInfo client, CancellationToken cancellationToken, DateTime? authenticatedAt = null)
     {
         var now = Now();
         var refreshToken = TokenService.CreateRefreshToken();
@@ -221,7 +234,7 @@ public sealed class AuthService(
             UserAgent = Truncate(client.UserAgent, 1024),
             IpAddress = client.IpAddress,
             CreatedAt = now,
-            AuthenticatedAt = now,
+            AuthenticatedAt = authenticatedAt ?? now,
             LastSeenAt = now,
             ExpiresAt = now + options.Value.SessionLifetime,
         };

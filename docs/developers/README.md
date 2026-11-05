@@ -67,8 +67,7 @@ handle it show the error: signing in never skips it. With the right password, th
   JSON text (the base64url fields of `PublicKeyCredential.toJSON()`). To pair one: `…/login/setup/passkey/options` and
   `…/login/setup/passkey` with `{ "challenge", "name", "attestation" }`. A passkey belongs to the domain it was made on:
   `passkey_other_domain` means this address is not one, and browsers need HTTPS (or `localhost`) and a name, not an IP.
-  Native apps need their own association with that domain (Apple's associated domains, Android's asset links), so most
-  will offer codes.
+  Native apps cannot use them directly on a server of any domain: they sign in through the browser (below).
 - **Step-up:** `POST /rest/v1/auth/reauthenticate` with only the password answers `401 second_factor_required` with the
   `methods` for such a user. Send it again with `code`, or with `passkey` after
   `POST /rest/v1/auth/reauthenticate/passkey/options`.
@@ -77,9 +76,57 @@ Users manage theirs with `mySecondFactor` and its mutations (`startTotpSetup`, `
 REST under `/rest/v1/me/second-factor`). App passwords for Subsonic and mStream apps keep working without a second
 factor: making one takes a step-up.
 
+### Signing in through the browser
+
+Servers that list `BROWSER_LOGIN` in `serverInfo.features` let an app sign in on the panel's own login page, with
+everything it can do: passkeys, codes, and pairing a factor the server requires. The app never sees the password.
+Offer it always, and open it by yourself when the login answers `second_factor_setup_required`, or `second_factor_required`
+with `PASSKEY` as the only method you cannot finish. `GET /rest/v1/auth/browser` gives `authorizeUrl` and `deviceUrl`:
+absolute with the server's public URL, otherwise relative to the address the app uses. Use them as they come: a passkey
+only works on the domain it was made on, which may not be the address or the P2P tunnel the app talks to.
+
+**An app with a browser on the same device** (PKCE):
+
+1. Make a random `verifier` (43 to 128 unreserved characters) and its `challenge`, the unpadded base64url SHA-256.
+2. Open the system browser, never a web view, at
+   `<authorizeUrl>?clientName=…&redirectUri=…&codeChallenge=<challenge>&state=…&deviceName=…`. On phones, use
+   `ASWebAuthenticationSession` or Custom Tabs.
+3. After signing in, the user is always asked to allow it. The browser then goes to `redirectUri` with `code` and `state`,
+   or with `error=access_denied` and `state`.
+4. Check `state`, and call `POST /rest/v1/auth/browser/token` with `{ "code", "codeVerifier", "redirectUri" }`. The answer
+   is the login's, with `refreshToken`. A code lasts 60 seconds and any attempt spends it: `409 browser_login_expired`.
+
+`redirectUri` is one of:
+
+- `http://127.0.0.1:<port>/…` or `http://[::1]:<port>/…`, on desktop: listen there on a free port. Names such as
+  `localhost` are not accepted.
+- An app's own scheme on the server's fixed list, on phones: `ultimate://…`. A server's administrator can add others with
+  `Arcanist:Auth:BrowserLoginSchemes`.
+
+**A device without a usable browser**, or with a P2P address where passkeys do not work (device code, RFC 8628):
+
+1. `POST /rest/v1/auth/device` with `{ "clientName", "deviceName" }` gives `deviceCode` (keep it to yourself), `userCode`,
+   `verificationUrl`, `verificationUrlComplete` (for a QR code), `expiresInSeconds` and `intervalSeconds`.
+2. Show the code and where to type it. The person signs in there, checks the code and allows it with their password.
+3. Every `intervalSeconds`, `POST /rest/v1/auth/device/token` with `{ "deviceCode" }`: `409 browser_login_pending` until
+   they answer, `429 browser_login_slow_down` if you ask too often, `409 browser_login_denied` or
+   `409 browser_login_expired` to stop, and the login's answer, once, when they allowed it.
+
+Either way the session appears in the user's My account under `deviceName`, and it has the password as recent as the
+browser's: sensitive actions may need a step-up, which takes the password and, for who has one, a code or recovery code.
+
 A `401` with code `unauthorized` (REST) or an error with that code (GraphQL) means the access token is missing,
 expired or revoked: refresh once and retry, and sign in again if refreshing fails. Login attempts are rate-limited
 per address and per account (`429 too_many_requests`, with `Retry-After`).
+
+## Play history
+
+Servers that list `PLAY_HISTORY_MANAGEMENT` in `serverInfo.features` let each user manage their own history:
+`playHistory` (`GET /rest/v1/me/plays`) takes `search` and gives `totalCount`; `deletePlays`
+(`POST /rest/v1/me/plays/delete`) takes `playIds` for single plays or `trackIds` for whole songs, at most 1000 of each;
+and `clearPlayHistory` (`DELETE /rest/v1/me/plays`) empties it, with the play counts. What leaves stops counting in
+`listeningStats` and mixes, but what was already reported to Ultimate Cloud or to a library's owner stays there.
+`changedSince` does not report these: a client that keeps counts reads them again after deleting.
 
 ## Errors
 

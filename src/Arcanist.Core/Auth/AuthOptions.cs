@@ -25,6 +25,9 @@ public sealed class AuthOptions
     /// <summary>Previews of shared playlists per client IP per minute (each is a conversion).</summary>
     public int PreviewsPerMinute { get; set; } = 20;
 
+    /// <summary>Apps' own schemes a browser sign-in may go back to, besides <see cref="BrowserRedirects.BuiltInSchemes"/>.</summary>
+    public List<string> BrowserLoginSchemes { get; set; } = [];
+
     /// <summary>How long permission and session state is cached between database reads.</summary>
     public TimeSpan AccessCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
 }

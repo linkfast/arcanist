@@ -27,6 +27,17 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login.page').then((m) => m.LoginPage),
   },
   {
+    // An app signing in through the browser. Asks for the session itself, once the link checks out.
+    path: 'authorize',
+    canActivate: [setupCompletedGuard],
+    loadComponent: () => import('./features/login/authorize.page').then((m) => m.AuthorizePage),
+  },
+  {
+    path: 'device',
+    canActivate: [setupCompletedGuard, authGuard],
+    loadComponent: () => import('./features/login/device.page').then((m) => m.DevicePage),
+  },
+  {
     path: '',
     canActivate: [setupCompletedGuard, authGuard, migrationGuard],
     loadComponent: () => import('./shell/shell').then((m) => m.Shell),
@@ -68,6 +79,16 @@ export const routes: Routes = [
         path: 'import',
         canActivate: [permissionGuard('MANAGE_LIBRARIES')],
         loadComponent: () => import('./features/import/import.page').then((m) => m.ImportPage),
+      },
+      {
+        path: 'listening',
+        loadComponent: () =>
+          import('./features/listening/listening.page').then((m) => m.ListeningPage),
+      },
+      {
+        path: 'listening/:section',
+        loadComponent: () =>
+          import('./features/listening/listening.page').then((m) => m.ListeningPage),
       },
       {
         path: 'stats',

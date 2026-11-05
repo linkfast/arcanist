@@ -221,6 +221,15 @@ public enum ApiFeature
     /// </summary>
     SecondFactor,
 
+    /// <summary>
+    /// Apps can sign in through the browser, the only way a native app can use a passkey on any server:
+    /// <c>/admin/authorize</c> with PKCE, or a code the device shows (see the developers' guide).
+    /// </summary>
+    BrowserLogin,
+
+    /// <summary>Users manage their own history: <c>deletePlays</c>, <c>clearPlayHistory</c> and <c>search</c> in <c>playHistory</c>.</summary>
+    PlayHistoryManagement,
+
     /// <summary><c>availablePlayers</c>: the web players any user can open.</summary>
     AvailablePlayers,
 

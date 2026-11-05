@@ -106,6 +106,14 @@ public static class ErrorCodes
     public const string PasskeyOtherDomain = "passkey_other_domain";
     /// <summary>The server requires a second factor, and this is the user's last one.</summary>
     public const string SecondFactorLast = "second_factor_last";
+    /// <summary>Nobody approved the device's code yet: it asks again after its interval.</summary>
+    public const string BrowserLoginPending = "browser_login_pending";
+    /// <summary>The device asked too soon: it waits for its interval.</summary>
+    public const string BrowserLoginSlowDown = "browser_login_slow_down";
+    /// <summary>The user said no to the device.</summary>
+    public const string BrowserLoginDenied = "browser_login_denied";
+    /// <summary>That code is wrong, was already used or took too long: the app starts the sign-in again.</summary>
+    public const string BrowserLoginExpired = "browser_login_expired";
     /// <summary>The user already has an authenticator app: they remove it first.</summary>
     public const string TotpAlreadyEnabled = "totp_already_enabled";
     /// <summary>The limit of items of that kind was reached (e.g. 50 app passwords per user).</summary>

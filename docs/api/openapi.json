@@ -849,6 +849,260 @@
         }
       }
     },
+    "/rest/v1/auth/browser": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Where an app opens the browser to sign in. Relative without a public URL: to the address the app uses.",
+        "operationId": "BrowserLoginInfo",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserLoginInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/browser/check": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Whether a link to the authorize page can be honoured.",
+        "operationId": "CheckBrowserLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowserLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserLoginCheck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/browser/approve": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "The signed-in user lets the app in: where the browser goes next, with a code for the app.",
+        "operationId": "ApproveBrowserLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowserLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserLoginApproval"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/browser/token": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Trades the code and the PKCE verifier for tokens. The code works once, for 60 seconds.",
+        "operationId": "RedeemBrowserLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowserLoginTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/device": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "A code for the person to approve from a browser, for 10 minutes.",
+        "operationId": "StartDeviceLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLoginStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLoginStart"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/device/token": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "description": "Until someone answers, \u0060409 browser_login_pending\u0060. \u0060429 browser_login_slow_down\u0060 means asking too often; \u0060409 browser_login_denied\u0060 and \u0060409 browser_login_expired\u0060 end it.",
+        "operationId": "PollDeviceLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLoginTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/device/lookup": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Which device a code is for, before approving it.",
+        "operationId": "LookUpDeviceLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLoginCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceLoginDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/device/approve": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Lets the device in. Needs a recent password.",
+        "operationId": "ApproveDeviceLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLoginCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/auth/device/deny": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "DenyDeviceLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceLoginCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/rest/v1/server-info": {
       "get": {
         "tags": [
@@ -1451,7 +1705,7 @@
         "tags": [
           "Listening"
         ],
-        "summary": "The user\u0027s counted plays, newest first.",
+        "summary": "The user\u0027s counted plays, newest first; with search, of the songs that match.",
         "operationId": "PlayHistory",
         "parameters": [
           {
@@ -1472,6 +1726,13 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1481,6 +1742,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PlayHistoryPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Empties the user\u0027s history and play counts. What was reported elsewhere stays there.",
+        "operationId": "ClearPlayHistory",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedPlays"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/me/plays/delete": {
+      "post": {
+        "tags": [
+          "Listening"
+        ],
+        "summary": "Takes single plays, or whole songs, from the user\u0027s history and statistics (at most 1000 of each). What was reported elsewhere stays there.",
+        "operationId": "DeletePlays",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletePlaysInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedPlays"
                 }
               }
             }
@@ -14677,6 +14988,8 @@
           "JUKEBOX_JAM_TAKE_OVER",
           "JUKEBOX_JAM_LISTEN",
           "SECOND_FACTOR",
+          "BROWSER_LOGIN",
+          "PLAY_HISTORY_MANAGEMENT",
           "AVAILABLE_PLAYERS",
           "WISH_LIST_CLOUD_SYNC"
         ]
@@ -16336,6 +16649,139 @@
           "SCHEDULED"
         ]
       },
+      "BrowserLoginApproval": {
+        "required": [
+          "redirectUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "redirectUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "BrowserLoginCheck": {
+        "required": [
+          "clientName",
+          "deviceName",
+          "target",
+          "scheme",
+          "denyUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "clientName": {
+            "type": "string"
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target": {
+            "$ref": "#/components/schemas/BrowserLoginTarget"
+          },
+          "scheme": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "denyUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "BrowserLoginInfo": {
+        "required": [
+          "authorizeUrl",
+          "deviceUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "authorizeUrl": {
+            "type": "string"
+          },
+          "deviceUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "BrowserLoginRequest": {
+        "required": [
+          "clientName",
+          "redirectUri",
+          "codeChallenge"
+        ],
+        "type": "object",
+        "properties": {
+          "clientName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "redirectUri": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codeChallenge": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BrowserLoginTarget": {
+        "enum": [
+          "LOOPBACK",
+          "APP"
+        ]
+      },
+      "BrowserLoginTokenRequest": {
+        "required": [
+          "code",
+          "codeVerifier",
+          "redirectUri"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codeVerifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "redirectUri": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Capability": {
         "enum": [
           "ULTIMATE_CLOUD_SOURCE",
@@ -17497,6 +17943,51 @@
           null
         ]
       },
+      "DeletedPlays": {
+        "required": [
+          "deleted"
+        ],
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DeletePlaysInput": {
+        "required": [
+          "playIds",
+          "trackIds"
+        ],
+        "type": "object",
+        "properties": {
+          "playIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "trackIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "DeleteTracksInput": {
         "required": [
           "trackIds"
@@ -17516,6 +18007,134 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "DeviceLoginCodeRequest": {
+        "required": [
+          "userCode"
+        ],
+        "type": "object",
+        "properties": {
+          "userCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DeviceLoginDetails": {
+        "required": [
+          "userCode",
+          "clientName",
+          "deviceName",
+          "ipAddress",
+          "createdAt",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "userCode": {
+            "type": "string"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ipAddress": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeviceLoginStart": {
+        "required": [
+          "deviceCode",
+          "userCode",
+          "verificationUrl",
+          "verificationUrlComplete",
+          "expiresInSeconds",
+          "intervalSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceCode": {
+            "type": "string"
+          },
+          "userCode": {
+            "type": "string"
+          },
+          "verificationUrl": {
+            "type": "string"
+          },
+          "verificationUrlComplete": {
+            "type": "string"
+          },
+          "expiresInSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "intervalSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "DeviceLoginStartRequest": {
+        "required": [
+          "clientName"
+        ],
+        "type": "object",
+        "properties": {
+          "clientName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DeviceLoginTokenRequest": {
+        "required": [
+          "deviceCode"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -25259,6 +25878,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "client": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -25280,6 +25905,15 @@
               "null",
               "string"
             ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },

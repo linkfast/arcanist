@@ -750,6 +750,42 @@ export const TOURS: Record<string, Tour> = {
       },
     ],
   },
+  listening: {
+    id: 'listening',
+    steps: [
+      {
+        title: { es: 'Lo que escuchas', en: 'What you listen to' },
+        body: {
+          es: 'Tu historial y tus estadísticas son tuyos: nadie más los gestiona.',
+          en: 'Your history and statistics are yours: nobody else manages them.',
+        },
+      },
+      {
+        target: '[data-tour="listening-tabs"]',
+        title: { es: 'Historial y estadísticas', en: 'History and statistics' },
+        body: {
+          es: 'Cada canción que escuchaste, día a día, y en Estadísticas lo que más escuchas, por semana, mes, año o siempre.',
+          en: 'Every song you played, day by day, and in Statistics what you play most, by week, month, year or all time.',
+        },
+      },
+      {
+        target: '[data-tour="listening-search"]',
+        title: { es: 'Busca y marca', en: 'Search and mark' },
+        body: {
+          es: 'Busca una canción, márcala como StarTrack con la estrella o abre «…» para quitarla del historial.',
+          en: 'Search for a song, make it a StarTrack with the star, or open “…” to take it from the history.',
+        },
+      },
+      {
+        target: '[data-tour="listening-actions"]',
+        title: { es: 'Empezar de nuevo', en: 'Start over' },
+        body: {
+          es: 'Vaciar el historial también borra tus estadísticas y contadores. Tus canciones no se tocan.',
+          en: 'Clearing the history also deletes your statistics and counts. Your songs are not touched.',
+        },
+      },
+    ],
+  },
   wishes: {
     id: 'wishes',
     steps: [

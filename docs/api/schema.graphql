@@ -117,8 +117,8 @@ type Query {
   starTracks(after: String, first: Int): StarTrackPage!
   "The user's tracks rated at least minRating (5 for StarTracks), most recently rated first. With the single-star rating mode, only StarTracks."
   ratedTracks(minRating: Int, after: String, first: Int): RatedTrackPage!
-  "The user's counted plays, newest first."
-  playHistory(after: String, first: Int): PlayHistoryPage!
+  "The user's counted plays, newest first; with search, of the songs that match."
+  playHistory(after: String, first: Int, search: String): PlayHistoryPage!
   "Listening over a period: the user's own, or another user's with VIEW_ALL_STATS. timeZone is an IANA id (UTC by default) for days and months."
   listeningStats(period: StatsPeriod!, timeZone: String, userId: ID, libraryId: ID): ListeningStats!
   "What the libraries hold and how the server is listened to, per user; with libraryId, of one library. Requires VIEW_ALL_STATS."
@@ -1736,6 +1736,7 @@ type RatedTrack {
 type PlayHistoryPage {
   items: [PlayHistoryItem!]!
   nextCursor: String
+  totalCount: Int!
 }
 
 type PlayHistoryItem {
@@ -1743,6 +1744,7 @@ type PlayHistoryItem {
   track: Track!
   playedAt: DateTime!
   playedMs: Int!
+  client: String
 }
 
 type ListeningStats {
@@ -3310,6 +3312,8 @@ enum ApiFeature {
   JUKEBOX_JAM_TAKE_OVER
   JUKEBOX_JAM_LISTEN
   SECOND_FACTOR
+  BROWSER_LOGIN
+  PLAY_HISTORY_MANAGEMENT
   AVAILABLE_PLAYERS
   WISH_LIST_CLOUD_SYNC
 }
@@ -3647,6 +3651,10 @@ type Mutation {
   removeStarTracks(input: StarTracksInput!): StarTracksResult!
   "Reports that the user listened to a track. The server decides whether it counts as a play (30 seconds, and half the track or four minutes) or a skip."
   recordPlay(input: RecordPlayInput!): RecordedPlay!
+  "Takes single plays, or whole songs, from the user's history and statistics (at most 1000 of each). What was reported elsewhere stays there."
+  deletePlays(input: DeletePlaysInput!): DeletedPlays!
+  "Empties the user's history and play counts. What was reported elsewhere stays there."
+  clearPlayHistory: DeletedPlays!
   "Chooses how users rate tracks: STARS (one to five, five being a StarTrack) or STAR (the StarTrack alone, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS."
   setRatingMode(mode: RatingMode!): RatingMode!
   "Asks the Lyrics Sync extension to work out the timing of a song's lyrics again from its audio, whatever timing they have (from the file, LRCLib or worked out here). The lyrics as they are now come back with resyncPending; their current timing stays until the new one is saved (syncedSource ALIGNED, resyncPending false), and is kept if the extension cannot match the words to the singing (resyncPending false, nothing changed). Requires EDIT_METADATA. Errors: not_found, lyrics_sync_unavailable (the extension is not installed or not running), no_lyrics (none, or instrumental), library_read_only, no_local_copy (no copy on this server's disks to listen to)."
@@ -4282,6 +4290,15 @@ input RecordPlayInput {
   playedMs: Int!
   playedAt: DateTime
   client: String
+}
+
+type DeletedPlays {
+  deleted: Int!
+}
+
+input DeletePlaysInput {
+  playIds: [ID!]
+  trackIds: [ID!]
 }
 
 input LyricsLineInput {

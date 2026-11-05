@@ -59,10 +59,20 @@ public static class ListeningEndpoints
             .WithName("ImportListening")
             .WithSummary("Brings ratings and play counts an app kept on its own (at most 1000 of each per call). Ratings only fill gaps; play counts keep the highest.");
 
-        rest.MapGet("/me/plays", (string? after, int? first, ListeningService service, CancellationToken ct) => service.HistoryAsync(after, first, ct))
+        rest.MapGet("/me/plays", (string? after, int? first, string? search, ListeningService service, CancellationToken ct) => service.HistoryAsync(after, first, ct, search))
             .WithTags("Listening")
             .WithName("PlayHistory")
-            .WithSummary("The user's counted plays, newest first.");
+            .WithSummary("The user's counted plays, newest first; with search, of the songs that match.");
+
+        rest.MapPost("/me/plays/delete", (DeletePlaysInput input, ListeningService service, CancellationToken ct) => service.DeletePlaysAsync(input, ct))
+            .WithTags("Listening")
+            .WithName("DeletePlays")
+            .WithSummary("Takes single plays, or whole songs, from the user's history and statistics (at most 1000 of each). What was reported elsewhere stays there.");
+
+        rest.MapDelete("/me/plays", (ListeningService service, CancellationToken ct) => service.ClearPlayHistoryAsync(ct))
+            .WithTags("Listening")
+            .WithName("ClearPlayHistory")
+            .WithSummary("Empties the user's history and play counts. What was reported elsewhere stays there.");
 
         rest.MapGet("/stats/listening", (string period, string? timeZone, Guid? userId, Guid? libraryId, StatsService service, CancellationToken ct) =>
                 service.ListeningAsync(ParsePeriod(period), timeZone, userId, ct, libraryId))

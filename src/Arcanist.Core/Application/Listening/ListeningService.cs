@@ -2,6 +2,7 @@ using Arcanist.Core.Application.Catalog;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
 using Arcanist.Core.Data.Entities;
+using Arcanist.Core.Data.Search;
 using Microsoft.EntityFrameworkCore;
 using Track = Arcanist.Core.Application.Catalog.Track;
 
@@ -313,11 +314,14 @@ public sealed class ListeningService(
         return new RecordedPlay(play.Id, counted, skipped);
     }
 
-    /// <summary>The user's counted plays, newest first.</summary>
-    public async Task<PlayHistoryPage> HistoryAsync(string? after, int? first, CancellationToken cancellationToken)
+    /// <summary>The user's counted plays of what they can still see, newest first.</summary>
+    /// <param name="search">Only plays of songs that match (title, artists or album).</param>
+    public async Task<PlayHistoryPage> HistoryAsync(string? after, int? first, CancellationToken cancellationToken, string? search = null)
     {
         var access = guard.Authenticated();
-        var plays = db.PlayEvents.AsNoTracking().Where(p => p.UserId == access.UserId && p.Counted && p.TrackId != null);
+        var visible = catalog.Matching(catalog.Visible(access), SearchKind.Tracks, search);
+        var plays = db.PlayEvents.AsNoTracking().Where(p => p.UserId == access.UserId && p.Counted && visible.Any(t => t.Id == p.TrackId));
+        var total = await plays.CountAsync(cancellationToken);
         if (after is not null)
         {
             var (at, id) = TimeCursor.Decode(after);
@@ -329,11 +333,64 @@ public sealed class ListeningService(
         var next = page.Count > size ? TimeCursor.Encode(page[size - 1].PlayedAt, page[size - 1].Id) : null;
         page = page.Take(size).ToList();
 
-        // Tracks the user can no longer see leave gaps rather than errors.
         var tracks = await catalog.VisibleTracksAsync(access, page.Select(p => p.TrackId!.Value).Distinct().ToList(), cancellationToken);
         return new PlayHistoryPage(
-            page.Where(p => tracks.ContainsKey(p.TrackId!.Value)).Select(p => new PlayHistoryItem(p.Id, tracks[p.TrackId!.Value], p.PlayedAt, p.PlayedMs)).ToList(),
-            next);
+            page.Where(p => tracks.ContainsKey(p.TrackId!.Value)).Select(p => new PlayHistoryItem(p.Id, tracks[p.TrackId!.Value], p.PlayedAt, p.PlayedMs, p.Client)).ToList(),
+            next,
+            total);
+    }
+
+    public const int MaxDeletePlays = 1000;
+
+    /// <summary>
+    /// Takes plays from the user's own history, as if they never happened: they stop counting in their statistics, top
+    /// lists and mixes. What was already reported elsewhere (their Ultimate Cloud account, a library's owner) stays there.
+    /// </summary>
+    public async Task<DeletedPlays> DeletePlaysAsync(DeletePlaysInput input, CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var playIds = (input.PlayIds ?? []).Distinct().ToList();
+        var trackIds = (input.TrackIds ?? []).Distinct().ToList();
+        if (playIds.Count > MaxDeletePlays)
+            throw ArcanistException.Field("playIds", ErrorCodes.TooMany);
+        if (trackIds.Count > MaxDeletePlays)
+            throw ArcanistException.Field("trackIds", ErrorCodes.TooMany);
+
+        var plays = await db.PlayEvents
+            .Where(p => p.UserId == access.UserId && (playIds.Contains(p.Id) || (p.TrackId != null && trackIds.Contains(p.TrackId.Value))))
+            .ToListAsync(cancellationToken);
+        var touched = plays.Where(p => p.TrackId != null).Select(p => p.TrackId!.Value).Concat(trackIds).Distinct().ToList();
+        var stats = await db.TrackPlayStats.Where(s => s.UserId == access.UserId && touched.Contains(s.TrackId)).ToListAsync(cancellationToken);
+
+        var lastPlays = await db.PlayEvents.AsNoTracking()
+            .Where(p => p.UserId == access.UserId && p.Counted && p.TrackId != null && touched.Contains(p.TrackId.Value) && !trackIds.Contains(p.TrackId.Value) && !playIds.Contains(p.Id))
+            .GroupBy(p => p.TrackId!.Value)
+            .Select(g => new { TrackId = g.Key, Last = g.Max(p => p.PlayedAt) })
+            .ToDictionaryAsync(g => g.TrackId, g => g.Last, cancellationToken);
+
+        foreach (var song in stats)
+        {
+            var theirs = plays.Where(p => p.TrackId == song.TrackId).ToList();
+            song.PlayCount = Math.Max(0, song.PlayCount - theirs.Count(p => p.Counted));
+            song.SkipCount = Math.Max(0, song.SkipCount - theirs.Count(p => p.Skipped));
+            song.LastPlayedAt = lastPlays.TryGetValue(song.TrackId, out var last) ? last : null;
+            // Counts brought from an app have no plays to delete: a whole song takes them too.
+            if (trackIds.Contains(song.TrackId) || song is { PlayCount: 0, SkipCount: 0 })
+                db.TrackPlayStats.Remove(song);
+        }
+
+        db.PlayEvents.RemoveRange(plays);
+        await db.SaveChangesAsync(cancellationToken);
+        return new DeletedPlays(plays.Count);
+    }
+
+    /// <summary>Empties the user's history and their play counts. Like <see cref="DeletePlaysAsync"/>, only here.</summary>
+    public async Task<DeletedPlays> ClearPlayHistoryAsync(CancellationToken cancellationToken)
+    {
+        var access = guard.Authenticated();
+        var deleted = await db.PlayEvents.Where(p => p.UserId == access.UserId).ExecuteDeleteAsync(cancellationToken);
+        await db.TrackPlayStats.Where(s => s.UserId == access.UserId).ExecuteDeleteAsync(cancellationToken);
+        return new DeletedPlays(deleted);
     }
 
     public const int MaxImportEntries = 1000;

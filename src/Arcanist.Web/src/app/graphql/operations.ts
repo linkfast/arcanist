@@ -890,6 +890,56 @@ export const StatsTrackFields = graphql(`
   }
 `);
 
+export const ListeningStatsFields = graphql(`
+  fragment ListeningStatsFields on ListeningStats {
+    period
+    from
+    plays
+    listenedMs
+    distinctTracks
+    skips
+    listeners
+    activeDays
+    playsByHour
+    playsByWeekday
+    topGenres {
+      genre
+      plays
+    }
+    bucket
+    timeline {
+      start
+      plays
+      listenedMs
+    }
+    topTracks {
+      plays
+      track {
+        ...StatsTrackFields
+      }
+    }
+    topArtists {
+      plays
+      artist {
+        id
+        name
+      }
+    }
+    topAlbums {
+      plays
+      album {
+        id
+        title
+        artworkId
+        artist {
+          id
+          name
+        }
+      }
+    }
+  }
+`);
+
 export const ServerStatsQuery = graphql(`
   query ServerStats($period: StatsPeriod!, $timeZone: String, $libraryId: ID) {
     serverStats(period: $period, timeZone: $timeZone, libraryId: $libraryId) {
@@ -910,51 +960,7 @@ export const ServerStatsQuery = graphql(`
         }
       }
       listening {
-        period
-        from
-        plays
-        listenedMs
-        distinctTracks
-        skips
-        listeners
-        activeDays
-        playsByHour
-        playsByWeekday
-        topGenres {
-          genre
-          plays
-        }
-        bucket
-        timeline {
-          start
-          plays
-          listenedMs
-        }
-        topTracks {
-          plays
-          track {
-            ...StatsTrackFields
-          }
-        }
-        topArtists {
-          plays
-          artist {
-            id
-            name
-          }
-        }
-        topAlbums {
-          plays
-          album {
-            id
-            title
-            artworkId
-            artist {
-              id
-              name
-            }
-          }
-        }
+        ...ListeningStatsFields
       }
       users {
         userId
@@ -970,6 +976,81 @@ export const ServerStatsQuery = graphql(`
   }
 `);
 
+export const MyListeningStatsQuery = graphql(`
+  query MyListeningStats($period: StatsPeriod!, $timeZone: String, $libraryId: ID) {
+    listeningStats(period: $period, timeZone: $timeZone, libraryId: $libraryId) {
+      ...ListeningStatsFields
+    }
+    libraries {
+      id
+      name
+    }
+  }
+`);
+
+export const PlayHistoryQuery = graphql(`
+  query PlayHistory($after: String, $first: Int, $search: String) {
+    playHistory(after: $after, first: $first, search: $search) {
+      totalCount
+      nextCursor
+      items {
+        id
+        playedAt
+        playedMs
+        client
+        track {
+          id
+          title
+          artworkId
+          starred
+          canDelete
+          album {
+            id
+            title
+          }
+          artists {
+            artistId
+            name
+            role
+          }
+        }
+      }
+    }
+  }
+`);
+
+export const DeletePlaysMutation = graphql(`
+  mutation DeletePlays($input: DeletePlaysInput!) {
+    deletePlays(input: $input) {
+      deleted
+    }
+  }
+`);
+
+export const ClearPlayHistoryMutation = graphql(`
+  mutation ClearPlayHistory {
+    clearPlayHistory {
+      deleted
+    }
+  }
+`);
+
+export const SetTrackStarredMutation = graphql(`
+  mutation SetTrackStarred($trackId: ID!, $starred: Boolean!) {
+    starTrack(trackId: $trackId, starred: $starred) {
+      id
+      starred
+    }
+  }
+`);
+
+export const AddStarTracksMutation = graphql(`
+  mutation AddStarTracks($input: StarTracksInput!) {
+    addStarTracks(input: $input) {
+      changed
+    }
+  }
+`);
 export const LibrarySummariesQuery = graphql(`
   query LibrarySummaries {
     librarySummaries {

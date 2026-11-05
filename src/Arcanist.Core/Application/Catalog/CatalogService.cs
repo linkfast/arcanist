@@ -513,7 +513,7 @@ public sealed class CatalogService(
     /// Rows matching a search (every word, as a word prefix, in the name, its artists or its album); null without
     /// one. A search with no words at all matches nothing.
     /// </summary>
-    private IQueryable<T> Matching<T>(IQueryable<T> rows, SearchKind kind, string? search) where T : Entity
+    internal IQueryable<T> Matching<T>(IQueryable<T> rows, SearchKind kind, string? search) where T : Entity
     {
         if (string.IsNullOrWhiteSpace(search))
             return rows;

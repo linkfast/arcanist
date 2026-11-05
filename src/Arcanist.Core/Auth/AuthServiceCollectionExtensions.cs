@@ -54,6 +54,7 @@ public static class AuthServiceCollectionExtensions
         services.AddSingleton<SecondFactor.Passkeys>();
         services.AddScoped<SecondFactor.SecondFactors>();
         services.AddScoped<AuthService>();
+        services.AddSingleton<BrowserLoginStore>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)

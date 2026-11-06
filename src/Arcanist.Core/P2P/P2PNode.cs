@@ -262,10 +262,23 @@ public sealed class P2PNode(
 
     private NodeConfig Desired(P2PConfig config, string? mstreamSecret)
     {
-        var relay = options.CurrentValue.Relay ?? config.Relay;
-        var url = relay == P2PRelay.Custom ? config.RelayUrl : null;
+        var (relay, url) = ChooseRelay(options.CurrentValue.Relay, config,
+            services.GetService<Application.Cloud.CloudPlus>()?.Relay?.RelayUrl);
         return new NodeConfig(relay, url, HttpPort(),
             Convert.ToHexStringLower(keys.Preamble), options.CurrentValue.BindPort, mstreamSecret);
+    }
+
+    /// <summary>
+    /// The relay: the configured override (tests), else the panel's, except that n0's public relays give way to an
+    /// extension's (<see cref="Arcanist.Extensibility.IP2PRelayProvider"/>: Ultimate Cloud's own, with the Cloud plan).
+    /// </summary>
+    internal static (P2PRelay Relay, string? Url) ChooseRelay(P2PRelay? overridden, P2PConfig config, string? extensionRelayUrl)
+    {
+        if (overridden is { } forced)
+            return (forced, forced == P2PRelay.Custom ? config.RelayUrl : null);
+        if (config.Relay == P2PRelay.N0 && !string.IsNullOrWhiteSpace(extensionRelayUrl))
+            return (P2PRelay.Custom, extensionRelayUrl.Trim());
+        return (config.Relay, config.Relay == P2PRelay.Custom ? config.RelayUrl : null);
     }
 
     /// <summary><see cref="P2POptions.Port"/>, or the first http address the server listens on.</summary>

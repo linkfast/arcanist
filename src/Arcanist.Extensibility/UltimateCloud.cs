@@ -227,6 +227,18 @@ public interface IP2PDevices
     Task ReplaceCloudDevicesAsync(IReadOnlyList<CloudDevice> devices, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// The relay the server's P2P node uses, when an extension has a better one than n0's public relays (Ultimate Cloud
+/// Plus: Ultimate Cloud's own, with the Cloud plan). Registered by an extension; asked whenever the node's settings
+/// are applied (at most a minute later). Only replaces n0's relays: a relay the administrator chose in the panel
+/// (their own, or direct connections only) stays.
+/// </summary>
+public interface IP2PRelayProvider
+{
+    /// <summary>The relay's URL to use now (<c>https://relay.example.com</c>); null to keep n0's.</summary>
+    string? RelayUrl { get; }
+}
+
 // —— The Cloud plan's features, and S3 libraries ——
 
 /// <summary>

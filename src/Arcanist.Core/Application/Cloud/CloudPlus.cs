@@ -22,6 +22,9 @@ public sealed class CloudPlus(ExtensionHost extensions, IServiceProvider service
 
     public IS3LibraryPolicy? S3 => extensions.Active<IS3LibraryPolicy>(services);
 
+    /// <summary>A relay for the P2P node in place of n0's (Ultimate Cloud's own, with the Cloud plan).</summary>
+    public IP2PRelayProvider? Relay => extensions.Active<IP2PRelayProvider>(services);
+
     /// <summary>Whether its extension provides anything now.</summary>
     public bool Available => Features is not null;
 

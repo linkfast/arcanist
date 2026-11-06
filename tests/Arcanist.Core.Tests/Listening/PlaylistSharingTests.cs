@@ -164,6 +164,11 @@ public sealed class PlaylistSharingTests : IAsyncLifetime
         Assert.Equal(("https://music.example.com", false), (set.GetProperty("publicUrl").GetString(), set.GetProperty("publicUrlSetByEnvironment").GetBoolean()));
         Assert.Matches($"^https://music\\.example\\.com/(players/[^/]+/)?#/s/{token}$", await LinkAsync());
 
+        // Any signed-in user sees the addresses the server announces (players move to them); no P2P node while P2P is off.
+        var seen = await OkAsync(owner.GetAsync("/rest/v1/sharing", Cancel));
+        Assert.Equal("https://music.example.com", seen.GetProperty("publicUrl").GetString());
+        Assert.True(!seen.TryGetProperty("p2pNodeId", out var node) || node.ValueKind == JsonValueKind.Null);
+
         // Saving without it keeps it; anything but an http(s) URL is refused; empty takes it off.
         await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing", new { publicLinks = true, jamGuests = false, guestAddLimit = 5, maxGuests = 100 }, ArcanistFactory.Json, Cancel));
         Assert.StartsWith("https://music.example.com/", await LinkAsync());

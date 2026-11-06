@@ -3,7 +3,7 @@ using Arcanist.Core.Data.Entities;
 namespace Arcanist.Core.Application.Sharing;
 
 /// <summary>Whether users may share outside the server (public links, guests in Jams), set by administrators.</summary>
-public sealed class SharingService(AccessGuard guard, SharingSettings settings)
+public sealed class SharingService(AccessGuard guard, SharingSettings settings, IServiceProvider services)
 {
     /// <summary>The server's settings and what the user asking may do with them.</summary>
     public async Task<SharingStatus> GetAsync(CancellationToken cancellationToken)
@@ -31,7 +31,8 @@ public sealed class SharingService(AccessGuard guard, SharingSettings settings)
     private SharingStatus ToModel(SharingConfig config, bool canShare)
     {
         var environment = settings.EnvironmentPublicUrl;
+        var node = services.GetService<Arcanist.Core.P2P.P2PNode>()?.State;
         return new(config.PublicLinks, config.JamGuests, config.GuestAddLimit, config.MaxGuests, canShare && (config.PublicLinks || config.JamGuests),
-            environment ?? config.PublicUrl, environment is not null);
+            environment ?? config.PublicUrl, environment is not null, node is { Running: true } ? node.NodeId : null);
     }
 }

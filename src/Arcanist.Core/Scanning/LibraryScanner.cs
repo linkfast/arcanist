@@ -154,9 +154,9 @@ public sealed class LibraryScanner(
         }
 
         await using var db = databases.CreateDbContext();
-        // Several rows per path when a cue sheet splits the file into tracks.
+        // Several rows per path when a cue sheet splits the file into tracks. Tracks that share another's file follow it after the scan.
         var known = (await db.MediaFiles.AsNoTracking()
-                .Where(f => f.LibrarySourceId == source.Id)
+                .Where(f => f.LibrarySourceId == source.Id && f.CueTrack >= 0)
                 .Select(f => new KnownFile(f.Id, f.RelativePath, f.CueTrack, f.Size, f.ModifiedAt, f.MissingSince, f.ScannedAt))
                 .ToListAsync(cancellationToken))
             .GroupBy(f => f.RelativePath, StringComparer.Ordinal)
@@ -263,6 +263,7 @@ public sealed class LibraryScanner(
         foreach (var chunk in vanished.Chunk(UpdateChunk))
             await db.MediaFiles.Where(f => chunk.Contains(f.Id)).ExecuteUpdateAsync(s => s.SetProperty(f => f.MissingSince, now), cancellationToken);
         job.FilesMissing += vanished.Count;
+        await Analysis.SharedFiles.SyncAsync(db, source.Id, cancellationToken);
 
         var videoResult = await videoScanner.ScanAsync(source, location, storage, videos, job.Kind == ScanKind.Full, cancellationToken);
         job.FilesSeen += videoResult.Seen;

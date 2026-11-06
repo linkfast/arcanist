@@ -316,12 +316,14 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
     /// </summary>
     private async Task RemoveObsoleteCueTracksAsync(IReadOnlyList<ScannedFile> files, CancellationToken cancellationToken)
     {
+        // A track that plays another's file says nothing of what that file's rows are.
+        files = files.Where(f => f.CueTrack >= 0).ToList();
         var current = files.Select(f => (f.SourceId, f.RelativePath, f.CueTrack)).ToHashSet();
         var sources = files.Select(f => f.SourceId).Distinct().ToList();
         var paths = files.Select(f => f.RelativePath).Distinct().ToList();
 
         var rows = await db.MediaFiles.AsNoTracking()
-            .Where(f => sources.Contains(f.LibrarySourceId) && paths.Contains(f.RelativePath))
+            .Where(f => sources.Contains(f.LibrarySourceId) && paths.Contains(f.RelativePath) && f.CueTrack >= 0)
             .Select(f => new { f.Id, f.LibrarySourceId, f.RelativePath, f.CueTrack })
             .ToListAsync(cancellationToken);
         var obsolete = rows.Where(r => !current.Contains((r.LibrarySourceId, r.RelativePath, r.CueTrack))).Select(r => r.Id).ToList();

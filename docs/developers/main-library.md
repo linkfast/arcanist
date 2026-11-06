@@ -151,6 +151,10 @@ of an album in one file with a cue sheet), `tags_unsupported` (a format without 
 folder or bucket does not answer), `write_failed` (the file could not be put back; the original returns), `busy` (a
 scan or import kept the library for 30 s: try again), `validation_failed`.
 
+A copy with `TrackFile.shared` is another track's file, which this track plays too (the same audio is stored once, on
+several albums): its metadata lives only in the server. Editing such a track changes the catalog, not the file, and works
+the same from the client's side.
+
 REST: `PATCH /rest/v1/tracks/{id}` (body: the input), `POST /rest/v1/tracks/edit`.
 
 ## Covers
@@ -200,6 +204,10 @@ mutation Delete($input: DeleteTracksInput!) { deleteTracks(input: $input) { trac
   them) and leave the catalog at once. A track left without copies leaves with its ratings, StarTracks, plays and
   playlist entries. With `libraryId`, only the copies in that library go; the track stays with the others.
 - There is no "remove from the library but keep the file": the next scan would bring it back.
+- A file another album's track plays too (`TrackFile.shared`) stays for that track: its tags are rewritten to describe
+  it, and the file only goes to the trash when the last track using it is deleted.
+- Uploading audio the library has, with another album's tags, answers `DUPLICATE` with the `trackId` of a new track of
+  that album, which plays the file already there. No file is written.
 - One outcome per track: `DELETED`, `NOT_FOUND`, `FORBIDDEN` (`library_read_only`), `NOT_DELETABLE` (`read_only`,
   `cue_sheet_track`), `FAILED` (`write_failed`). Up to 1000 per call. Without `DELETE_TRACKS`, the whole call is
   `forbidden`.

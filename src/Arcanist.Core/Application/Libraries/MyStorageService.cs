@@ -42,8 +42,8 @@ public sealed class MyStorageService(ArcanistDbContext db, AccessGuard guard, IL
             .Select(g => new
             {
                 LibraryId = g.Key,
-                Files = g.Count(f => f.CueTrack <= 1),
-                Bytes = g.Where(f => f.CueTrack <= 1).Sum(f => f.Size),
+                Files = g.Count(f => f.CueTrack >= 0 && f.CueTrack <= 1),
+                Bytes = g.Where(f => f.CueTrack >= 0 && f.CueTrack <= 1).Sum(f => f.Size),
                 Tracks = g.Select(f => f.TrackId).Distinct().Count(),
             })
             .ToDictionaryAsync(g => g.LibraryId, cancellationToken);

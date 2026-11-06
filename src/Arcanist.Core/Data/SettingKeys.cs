@@ -21,6 +21,9 @@ public static class SettingKeys
     /// <summary>Whether audio is analyzed in the background (loudness, fingerprints, waveform, tempo, key). Default true.</summary>
     public const string AnalysisEnabled = "analysis.enabled";
 
+    /// <summary>The last file the sweep for duplicates looked at.</summary>
+    public const string DuplicatesCursor = "duplicates.cursor";
+
     /// <summary>Path to ffmpeg chosen in the setup wizard or the admin panel; null to find it automatically.</summary>
     public const string FfmpegPath = "media.ffmpegPath";
 

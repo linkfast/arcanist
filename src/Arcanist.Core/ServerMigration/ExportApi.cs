@@ -228,7 +228,7 @@ internal static class ExportApi
         foreach (var chunk in paths.Chunk(500))
         {
             foreach (var row in await db.MediaFiles.AsNoTracking()
-                         .Where(f => sourceIds.Contains(f.LibrarySourceId) && chunk.Contains(f.RelativePath) && f.CueTrack <= 1 && f.MissingSince == null)
+                         .Where(f => sourceIds.Contains(f.LibrarySourceId) && chunk.Contains(f.RelativePath) && f.CueTrack >= 0 && f.CueTrack <= 1 && f.MissingSince == null)
                          .Select(f => new { f.RelativePath, f.ContentHash, f.CueTrack }).ToListAsync(ct))
             {
                 // A file split by a cue sheet: the hash of its first track's range is not the file's; leave it out.

@@ -6,16 +6,19 @@ using Microsoft.EntityFrameworkCore;
 namespace Arcanist.Core.Analysis;
 
 /// <summary>
-/// Finds tracks with the same audio by comparing Chromaprint fingerprints, after analysis. Tags decide most
-/// duplicates at scan time; fingerprints catch the copies whose tags differ (a "(Remastered)" title, a missing track
-/// number) and the same recording on several albums.
+/// Finds tracks that are the same song, after analysis and in a sweep of the catalog (<see cref="DuplicateSweepWorker"/>).
+/// Tags decide most duplicates at scan time; this catches the copies whose tags differ (a "(Remastered)" title, a missing
+/// track number) and the same song on several albums.
 /// <list type="bullet">
 /// <item>Same album, same length (±3 s), similarity ≥ <see cref="MergeThreshold"/>, and no conflicting track
 /// numbers: merged into one track.</item>
 /// <item>Other albums, similarity ≥ <see cref="MergeThreshold"/>: the tracks share one <see cref="Recording"/>
-/// (unless their MusicBrainz recordings differ), which keeps statistics together.</item>
-/// <item>Similarity from <see cref="CandidateThreshold"/>: proposed to administrators as a
-/// <see cref="DuplicateCandidate"/>.</item>
+/// (unless their MusicBrainz recordings differ), which keeps statistics together, and are proposed: keeping both copies
+/// or one file for both albums is an administrator's choice.</item>
+/// <item>Similarity from <see cref="CandidateThreshold"/>, or the very same audio: proposed.</item>
+/// <item>The same name (<see cref="DuplicateNames"/>), artist and length (±3 s), with a similarity from
+/// <see cref="SameNameThreshold"/> or no fingerprint to compare (S3, Ultimate Cloud): proposed, with similarity 0 when
+/// nothing could be compared.</item>
 /// </list>
 /// </summary>
 public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetector> logger)
@@ -26,6 +29,9 @@ public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetect
     /// <summary>A 15 % bit error rate: below it, quiet or sustained music produces too many false matches.</summary>
     public const double CandidateThreshold = 0.7;
 
+    /// <summary>Another master of a song falls below <see cref="CandidateThreshold"/>; with its name and length to back it, this is enough to ask.</summary>
+    public const double SameNameThreshold = 0.5;
+
     private const int DurationToleranceMs = 3000;
     private const int CandidateDurationToleranceMs = 7000;
 
@@ -34,13 +40,18 @@ public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetect
     /// <summary>Looks for duplicates of the tracks that have audio with these content hashes.</summary>
     public async Task<Outcome> ProcessAsync(ArcanistDbContext db, IReadOnlyCollection<string> contentHashes, CancellationToken cancellationToken)
     {
-        int merged = 0, linked = 0, proposed = 0;
         var trackIds = await db.MediaFiles.AsNoTracking()
             .Where(f => f.MissingSince == null && contentHashes.Contains(f.ContentHash))
             .Select(f => f.TrackId)
             .Distinct()
             .ToListAsync(cancellationToken);
+        return await ProcessTracksAsync(db, trackIds, cancellationToken);
+    }
 
+    /// <summary>Looks for duplicates of these tracks.</summary>
+    public async Task<Outcome> ProcessTracksAsync(ArcanistDbContext db, IReadOnlyCollection<Guid> trackIds, CancellationToken cancellationToken)
+    {
+        int merged = 0, linked = 0, proposed = 0;
         foreach (var trackId in trackIds)
         {
             var track = await db.Tracks.AsNoTracking().Where(t => t.Id == trackId)
@@ -50,17 +61,17 @@ public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetect
             if (track is null)
                 continue;
 
-            var own = await FingerprintsAsync(db, [track.Id], cancellationToken);
-            if (!own.TryGetValue(track.Id, out var fingerprints))
-                continue;
+            var fingerprints = (await FingerprintsAsync(db, [track.Id], cancellationToken)).GetValueOrDefault(track.Id);
+            var hashes = await HashesAsync(db, track.Id, cancellationToken);
 
-            foreach (var candidate in await CandidatesAsync(db, track, cancellationToken))
+            foreach (var candidate in await CandidatesAsync(db, track, hashes, cancellationToken))
             {
-                var theirs = await FingerprintsAsync(db, [candidate.Id], cancellationToken);
-                if (!theirs.TryGetValue(candidate.Id, out var candidatePrints))
-                    continue;
+                var candidatePrints = (await FingerprintsAsync(db, [candidate.Id], cancellationToken)).GetValueOrDefault(candidate.Id);
+                var theirHashes = await HashesAsync(db, candidate.Id, cancellationToken);
+                double? similarity = hashes.Overlaps(theirHashes) ? 1
+                    : fingerprints is null || candidatePrints is null || !AudioAnalyzer.IsAvailable ? null
+                    : fingerprints.SelectMany(a => candidatePrints.Select(b => AudioAnalyzer.Compare(a, b))).Max();
 
-                var similarity = fingerprints.SelectMany(a => candidatePrints.Select(b => AudioAnalyzer.Compare(a, b))).Max();
                 if (similarity >= MergeThreshold && CanMerge(track, candidate))
                 {
                     var (keep, remove) = Prefer(track, candidate) ? (track.Id, candidate.Id) : (candidate.Id, track.Id);
@@ -69,20 +80,51 @@ public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetect
                     merged++;
                     if (remove == track.Id)
                         break;
+                    continue;
                 }
-                else if (similarity >= MergeThreshold && candidate.AlbumId != track.AlbumId)
+
+                if (similarity >= MergeThreshold && candidate.AlbumId != track.AlbumId
+                    && await LinkRecordingsAsync(db, track.RecordingId, candidate.RecordingId, cancellationToken))
+                    linked++;
+
+                if (similarity >= CandidateThreshold
+                    || ((similarity is null || similarity >= SameNameThreshold) && await SameSongByNameAsync(db, track, candidate, similarity is null, cancellationToken)))
                 {
-                    if (await LinkRecordingsAsync(db, track.RecordingId, candidate.RecordingId, cancellationToken))
-                        linked++;
-                }
-                else if (similarity >= CandidateThreshold && await ProposeAsync(db, track.Id, candidate.Id, similarity, cancellationToken))
-                {
-                    proposed++;
+                    if (await ProposeAsync(db, track.Id, candidate.Id, similarity ?? 0, cancellationToken))
+                        proposed++;
                 }
             }
         }
 
         return new Outcome(merged, linked, proposed);
+    }
+
+    private static async Task<HashSet<string>> HashesAsync(ArcanistDbContext db, Guid trackId, CancellationToken cancellationToken) =>
+        (await db.MediaFiles.AsNoTracking().Where(f => f.TrackId == trackId && f.MissingSince == null).Select(f => f.ContentHash).ToListAsync(cancellationToken)).ToHashSet();
+
+    /// <summary>
+    /// The same name, artist and length. With nothing to compare (<paramref name="unheard"/>), not while a local file of
+    /// either is still to be analyzed: its fingerprint will decide, in a moment.
+    /// </summary>
+    private static async Task<bool> SameSongByNameAsync(ArcanistDbContext db, TrackFacts a, TrackFacts b, bool unheard, CancellationToken cancellationToken)
+    {
+        if (Math.Abs(a.DurationMs - b.DurationMs) > DurationToleranceMs)
+            return false;
+
+        Guid[] ids = [a.Id, b.Id];
+        if (unheard && await db.MediaFiles.AnyAsync(f => ids.Contains(f.TrackId) && f.MissingSince == null && f.LibrarySource.Kind == LibrarySourceKind.Local
+                                                         && !db.AudioAnalyses.Any(x => x.ContentHash == f.ContentHash), cancellationToken))
+            return false;
+
+        var titles = await db.Tracks.AsNoTracking().Where(t => ids.Contains(t.Id)).Select(t => t.NormalizedTitle).ToListAsync(cancellationToken);
+        if (titles.Count != 2 || DuplicateNames.CoreTitle(titles[0]) != DuplicateNames.CoreTitle(titles[1]))
+            return false;
+
+        var artists = await db.TrackArtists.AsNoTracking().Where(ta => ids.Contains(ta.TrackId))
+            .Select(ta => new { ta.TrackId, ta.Artist.NormalizedName }).ToListAsync(cancellationToken);
+        return DuplicateNames.SameArtist(
+            artists.Where(x => x.TrackId == a.Id).Select(x => x.NormalizedName).ToList(),
+            artists.Where(x => x.TrackId == b.Id).Select(x => x.NormalizedName).ToList());
     }
 
     /// <summary>
@@ -102,20 +144,27 @@ public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetect
         // An album listing the same audio twice (two numbers) means it, so that is for an administrator to decide.
         && (a.TrackNumber is null || b.TrackNumber is null || (a.TrackNumber == b.TrackNumber && (a.DiscNumber ?? 1) == (b.DiscNumber ?? 1)));
 
-    /// <summary>Tracks that could plausibly be the same song: same album, title or artist, and a similar length.</summary>
-    private static async Task<List<TrackFacts>> CandidatesAsync(ArcanistDbContext db, TrackFacts track, CancellationToken cancellationToken)
+    /// <summary>
+    /// Tracks that could plausibly be the same song: the same audio, or the same album, name or artist and a similar
+    /// length. The name, without what says which pressing it is, so tags that differ do not hide a song on another album.
+    /// </summary>
+    private static async Task<List<TrackFacts>> CandidatesAsync(ArcanistDbContext db, TrackFacts track, HashSet<string> hashes, CancellationToken cancellationToken)
     {
         var title = await db.Tracks.Where(t => t.Id == track.Id).Select(t => t.NormalizedTitle).SingleAsync(cancellationToken);
+        var core = DuplicateNames.CoreTitle(title);
+        var coreAndMore = core + " ";
         var artists = await db.TrackArtists.Where(ta => ta.TrackId == track.Id).Select(ta => ta.ArtistId).ToListAsync(cancellationToken);
         var (shortest, longest) = (track.DurationMs - CandidateDurationToleranceMs, track.DurationMs + CandidateDurationToleranceMs);
 
         return await db.Tracks.AsNoTracking()
-            .Where(t => t.Id != track.Id && t.DurationMs >= shortest && t.DurationMs <= longest)
-            .Where(t => t.AlbumId == track.AlbumId || t.NormalizedTitle == title
-                        || db.TrackArtists.Any(ta => ta.TrackId == t.Id && artists.Contains(ta.ArtistId)))
+            .Where(t => t.Id != track.Id)
+            .Where(t => t.Files.Any(f => hashes.Contains(f.ContentHash))
+                        || (t.DurationMs >= shortest && t.DurationMs <= longest
+                            && (t.AlbumId == track.AlbumId || t.NormalizedTitle == title || t.NormalizedTitle == core || t.NormalizedTitle.StartsWith(coreAndMore)
+                                || db.TrackArtists.Any(ta => ta.TrackId == t.Id && artists.Contains(ta.ArtistId)))))
             .Where(t => t.Files.Any(f => f.MissingSince == null))
-            // Tracks of the same album first: only those can be merged automatically.
-            .OrderByDescending(t => t.AlbumId == track.AlbumId).ThenBy(t => t.Id)
+            // Tracks of the same album first (only those can be merged automatically), then those of the same name.
+            .OrderByDescending(t => t.AlbumId == track.AlbumId).ThenByDescending(t => t.NormalizedTitle == title).ThenBy(t => t.Id)
             .Select(t => new TrackFacts(t.Id, t.AlbumId, t.DurationMs, t.TrackNumber, t.DiscNumber, t.AddedAt, t.RecordingId))
             .Take(200)
             .ToListAsync(cancellationToken);
@@ -182,6 +231,13 @@ public static class TrackMerger
         await MoveUserDataAsync(db, keep, remove, cancellationToken);
         await db.MediaFiles.Where(f => f.TrackId == remove)
             .ExecuteUpdateAsync(s => s.SetProperty(f => f.TrackId, keep).SetProperty(f => f.TrackLocked, true), cancellationToken);
+        // A track that played the other's file has that file itself now.
+        var own = await db.MediaFiles.AsNoTracking().Where(f => f.TrackId == keep)
+            .Select(f => new { f.Id, f.LibrarySourceId, f.RelativePath, f.CueTrack }).ToListAsync(cancellationToken);
+        var redundant = own.Where(f => f.CueTrack < 0 && own.Any(o => o.CueTrack == 0 && o.LibrarySourceId == f.LibrarySourceId && o.RelativePath == f.RelativePath))
+            .Select(f => f.Id).ToList();
+        if (redundant.Count > 0)
+            await db.MediaFiles.Where(f => redundant.Contains(f.Id)).ExecuteDeleteAsync(cancellationToken);
         await db.DuplicateCandidates.Where(c => c.Status == DuplicateStatus.Open && (c.TrackAId == remove || c.TrackBId == remove))
             .ExecuteDeleteAsync(cancellationToken);
         await db.TrackArtists.Where(ta => ta.TrackId == remove).ExecuteDeleteAsync(cancellationToken);

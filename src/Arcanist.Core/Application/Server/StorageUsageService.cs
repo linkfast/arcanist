@@ -286,8 +286,8 @@ public sealed class StorageUsageService(
         await db.Tracks.CountAsync(cancellationToken),
         await db.Albums.CountAsync(cancellationToken),
         await db.Artists.CountAsync(cancellationToken),
-        await db.MediaFiles.CountAsync(f => f.MissingSince == null && f.CueTrack <= 1, cancellationToken),
-        await db.MediaFiles.CountAsync(f => f.MissingSince != null && f.CueTrack <= 1, cancellationToken),
+        await db.MediaFiles.CountAsync(f => f.MissingSince == null && f.CueTrack >= 0 && f.CueTrack <= 1, cancellationToken),
+        await db.MediaFiles.CountAsync(f => f.MissingSince != null && f.CueTrack >= 0 && f.CueTrack <= 1, cancellationToken),
         await db.Playlists.CountAsync(cancellationToken),
         await db.Users.CountAsync(cancellationToken),
         await db.PlayEvents.LongCountAsync(cancellationToken),
@@ -300,7 +300,7 @@ public sealed class StorageUsageService(
     private async Task<List<LibraryUsage>> LibrariesAsync(CancellationToken cancellationToken)
     {
         var bySource = await db.MediaFiles.AsNoTracking()
-            .Where(f => f.MissingSince == null && f.CueTrack <= 1)
+            .Where(f => f.MissingSince == null && f.CueTrack >= 0 && f.CueTrack <= 1)
             .GroupBy(f => f.LibrarySourceId)
             .Select(g => new { SourceId = g.Key, Files = g.Count(), Bytes = g.Sum(f => f.Size) })
             .ToListAsync(cancellationToken);

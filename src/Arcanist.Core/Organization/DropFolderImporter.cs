@@ -26,6 +26,7 @@ public sealed class DropFolderImporter(
     LibraryLocks locks,
     Transcoder transcoder,
     ArcanistPaths paths,
+    ArtworkStore artworkStore,
     TimeProvider time,
     ILogger<DropFolderImporter> logger)
 {
@@ -174,6 +175,9 @@ public sealed class DropFolderImporter(
                 .Where(f => f.ContentHash == item.ContentHash && f.MissingSince == null && f.LibrarySource.LibraryId == batch.Drop.LibrarySource.LibraryId)
                 .Select(f => (Guid?)f.TrackId)
                 .FirstOrDefaultAsync(cancellationToken);
+            if (sameAudio is not null && cue is null && await VirtualTrackAsync(batch, item, entry, localPath, metadata!, cancellationToken))
+                return;
+
             if (sameAudio is not null || batch.Imported.Any(i => i.Hash == item.ContentHash))
             {
                 item.TrackId = sameAudio;
@@ -331,7 +335,11 @@ public sealed class DropFolderImporter(
                 Artist = t.Artists.Where(a => a.Role == ArtistRole.Primary).OrderBy(a => a.Position).Select(a => a.Artist.NormalizedName).FirstOrDefault(),
                 Files = t.Files
                     .Where(f => f.MissingSince == null && f.LibrarySource.LibraryId == libraryId)
-                    .Select(f => new { f.LibrarySourceId, f.RelativePath, f.CueTrack, f.BitDepth, f.SampleRate, f.BitRate })
+                    .Select(f => new
+                    {
+                        f.LibrarySourceId, f.RelativePath, f.CueTrack, f.BitDepth, f.SampleRate, f.BitRate,
+                        Shared = db.MediaFiles.Any(o => o.LibrarySourceId == f.LibrarySourceId && o.RelativePath == f.RelativePath && o.CueTrack < 0),
+                    })
                     .ToList(),
             })
             .ToListAsync(cancellationToken);
@@ -345,10 +353,33 @@ public sealed class DropFolderImporter(
         if (match is null)
             return (null, copies);
 
-        // A track of an album file split by a cue sheet cannot be replaced on its own; it counts as better.
+        // A track of an album file split by a cue sheet, or a file another album plays too, cannot be replaced on its own; it counts as better.
         copies.AddRange(match.Files.Select(f => new LibraryCopy(f.LibrarySourceId, f.RelativePath,
-            f.CueTrack > 0 ? new AudioQuality(true, int.MaxValue, int.MaxValue, int.MaxValue) : AudioQuality.Of(f.RelativePath, f.BitDepth, f.SampleRate, f.BitRate))));
+            f.CueTrack != 0 || f.Shared ? new AudioQuality(true, int.MaxValue, int.MaxValue, int.MaxValue) : AudioQuality.Of(f.RelativePath, f.BitDepth, f.SampleRate, f.BitRate))));
         return (match.Id, copies);
+    }
+
+    /// <summary>
+    /// The library has this audio on another album: a track of this one that plays that file, so the song is not stored
+    /// twice and these tags are not lost. Then the file here is done with, as an imported one.
+    /// </summary>
+    private async Task<bool> VirtualTrackAsync(Batch batch, ImportItem item, StorageEntry entry, string localPath, AudioMetadata metadata, CancellationToken cancellationToken)
+    {
+        byte[]? picture;
+        await using (var stream = File.OpenRead(localPath))
+            picture = TagReader.Read(stream, AudioFormats.MimeType(entry.RelativePath)).EmbeddedPicture;
+
+        var track = await Application.Catalog.VirtualTracks.AddAsync(databases, time, batch.Drop.LibrarySource.LibraryId, item.ContentHash!, metadata,
+            picture is null ? null : artworkStore.Store(picture), cancellationToken);
+        if (track is null)
+            return false;
+
+        if (!KeepsFiles(batch.Drop))
+            await batch.DropStorage.TrashAsync(batch.DropLocation, entry.RelativePath, cancellationToken);
+        item.TrackId = track;
+        Settle(item, ImportStatus.Imported, ImportReason.SameAudioOtherAlbum);
+        logger.LogInformation("{Path} from {DropFolder} is the audio of a file the library has: its album plays that file", entry.RelativePath, batch.Drop.Path);
+        return true;
     }
 
     private async Task TrashCopyAsync(Batch batch, LibraryCopy copy, CancellationToken cancellationToken)

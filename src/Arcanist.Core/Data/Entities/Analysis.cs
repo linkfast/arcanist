@@ -68,6 +68,9 @@ public enum DuplicateStatus
     Open,
     Merged,
     Dismissed,
+
+    /// <summary>The two tracks stay, on their albums, and play the same file (<see cref="MediaFile.IsSharedCopy"/>).</summary>
+    Shared,
 }
 
 /// <summary>

@@ -173,9 +173,17 @@ public sealed class MediaFile : Entity
 
     /// <summary>
     /// 0 for a whole file. For an album stored as one file with a cue sheet, the cue track this row is: each track
-    /// is a row of its own, playing from <see cref="StartMs"/> to <see cref="EndMs"/> of the file.
+    /// is a row of its own, playing from <see cref="StartMs"/> to <see cref="EndMs"/> of the file. Negative for a
+    /// <see cref="IsSharedCopy"/>.
     /// </summary>
     public int CueTrack { get; set; }
+
+    /// <summary>
+    /// Another track (of another album) playing this same file, chosen by an administrator so the song is stored once.
+    /// The file's tags describe the track of its row with <see cref="CueTrack"/> 0; scans read only that one and
+    /// <see cref="Analysis.SharedFiles"/> keeps this row in step with it.
+    /// </summary>
+    public bool IsSharedCopy => CueTrack < 0;
 
     public int? StartMs { get; set; }
 

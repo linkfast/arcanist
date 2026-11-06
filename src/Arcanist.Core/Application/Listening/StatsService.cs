@@ -40,7 +40,8 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
 
         var present = db.MediaFiles.Where(f => f.MissingSince == null && (only == null || f.LibrarySource.LibraryId == only));
         var tracks = db.Tracks.Where(t => present.Any(f => f.TrackId == t.Id));
-        var formats = await present
+        // A file that two albums share is one file.
+        var formats = await present.Where(f => f.CueTrack >= 0)
             .GroupBy(f => f.Format ?? "")
             .Select(g => new { Format = g.Key, Files = g.Count(), Size = g.Sum(f => f.Size) })
             .ToListAsync(cancellationToken);
@@ -98,7 +99,7 @@ public sealed class StatsService(ArcanistDbContext db, AccessGuard guard, Catalo
         var access = guard.Authenticated();
         var visible = await Libraries.LibraryService.Visible(db, access).Select(l => l.Id).ToListAsync(cancellationToken);
         var present = db.MediaFiles.AsNoTracking().Where(f => f.MissingSince == null && visible.Contains(f.LibrarySource.LibraryId));
-        var files = await present.GroupBy(f => f.LibrarySource.LibraryId)
+        var files = await present.Where(f => f.CueTrack >= 0).GroupBy(f => f.LibrarySource.LibraryId)
             .Select(g => new { LibraryId = g.Key, Files = g.Count(), Size = g.Sum(f => f.Size) })
             .ToListAsync(cancellationToken);
         var tracks = await present.Select(f => new { f.LibrarySource.LibraryId, f.TrackId, f.Track.AlbumId, f.Track.DurationMs }).Distinct()

@@ -304,6 +304,10 @@ public static class ErrorCodes
     public const string TagsUnsupported = "tags_unsupported";
     /// <summary>The track is part of a file split by a cue sheet: its tags are the sheet's, and the file holds other tracks.</summary>
     public const string CueSheetTrack = "cue_sheet_track";
+    /// <summary>It is the song's only copy: deleting the song is what applies.</summary>
+    public const string LastCopy = "last_copy";
+    /// <summary>The two tracks have no copies that one file could stand for: see the pair's <c>shareBlocked</c>.</summary>
+    public const string DuplicateNotShareable = "duplicate_not_shareable";
     /// <summary>The extension that times lyrics on this server (Lyrics Sync) is not installed, or is off or not loaded.</summary>
     public const string LyricsSyncUnavailable = "lyrics_sync_unavailable";
     /// <summary>The song has no lyrics with words to time (none, or it is instrumental).</summary>

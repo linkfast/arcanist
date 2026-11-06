@@ -77,7 +77,8 @@ public sealed class LibraryOrganizer(
         ArcanistDbContext db, LibrarySource source, ILibraryStorage storage, StorageLocation location, PathTemplate template,
         DateTime? addedSince, CancellationToken cancellationToken)
     {
-        var query = db.MediaFiles.AsNoTracking().Where(f => f.LibrarySourceId == source.Id && f.MissingSince == null);
+        // The file goes where the track its tags describe says; those that share it follow (RepointAsync).
+        var query = db.MediaFiles.AsNoTracking().Where(f => f.LibrarySourceId == source.Id && f.MissingSince == null && f.CueTrack >= 0);
         if (addedSince is { } since)
         {
             // A file still being copied is left for the next time.

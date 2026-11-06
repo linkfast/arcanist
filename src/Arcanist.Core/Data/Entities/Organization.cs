@@ -193,6 +193,9 @@ public enum ImportReason
     /// <summary>Imported, and the library's worse copies went to the trash.</summary>
     ReplacedWorse,
 
+    /// <summary>The library had this audio on another album: that album's track plays the same file, and no copy was stored.</summary>
+    SameAudioOtherAlbum,
+
     Unreadable,
 
     /// <summary>It had to be converted but ffmpeg (or its encoder) is not available.</summary>

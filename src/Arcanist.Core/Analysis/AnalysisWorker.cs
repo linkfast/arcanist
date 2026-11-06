@@ -38,6 +38,7 @@ internal sealed class AnalysisWorker(
     SettingsStore settings,
     FfmpegLocator ffmpeg,
     DuplicateDetector duplicates,
+    DuplicateSweep sweep,
     IOptionsMonitor<SetupOptions> setup,
     IOptionsMonitor<AnalysisOptions> options,
     TimeProvider time,
@@ -132,6 +133,8 @@ internal sealed class AnalysisWorker(
         if (batch.Count == 0)
         {
             await RefreshCountsAsync(db, AnalysisActivity.Idle, ffmpegPath is not null, cancellationToken);
+            // Woken after a scan, with nothing to hear: a copy of audio already analyzed is the sweep's.
+            sweep.Wake();
             return IdleDelay;
         }
 
@@ -342,6 +345,8 @@ public static class AnalysisServiceCollectionExtensions
         services.AddSingleton<SettingsStore>();
         services.AddSingleton<AnalysisMonitor>();
         services.AddSingleton<DuplicateDetector>();
+        services.AddSingleton<DuplicateSweep>();
+        services.AddHostedService<DuplicateSweepWorker>();
         services.AddSingleton<AnalysisWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<AnalysisWorker>());
         return services;

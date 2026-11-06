@@ -212,6 +212,27 @@ public sealed class DropFolderTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task The_same_audio_of_another_album_gets_its_track_without_a_second_copy()
+    {
+        WriteSong(In(Music, "Album/song.wav"), One);
+        await StartAsync();
+        WriteSong(In(Staging, "again.wav"), One with { Album = "Best Of" });
+        var inLibrary = Files(Music).Count;
+
+        Deliver();
+        await _factory.WaitForImportsAsync();
+
+        var item = Assert.Single(await ItemsAsync("IMPORTED"));
+        Assert.Equal("SAME_AUDIO_OTHER_ALBUM", item.GetProperty("reason").GetString());
+        Assert.Empty(Files(Drop));
+        Assert.Equal(inLibrary, Files(Music).Count);
+
+        var track = await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/tracks/{item.GetProperty("trackId").GetGuid()}", ArcanistFactory.Json, Cancel);
+        Assert.Equal("Best Of", track.GetProperty("album").GetProperty("title").GetString());
+        Assert.True(track.GetProperty("files")[0].GetProperty("shared").GetBoolean());
+    }
+
+    [Fact]
     public async Task Keeping_the_best_copy_replaces_worse_ones_and_skips_worse_ones()
     {
         WriteSong(In(Music, "old/one.wav"), One, sampleRate: 22050);

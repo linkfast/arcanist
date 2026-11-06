@@ -61,6 +61,8 @@ public sealed record Loudness(double Integrated, double Range, double TruePeak, 
 /// <param name="AddedAt">When the server found it.</param>
 /// <param name="ModifiedAt">When the file last changed (its tags too).</param>
 /// <param name="CueTrack">0 for a whole file; for an album in one file split by a cue sheet, the number of this track.</param>
+/// <param name="Shared">The file's tags describe a track of another album and this track plays it too, its metadata being
+/// only in the catalog: the same audio is stored once. Editing this track leaves the file as it is; deleting it too.</param>
 public sealed record TrackFile(
     Guid Id,
     string? Format,
@@ -79,7 +81,8 @@ public sealed record TrackFile(
     string ContentHash,
     DateTime AddedAt,
     DateTime ModifiedAt,
-    int CueTrack);
+    int CueTrack,
+    bool Shared);
 
 /// <summary>A line of synchronized lyrics, shown from <paramref name="TimeMs"/> until the next line.</summary>
 public sealed record LyricsLine(int TimeMs, string Text);

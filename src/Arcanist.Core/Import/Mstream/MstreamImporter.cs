@@ -112,7 +112,7 @@ internal sealed class MstreamImporter(TimeProvider time)
 
             if (!_sources.TryGetValue(sourceId, out var files))
             {
-                var rows = await db.MediaFiles.AsNoTracking().Where(f => f.LibrarySourceId == sourceId && f.MissingSince == null)
+                var rows = await db.MediaFiles.AsNoTracking().Where(f => f.LibrarySourceId == sourceId && f.MissingSince == null && f.CueTrack >= 0)
                     .Select(f => new { f.RelativePath, f.CueTrack, f.TrackId })
                     .ToListAsync(cancellationToken);
                 files = (new Dictionary<string, Guid>(StringComparer.Ordinal), new Dictionary<string, Guid>(StringComparer.Ordinal));

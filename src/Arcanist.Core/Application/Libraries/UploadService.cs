@@ -18,7 +18,10 @@ public enum UploadStatus
     /// <summary>The file entered the library; it is in the catalog after the next scan (soon).</summary>
     Imported,
 
-    /// <summary>The library already had this audio; nothing was written.</summary>
+    /// <summary>
+    /// The library already had this audio; no file was written. With the tags of another album, that album gets its track,
+    /// which plays the file that was there.
+    /// </summary>
     Duplicate,
 }
 
@@ -67,6 +70,8 @@ public sealed class UploadService(
     LibraryLocks locks,
     UploadScans scans,
     ArcanistPaths paths,
+    IArcanistDbContextFactory databases,
+    ArtworkStore artworkStore,
     TimeProvider time,
     ILogger<UploadService> logger)
 {
@@ -246,7 +251,13 @@ public sealed class UploadService(
                     .Select(f => new { f.TrackId, f.RelativePath })
                     .FirstOrDefaultAsync(cancellationToken);
                 if (existing is not null)
-                    return new UploadResult(UploadStatus.Duplicate, hash, existing.RelativePath, existing.TrackId);
+                {
+                    // The same audio with another album's tags: that album plays the file already here, with no second copy.
+                    var track = await Catalog.VirtualTracks.AddAsync(databases, time, libraryId, hash, metadata,
+                        metadata.EmbeddedPicture is { } picture ? artworkStore.Store(picture) : null, cancellationToken);
+                    return new UploadResult(UploadStatus.Duplicate, hash, existing.RelativePath, track ?? existing.TrackId);
+                }
+
                 if (scans.IsPending(libraryId, hash))
                     return new UploadResult(UploadStatus.Duplicate, hash, null, null);
 

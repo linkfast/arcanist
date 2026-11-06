@@ -309,24 +309,29 @@ public sealed class TrackEditService(
                     var failed = false;
                     foreach (var file in copies)
                     {
+                        // Only this track's use of a file that stays.
+                        if (file.IsSharedCopy)
+                        {
+                            removed.Add(file.Id);
+                            continue;
+                        }
+
                         var storage = storages.For(file.LibrarySource.Kind);
                         var location = StorageLocation.From(file.LibrarySource);
                         try
                         {
-                            if (await storage.ExistsAsync(location, file.RelativePath, cancellationToken))
-                                await storage.TrashAsync(location, file.RelativePath, cancellationToken);
-                            // The .lrc goes along unless another audio file of the folder (song.mp3 beside song.flac) stays and uses it.
-                            var stem = AudioFormats.WithoutExtension(file.RelativePath);
-                            var lyrics = stem + ".lrc";
-                            var deleting = deletable.SelectMany(d => d.Files).Select(f => f.Id).ToList();
-                            var shared = await db.MediaFiles.AsNoTracking()
-                                .Where(f => f.LibrarySourceId == file.LibrarySourceId && !deleting.Contains(f.Id) && f.RelativePath.StartsWith(stem + "."))
-                                .Select(f => f.RelativePath).ToListAsync(cancellationToken);
-                            if (!shared.Any(p => AudioFormats.WithoutExtension(p) == stem)
-                                && await storage.ExistsAsync(location, lyrics, cancellationToken))
-                                await storage.TrashAsync(location, lyrics, cancellationToken);
+                            var leaving = deletable.SelectMany(d => d.Files).Select(f => f.Id).ToList();
+                            // Another album's track plays it: the file stays, for that track.
+                            if (await HandOverAsync(file, leaving, cancellationToken))
+                                continue;
+                            await TrashWithLyricsAsync(storage, location, file, leaving, cancellationToken);
                             removed.Add(file.Id);
                             await RemoveFolderAsync(storage, location, file.RelativePath, cancellationToken);
+                        }
+                        catch (ArcanistException.Conflict e)
+                        {
+                            logger.LogWarning(e, "Could not hand {Path} over to the track that plays it too", file.RelativePath);
+                            failed = true;
                         }
                         catch (Exception e) when (e is IOException or UnauthorizedAccessException or HttpRequestException)
                         {
@@ -352,6 +357,206 @@ public sealed class TrackEditService(
         }
 
         return ids.Select(id => results[id]).ToList();
+    }
+
+    /// <summary>Moves a file to the trash. Its .lrc goes along unless another audio file of the folder (song.mp3 beside song.flac) stays and uses it.</summary>
+    private async Task TrashWithLyricsAsync(ILibraryStorage storage, StorageLocation location, MediaFile file, List<Guid> leaving, CancellationToken cancellationToken)
+    {
+        if (await storage.ExistsAsync(location, file.RelativePath, cancellationToken))
+            await storage.TrashAsync(location, file.RelativePath, cancellationToken);
+        var stem = AudioFormats.WithoutExtension(file.RelativePath);
+        var lyrics = stem + ".lrc";
+        var staying = await db.MediaFiles.AsNoTracking()
+            .Where(f => f.LibrarySourceId == file.LibrarySourceId && !leaving.Contains(f.Id) && f.RelativePath.StartsWith(stem + "."))
+            .Select(f => f.RelativePath).ToListAsync(cancellationToken);
+        if (!staying.Any(p => AudioFormats.WithoutExtension(p) == stem)
+            && await storage.ExistsAsync(location, lyrics, cancellationToken))
+            await storage.TrashAsync(location, lyrics, cancellationToken);
+    }
+
+    /// <summary>
+    /// A file whose track is going, while another track plays it too: that track becomes its owner, and the file's tags
+    /// say what the catalog says of it (so scans read it as that track from now on). False when nobody else plays it.
+    /// </summary>
+    private async Task<bool> HandOverAsync(MediaFile file, IReadOnlyList<Guid> leaving, CancellationToken cancellationToken)
+    {
+        await using var after = databases.CreateDbContext();
+        var heir = await after.MediaFiles
+            .Where(f => f.LibrarySourceId == file.LibrarySourceId && f.RelativePath == file.RelativePath && f.CueTrack < 0 && !leaving.Contains(f.Id))
+            .OrderBy(f => f.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (heir is null)
+            return false;
+
+        var description = await VirtualTracks.DescribeAsync(after, heir.TrackId, cancellationToken);
+        var folder = Path.Combine(paths.Cache, "edits");
+        Directory.CreateDirectory(folder);
+        var scanned = await RewriteFileAsync(file, description.Input with { Artists = [.. description.Input.Artists ?? [], .. description.Featured] }, null, folder, [], cancellationToken);
+
+        await after.MediaFiles.Where(f => f.Id == file.Id).ExecuteDeleteAsync(CancellationToken.None);
+        heir.CueTrack = 0;
+        heir.TrackLocked = false;
+        heir.Size = scanned.Size;
+        heir.ModifiedAt = scanned.ModifiedAt;
+        heir.ContentHash = scanned.ContentHash;
+        await after.SaveChangesAsync(CancellationToken.None);
+        await SharedFiles.SyncAsync(after, file.LibrarySourceId, CancellationToken.None);
+        logger.LogInformation("{Path} is now the file of track {Track}: its track was deleted and that one played it too", file.RelativePath, heir.TrackId);
+        return true;
+    }
+
+    /// <summary>
+    /// Deletes one copy of a song that has others (a FLAC and an MP3 of it): the file goes to the trash and the track stays.
+    /// Tracks of other albums that played that copy follow to another copy in its folder, or become its owner.
+    /// </summary>
+    public async Task DeleteFileAsync(Guid fileId, CancellationToken cancellationToken)
+    {
+        var access = guard.Permission(Permissions.DeleteTracks);
+        var file = await catalog.VisibleFiles(access).AsNoTracking().Include(f => f.LibrarySource)
+                       .SingleOrDefaultAsync(f => f.Id == fileId && f.CueTrack >= 0, cancellationToken)
+                   ?? throw new ArcanistException.NotFound();
+        if (await RefusalAsync(access, [file], [], cancellationToken) is { } refusal)
+        {
+            throw refusal.Status == TrackDeletionStatus.Forbidden
+                ? new ArcanistException.Forbidden(refusal.Code)
+                : new ArcanistException.Conflict(refusal.Code);
+        }
+
+        var others = await catalog.VisibleFiles(access).AsNoTracking()
+            .Where(f => f.TrackId == file.TrackId && f.Id != file.Id && f.CueTrack >= 0)
+            .ToListAsync(cancellationToken);
+        if (others.Count == 0)
+            throw new ArcanistException.Conflict(ErrorCodes.LastCopy);
+
+        var libraryId = file.LibrarySource.LibraryId;
+        var storage = storages.For(file.LibrarySource.Kind);
+        var location = StorageLocation.From(file.LibrarySource);
+        using (await LockAsync([libraryId], cancellationToken))
+        {
+            await using var after = databases.CreateDbContext();
+            var stand = others.FirstOrDefault(f => f.LibrarySourceId == file.LibrarySourceId && f.CueTrack == 0);
+            if (stand is not null)
+            {
+                var followers = await after.MediaFiles
+                    .Where(f => f.LibrarySourceId == file.LibrarySourceId && f.RelativePath == file.RelativePath && f.CueTrack < 0)
+                    .ToListAsync(cancellationToken);
+                var slots = await after.MediaFiles.Where(f => f.LibrarySourceId == stand.LibrarySourceId && f.RelativePath == stand.RelativePath)
+                    .Select(f => f.CueTrack).ToListAsync(cancellationToken);
+                foreach (var follower in followers)
+                {
+                    follower.CueTrack = SharedFiles.NextSlot(slots);
+                    slots.Add(follower.CueTrack);
+                    follower.RelativePath = stand.RelativePath;
+                }
+
+                await after.SaveChangesAsync(CancellationToken.None);
+            }
+
+            if (!await HandOverAsync(file, [file.Id], cancellationToken))
+            {
+                try
+                {
+                    await TrashWithLyricsAsync(storage, location, file, [file.Id], cancellationToken);
+                    await RemoveFolderAsync(storage, location, file.RelativePath, cancellationToken);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or HttpRequestException)
+                {
+                    logger.LogWarning(e, "Could not move {Path} to the trash", file.RelativePath);
+                    throw new ArcanistException.Conflict(ErrorCodes.WriteFailed);
+                }
+
+                await after.MediaFiles.Where(f => f.Id == file.Id).ExecuteDeleteAsync(CancellationToken.None);
+            }
+
+            await SharedFiles.SyncAsync(after, file.LibrarySourceId, CancellationToken.None);
+        }
+
+        await using (var clean = databases.CreateDbContext())
+            await CleanAsync(clean, CancellationToken.None);
+        signals.Publish([libraryId], [file.TrackId], []);
+        logger.LogInformation("{User} deleted the copy {Path} of track {Track}", access.UserName, file.RelativePath, file.TrackId);
+    }
+
+    /// <summary>
+    /// Makes <paramref name="trackId"/> play <paramref name="fileId"/> (a file of another track, in the same folder of a
+    /// library) in place of its own copies there, which go to the trash. The track stays on its album, with its own title,
+    /// number and everything users attached to it. Tracks of other albums that played those copies follow to this file.
+    /// </summary>
+    public async Task ShareFileAsync(Guid fileId, Guid trackId, CancellationToken cancellationToken)
+    {
+        var access = guard.Permission(Permissions.DeleteTracks);
+        var keep = await catalog.VisibleFiles(access).AsNoTracking().Include(f => f.LibrarySource)
+                       .SingleOrDefaultAsync(f => f.Id == fileId, cancellationToken)
+                   ?? throw new ArcanistException.NotFound();
+        var replaced = await catalog.VisibleFiles(access).AsNoTracking().Include(f => f.LibrarySource)
+            .Where(f => f.TrackId == trackId && f.LibrarySourceId == keep.LibrarySourceId)
+            .ToListAsync(cancellationToken);
+        if (keep.CueTrack != 0 || keep.TrackId == trackId || !replaced.Any(f => f.CueTrack == 0))
+            throw new ArcanistException.Conflict(ErrorCodes.DuplicateNotShareable);
+        if (await RefusalAsync(access, [keep, .. replaced], [], cancellationToken) is { } refusal)
+        {
+            throw refusal.Status == TrackDeletionStatus.Forbidden
+                ? new ArcanistException.Forbidden(refusal.Code)
+                : new ArcanistException.Conflict(refusal.Code);
+        }
+
+        var storage = storages.For(keep.LibrarySource.Kind);
+        var location = StorageLocation.From(keep.LibrarySource);
+        var libraryId = keep.LibrarySource.LibraryId;
+        var replacedPaths = replaced.Where(f => f.CueTrack == 0).Select(f => f.RelativePath).ToList();
+        var now = Now();
+
+        using (await LockAsync([libraryId], cancellationToken))
+        {
+            var replacedIds = replaced.Select(f => f.Id).ToList();
+            foreach (var file in replaced.Where(f => f.CueTrack == 0))
+            {
+                try
+                {
+                    await TrashWithLyricsAsync(storage, location, file, replacedIds, cancellationToken);
+                    await RemoveFolderAsync(storage, location, file.RelativePath, cancellationToken);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException or HttpRequestException)
+                {
+                    logger.LogWarning(e, "Could not move {Path} to the trash", file.RelativePath);
+                    throw new ArcanistException.Conflict(ErrorCodes.WriteFailed);
+                }
+            }
+
+            // Past the trash there is no turning back: the catalog must say so even if the caller leaves.
+            await using var after = databases.CreateDbContext();
+            await using var transaction = await after.Database.BeginTransactionAsync(CancellationToken.None);
+            var slots = await after.MediaFiles.Where(f => f.LibrarySourceId == keep.LibrarySourceId && f.RelativePath == keep.RelativePath)
+                .Select(f => f.CueTrack).ToListAsync(CancellationToken.None);
+            var followers = await after.MediaFiles
+                .Where(f => f.LibrarySourceId == keep.LibrarySourceId && f.CueTrack < 0 && replacedPaths.Contains(f.RelativePath) && f.TrackId != trackId)
+                .ToListAsync(CancellationToken.None);
+            foreach (var follower in followers)
+            {
+                follower.CueTrack = SharedFiles.NextSlot(slots);
+                slots.Add(follower.CueTrack);
+                follower.RelativePath = keep.RelativePath;
+            }
+
+            await after.SaveChangesAsync(CancellationToken.None);
+            await after.MediaFiles.Where(f => replacedIds.Contains(f.Id)).ExecuteDeleteAsync(CancellationToken.None);
+            after.MediaFiles.Add(SharedFiles.CopyFor(keep, trackId, SharedFiles.NextSlot(slots), now));
+            await after.Tracks.Where(t => t.Id == trackId)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.DurationMs, keep.DurationMs).SetProperty(t => t.UpdatedAt, now), CancellationToken.None);
+            await after.SaveChangesAsync(CancellationToken.None);
+            await SharedFiles.SyncAsync(after, keep.LibrarySourceId, CancellationToken.None);
+            await transaction.CommitAsync(CancellationToken.None);
+        }
+
+        await using (var clean = databases.CreateDbContext())
+        {
+            var albums = await clean.Tracks.Where(t => t.Id == trackId || t.Id == keep.TrackId).Select(t => t.AlbumId).Distinct().ToListAsync(CancellationToken.None);
+            await AlbumLoudness.UpdateAsync(clean, albums, CancellationToken.None);
+            await CleanAsync(clean, CancellationToken.None);
+        }
+
+        signals.Publish([libraryId], [trackId, keep.TrackId], []);
+        logger.LogInformation("{User} made track {Track} play the file of track {Other}; its copies went to the trash", access.UserName, trackId, keep.TrackId);
     }
 
     private static async Task RemoveFolderAsync(ILibraryStorage storage, StorageLocation location, string path, CancellationToken cancellationToken)
@@ -392,6 +597,7 @@ public sealed class TrackEditService(
         // Everything is checked before anything is written.
         var writable = new Dictionary<Guid, bool>();
         var toWrite = new List<MediaFile>();
+        var virtualCopies = new List<MediaFile>();
         foreach (var id in ids)
         {
             var copies = files.Where(f => f.TrackId == id && f.LibrarySource.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3).ToList();
@@ -404,7 +610,11 @@ public sealed class TrackEditService(
                     : new ArcanistException.Conflict(refusal.Code);
             }
 
-            toWrite.AddRange(copies);
+            // A track that only plays another's file has its metadata in the catalog alone: that file's tags are the other's.
+            if (copies.Any(f => !f.IsSharedCopy))
+                toWrite.AddRange(copies.Where(f => !f.IsSharedCopy));
+            else
+                virtualCopies.AddRange(copies);
         }
 
         var folder = Path.Combine(paths.Cache, "edits");
@@ -415,19 +625,28 @@ public sealed class TrackEditService(
         var sidecarsRemoved = new HashSet<Guid>();
         try
         {
-            using (await LockAsync(toWrite.Select(f => f.LibrarySource.LibraryId), cancellationToken))
+            using (await LockAsync(toWrite.Concat(virtualCopies).Select(f => f.LibrarySource.LibraryId), cancellationToken))
             {
                 foreach (var file in toWrite)
                 {
                     scanned.Add(await RewriteFileAsync(file, changes, picture, folder, sidecarsRemoved, cancellationToken));
                     written.Add(file);
                 }
+
+                if (changes != new TrackEditInput())
+                {
+                    foreach (var file in virtualCopies)
+                    {
+                        await VirtualTracks.EditAsync(databases, time, file.Id, changes, cancellationToken);
+                        written.Add(file);
+                    }
+                }
             }
         }
         finally
         {
             // What was written is catalogued, and its tracks follow it, even when a later file failed.
-            if (scanned.Count > 0)
+            if (written.Count > 0)
             {
                 // A .lrc that went (the edited lyrics have no timing): its lyrics leave the catalog, or they would still win
                 // over the tags' (a sidecar is trusted most).
@@ -438,13 +657,14 @@ public sealed class TrackEditService(
                         .ExecuteDeleteAsync(CancellationToken.None);
                 }
 
-                await CatalogueAsync(scanned, cancellationToken);
+                if (scanned.Count > 0)
+                    await CatalogueAsync(scanned, cancellationToken);
                 moved = await FollowAsync(ids, written);
             }
         }
 
         var result = ids.ToDictionary(id => id, id => moved.GetValueOrDefault(id, id));
-        signals.Publish(toWrite.Select(f => f.LibrarySource.LibraryId), result.Values.Distinct(), ids.Where(id => !result.ContainsValue(id)));
+        signals.Publish(toWrite.Concat(virtualCopies).Select(f => f.LibrarySource.LibraryId), result.Values.Distinct(), ids.Where(id => !result.ContainsValue(id)));
         return result;
     }
 
@@ -623,6 +843,8 @@ public sealed class TrackEditService(
         // Once in place, the files must be catalogued even if the caller leaves.
         await writer.ApplyAsync(scanned, CancellationToken.None);
         await SearchIndexer.RefreshAsync(writerDb, CancellationToken.None);
+        foreach (var source in scanned.Select(f => f.SourceId).Distinct())
+            await SharedFiles.SyncAsync(writerDb, source, CancellationToken.None);
     }
 
     /// <summary>Why the user cannot change these copies of a track, or null.</summary>
@@ -636,7 +858,7 @@ public sealed class TrackEditService(
                 return (TrackDeletionStatus.Forbidden, ErrorCodes.LibraryReadOnly);
             if (file.LibrarySource.Kind is not (LibrarySourceKind.Local or LibrarySourceKind.S3))
                 return (TrackDeletionStatus.NotDeletable, ErrorCodes.ReadOnly);
-            if (file.CueTrack != 0)
+            if (file.CueTrack > 0)
                 return (TrackDeletionStatus.NotDeletable, ErrorCodes.CueSheetTrack);
             if (!writable.TryGetValue(file.LibrarySourceId, out var canWrite))
             {

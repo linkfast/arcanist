@@ -329,7 +329,7 @@ public sealed class CatalogService(
         var libraryOf = sources.ToDictionary(s => s.Key, s => s.Value.LibraryId);
         // Hints for the client's menus; the edit itself checks again (the folder may be read-only).
         bool Writable(MediaFile f) => sources[f.LibrarySourceId].Kind is LibrarySourceKind.Local or LibrarySourceKind.S3;
-        bool Changeable(MediaFile f) => Writable(f) && f.CueTrack == 0 && access.CanChange(libraryOf[f.LibrarySourceId]);
+        bool Changeable(MediaFile f) => Writable(f) && f.CueTrack <= 0 && access.CanChange(libraryOf[f.LibrarySourceId]);
         var canEdit = access.Has(Permissions.EditMetadata);
         var canDelete = access.Has(Permissions.DeleteTracks);
 
@@ -383,7 +383,7 @@ public sealed class CatalogService(
                         f.ReplayGainTrackGain, f.ReplayGainAlbumGain,
                         LoudnessOf(analyses.GetValueOrDefault(f.ContentHash), album.Loudness, album.TruePeak),
                         StreamUrls.For(t.Id, streamToken, f.Id),
-                        libraryOf[f.LibrarySourceId], f.RelativePath, f.ContentHash, f.AddedAt, f.ModifiedAt, f.CueTrack))
+                        libraryOf[f.LibrarySourceId], f.RelativePath, f.ContentHash, f.AddedAt, f.ModifiedAt, Math.Max(f.CueTrack, 0), f.IsSharedCopy))
                     .ToList(),
                 StreamUrls.For(t.Id, streamToken),
                 userRatings.TryGetValue(t.Id, out var rating) && (!singleStar || rating == 5) ? rating : null,

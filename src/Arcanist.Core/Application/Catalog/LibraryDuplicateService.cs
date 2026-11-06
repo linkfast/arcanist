@@ -24,6 +24,12 @@ public sealed record LibraryDuplicatesInput(Guid? LibraryId, string? After, int?
 
 public sealed record LibraryDuplicatePage(IReadOnlyList<LibraryDuplicate> Items, string? NextCursor, int TotalCount);
 
+/// <summary>A song with more than one file in a library. The versions Arcanist converts to play them are not files of the song.</summary>
+/// <param name="DeletableFileIds">The files the caller can delete: <c>deleteTrackFile</c>.</param>
+public sealed record TrackCopies(Track Track, IReadOnlyList<Guid> DeletableFileIds);
+
+public sealed record TrackCopiesPage(IReadOnlyList<TrackCopies> Items, string? NextCursor, int TotalCount);
+
 /// <summary>
 /// The songs that more than one library has (the same track, with copies in each): to free space or tidy libraries
 /// up, saying who would stop having a song if one library's copies went. Personal libraries (a user's own Ultimate
@@ -81,6 +87,39 @@ public sealed class LibraryDuplicateService(ArcanistDbContext db, AccessGuard gu
         }
 
         return new LibraryDuplicatePage(items, next, total);
+    }
+
+    /// <summary>
+    /// The songs with several files of their own in one library (a FLAC and an MP3, say): tracks that only play another's
+    /// file and the conversions kept in the caches are no copies. Personal libraries aside. Requires MANAGE_LIBRARIES.
+    /// </summary>
+    public async Task<TrackCopiesPage> CopiesAsync(LibraryDuplicatesInput input, CancellationToken cancellationToken)
+    {
+        var access = guard.Permission(Permissions.ManageLibraries);
+        if (input.LibraryId is { } only && !access.CanAccessLibrary(only))
+            throw new ArcanistException.NotFound();
+
+        var files = catalog.VisibleFiles(access).Where(f => f.CueTrack == 0 && f.LibrarySource.Library.OwnerUserId == null
+                                                            && (input.LibraryId == null || f.LibrarySource.LibraryId == input.LibraryId));
+        var repeated = files.GroupBy(f => new { f.TrackId, f.LibrarySource.LibraryId }).Where(g => g.Count() > 1).Select(g => g.Key.TrackId).Distinct();
+
+        var total = await repeated.CountAsync(cancellationToken);
+        var after = Guid.TryParse(input.After, out var cursor) ? cursor : (Guid?)null;
+        var size = Math.Clamp(input.First ?? 50, 1, MaxResults);
+        var ids = await repeated.Where(id => after == null || id.CompareTo(after.Value) > 0).OrderBy(id => id).Take(size + 1).ToListAsync(cancellationToken);
+        var next = ids.Count > size ? ids[size - 1].ToString() : null;
+        ids = ids.Take(size).ToList();
+
+        var tracks = await catalog.VisibleTracksAsync(access, ids, cancellationToken);
+        var deletable = await files.AsNoTracking().Where(f => ids.Contains(f.TrackId))
+            .Select(f => new { f.Id, f.TrackId, f.LibrarySource.LibraryId, f.LibrarySource.Kind })
+            .ToListAsync(cancellationToken);
+        var deletes = access.Has(Permissions.DeleteTracks);
+        return new TrackCopiesPage(
+            ids.Where(tracks.ContainsKey).Select(id => new TrackCopies(tracks[id],
+                deletable.Where(f => deletes && f.TrackId == id && f.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3 && access.CanChange(f.LibraryId))
+                    .Select(f => f.Id).ToList())).ToList(),
+            next, total);
     }
 
     private sealed record Listener(DuplicateUser User, HashSet<Guid> Libraries)

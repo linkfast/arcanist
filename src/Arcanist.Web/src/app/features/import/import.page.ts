@@ -1,6 +1,6 @@
 import { Component, DestroyRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideArrowRightLeft,
@@ -89,6 +89,7 @@ import { UploadsCard } from './uploads-card';
 
 type Library = LibrariesResult['libraries'][number];
 type Summary = ImportQueueQuery['importSummary'];
+type ImportTab = 'review' | 'folders' | 'uploads' | 'migrate';
 
 interface FolderForm {
   id: string | null;
@@ -173,7 +174,27 @@ const REFRESH_MS = 5000;
 })
 export class ImportPage implements OnInit {
   protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly extensions = inject(EnabledExtensions);
+
+  /** By how often one comes for them: what waits for a decision first, moving from another server last. */
+  protected readonly tabs = computed<ImportTab[]>(() =>
+    this.auth.isAdmin() ? ['review', 'folders', 'uploads', 'migrate'] : ['review', 'uploads'],
+  );
+  protected readonly tab = signal<ImportTab>(
+    (inject(ActivatedRoute).snapshot.queryParamMap.get('tab') as ImportTab | null) ?? 'review',
+  );
+  /** The tab in view: one this user does not have (from a link) is the first. */
+  protected readonly activeTab = computed(() =>
+    this.tabs().includes(this.tab()) ? this.tab() : 'review',
+  );
+
+  /** In the URL, so a reload or a link stays on it. */
+  protected choose(tab: ImportTab): void {
+    this.tab.set(tab);
+    void this.router.navigate([], { queryParams: { tab }, replaceUrl: true });
+  }
+
   /** Ultimate Cloud Plus's id while it is not running: uploading Cloud Drop's songs is its. */
   protected readonly cloudPlus = signal<string | null>(null);
   /** The Ultimate Cloud accounts linked to this server: where Cloud Drop's songs can be uploaded. */

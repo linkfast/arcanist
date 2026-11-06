@@ -116,9 +116,22 @@ export const routes: Routes = [
       {
         path: 'extensions',
         canActivate: [adminGuard],
+        data: { scope: 'extensions' },
         loadComponent: () =>
           import('./features/extensions/extensions.page').then((m) => m.ExtensionsPage),
       },
+      {
+        path: 'players',
+        canActivate: [adminGuard],
+        data: { scope: 'players' },
+        loadComponent: () =>
+          import('./features/extensions/extensions.page').then((m) => m.ExtensionsPage),
+      },
+      {
+        path: 'about',
+        loadComponent: () => import('./features/about/about.page').then((m) => m.AboutPage),
+      },
+      { path: 'account/about', pathMatch: 'full', redirectTo: 'about' },
       {
         path: 'database',
         canActivate: [adminGuard],

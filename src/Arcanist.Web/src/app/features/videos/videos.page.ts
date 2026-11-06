@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { toast } from '@spartan-ng/brain/sonner';
 import { HlmBadgeImports } from '@spartan-ng/helm/badge';
@@ -10,6 +11,7 @@ import { HlmInputImports } from '@spartan-ng/helm/input';
 import { HlmNativeSelectImports } from '@spartan-ng/helm/native-select';
 import { HlmSkeletonImports } from '@spartan-ng/helm/skeleton';
 import { ApiError } from '../../core/api/rest';
+import { AuthService } from '../../core/auth/auth.service';
 import { Gql } from '../../core/graphql/gql.service';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type { VideoClipFieldsFragment as Video } from '../../graphql/generated/graphql';
@@ -26,6 +28,7 @@ import { VideoDetail } from './video-detail';
   selector: 'app-videos-page',
   imports: [
     FormsModule,
+    RouterLink,
     BrnDialogContent,
     HlmBadgeImports,
     HlmButtonImports,
@@ -41,7 +44,12 @@ import { VideoDetail } from './video-detail';
   template: `
     <header class="mb-6">
       <h1 class="text-2xl font-semibold">{{ 'videos.title' | t }}</h1>
-      <p class="text-sm text-muted-foreground">{{ 'videos.subtitle' | t }}</p>
+      <p class="text-sm text-muted-foreground">
+        {{ 'videos.subtitle' | t }}
+        @if (auth.can('MANAGE_SETTINGS')) {
+          <a class="underline" routerLink="/transcoding">{{ 'videos.settingsLink' | t }}</a>
+        }
+      </p>
     </header>
 
     <form class="mb-4 flex flex-wrap gap-2" data-tour="videos-filters" (ngSubmit)="reload()">
@@ -155,6 +163,7 @@ import { VideoDetail } from './video-detail';
   `,
 })
 export class VideosPage implements OnInit {
+  protected readonly auth = inject(AuthService);
   private readonly gql = inject(Gql);
   private readonly i18n = inject(I18n);
 

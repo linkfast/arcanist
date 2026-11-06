@@ -46,7 +46,6 @@ export function accountSections(ultimateCloud: boolean): PanelSection[] {
     accountSection('apps', 'lucideSmartphone'),
     ...(ultimateCloud ? [accountSection('cloud', 'lucideCloud')] : []),
     accountSection('preferences', 'lucideSettings2'),
-    accountSection('about', 'lucideInfo'),
   ];
 }
 

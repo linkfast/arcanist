@@ -1,6 +1,6 @@
 import { ExtensionSetupDialog } from './extension-setup';
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, computed, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrnAlertDialogContent } from '@spartan-ng/brain/alert-dialog';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -43,19 +43,9 @@ import { PackageDropzone } from './package-dropzone';
 
 type Kind = 'frontend' | 'extension';
 
-const Tabs = ['installed', 'marketplace', 'players'] as const;
+/** What one has first, then where to get more. */
+const Tabs = ['installed', 'marketplace'] as const;
 type Tab = (typeof Tabs)[number];
-const TabKey = 'arcanist.extensions.tab';
-
-function initialTab(): Tab {
-  try {
-    const stored = localStorage.getItem(TabKey);
-    if ((Tabs as readonly string[]).includes(stored ?? '')) return stored as Tab;
-  } catch {
-    // Without storage the page opens on its first tab.
-  }
-  return 'installed';
-}
 
 /** A package waiting for the administrator to accept that it runs with full trust. */
 interface PendingInstall {
@@ -65,8 +55,9 @@ interface PendingInstall {
 }
 
 /**
- * Web players (served at / and /players/<id>/) and extensions (mStream, Subsonic and installed ones). Both run
- * with full trust, so installing asks for confirmation and a recent password.
+ * Extensions (mStream, Subsonic and installed ones) or, at /players, web players (served at / and /players/<id>/): a
+ * page each, with what is installed and the catalog. Both run with full trust, so installing asks for confirmation and
+ * a recent password.
  */
 @Component({
   selector: 'app-extensions-page',
@@ -92,8 +83,12 @@ interface PendingInstall {
   ],
   template: `
     <header class="mb-6">
-      <h1 class="text-2xl font-semibold">{{ 'extensions.title' | t }}</h1>
-      <p class="text-sm text-muted-foreground">{{ 'extensions.subtitle' | t }}</p>
+      <h1 class="text-2xl font-semibold">
+        {{ (scope() === 'players' ? 'extensions.players.title' : 'extensions.title') | t }}
+      </h1>
+      <p class="text-sm text-muted-foreground">
+        {{ (scope() === 'players' ? 'extensions.players.subtitle' : 'extensions.subtitle') | t }}
+      </p>
     </header>
 
     <div class="grid grid-cols-[minmax(0,1fr)] gap-6">
@@ -108,17 +103,17 @@ interface PendingInstall {
             [variant]="tab() === option ? 'default' : 'ghost'"
             (click)="choose(option)"
           >
-            {{ 'extensions.tabs.' + option | t }}
+            {{ 'extensions.tabs.' + (option === 'installed' ? installedTab() : option) | t }}
             @if (option === 'installed') {
-              <span class="ml-1 text-xs opacity-70">{{ extensions().length }}</span>
-            } @else if (option === 'players') {
-              <span class="ml-1 text-xs opacity-70">{{ frontends().length }}</span>
+              <span class="ml-1 text-xs opacity-70">{{
+                scope() === 'players' ? frontends().length : extensions().length
+              }}</span>
             }
           </button>
         }
       </div>
 
-      @if (restartNeeded() && !restarting()) {
+      @if (scope() === 'extensions' && restartNeeded() && !restarting()) {
         <div hlmAlert class="flex flex-wrap items-center justify-between gap-3">
           <div class="grid min-w-0 flex-1 gap-1">
             <p hlmAlertDescription>{{ 'extensions.list.restartNeeded' | t }}</p>
@@ -143,8 +138,8 @@ interface PendingInstall {
         </div>
       }
 
-      @switch (tab()) {
-        @case ('installed') {
+      @switch (view()) {
+        @case ('extensions') {
           <section hlmCard data-tour="extensions-list">
             <div hlmCardHeader>
               <h2 hlmCardTitle>{{ 'extensions.list.title' | t }}</h2>
@@ -250,37 +245,17 @@ interface PendingInstall {
           </section>
         }
         @case ('marketplace') {
-          <div
-            class="flex flex-wrap gap-1"
-            role="group"
-            [attr.aria-label]="'extensions.marketplace.kind' | t"
-          >
-            @for (option of marketKinds; track option) {
-              <button
-                hlmBtn
-                size="sm"
-                type="button"
-                [variant]="marketKind() === option ? 'secondary' : 'ghost'"
-                [attr.aria-pressed]="marketKind() === option"
-                (click)="marketKind.set(option)"
-              >
-                {{ 'extensions.marketplace.kinds.' + option | t }}
-              </button>
-            }
-          </div>
-          @for (kind of [marketKind()]; track kind) {
-            <app-extension-marketplace
-              [kind]="kind"
-              [busy]="busy()"
-              (installed)="afterInstall($event)"
-              (installedPlayer)="reloadPlayers()"
-            />
-          }
+          <app-extension-marketplace
+            [kind]="scope()"
+            [busy]="busy()"
+            (installed)="afterInstall($event)"
+            (installedPlayer)="reloadPlayers()"
+          />
         }
         @case ('players') {
-          <section hlmCard>
+          <section hlmCard data-tour="players-list">
             <div hlmCardHeader>
-              <h2 hlmCardTitle>{{ 'extensions.players.title' | t }}</h2>
+              <h2 hlmCardTitle>{{ 'extensions.players.installedTitle' | t }}</h2>
               <p hlmCardDescription>{{ 'extensions.players.description' | t }}</p>
             </div>
             <div hlmCardContent class="grid gap-4">
@@ -362,7 +337,7 @@ interface PendingInstall {
                 }
               </ul>
               <p class="text-sm">
-                <button type="button" class="underline" (click)="browsePlayers()">
+                <button type="button" class="underline" (click)="choose('marketplace')">
                   {{ 'extensions.players.browse' | t }}
                 </button>
               </p>
@@ -471,15 +446,10 @@ export class ExtensionsPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  protected readonly frontends = signal<Frontend[]>([]);
-  protected readonly marketKinds: MarketplaceKind[] = ['extensions', 'players'];
-  protected readonly marketKind = signal<MarketplaceKind>('extensions');
+  /** Which of the two pages this is: from the route. */
+  readonly scope = input<MarketplaceKind>('extensions');
 
-  /** The catalog's web players, from the Players tab. */
-  protected browsePlayers(): void {
-    this.marketKind.set('players');
-    this.choose('marketplace');
-  }
+  protected readonly frontends = signal<Frontend[]>([]);
 
   protected async reloadPlayers(): Promise<void> {
     await this.reload();
@@ -498,22 +468,23 @@ export class ExtensionsPage implements OnInit {
   protected readonly restartSeconds = signal(0);
 
   protected readonly tabs = Tabs;
-  protected readonly tab = signal<Tab>(initialTab());
+  protected readonly tab = signal<Tab>('installed');
+  protected readonly view = computed(() =>
+    this.tab() === 'marketplace' ? 'marketplace' : this.scope(),
+  );
+  protected readonly installedTab = computed(() =>
+    this.scope() === 'players' ? 'installedPlayers' : 'installed',
+  );
 
   protected choose(tab: Tab): void {
     this.tab.set(tab);
-    try {
-      localStorage.setItem(TabKey, tab);
-    } catch {
-      // Only a convenience.
-    }
   }
 
   async ngOnInit(): Promise<void> {
     await this.reload();
     // Offered elsewhere in the panel (Settings › Timed lyrics): an extension of the marketplace, installed on demand.
     const id = this.route.snapshot.queryParamMap.get('install');
-    if (id) {
+    if (id && this.scope() === 'extensions') {
       void this.router.navigate([], { queryParams: { install: null }, replaceUrl: true });
       if (!this.extensions().some((e) => e.id === id)) await this.installFromMarketplace(id);
     }

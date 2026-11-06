@@ -1200,7 +1200,7 @@ export class SetupPage implements OnInit {
       // Imports go on by themselves: their progress is in Import.
       if (imported || this.dlnaStarted()) {
         toast.info(this.i18n.t('setup.importContinues'));
-        await this.router.navigateByUrl('/import');
+        await this.router.navigateByUrl('/import?tab=migrate');
       } else await this.router.navigateByUrl('/settings');
     } catch (error) {
       const apiError = ApiError.from(error);

@@ -27,6 +27,7 @@ import {
   lucideCloud,
   lucideClapperboard,
   lucideMicVocal,
+  lucideMonitorPlay,
   lucideCopy,
   lucideDatabase,
   lucideExternalLink,
@@ -100,6 +101,7 @@ import { UpdateNotice } from './update-notice';
       lucideCloud,
       lucideClapperboard,
       lucideMicVocal,
+      lucideMonitorPlay,
       lucideCopy,
       lucideDatabase,
       lucideHouse,
@@ -170,76 +172,83 @@ import { UpdateNotice } from './update-notice';
         </div>
 
         <nav class="flex flex-col gap-1" data-tour="nav">
-          @for (item of navigation(); track item.path) {
-            @if (groups()[item.path]; as children) {
-              <!-- A page with others under it: Extensions, and the sections of Settings and My account. -->
-              <div class="flex items-center">
+          @for (section of navigation(); track section.heading) {
+            @if (section.heading) {
+              <p class="px-3 pt-3 pb-0.5 text-xs font-medium text-muted-foreground">
+                {{ section.heading | t }}
+              </p>
+            }
+            @for (item of section.items; track item.path) {
+              @if (groups()[item.path]; as children) {
+                <!-- A page with others under it: Extensions, and the sections of Settings and My account. -->
+                <div class="flex items-center">
+                  <a
+                    hlmBtn
+                    variant="ghost"
+                    class="flex-1 justify-start gap-2"
+                    [routerLink]="item.path"
+                    routerLinkActive="bg-accent text-accent-foreground"
+                    [routerLinkActiveOptions]="{ exact: true }"
+                    (click)="reopen(item.path)"
+                  >
+                    <ng-icon [name]="item.icon" />
+                    {{ item.label | t }}
+                  </a>
+                  @if (children.length > 0) {
+                    <button
+                      hlmBtn
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      class="shrink-0"
+                      [attr.aria-expanded]="isOpen(item.path)"
+                      [attr.aria-label]="'nav.toggleGroup' | t: { name: item.label | t }"
+                      (click)="toggle(item.path)"
+                    >
+                      <ng-icon
+                        name="lucideChevronDown"
+                        class="transition-transform"
+                        [class.-rotate-90]="!isOpen(item.path)"
+                      />
+                    </button>
+                  }
+                </div>
+                @if (isOpen(item.path)) {
+                  <div class="ml-4 flex flex-col gap-1 border-l pl-2">
+                    @for (page of children; track page.path) {
+                      <a
+                        hlmBtn
+                        variant="ghost"
+                        size="sm"
+                        class="justify-start gap-2"
+                        [routerLink]="page.path"
+                        routerLinkActive="bg-accent text-accent-foreground"
+                        ariaCurrentWhenActive="page"
+                        [attr.data-tour]="page.tour"
+                      >
+                        @if (page.iconUrl) {
+                          <img [src]="page.iconUrl" alt="" class="size-4 rounded-sm" />
+                        } @else {
+                          <ng-icon [name]="page.icon" />
+                        }
+                        {{ page.label }}
+                      </a>
+                    }
+                  </div>
+                }
+              } @else {
                 <a
                   hlmBtn
                   variant="ghost"
-                  class="flex-1 justify-start gap-2"
+                  class="justify-start gap-2"
                   [routerLink]="item.path"
                   routerLinkActive="bg-accent text-accent-foreground"
-                  [routerLinkActiveOptions]="{ exact: true }"
-                  (click)="reopen(item.path)"
+                  [routerLinkActiveOptions]="{ exact: item.path === '/' }"
                 >
                   <ng-icon [name]="item.icon" />
                   {{ item.label | t }}
                 </a>
-                @if (children.length > 0) {
-                  <button
-                    hlmBtn
-                    variant="ghost"
-                    size="icon"
-                    type="button"
-                    class="shrink-0"
-                    [attr.aria-expanded]="isOpen(item.path)"
-                    [attr.aria-label]="'nav.toggleGroup' | t: { name: item.label | t }"
-                    (click)="toggle(item.path)"
-                  >
-                    <ng-icon
-                      name="lucideChevronDown"
-                      class="transition-transform"
-                      [class.-rotate-90]="!isOpen(item.path)"
-                    />
-                  </button>
-                }
-              </div>
-              @if (isOpen(item.path)) {
-                <div class="ml-4 flex flex-col gap-1 border-l pl-2">
-                  @for (page of children; track page.path) {
-                    <a
-                      hlmBtn
-                      variant="ghost"
-                      size="sm"
-                      class="justify-start gap-2"
-                      [routerLink]="page.path"
-                      routerLinkActive="bg-accent text-accent-foreground"
-                      ariaCurrentWhenActive="page"
-                      [attr.data-tour]="page.tour"
-                    >
-                      @if (page.iconUrl) {
-                        <img [src]="page.iconUrl" alt="" class="size-4 rounded-sm" />
-                      } @else {
-                        <ng-icon [name]="page.icon" />
-                      }
-                      {{ page.label }}
-                    </a>
-                  }
-                </div>
               }
-            } @else {
-              <a
-                hlmBtn
-                variant="ghost"
-                class="justify-start gap-2"
-                [routerLink]="item.path"
-                routerLinkActive="bg-accent text-accent-foreground"
-                [routerLinkActiveOptions]="{ exact: item.path === '/' }"
-              >
-                <ng-icon [name]="item.icon" />
-                {{ item.label | t }}
-              </a>
             }
           }
         </nav>
@@ -255,6 +264,16 @@ import { UpdateNotice } from './update-notice';
           >
             <ng-icon name="lucideExternalLink" />
             {{ 'nav.player' | t }}
+          </a>
+          <a
+            hlmBtn
+            variant="ghost"
+            class="justify-start gap-2"
+            routerLink="/about"
+            routerLinkActive="bg-accent text-accent-foreground"
+          >
+            <ng-icon name="lucideInfo" />
+            {{ 'nav.about' | t }}
           </a>
           <app-language-select />
           <app-theme-select />
@@ -447,98 +466,135 @@ export class Shell {
     });
   }
 
+  /** The menu by what one comes to do: the music, the people, the server, what connects or extends it, and oneself. */
   protected readonly navigation = computed(() =>
     [
-      { path: '/', label: 'nav.overview', icon: 'lucideHouse', visible: true },
-      { path: '/libraries', label: 'nav.libraries', icon: 'lucideLibrary', visible: true },
       {
-        path: '/duplicates',
-        label: 'nav.duplicates',
-        icon: 'lucideCopy',
-        visible: this.auth.can('MANAGE_LIBRARIES'),
+        heading: null,
+        items: [{ path: '/', label: 'nav.overview', icon: 'lucideHouse', visible: true }],
       },
       {
-        path: '/videos',
-        label: 'nav.videos',
-        icon: 'lucideClapperboard',
-        visible: this.auth.can('MANAGE_LIBRARIES') || this.auth.can('EDIT_METADATA'),
+        heading: 'nav.sections.music',
+        items: [
+          { path: '/libraries', label: 'nav.libraries', icon: 'lucideLibrary', visible: true },
+          {
+            path: '/import',
+            label: 'nav.import',
+            icon: 'lucideInbox',
+            visible: this.auth.can('MANAGE_LIBRARIES'),
+          },
+          {
+            path: '/videos',
+            label: 'nav.videos',
+            icon: 'lucideClapperboard',
+            visible: this.auth.can('MANAGE_LIBRARIES') || this.auth.can('EDIT_METADATA'),
+          },
+          {
+            path: '/lyrics/review',
+            label: 'nav.lyricsReview',
+            icon: 'lucideMicVocal',
+            visible: this.auth.can('EDIT_METADATA'),
+          },
+          {
+            path: '/duplicates',
+            label: 'nav.duplicates',
+            icon: 'lucideCopy',
+            visible: this.auth.can('MANAGE_LIBRARIES'),
+          },
+        ],
       },
       {
-        path: '/lyrics/review',
-        label: 'nav.lyricsReview',
-        icon: 'lucideMicVocal',
-        visible: this.auth.can('EDIT_METADATA'),
+        heading: 'nav.sections.people',
+        items: [
+          {
+            path: '/users',
+            label: 'nav.users',
+            icon: 'lucideUsers',
+            visible: this.auth.can('MANAGE_USERS'),
+          },
+          {
+            path: '/stats',
+            label: 'nav.stats',
+            icon: 'lucideChartColumn',
+            visible: this.auth.can('VIEW_ALL_STATS'),
+          },
+        ],
       },
       {
-        path: '/import',
-        label: 'nav.import',
-        icon: 'lucideInbox',
-        visible: this.auth.can('MANAGE_LIBRARIES'),
+        heading: 'nav.sections.server',
+        items: [
+          {
+            path: '/settings',
+            label: 'nav.settings',
+            icon: 'lucideSettings',
+            visible: this.auth.can('MANAGE_SETTINGS'),
+          },
+          {
+            path: '/transcoding',
+            label: 'nav.transcoding',
+            icon: 'lucideAudioWaveform',
+            visible: this.auth.can('MANAGE_SETTINGS'),
+          },
+          {
+            path: '/database',
+            label: 'nav.database',
+            icon: 'lucideDatabase',
+            visible: this.auth.isAdmin(),
+          },
+          {
+            path: '/backups',
+            label: 'nav.backups',
+            icon: 'lucideArchive',
+            visible: this.auth.isAdmin(),
+          },
+        ],
       },
       {
-        path: '/stats',
-        label: 'nav.stats',
-        icon: 'lucideChartColumn',
-        visible: this.auth.can('VIEW_ALL_STATS'),
+        heading: 'nav.sections.connections',
+        items: [
+          {
+            path: '/network',
+            label: 'nav.network',
+            icon: 'lucideNetwork',
+            visible: this.auth.isAdmin(),
+          },
+          {
+            path: '/cloud',
+            label: 'nav.cloud',
+            icon: 'lucideCloud',
+            visible: this.auth.isAdmin() && this.extensions.has('ultimate-cloud'),
+          },
+          {
+            path: '/ai',
+            label: 'nav.ai',
+            icon: 'lucideBrainCircuit',
+            visible: this.auth.isAdmin() && this.extensions.has('ai'),
+          },
+          {
+            path: '/extensions',
+            label: 'nav.extensions',
+            icon: 'lucidePuzzle',
+            visible: this.auth.isAdmin(),
+          },
+          {
+            path: '/players',
+            label: 'nav.players',
+            icon: 'lucideMonitorPlay',
+            visible: this.auth.isAdmin(),
+          },
+        ],
       },
       {
-        path: '/users',
-        label: 'nav.users',
-        icon: 'lucideUsers',
-        visible: this.auth.can('MANAGE_USERS'),
+        heading: 'nav.sections.mine',
+        items: [
+          { path: '/listening', label: 'nav.listening', icon: 'lucideHistory', visible: true },
+          { path: '/wishes', label: 'nav.wishes', icon: 'lucideGift', visible: true },
+          { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
+        ],
       },
-      {
-        path: '/settings',
-        label: 'nav.settings',
-        icon: 'lucideSettings',
-        visible: this.auth.can('MANAGE_SETTINGS'),
-      },
-      {
-        path: '/transcoding',
-        label: 'nav.transcoding',
-        icon: 'lucideAudioWaveform',
-        visible: this.auth.can('MANAGE_SETTINGS'),
-      },
-      {
-        path: '/extensions',
-        label: 'nav.extensions',
-        icon: 'lucidePuzzle',
-        visible: this.auth.isAdmin(),
-      },
-      {
-        path: '/database',
-        label: 'nav.database',
-        icon: 'lucideDatabase',
-        visible: this.auth.isAdmin(),
-      },
-      {
-        path: '/backups',
-        label: 'nav.backups',
-        icon: 'lucideArchive',
-        visible: this.auth.isAdmin(),
-      },
-      {
-        path: '/network',
-        label: 'nav.network',
-        icon: 'lucideNetwork',
-        visible: this.auth.isAdmin(),
-      },
-      {
-        path: '/cloud',
-        label: 'nav.cloud',
-        icon: 'lucideCloud',
-        visible: this.auth.isAdmin() && this.extensions.has('ultimate-cloud'),
-      },
-      {
-        path: '/ai',
-        label: 'nav.ai',
-        icon: 'lucideBrainCircuit',
-        visible: this.auth.isAdmin() && this.extensions.has('ai'),
-      },
-      { path: '/listening', label: 'nav.listening', icon: 'lucideHistory', visible: true },
-      { path: '/wishes', label: 'nav.wishes', icon: 'lucideGift', visible: true },
-      { path: '/account', label: 'nav.account', icon: 'lucideUserCog', visible: true },
-    ].filter((item) => item.visible),
+    ]
+      .map((section) => ({ ...section, items: section.items.filter((item) => item.visible) }))
+      .filter((section) => section.items.length > 0),
   );
 }
 

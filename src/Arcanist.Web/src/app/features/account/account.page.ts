@@ -19,7 +19,6 @@ import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import type {
   AppPasswordFieldsFragment as AppPassword,
   MySessionsQuery as SessionsResult,
-  ServerInfoQuery as ServerInfoResult,
 } from '../../graphql/generated/graphql';
 import {
   AppPasswordsQuery,
@@ -28,7 +27,6 @@ import {
   DeleteAppPasswordMutation,
   MySessionsQuery,
   RevokeMySessionMutation,
-  ServerInfoQuery,
   SharingQuery,
 } from '../../graphql/operations';
 import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
@@ -251,32 +249,6 @@ type Pending =
           <app-my-dlna />
           <app-my-tours />
         }
-
-        @case ('about') {
-          <section hlmCard>
-            <div hlmCardHeader>
-              <h2 hlmCardTitle>{{ 'account.about' | t }}</h2>
-            </div>
-            <div hlmCardContent class="grid gap-1 text-sm">
-              @if (server(); as info) {
-                <p>Arcanist {{ info.version }} · API v{{ info.apiVersion }}</p>
-                <p class="text-muted-foreground">{{ 'overview.madeBy' | t }}</p>
-                <p class="text-muted-foreground">{{ 'overview.license' | t }}</p>
-                @if (info.sourceUrl) {
-                  <a class="underline" [href]="info.sourceUrl" target="_blank" rel="noopener">{{
-                    'overview.sourceCode' | t
-                  }}</a>
-                }
-                <p class="mt-2 flex flex-wrap gap-3">
-                  <a class="underline" href="/rest/docs" target="_blank" rel="noopener">REST API</a>
-                  <a class="underline" href="/graphql/ui" target="_blank" rel="noopener">GraphQL</a>
-                </p>
-              } @else {
-                <hlm-spinner class="size-5 justify-self-center" />
-              }
-            </div>
-          </section>
-        }
       }
     </app-section-layout>
 
@@ -443,7 +415,6 @@ export class AccountPage implements OnInit {
   /** Null until they load, so an empty list only says so when it is. */
   protected readonly sessions = signal<Session[] | null>(null);
   protected readonly appPasswords = signal<AppPassword[] | null>(null);
-  protected readonly server = signal<ServerInfoResult['serverInfo'] | null>(null);
   protected readonly busy = signal(false);
 
   protected readonly sortedSessions = computed(() =>
@@ -468,14 +439,12 @@ export class AccountPage implements OnInit {
   protected confirmation = '';
 
   async ngOnInit(): Promise<void> {
-    const [sessions, server, passwords, sharing] = await Promise.all([
+    const [sessions, passwords, sharing] = await Promise.all([
       this.gql.query(MySessionsQuery),
-      this.gql.query(ServerInfoQuery),
       this.gql.query(AppPasswordsQuery),
       this.gql.query(SharingQuery),
     ]);
     this.sessions.set(sessions.mySessions);
-    this.server.set(server.serverInfo);
     this.appPasswords.set(passwords.appPasswords);
     if (sharing.sharing.publicUrl) this.serverUrl.set(sharing.sharing.publicUrl);
   }

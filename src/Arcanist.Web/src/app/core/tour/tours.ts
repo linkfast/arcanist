@@ -20,8 +20,8 @@ export const TOURS: Record<string, Tour> = {
         target: '[data-tour="nav"]',
         title: { es: 'El menú', en: 'The menu' },
         body: {
-          es: 'Las secciones que puedes usar según tus permisos. Las extensiones activas tienen su propio grupo.',
-          en: 'The sections you can use with your permissions. Active extensions have a group of their own.',
+          es: 'Las secciones que puedes usar según tus permisos, agrupadas por tema. Al final está lo tuyo: tu historial, tus deseos y tu cuenta.',
+          en: 'The sections you can use with your permissions, grouped by topic. Yours come last: your history, your wishes and your account.',
         },
       },
       {
@@ -120,24 +120,32 @@ export const TOURS: Record<string, Tour> = {
       {
         title: { es: 'Canciones repetidas', en: 'Repeated songs' },
         body: {
-          es: 'Arcanist une solo las copias evidentes de una canción. Aquí quedan los casos dudosos y las canciones que están en varias bibliotecas.',
-          en: 'Arcanist merges the obvious copies of a song by itself. The doubtful cases, and songs in several libraries, wait here.',
+          es: 'Arcanist une solo las copias evidentes dentro de un álbum. Lo demás te lo pregunta aquí.',
+          en: 'Arcanist merges the obvious copies within an album by itself. It asks you about the rest here.',
         },
       },
       {
         target: '[data-tour="duplicates-tabs"]',
-        title: { es: 'Dos listas', en: 'Two lists' },
+        title: { es: 'Cuatro listas', en: 'Four lists' },
         body: {
-          es: 'Posibles duplicados: canciones que suenan casi igual. Entre bibliotecas: la misma canción en dos o más, para liberar espacio.',
-          en: 'Possible duplicates: songs that sound almost the same. Across libraries: the same song in two or more, to free space.',
+          es: 'En varios álbumes: la misma canción en álbumes distintos. En un mismo álbum: los casos dudosos. Varias copias: más de un archivo de una canción, como un FLAC y un MP3. Entre bibliotecas: la misma canción en dos o más.',
+          en: 'On several albums: the same song on different albums. On one album: the doubtful cases. Several copies: more than one file of a song, such as a FLAC and an MP3. Across libraries: the same song in two or more.',
         },
       },
       {
         target: '[data-tour="duplicates-list"]',
         title: { es: 'Decide cada par', en: 'Decide each pair' },
         body: {
-          es: 'Conserva una para unir sus copias en una sola canción, o di que son distintas para que no se vuelvan a proponer.',
-          en: 'Keep one to merge their copies into a single song, or say they are different so they are not suggested again.',
+          es: 'Mantén las dos copias o usa un solo archivo en ambos álbumes: cada álbum conserva su canción y la otra copia va a la papelera.',
+          en: 'Keep both copies or use a single file on both albums: each album keeps its song and the other copy goes to the trash.',
+        },
+      },
+      {
+        target: '[data-tour="duplicates-rescan"]',
+        title: { es: 'Buscar de nuevo', en: 'Search again' },
+        body: {
+          es: 'Vuelve a comparar toda la biblioteca en segundo plano. Lo que ya dijiste que mantienes no se vuelve a preguntar.',
+          en: 'Compares the whole library again in the background. What you said to keep is not asked again.',
         },
       },
     ],
@@ -181,35 +189,19 @@ export const TOURS: Record<string, Tour> = {
         },
       },
       {
-        target: '[data-tour="import-migrate"]',
-        title: { es: 'Desde otro servidor', en: 'From another server' },
-        body: {
-          es: 'Trae bibliotecas, usuarios y datos de mStream, de un servidor DLNA o de otro Arcanist. El otro servidor no se modifica.',
-          en: 'Bring libraries, users and data from mStream, a DLNA server or another Arcanist. The other server is not changed.',
-        },
-      },
-      {
-        target: '[data-tour="import-folders"]',
-        title: { es: 'Carpetas de entrada', en: 'Drop folders' },
-        body: {
-          es: 'Lo que copies en ellas se identifica por sus etiquetas y pasa a una biblioteca cuando termina de copiarse.',
-          en: 'What you copy into them is identified by its tags and moves into a library once it finishes copying.',
-        },
-      },
-      {
-        target: '[data-tour="import-uploads"]',
-        title: { es: 'Subidas', en: 'Uploads' },
-        body: {
-          es: 'Todo lo que se sube desde aquí, las apps o las extensiones. «Subir música» deja arrastrar archivos a una biblioteca.',
-          en: 'Everything uploaded from here, the apps or extensions. “Upload music” lets you drag files into a library.',
-        },
-      },
-      {
         target: '[data-tour="import-queue"]',
         title: { es: 'Lo que espera tu decisión', en: 'What waits for you' },
         body: {
           es: 'Los archivos que no se pudieron colocar solos, por ejemplo sin etiquetas: complétalas, impórtalos tal cual o descártalos.',
           en: 'Files that could not be placed by themselves, for example without tags: fill them in, import them as they are or discard them.',
+        },
+      },
+      {
+        target: '[data-tour="import-tabs"]',
+        title: { es: 'El resto, en sus pestañas', en: 'The rest, in its tabs' },
+        body: {
+          es: 'Carpetas de entrada: lo que copies en ellas pasa solo a una biblioteca. Subidas: todo lo que se sube, y «Subir música» para arrastrar archivos. Migrar: trae lo de mStream, un servidor DLNA u otro Arcanist, o lleva este a otro servidor.',
+          en: 'Drop folders: what you copy into them moves into a library by itself. Uploads: everything uploaded, and “Upload music” to drag files in. Migrate: bring in what mStream, a DLNA server or another Arcanist holds, or take this one to another server.',
         },
       },
     ],
@@ -396,16 +388,16 @@ export const TOURS: Record<string, Tour> = {
       {
         title: { es: 'Extensiones', en: 'Extensions' },
         body: {
-          es: 'Añaden funciones al servidor, como DLNA, Subsonic o mStream, y los reproductores web son las páginas desde donde se escucha.',
-          en: 'They add features to the server, such as DLNA, Subsonic or mStream, and web players are the pages people listen from.',
+          es: 'Añaden funciones al servidor, como DLNA, Subsonic o mStream. Los reproductores web tienen su propia página en el menú.',
+          en: 'They add features to the server, such as DLNA, Subsonic or mStream. Web players have a page of their own in the menu.',
         },
       },
       {
         target: '[data-tour="extensions-tabs"]',
-        title: { es: 'Tres pestañas', en: 'Three tabs' },
+        title: { es: 'Lo que tienes y lo que hay', en: 'What you have and what there is' },
         body: {
-          es: 'Instaladas, el Marketplace para instalar con un clic, y los Reproductores web.',
-          en: 'Installed, the Marketplace to install with one click, and the web Players.',
+          es: 'Instaladas son las de este servidor; en el Marketplace se instalan más con un clic.',
+          en: 'Installed are this server’s; in the Marketplace more install with one click.',
         },
       },
       {
@@ -422,6 +414,47 @@ export const TOURS: Record<string, Tour> = {
         body: {
           es: 'Suelta el .zip de una extensión o pega su URL. Tiene acceso total al servidor: instala solo las que confíes.',
           en: 'Drop an extension’s .zip or paste its URL. It gets full access to the server: install only ones you trust.',
+        },
+      },
+    ],
+  },
+  players: {
+    id: 'players',
+    steps: [
+      {
+        title: { es: 'Reproductores web', en: 'Web players' },
+        body: {
+          es: 'Las páginas desde donde se escucha la música. Puede haber varios a la vez.',
+          en: 'The pages people listen to music from. There can be several at once.',
+        },
+      },
+      {
+        target: '[data-tour="players-list"]',
+        title: { es: 'El predeterminado', en: 'The default one' },
+        body: {
+          es: 'Es el que abre la dirección del servidor. Los demás siguen disponibles en su propia dirección.',
+          en: 'It is the one the server’s address opens. The others stay available at their own address.',
+        },
+      },
+      {
+        target: '[data-tour="extensions-tabs"]',
+        title: { es: 'Más reproductores', en: 'More players' },
+        body: {
+          es: 'En el Marketplace se instalan con un clic; también se puede soltar el .zip de uno. Tienen acceso total al servidor: instala solo los que confíes.',
+          en: 'In the Marketplace they install with one click; you can also drop one’s .zip. They get full access to the server: install only ones you trust.',
+        },
+      },
+    ],
+  },
+  about: {
+    id: 'about',
+    steps: [
+      {
+        target: '[data-tour="about-server"]',
+        title: { es: 'Acerca de este servidor', en: 'About this server' },
+        body: {
+          es: 'Su versión, su licencia y dónde están el código fuente y la documentación de las APIs.',
+          en: 'Its version, its license and where the source code and the APIs’ documentation are.',
         },
       },
     ],
@@ -466,10 +499,10 @@ export const TOURS: Record<string, Tour> = {
     id: 'database',
     steps: [
       {
-        title: { es: 'Base de datos', en: 'Database' },
+        title: { es: 'Almacenamiento', en: 'Storage' },
         body: {
-          es: 'Dónde guarda Arcanist su catálogo, usuarios y ajustes, y cuánto ocupa cada parte.',
-          en: 'Where Arcanist keeps its catalog, users and settings, and how much space each part takes.',
+          es: 'Cuánto ocupa cada parte de Arcanist y dónde guarda su catálogo, usuarios y ajustes.',
+          en: 'How much space each part of Arcanist takes and where it keeps its catalog, users and settings.',
         },
       },
       {

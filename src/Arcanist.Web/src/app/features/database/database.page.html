@@ -41,6 +41,9 @@
   }
 
   @if (status(); as current) {
+    <!-- How the space is spread, what the catalog holds; the version, size and tables of the database. -->
+    <app-storage-usage [detail]="true" />
+
     <section hlmCard data-tour="database-current">
       <div hlmCardHeader>
         <h2 hlmCardTitle>{{ 'database.current.title' | t }}</h2>
@@ -77,9 +80,6 @@
         }
       </dl>
     </section>
-
-    <!-- Version, size and tables of the database; what the catalog holds; how the space is spread. -->
-    <app-storage-usage [detail]="true" />
 
     @if (current.previousSqlite; as previous) {
       <section hlmCard>

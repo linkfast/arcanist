@@ -96,6 +96,20 @@ import { SetSharingSettingsMutation, SharingQuery } from '../../graphql/operatio
               </label>
             </div>
           }
+          <label class="flex items-start gap-3">
+            <hlm-switch
+              class="mt-0.5"
+              [checked]="s.jamDeletePlaylist"
+              [disabled]="busy()"
+              (checkedChange)="save({ jamDeletePlaylist: $event })"
+            />
+            <span class="grid gap-0.5">
+              <span class="font-medium">{{ 'sharing.card.jamDeletePlaylist' | t }}</span>
+              <span class="text-muted-foreground">{{
+                'sharing.card.jamDeletePlaylistHelp' | t
+              }}</span>
+            </span>
+          </label>
           <p class="text-xs text-muted-foreground">{{ 'sharing.card.permission' | t }}</p>
           <form class="grid gap-1 border-t pt-4" (ngSubmit)="savePublicUrl()">
             <label class="font-medium" for="sharing-public-url">{{
@@ -185,6 +199,7 @@ export class SharingCard implements OnInit {
         jamGuests: current.jamGuests,
         guestAddLimit: current.guestAddLimit,
         maxGuests: current.maxGuests,
+        jamDeletePlaylist: current.jamDeletePlaylist,
         ...change,
       };
       this.show((await this.gql.mutate(SetSharingSettingsMutation, { input })).setSharingSettings);

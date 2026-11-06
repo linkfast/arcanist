@@ -23,8 +23,10 @@ public sealed class SharingService(AccessGuard guard, SharingSettings settings, 
         var publicUrl = input.PublicUrl is null ? current.PublicUrl : SharingSettings.NormalizeUrl(input.PublicUrl);
         if (publicUrl != current.PublicUrl && settings.EnvironmentPublicUrl is not null)
             throw new ArcanistException.Conflict(ErrorCodes.SetByEnvironment);
+        // Null keeps what a Jam does with its playlist (clients from before the setting).
         var config = await settings.SetAsync(
-            new SharingConfig(input.PublicLinks, input.JamGuests, input.GuestAddLimit, input.MaxGuests, publicUrl), cancellationToken);
+            new SharingConfig(input.PublicLinks, input.JamGuests, input.GuestAddLimit, input.MaxGuests, publicUrl,
+                input.JamDeletePlaylist ?? current.JamDeletePlaylist), cancellationToken);
         return ToModel(config, true);
     }
 
@@ -33,6 +35,7 @@ public sealed class SharingService(AccessGuard guard, SharingSettings settings, 
         var environment = settings.EnvironmentPublicUrl;
         var node = services.GetService<Arcanist.Core.P2P.P2PNode>()?.State;
         return new(config.PublicLinks, config.JamGuests, config.GuestAddLimit, config.MaxGuests, canShare && (config.PublicLinks || config.JamGuests),
-            environment ?? config.PublicUrl, environment is not null, node is { Running: true } ? node.NodeId : null);
+            environment ?? config.PublicUrl, environment is not null, node is { Running: true } ? node.NodeId : null,
+            config.JamDeletePlaylist);
     }
 }

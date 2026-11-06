@@ -75,8 +75,10 @@ type Query {
   dlnaRenderers: [DlnaRenderer!]!
   "What a renderer is doing: its state, position, volume and Arcanist's queue on it."
   dlnaRenderer(id: String!): DlnaRendererState!
-  "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. Open ones by default, or DISMISSED. Requires MANAGE_LIBRARIES."
-  duplicateCandidates(status: DuplicateStatus, first: Int): [DuplicatePair!]!
+  "Pairs of tracks that may be the same song and were not merged automatically (also the same song on two albums), most similar first. Open ones by default, or DISMISSED or SHARED. Requires MANAGE_LIBRARIES."
+  duplicateCandidates(status: DuplicateStatus, first: Int, skip: Int): [DuplicatePair!]!
+  "Songs with several files of their own in one library (a FLAC and an MP3), by track id with a cursor. Conversions Arcanist keeps are not copies. Requires MANAGE_LIBRARIES."
+  trackCopies(input: LibraryDuplicatesInput): TrackCopiesPage!
   "Songs with copies in more than one library (personal libraries aside), by track id with a cursor; with `libraryId`, those that library has among others. Each library says whether the caller can delete its copies (deleteTrack with libraryId) and the users who would stop having the song if it did. Requires MANAGE_LIBRARIES."
   libraryDuplicates(input: LibraryDuplicatesInput): LibraryDuplicatePage!
   "Built-in and installed extensions, with what happened to them at startup. Administrators only."
@@ -837,6 +839,7 @@ type TrackFile {
   addedAt: DateTime!
   modifiedAt: DateTime!
   cueTrack: Int!
+  shared: Boolean!
 }
 
 type Loudness {
@@ -1269,12 +1272,39 @@ type DuplicatePair {
   similarity: Float!
   status: DuplicateStatus!
   detectedAt: DateTime!
+  shareableFileIds: [ID!]!
+  shareBlocked: DuplicateShareBlock
 }
 
 enum DuplicateStatus {
   OPEN
   MERGED
   DISMISSED
+  SHARED
+}
+
+enum DuplicateShareBlock {
+  SAME_ALBUM
+  NO_PERMISSION
+  DIFFERENT_LIBRARIES
+  READ_ONLY
+}
+
+type TrackCopiesPage {
+  items: [TrackCopies!]!
+  nextCursor: String
+  totalCount: Int!
+}
+
+type TrackCopies {
+  track: Track!
+  deletableFileIds: [ID!]!
+}
+
+input LibraryDuplicatesInput {
+  libraryId: ID
+  after: String
+  first: Int
 }
 
 type LibraryDuplicatePage {
@@ -1299,12 +1329,6 @@ type DuplicateLibrary {
 type DuplicateUser {
   id: ID!
   name: String!
-}
-
-input LibraryDuplicatesInput {
-  libraryId: ID
-  after: String
-  first: Int
 }
 
 type Extension {
@@ -2372,6 +2396,7 @@ enum ImportReason {
   SAME_TRACK
   NOT_BETTER
   REPLACED_WORSE
+  SAME_AUDIO_OTHER_ALBUM
   UNREADABLE
   TRANSCODING_UNAVAILABLE
   TRANSCODING_FAILED
@@ -2856,6 +2881,7 @@ type SharingStatus {
   publicUrl: String
   publicUrlSetByEnvironment: Boolean!
   p2pNodeId: String
+  jamDeletePlaylist: Boolean!
 }
 
 type SharedPlaylist {
@@ -3580,6 +3606,12 @@ type Mutation {
   mergeDuplicate(id: ID!, keepTrackId: ID!): Track!
   "Keeps the two tracks of an open pair apart; it is not proposed again. Requires MANAGE_LIBRARIES."
   dismissDuplicate(id: ID!): Boolean!
+  "Both tracks of an open pair stay on their albums and play fileId, one of the pair's shareableFileIds; the other's copy in that folder goes to the trash. Requires MANAGE_LIBRARIES and DELETE_TRACKS."
+  shareDuplicateFile(id: ID!, fileId: ID!): Boolean!
+  "Moves one copy of a song to the trash; the song stays with the others (last_copy when it has none). Requires DELETE_TRACKS."
+  deleteTrackFile(fileId: ID!): Boolean!
+  "Looks through the whole catalog again, in the background, for pairs not proposed yet. Requires MANAGE_LIBRARIES."
+  rescanDuplicates: Boolean!
   "Downloads an extension's .zip and installs it (or updates it); it runs once enabled and the server restarts. Extensions run inside the server with full trust. Administrators only, with a recent authentication. To upload a .zip, use POST /rest/v1/extensions."
   installExtensionFromUrl(url: String!): Extension!
   "Installs (or updates) an extension of the catalog, checked against the SHA-256 the catalog publishes, and switches it on unless `enable` is false; it runs after a restart. Administrators only, with a recent authentication."
@@ -4615,6 +4647,7 @@ input SharingSettingsInput {
   guestAddLimit: Int!
   maxGuests: Int!
   publicUrl: String
+  jamDeletePlaylist: Boolean
 }
 
 input TrackEditInput {

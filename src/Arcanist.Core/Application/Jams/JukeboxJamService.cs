@@ -101,6 +101,8 @@ public sealed class JukeboxJamService(
         if (input.AllowGuests == true)
             await RequireGuestsAsync(access, cancellationToken);
         var libraries = await LibrariesAsync(access, input.GuestLibraryIds, cancellationToken);
+        // Without a choice, the server's: by default the playlist goes when the Jam ends.
+        var save = input.SaveAsPlaylist ?? !(await sharing.GetAsync(cancellationToken)).JamDeletePlaylist;
 
         var now = Now();
         var playlist = await playlists.NewAsync(access, new CreatePlaylistInput(input.Name, null, false, []), PlaylistKind.Jam, cancellationToken);
@@ -114,7 +116,7 @@ public sealed class JukeboxJamService(
             Voting = input.Voting ?? false,
             AllowGuests = input.AllowGuests ?? false,
             AllowReplace = input.AllowReplace ?? true,
-            SaveAsPlaylist = input.SaveAsPlaylist ?? true,
+            SaveAsPlaylist = save,
             Suggestions = input.Suggestions ?? true,
             GuestLibraryIds = libraries is null ? null : JsonSerializer.Serialize(libraries, Json),
             StartedAt = now,

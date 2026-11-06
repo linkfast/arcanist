@@ -33,8 +33,11 @@ later), the Jam's next song goes right after the one playing, one at a time, and
 Jam has nothing waiting; meanwhile `nowPlaying.external` shows the host's song. An idle renderer starts with the Jam's.
 
 The Jam has a playlist of its own (`playlistId`, of type `JUKEBOX_JAM`): what played stays there as a normal playlist of
-the host's when the Jam ends, unless `saveAsPlaylist` is false (`JUKEBOX_JAM_SAVE_AS_PLAYLIST`; true by default, and
-`updateJukeboxJam` changes it): then the playlist and the Jam are deleted when it ends. `guestLibraryIds` limits the songs that can be added to some of the host's libraries
+the host's when the Jam ends, unless `saveAsPlaylist` is false (`JUKEBOX_JAM_SAVE_AS_PLAYLIST`; `updateJukeboxJam`
+changes it): then the playlist and the Jam are deleted when it ends. Left out, the server decides: `sharing.jamDeletePlaylist`
+(an administrator's setting, **true unless changed**) deletes it. Show the choice as "delete the playlist when the Jam
+ends", ticked as `sharing { jamDeletePlaylist }` says, and send `saveAsPlaylist` only when the user changes it (older
+servers lack the field and kept the playlist). `guestLibraryIds` limits the songs that can be added to some of the host's libraries
 (all of them when null). `allowGuests` (off by default) needs the server's setting (`sharing.jamGuests`, off at first) and the
 `SHARE_LINKS` permission. `voting` is off by default. `allowReplace` (**on by default**) lets anyone taking part change
 what plays (below): the host's switch "let others change what plays". `suggestions` (on by default) is below too.

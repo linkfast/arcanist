@@ -48,10 +48,14 @@ public sealed record SharedPlaylistPage(IReadOnlyList<SharedPlaylistEntry> Items
 /// <param name="P2pNodeId">The server's node id while its P2P network runs, null otherwise: with <see cref="PublicUrl"/>, the
 /// addresses the server announces, so a player can move to them without signing in again (a device still needs to be paired
 /// to come in through P2P).</param>
+/// <param name="JamDeletePlaylist">A new Jukebox Jam deletes its playlist when it ends unless whoever starts it keeps it
+/// (<c>saveAsPlaylist</c>): clients start their "delete the playlist when the Jam ends" choice from this.</param>
 public sealed record SharingStatus(
     bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, bool CanShareLinks, string? PublicUrl, bool PublicUrlSetByEnvironment,
-    string? P2pNodeId = null);
+    string? P2pNodeId = null, bool JamDeletePlaylist = true);
 
 /// <param name="PublicUrl">The server's public URL (http or https; a bare host is taken as https). Null keeps the one
 /// there is; empty takes it off.</param>
-public sealed record SharingSettingsInput(bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null);
+/// <param name="JamDeletePlaylist">Whether a new Jukebox Jam deletes its playlist when it ends by default. Null keeps it.</param>
+public sealed record SharingSettingsInput(
+    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null, bool? JamDeletePlaylist = null);

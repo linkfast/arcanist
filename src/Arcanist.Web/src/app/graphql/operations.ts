@@ -534,6 +534,8 @@ export const DuplicateTrackFields = graphql(`
       libraryId
       path
       size
+      cueTrack
+      shared
     }
   }
 `);
@@ -569,12 +571,14 @@ export const DeleteTrackCopiesMutation = graphql(`
 `);
 
 export const DuplicateCandidatesQuery = graphql(`
-  query DuplicateCandidates($status: DuplicateStatus) {
-    duplicateCandidates(status: $status, first: 200) {
+  query DuplicateCandidates($status: DuplicateStatus, $skip: Int) {
+    duplicateCandidates(status: $status, first: 100, skip: $skip) {
       id
       similarity
       status
       detectedAt
+      shareableFileIds
+      shareBlocked
       trackA {
         ...DuplicateTrackFields
       }
@@ -596,6 +600,39 @@ export const MergeDuplicateMutation = graphql(`
 export const DismissDuplicateMutation = graphql(`
   mutation DismissDuplicate($id: ID!) {
     dismissDuplicate(id: $id)
+  }
+`);
+
+export const ShareDuplicateFileMutation = graphql(`
+  mutation ShareDuplicateFile($id: ID!, $fileId: ID!) {
+    shareDuplicateFile(id: $id, fileId: $fileId)
+  }
+`);
+
+export const TrackCopiesQuery = graphql(`
+  query TrackCopies($input: LibraryDuplicatesInput) {
+    trackCopies(input: $input) {
+      totalCount
+      nextCursor
+      items {
+        deletableFileIds
+        track {
+          ...DuplicateTrackFields
+        }
+      }
+    }
+  }
+`);
+
+export const DeleteTrackFileMutation = graphql(`
+  mutation DeleteTrackFile($fileId: ID!) {
+    deleteTrackFile(fileId: $fileId)
+  }
+`);
+
+export const RescanDuplicatesMutation = graphql(`
+  mutation RescanDuplicates {
+    rescanDuplicates
   }
 `);
 
@@ -1451,6 +1488,7 @@ export const SharingFieldsFragment = graphql(`
     canShareLinks
     publicUrl
     publicUrlSetByEnvironment
+    jamDeletePlaylist
   }
 `);
 

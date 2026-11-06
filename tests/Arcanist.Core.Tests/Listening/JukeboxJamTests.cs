@@ -43,7 +43,10 @@ public sealed class JukeboxJamTests : IAsyncLifetime
             new SetupLibrary("Private", [Path.Combine(_root, "Private")], VisibleToAll: false));
         _admin = await _factory.CreateAuthenticatedClientAsync();
         await _factory.WaitForScansAsync(_admin);
-        await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing", new { publicLinks = false, jamGuests = true, guestAddLimit = 2, maxGuests = 100 }, ArcanistFactory.Json, Cancel));
+        // A new server deletes a Jam's playlist when it ends (see the test about it); these keep it to look at it after.
+        Assert.True((await OkAsync(_admin.GetAsync("/rest/v1/sharing", Cancel))).GetProperty("jamDeletePlaylist").GetBoolean());
+        await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing", new { publicLinks = false, jamGuests = true, guestAddLimit = 2, maxGuests = 100, jamDeletePlaylist = false },
+            ArcanistFactory.Json, Cancel));
 
         var page = await _admin.GetFromJsonAsync<JsonElement>("/rest/v1/tracks", ArcanistFactory.Json, Cancel);
         foreach (var track in page.GetProperty("items").EnumerateArray())
@@ -610,8 +613,11 @@ public sealed class JukeboxJamServerAudioTests : IAsyncLifetime
     [Fact]
     public async Task A_jam_that_is_not_kept_leaves_no_playlist_when_it_ends()
     {
-        var kept = (await StartAsync(new { name = "Kept", playsOn = "CLIENT", voting = false, allowGuests = false })).GetProperty("code").GetString()!;
-        var gone = await StartAsync(new { name = "Gone", playsOn = "CLIENT", voting = false, allowGuests = false, saveAsPlaylist = false });
+        // The server's choice for those who do not say: delete it. Whoever starts one can still keep it.
+        await OkAsync(_admin.PutAsJsonAsync("/rest/v1/sharing", new { publicLinks = false, jamGuests = true, guestAddLimit = 2, maxGuests = 100, jamDeletePlaylist = true },
+            ArcanistFactory.Json, Cancel));
+        var kept = (await StartAsync(new { name = "Kept", playsOn = "CLIENT", voting = false, allowGuests = false, saveAsPlaylist = true })).GetProperty("code").GetString()!;
+        var gone = await StartAsync(new { name = "Gone", playsOn = "CLIENT", voting = false, allowGuests = false });
         Assert.False(gone.GetProperty("saveAsPlaylist").GetBoolean());
         var goneCode = gone.GetProperty("code").GetString()!;
         foreach (var code in new[] { kept, goneCode })

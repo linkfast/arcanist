@@ -113,6 +113,15 @@ export const en: Dictionary = {
   },
   nav: {
     menu: 'Menu',
+    sections: {
+      music: 'Music',
+      people: 'People',
+      server: 'Server',
+      connections: 'Connections and extensions',
+      mine: 'Mine',
+    },
+    players: 'Web players',
+    about: 'About',
     videos: 'Music videos',
     lyricsReview: 'Review lyrics',
     transcoding: 'Transcoding',
@@ -120,7 +129,7 @@ export const en: Dictionary = {
     ai: 'AI',
     backups: 'Backups',
     cloud: 'Ultimate Cloud',
-    database: 'Database',
+    database: 'Storage',
     network: 'P2P network',
     mstream: 'mStream',
     dlna: 'DLNA',
@@ -339,6 +348,10 @@ export const en: Dictionary = {
           "Use it as one more library of this server, and Cloud Drop to bring songs from anywhere · Sync it with your libraries both ways · S3 libraries and the seamless P2P connection with the Cloud plan · Ultimate's global rankings, fed by anonymous statistics",
         plans:
           'A free account is enough to use it as a library; the Cloud plan unlocks the rest. Link it later, from the panel.',
+      },
+      discovery: {
+        name: 'Easily discover this server on your local network by turning on the DLNA announcement',
+        help: 'Ultimate Desktop and the mobile apps find it on their own on your network, without typing its address. It does not publish your music: over DLNA only the libraries you choose later on the panel’s DLNA page will show.',
       },
       enhancers: 'AI and Ultimate enhancers for this server',
     },
@@ -746,7 +759,53 @@ export const en: Dictionary = {
   },
   duplicates: {
     title: 'Duplicates',
-    tabs: { possible: 'Possible duplicates', libraries: 'Across libraries' },
+    tabs: {
+      albums: 'On several albums',
+      possible: 'On one album',
+      copies: 'Several copies',
+      libraries: 'Across libraries',
+    },
+    copies: {
+      subtitle:
+        'Songs with more than one file of their own in a library, such as a FLAC and an MP3. The versions Arcanist converts to play them are not files of the song and do not show here.',
+      count: 'Songs with several copies: {count}',
+      delete: 'Delete this copy',
+      confirmTitle: 'Delete this copy?',
+      confirmBody:
+        'The {quality} file goes to the library’s trash for 30 days. The song stays, with its ratings and playlists, and plays from the other copies.',
+      deleted: 'Copy deleted.',
+      none: 'No song has several copies',
+      noneHelp: 'When a song has more than one file in a library, it shows up here.',
+    },
+    albums: {
+      subtitle:
+        'The same song on different albums. Keep both copies, or store a single file: each album keeps its song and both play that file.',
+      keepBoth: 'Keep both',
+      useThis: 'Use this file on both albums',
+      best: 'Best quality',
+      sharedBadge: 'Shared file',
+      confirmTitle: 'Use a single file on both albums?',
+      confirmBody:
+        '“{other}” will play the {quality} file of “{album}”. Both albums keep the song, with its ratings, plays and playlists.',
+      confirmHelp:
+        'The copy of “{other}” goes to the library’s trash for 30 days. Each album keeps its own data: editing its track does not change the file, and if you delete one, the file stays for the other.',
+      confirm: 'Use this file',
+      shared: 'Both albums now use the same file.',
+      blocked: {
+        DIFFERENT_LIBRARIES:
+          'They are in different libraries: a single file would leave those who only reach the other one without the song. You can delete one copy under “Across libraries”.',
+        READ_ONLY:
+          'A single file is not possible: a copy is read only (another server or Ultimate Cloud) or part of a cue sheet.',
+        NO_PERMISSION: 'Using a single file needs the permission to delete songs.',
+        SAME_ALBUM: 'They are on the same album.',
+      },
+      none: 'No song repeated on another album',
+      noneHelp:
+        'Arcanist compares the audio, and also the name, artist and length. The first search over a large library takes a while and happens in the background.',
+    },
+    rescan: 'Search again',
+    rescanStarted: 'Searching the whole library in the background. Come back in a while.',
+    byName: 'Same name, artist and length',
     libraries: {
       subtitle:
         'Songs that more than one library has. Deleting one library’s copy frees space; the song stays in the others. Personal libraries do not count.',
@@ -768,7 +827,7 @@ export const en: Dictionary = {
       noneHelp: 'When the same song is in two libraries or more, it shows up here.',
     },
     subtitle:
-      'Songs that sound the same but are not clearly the same song. Keep one to join their copies into a single song, or keep both.',
+      'Songs of one album that sound the same but are not clearly the same song. Keep one to join their copies into a single song, or keep both.',
     similarity: '{percent}% alike',
     keepThis: 'Keep this one',
     keepBoth: 'They are different',
@@ -776,7 +835,7 @@ export const en: Dictionary = {
     merged: 'Songs joined.',
     none: 'No possible duplicates',
     noneHelp:
-      'Arcanist compares the acoustic fingerprint of every song when it analyzes it. Obvious copies are joined automatically; only doubtful cases show up here.',
+      'Obvious copies within an album are joined automatically; only doubtful cases show up here.',
   },
   settings: {
     sections: {
@@ -1219,8 +1278,6 @@ export const en: Dictionary = {
       cloudHint: 'Your Ultimate Cloud account',
       preferences: 'Preferences',
       preferencesHint: 'Language, theme, music videos and tours',
-      about: 'About',
-      aboutHint: 'Version, license and APIs',
     },
     password: 'Password',
     passwordsDiffer: 'The passwords do not match.',
@@ -1309,7 +1366,6 @@ export const en: Dictionary = {
     thisDevice: 'This device',
     lastSeen: 'last active',
     signOut: 'Sign out',
-    about: 'About',
   },
   folderPicker: {
     title: 'Choose a server folder',
@@ -1325,6 +1381,12 @@ export const en: Dictionary = {
     create: 'Create',
   },
   import: {
+    tabs: {
+      review: 'To review',
+      folders: 'Drop folders',
+      uploads: 'Uploads',
+      migrate: 'Migrate',
+    },
     uploads: {
       defaultLibrary: 'Uploads with no library go to',
       noDefault: 'None (each upload chooses)',
@@ -1500,6 +1562,7 @@ export const en: Dictionary = {
     reasons: {
       MISSING_TAGS: 'Missing title, artist or album',
       SAME_AUDIO: 'Already in the library',
+      SAME_AUDIO_OTHER_ALBUM: 'Added to its album using the file already there, with no other copy',
       SAME_TRACK: 'The song is already in the library',
       NOT_BETTER: 'The library has it in equal or better quality',
       REPLACED_WORSE: 'Replaced copies of lower quality',
@@ -1976,6 +2039,9 @@ export const en: Dictionary = {
         'With a Jam’s link or QR code, anyone gives a name, searches its libraries and adds songs (and votes). They hear nothing: the music plays on the host’s player. Turning it off stops every guest at once.',
       guestAddLimit: 'Songs per guest every 10 minutes',
       maxGuests: 'Guests per Jam',
+      jamDeletePlaylist: 'Delete the playlist when a Jukebox Jam ends',
+      jamDeletePlaylistHelp:
+        'Each Jam makes a playlist of what plays. On, it is deleted when the Jam ends; off, it stays as one more of the host’s playlists. This is what comes ticked when a Jam starts: whoever starts it can change it for that Jam.',
       permission:
         'Each user also needs the “Share outside the server” permission (Users). Administrators always have it.',
       publicUrl: 'Server’s public URL',
@@ -2104,12 +2170,14 @@ export const en: Dictionary = {
         'Ultimate Cloud by LinkFast: its libraries and Cloud Drop, syncing, S3 libraries, the seamless connection and its online services.',
     },
     title: 'Extensions',
-    subtitle: 'Web players and server extensions.',
+    subtitle: 'They add features to the server, such as DLNA, Subsonic or mStream.',
     builtIn: 'Built in',
     uninstall: 'Uninstall',
     players: {
       browse: 'Browse more players in the Marketplace',
       title: 'Web players',
+      subtitle: 'The pages people listen to music from.',
+      installedTitle: 'Installed on this server',
       description:
         'The default one is served at the root of the server; all of them are also at /players/<id>/.',
       default: 'Default',
@@ -2142,8 +2210,6 @@ export const en: Dictionary = {
     marketplace: {
       closedSource: 'Not open source',
       closedSourceHelp: 'The 100% open source mode is on: turn it off in Settings to install it.',
-      kind: 'What to browse',
-      kinds: { extensions: 'Extensions', players: 'Web players' },
       extensions: {
         title: 'Extension marketplace',
         description:
@@ -2216,8 +2282,8 @@ export const en: Dictionary = {
     },
     tabs: {
       installed: 'Installed',
+      installedPlayers: 'Installed',
       marketplace: 'Marketplace',
-      players: 'Players',
     },
     restartDialog: {
       title: 'Restarting the server',
@@ -2554,9 +2620,9 @@ export const en: Dictionary = {
     },
   },
   database: {
-    title: 'Database',
+    title: 'Storage and database',
     subtitle:
-      'Where Arcanist keeps its catalog, users and settings, and moving from SQLite to PostgreSQL.',
+      'How much space Arcanist takes, where it keeps its catalog, users and settings, and moving from SQLite to PostgreSQL.',
     current: {
       title: 'Current database',
       provider: 'Type',
@@ -3566,6 +3632,8 @@ export const en: Dictionary = {
       'Some users of that mStream server have not signed in yet, and their first sign-in needs it.',
     import_failed: 'The import stopped because of an unexpected error. Check the server log.',
     tags_unsupported: 'The tags of that file’s format cannot be written.',
+    last_copy: 'It is the only copy of this song.',
+    duplicate_not_shareable: 'These two songs cannot use a single file.',
     cue_sheet_track:
       'That song is part of an album in one file with a cue sheet: its tags come from the sheet, and the file has other songs.',
     lyrics_sync_unavailable:
@@ -3775,6 +3843,7 @@ export const en: Dictionary = {
     addLine: 'Add a line',
   },
   videos: {
+    settingsLink: 'Music video settings',
     title: 'Music videos',
     subtitle:
       "The libraries' music videos: next to their song, named after it, or uploaded. With their song linked, they play its audio from the library where it matches.",

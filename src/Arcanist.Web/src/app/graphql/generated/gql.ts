@@ -61,12 +61,16 @@ type Documents = {
     "\n  mutation SetFfmpegPath($path: String) {\n    setFfmpegPath(path: $path) {\n      ...FfmpegStatusFields\n    }\n  }\n": typeof types.SetFfmpegPathDocument,
     "\n  mutation RemoveDownloadedFfmpeg {\n    removeDownloadedFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": typeof types.RemoveDownloadedFfmpegDocument,
     "\n  mutation InstallFfmpeg {\n    installFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": typeof types.InstallFfmpegDocument,
-    "\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n    }\n  }\n": typeof types.DuplicateTrackFieldsFragmentDoc,
+    "\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n      cueTrack\n      shared\n    }\n  }\n": typeof types.DuplicateTrackFieldsFragmentDoc,
     "\n  query LibraryDuplicates($input: LibraryDuplicatesInput) {\n    libraryDuplicates(input: $input) {\n      totalCount\n      nextCursor\n      items {\n        track {\n          ...DuplicateTrackFields\n        }\n        libraries {\n          id\n          name\n          visibleToAll\n          canDelete\n          losingUsers {\n            id\n            name\n          }\n        }\n      }\n    }\n  }\n": typeof types.LibraryDuplicatesDocument,
     "\n  mutation DeleteTrackCopies($id: ID!, $libraryId: ID) {\n    deleteTrack(id: $id, libraryId: $libraryId)\n  }\n": typeof types.DeleteTrackCopiesDocument,
-    "\n  query DuplicateCandidates($status: DuplicateStatus) {\n    duplicateCandidates(status: $status, first: 200) {\n      id\n      similarity\n      status\n      detectedAt\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n": typeof types.DuplicateCandidatesDocument,
+    "\n  query DuplicateCandidates($status: DuplicateStatus, $skip: Int) {\n    duplicateCandidates(status: $status, first: 100, skip: $skip) {\n      id\n      similarity\n      status\n      detectedAt\n      shareableFileIds\n      shareBlocked\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n": typeof types.DuplicateCandidatesDocument,
     "\n  mutation MergeDuplicate($id: ID!, $keepTrackId: ID!) {\n    mergeDuplicate(id: $id, keepTrackId: $keepTrackId) {\n      id\n    }\n  }\n": typeof types.MergeDuplicateDocument,
     "\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n": typeof types.DismissDuplicateDocument,
+    "\n  mutation ShareDuplicateFile($id: ID!, $fileId: ID!) {\n    shareDuplicateFile(id: $id, fileId: $fileId)\n  }\n": typeof types.ShareDuplicateFileDocument,
+    "\n  query TrackCopies($input: LibraryDuplicatesInput) {\n    trackCopies(input: $input) {\n      totalCount\n      nextCursor\n      items {\n        deletableFileIds\n        track {\n          ...DuplicateTrackFields\n        }\n      }\n    }\n  }\n": typeof types.TrackCopiesDocument,
+    "\n  mutation DeleteTrackFile($fileId: ID!) {\n    deleteTrackFile(fileId: $fileId)\n  }\n": typeof types.DeleteTrackFileDocument,
+    "\n  mutation RescanDuplicates {\n    rescanDuplicates\n  }\n": typeof types.RescanDuplicatesDocument,
     "\n  fragment OnlineServicesFields on OnlineServicesStatus {\n    settings {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    hasAcoustIdKey\n    hasOwnAcoustIdKey\n    services {\n      service\n      enabled\n      ready\n      pending\n      found\n      notFound\n      failed\n      lastRequestAt\n      lastError\n    }\n  }\n": typeof types.OnlineServicesFieldsFragmentDoc,
     "\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.OnlineServicesDocument,
     "\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": typeof types.SetOnlineServicesDocument,
@@ -135,7 +139,7 @@ type Documents = {
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.CheckServerUpdateDocument,
     "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.SetServerUpdateSettingsDocument,
-    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n": typeof types.SharingFieldsFragmentDoc,
+    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n": typeof types.SharingFieldsFragmentDoc,
     "\n  query Sharing {\n    sharing {\n      ...SharingFields\n    }\n  }\n": typeof types.SharingDocument,
     "\n  mutation SetSharingSettings($input: SharingSettingsInput!) {\n    setSharingSettings(input: $input) {\n      ...SharingFields\n    }\n  }\n": typeof types.SetSharingSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n        pricing\n        pricingUrl\n      }\n    }\n  }\n": typeof types.ExtensionMarketplaceDocument,
@@ -370,12 +374,16 @@ const documents: Documents = {
     "\n  mutation SetFfmpegPath($path: String) {\n    setFfmpegPath(path: $path) {\n      ...FfmpegStatusFields\n    }\n  }\n": types.SetFfmpegPathDocument,
     "\n  mutation RemoveDownloadedFfmpeg {\n    removeDownloadedFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": types.RemoveDownloadedFfmpegDocument,
     "\n  mutation InstallFfmpeg {\n    installFfmpeg {\n      ...FfmpegStatusFields\n    }\n  }\n": types.InstallFfmpegDocument,
-    "\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n    }\n  }\n": types.DuplicateTrackFieldsFragmentDoc,
+    "\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n      cueTrack\n      shared\n    }\n  }\n": types.DuplicateTrackFieldsFragmentDoc,
     "\n  query LibraryDuplicates($input: LibraryDuplicatesInput) {\n    libraryDuplicates(input: $input) {\n      totalCount\n      nextCursor\n      items {\n        track {\n          ...DuplicateTrackFields\n        }\n        libraries {\n          id\n          name\n          visibleToAll\n          canDelete\n          losingUsers {\n            id\n            name\n          }\n        }\n      }\n    }\n  }\n": types.LibraryDuplicatesDocument,
     "\n  mutation DeleteTrackCopies($id: ID!, $libraryId: ID) {\n    deleteTrack(id: $id, libraryId: $libraryId)\n  }\n": types.DeleteTrackCopiesDocument,
-    "\n  query DuplicateCandidates($status: DuplicateStatus) {\n    duplicateCandidates(status: $status, first: 200) {\n      id\n      similarity\n      status\n      detectedAt\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n": types.DuplicateCandidatesDocument,
+    "\n  query DuplicateCandidates($status: DuplicateStatus, $skip: Int) {\n    duplicateCandidates(status: $status, first: 100, skip: $skip) {\n      id\n      similarity\n      status\n      detectedAt\n      shareableFileIds\n      shareBlocked\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n": types.DuplicateCandidatesDocument,
     "\n  mutation MergeDuplicate($id: ID!, $keepTrackId: ID!) {\n    mergeDuplicate(id: $id, keepTrackId: $keepTrackId) {\n      id\n    }\n  }\n": types.MergeDuplicateDocument,
     "\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n": types.DismissDuplicateDocument,
+    "\n  mutation ShareDuplicateFile($id: ID!, $fileId: ID!) {\n    shareDuplicateFile(id: $id, fileId: $fileId)\n  }\n": types.ShareDuplicateFileDocument,
+    "\n  query TrackCopies($input: LibraryDuplicatesInput) {\n    trackCopies(input: $input) {\n      totalCount\n      nextCursor\n      items {\n        deletableFileIds\n        track {\n          ...DuplicateTrackFields\n        }\n      }\n    }\n  }\n": types.TrackCopiesDocument,
+    "\n  mutation DeleteTrackFile($fileId: ID!) {\n    deleteTrackFile(fileId: $fileId)\n  }\n": types.DeleteTrackFileDocument,
+    "\n  mutation RescanDuplicates {\n    rescanDuplicates\n  }\n": types.RescanDuplicatesDocument,
     "\n  fragment OnlineServicesFields on OnlineServicesStatus {\n    settings {\n      musicBrainz\n      acoustId\n      coverArtArchive\n      lyrics\n    }\n    hasAcoustIdKey\n    hasOwnAcoustIdKey\n    services {\n      service\n      enabled\n      ready\n      pending\n      found\n      notFound\n      failed\n      lastRequestAt\n      lastError\n    }\n  }\n": types.OnlineServicesFieldsFragmentDoc,
     "\n  query OnlineServices {\n    onlineServices {\n      ...OnlineServicesFields\n    }\n  }\n": types.OnlineServicesDocument,
     "\n  mutation SetOnlineServices($input: SetOnlineServicesInput!) {\n    setOnlineServices(input: $input) {\n      ...OnlineServicesFields\n    }\n  }\n": types.SetOnlineServicesDocument,
@@ -444,7 +452,7 @@ const documents: Documents = {
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.CheckServerUpdateDocument,
     "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": types.SetServerUpdateSettingsDocument,
-    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n": types.SharingFieldsFragmentDoc,
+    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n": types.SharingFieldsFragmentDoc,
     "\n  query Sharing {\n    sharing {\n      ...SharingFields\n    }\n  }\n": types.SharingDocument,
     "\n  mutation SetSharingSettings($input: SharingSettingsInput!) {\n    setSharingSettings(input: $input) {\n      ...SharingFields\n    }\n  }\n": types.SetSharingSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n        pricing\n        pricingUrl\n      }\n    }\n  }\n": types.ExtensionMarketplaceDocument,
@@ -837,7 +845,7 @@ export function graphql(source: "\n  mutation InstallFfmpeg {\n    installFfmpeg
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n    }\n  }\n"): (typeof documents)["\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n    }\n  }\n"];
+export function graphql(source: "\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n      cueTrack\n      shared\n    }\n  }\n"): (typeof documents)["\n  fragment DuplicateTrackFields on Track {\n    id\n    title\n    durationMs\n    trackNumber\n    discNumber\n    album {\n      id\n      title\n    }\n    artists {\n      artistId\n      name\n      role\n    }\n    files {\n      id\n      format\n      bitRate\n      sampleRate\n      bitDepth\n      libraryId\n      path\n      size\n      cueTrack\n      shared\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -849,7 +857,7 @@ export function graphql(source: "\n  mutation DeleteTrackCopies($id: ID!, $libra
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query DuplicateCandidates($status: DuplicateStatus) {\n    duplicateCandidates(status: $status, first: 200) {\n      id\n      similarity\n      status\n      detectedAt\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n"): (typeof documents)["\n  query DuplicateCandidates($status: DuplicateStatus) {\n    duplicateCandidates(status: $status, first: 200) {\n      id\n      similarity\n      status\n      detectedAt\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n"];
+export function graphql(source: "\n  query DuplicateCandidates($status: DuplicateStatus, $skip: Int) {\n    duplicateCandidates(status: $status, first: 100, skip: $skip) {\n      id\n      similarity\n      status\n      detectedAt\n      shareableFileIds\n      shareBlocked\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n"): (typeof documents)["\n  query DuplicateCandidates($status: DuplicateStatus, $skip: Int) {\n    duplicateCandidates(status: $status, first: 100, skip: $skip) {\n      id\n      similarity\n      status\n      detectedAt\n      shareableFileIds\n      shareBlocked\n      trackA {\n        ...DuplicateTrackFields\n      }\n      trackB {\n        ...DuplicateTrackFields\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -858,6 +866,22 @@ export function graphql(source: "\n  mutation MergeDuplicate($id: ID!, $keepTrac
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n"): (typeof documents)["\n  mutation DismissDuplicate($id: ID!) {\n    dismissDuplicate(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ShareDuplicateFile($id: ID!, $fileId: ID!) {\n    shareDuplicateFile(id: $id, fileId: $fileId)\n  }\n"): (typeof documents)["\n  mutation ShareDuplicateFile($id: ID!, $fileId: ID!) {\n    shareDuplicateFile(id: $id, fileId: $fileId)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query TrackCopies($input: LibraryDuplicatesInput) {\n    trackCopies(input: $input) {\n      totalCount\n      nextCursor\n      items {\n        deletableFileIds\n        track {\n          ...DuplicateTrackFields\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  query TrackCopies($input: LibraryDuplicatesInput) {\n    trackCopies(input: $input) {\n      totalCount\n      nextCursor\n      items {\n        deletableFileIds\n        track {\n          ...DuplicateTrackFields\n        }\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteTrackFile($fileId: ID!) {\n    deleteTrackFile(fileId: $fileId)\n  }\n"): (typeof documents)["\n  mutation DeleteTrackFile($fileId: ID!) {\n    deleteTrackFile(fileId: $fileId)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RescanDuplicates {\n    rescanDuplicates\n  }\n"): (typeof documents)["\n  mutation RescanDuplicates {\n    rescanDuplicates\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -1133,7 +1157,7 @@ export function graphql(source: "\n  mutation SetServerUpdateSettings($input: Se
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n"): (typeof documents)["\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n  }\n"];
+export function graphql(source: "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n"): (typeof documents)["\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

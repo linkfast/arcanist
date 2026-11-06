@@ -9,7 +9,10 @@ namespace Arcanist.Core.Application.Sharing;
 /// <param name="MaxGuests">Guests a Jam takes at most.</param>
 /// <param name="PublicUrl">Where the server is reached from outside (<c>https://music.example.com</c>): the links it shares
 /// start with it. Null: they are relative, and clients complete them with the address they opened the server with.</param>
-public sealed record SharingConfig(bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null)
+/// <param name="JamDeletePlaylist">What a new Jukebox Jam does with its playlist when it ends, unless whoever starts it says
+/// otherwise: deleted (the default, also for servers from before the setting) or kept as a playlist of the host's.</param>
+public sealed record SharingConfig(
+    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null, bool JamDeletePlaylist = true)
 {
     public static readonly SharingConfig Default = new(false, false, 5, 100);
 

@@ -116,6 +116,15 @@ export const es: Dictionary = {
   },
   nav: {
     menu: 'Menú',
+    sections: {
+      music: 'Música',
+      people: 'Personas',
+      server: 'Servidor',
+      connections: 'Conexiones y extensiones',
+      mine: 'Lo mío',
+    },
+    players: 'Reproductores web',
+    about: 'Acerca de',
     videos: 'Videoclips',
     lyricsReview: 'Revisar letras',
     transcoding: 'Transcodificación',
@@ -123,7 +132,7 @@ export const es: Dictionary = {
     ai: 'AI',
     backups: 'Copias de seguridad',
     cloud: 'Ultimate Cloud',
-    database: 'Base de datos',
+    database: 'Almacenamiento',
     network: 'Red P2P',
     mstream: 'mStream',
     dlna: 'DLNA',
@@ -343,6 +352,10 @@ export const es: Dictionary = {
           'Úsala como una biblioteca más de este servidor, y Cloud Drop para traer canciones desde cualquier sitio · Sincronízala con tus bibliotecas en ambos sentidos · Bibliotecas en S3 y conexión P2P transparente con el plan Cloud · Los rankings globales de Ultimate, alimentados por las estadísticas anónimas',
         plans:
           'Una cuenta gratuita basta para usarla como biblioteca; el plan Cloud desbloquea el resto. Se vincula después, desde el panel.',
+      },
+      discovery: {
+        name: 'Descubre fácilmente este servidor en tu red local activando el anuncio DLNA',
+        help: 'Ultimate Desktop y las apps móviles lo encuentran solas en tu red, sin escribir su dirección. No publica tu música: por DLNA solo se verán las bibliotecas que elijas después en la página DLNA del panel.',
       },
       enhancers: 'Mejoras de IA y Ultimate para este servidor',
     },
@@ -759,7 +772,53 @@ export const es: Dictionary = {
   },
   duplicates: {
     title: 'Duplicados',
-    tabs: { possible: 'Posibles duplicados', libraries: 'Entre bibliotecas' },
+    tabs: {
+      albums: 'En varios álbumes',
+      possible: 'En un mismo álbum',
+      copies: 'Varias copias',
+      libraries: 'Entre bibliotecas',
+    },
+    copies: {
+      subtitle:
+        'Canciones con más de un archivo propio en una biblioteca, por ejemplo un FLAC y un MP3. Las versiones que Arcanist convierte para reproducir no son archivos de la canción y no aparecen aquí.',
+      count: 'Canciones con varias copias: {count}',
+      delete: 'Borrar esta copia',
+      confirmTitle: '¿Borrar esta copia?',
+      confirmBody:
+        'El archivo {quality} va a la papelera de la biblioteca durante 30 días. La canción sigue, con sus valoraciones y playlists, y suena con las otras copias.',
+      deleted: 'Copia borrada.',
+      none: 'Ninguna canción tiene varias copias',
+      noneHelp: 'Cuando una canción tenga más de un archivo en una biblioteca, aparecerá aquí.',
+    },
+    albums: {
+      subtitle:
+        'La misma canción en álbumes distintos. Puedes mantener las dos copias o guardar un solo archivo: cada álbum conserva su canción y las dos suenan con ese archivo.',
+      keepBoth: 'Mantener ambas',
+      useThis: 'Usar este archivo en ambos álbumes',
+      best: 'Mejor calidad',
+      sharedBadge: 'Archivo compartido',
+      confirmTitle: '¿Usar un solo archivo en ambos álbumes?',
+      confirmBody:
+        '«{other}» pasará a sonar con el archivo {quality} de «{album}». Los dos álbumes conservan la canción, con sus valoraciones, reproducciones y playlists.',
+      confirmHelp:
+        'La copia de «{other}» va a la papelera de la biblioteca durante 30 días. Cada álbum sigue con sus propios datos: editar su pista no cambia el archivo, y si borras una, el archivo se queda para la otra.',
+      confirm: 'Usar este archivo',
+      shared: 'Ahora los dos álbumes usan el mismo archivo.',
+      blocked: {
+        DIFFERENT_LIBRARIES:
+          'Están en bibliotecas distintas: un solo archivo dejaría sin la canción a quien solo tiene acceso a la otra. Puedes borrar una copia en «Entre bibliotecas».',
+        READ_ONLY:
+          'No se puede usar un solo archivo: alguna copia es de solo lectura (otro servidor o Ultimate Cloud) o forma parte de una hoja CUE.',
+        NO_PERMISSION: 'Para usar un solo archivo necesitas el permiso de borrar canciones.',
+        SAME_ALBUM: 'Están en el mismo álbum.',
+      },
+      none: 'Ninguna canción repetida en otro álbum',
+      noneHelp:
+        'Arcanist compara el audio, y también el nombre, el artista y la duración. La primera búsqueda sobre una biblioteca grande tarda un rato y sucede en segundo plano.',
+    },
+    rescan: 'Buscar de nuevo',
+    rescanStarted: 'Buscando en toda la biblioteca, en segundo plano. Vuelve en un rato.',
+    byName: 'Mismo nombre, artista y duración',
     libraries: {
       subtitle:
         'Canciones que están en más de una biblioteca. Borrar la copia de una biblioteca libera espacio; la canción sigue en las demás. Las bibliotecas personales no cuentan.',
@@ -781,7 +840,7 @@ export const es: Dictionary = {
       noneHelp: 'Cuando la misma canción esté en dos bibliotecas o más, aparecerá aquí.',
     },
     subtitle:
-      'Canciones que suenan igual pero no son claramente la misma. Conserva una para unir sus copias en una sola canción, o mantén ambas.',
+      'Canciones de un mismo álbum que suenan igual pero no son claramente la misma. Conserva una para unir sus copias en una sola canción, o mantén ambas.',
     similarity: '{percent} % de parecido',
     keepThis: 'Conservar esta',
     keepBoth: 'Son distintas',
@@ -789,7 +848,7 @@ export const es: Dictionary = {
     merged: 'Canciones unidas.',
     none: 'No hay posibles duplicados',
     noneHelp:
-      'Arcanist compara la huella acústica de cada canción al analizarla. Las copias evidentes se unen solas; aquí solo aparecen los casos dudosos.',
+      'Las copias evidentes dentro de un álbum se unen solas; aquí solo aparecen los casos dudosos.',
   },
   settings: {
     sections: {
@@ -1232,8 +1291,6 @@ export const es: Dictionary = {
       cloudHint: 'Tu cuenta de Ultimate Cloud',
       preferences: 'Preferencias',
       preferencesHint: 'Idioma, tema, videoclips y tours',
-      about: 'Acerca de',
-      aboutHint: 'Versión, licencia y APIs',
     },
     password: 'Contraseña',
     passwordsDiffer: 'Las contraseñas no coinciden.',
@@ -1325,7 +1382,6 @@ export const es: Dictionary = {
     thisDevice: 'Este dispositivo',
     lastSeen: 'última actividad',
     signOut: 'Cerrar sesión',
-    about: 'Acerca de',
   },
   folderPicker: {
     title: 'Elegir carpeta del servidor',
@@ -1341,6 +1397,12 @@ export const es: Dictionary = {
     create: 'Crear',
   },
   import: {
+    tabs: {
+      review: 'Por revisar',
+      folders: 'Carpetas de entrada',
+      uploads: 'Subidas',
+      migrate: 'Migrar',
+    },
     uploads: {
       defaultLibrary: 'Las subidas sin biblioteca van a',
       noDefault: 'Ninguna (cada subida elige)',
@@ -1517,6 +1579,7 @@ export const es: Dictionary = {
     reasons: {
       MISSING_TAGS: 'Faltan título, artista o álbum',
       SAME_AUDIO: 'Ya está en la biblioteca',
+      SAME_AUDIO_OTHER_ALBUM: 'Añadida a su álbum usando el archivo que ya estaba, sin otra copia',
       SAME_TRACK: 'La canción ya está en la biblioteca',
       NOT_BETTER: 'La biblioteca ya la tiene con igual o mejor calidad',
       REPLACED_WORSE: 'Sustituyó a copias de peor calidad',
@@ -1997,6 +2060,9 @@ export const es: Dictionary = {
         'Con el enlace o el QR de un Jam, cualquiera pone un nombre, busca en sus bibliotecas y añade canciones (y vota), y si el anfitrión lo deja cambia lo que suena. No escucha nada: la música suena en el reproductor del anfitrión. Apagarlo corta al momento a todos los invitados.',
       guestAddLimit: 'Canciones por invitado cada 10 minutos',
       maxGuests: 'Invitados por Jam',
+      jamDeletePlaylist: 'Eliminar la lista al finalizar un Jukebox Jam',
+      jamDeletePlaylistHelp:
+        'Cada Jam crea una lista con lo que suena. Activado, al terminar se elimina; apagado, se queda como una playlist más del anfitrión. Es lo que viene marcado al empezar un Jam: quien lo empieza puede cambiarlo para ese Jam.',
       permission:
         'Además, cada usuario necesita el permiso «Compartir fuera del servidor» (Usuarios). Los administradores lo tienen siempre.',
       publicUrl: 'URL pública del servidor',
@@ -2126,12 +2192,14 @@ export const es: Dictionary = {
         'Ultimate Cloud de LinkFast: sus bibliotecas y Cloud Drop, la sincronización, las bibliotecas en S3, la conexión transparente y sus servicios en línea.',
     },
     title: 'Extensiones',
-    subtitle: 'Reproductores web y extensiones del servidor.',
+    subtitle: 'Añaden funciones al servidor, como DLNA, Subsonic o mStream.',
     builtIn: 'Integrado',
     uninstall: 'Desinstalar',
     players: {
       browse: 'Ver más reproductores en el Marketplace',
       title: 'Reproductores web',
+      subtitle: 'Las páginas desde donde se escucha la música.',
+      installedTitle: 'Instalados en este servidor',
       description:
         'El predeterminado se sirve en la raíz del servidor; todos están además en /players/<id>/.',
       default: 'Predeterminado',
@@ -2166,8 +2234,6 @@ export const es: Dictionary = {
       closedSource: 'No es open source',
       closedSourceHelp:
         'El modo 100% open source está activado: desactívalo en Ajustes para instalarla.',
-      kind: 'Qué buscar',
-      kinds: { extensions: 'Extensiones', players: 'Reproductores web' },
       extensions: {
         title: 'Marketplace de extensiones',
         description:
@@ -2240,8 +2306,8 @@ export const es: Dictionary = {
     },
     tabs: {
       installed: 'Instaladas',
+      installedPlayers: 'Instalados',
       marketplace: 'Marketplace',
-      players: 'Reproductores',
     },
     restartDialog: {
       title: 'Reiniciando el servidor',
@@ -2580,9 +2646,9 @@ export const es: Dictionary = {
     },
   },
   database: {
-    title: 'Base de datos',
+    title: 'Almacenamiento y base de datos',
     subtitle:
-      'Dónde guarda Arcanist su catálogo, usuarios y ajustes, y cómo pasar de SQLite a PostgreSQL.',
+      'Cuánto ocupa Arcanist, dónde guarda su catálogo, usuarios y ajustes, y cómo pasar de SQLite a PostgreSQL.',
     current: {
       title: 'Base de datos actual',
       provider: 'Tipo',
@@ -3612,6 +3678,8 @@ export const es: Dictionary = {
     import_failed:
       'La importación se detuvo por un error inesperado. Revisa el registro del servidor.',
     tags_unsupported: 'No se pueden escribir las etiquetas del formato de ese archivo.',
+    last_copy: 'Es la única copia de esta canción.',
+    duplicate_not_shareable: 'Estas dos canciones no pueden usar un solo archivo.',
     cue_sheet_track:
       'Esa canción es parte de un álbum en un solo archivo con hoja CUE: sus etiquetas vienen de la hoja y el archivo tiene otras canciones.',
     lyrics_sync_unavailable:
@@ -3823,6 +3891,7 @@ export const es: Dictionary = {
     addLine: 'Añadir línea',
   },
   videos: {
+    settingsLink: 'Ajustes de videoclips',
     title: 'Videoclips',
     subtitle:
       'Los videoclips de las bibliotecas: junto a su canción, con su nombre o subidos. Con la canción enlazada suenan con su audio de la biblioteca donde coincide.',

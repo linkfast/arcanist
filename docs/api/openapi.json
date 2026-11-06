@@ -5057,7 +5057,7 @@
         "tags": [
           "Duplicates"
         ],
-        "summary": "Pairs of tracks whose audio is similar but not enough to merge them automatically, most similar first. \u0060status\u0060 is OPEN (default) or DISMISSED. Requires MANAGE_LIBRARIES.",
+        "summary": "Pairs of tracks that may be the same song and were not merged automatically (also the same song on two albums), most similar first. \u0060status\u0060 is OPEN (default), DISMISSED or SHARED. Requires MANAGE_LIBRARIES.",
         "operationId": "DuplicateCandidates",
         "parameters": [
           {
@@ -5069,6 +5069,18 @@
           },
           {
             "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "skip",
             "in": "query",
             "schema": {
               "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -5093,6 +5105,55 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/rest/v1/duplicates/{id}/share": {
+      "post": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Both tracks of an open pair stay on their albums and play fileId, one of the pair\u0027s shareableFileIds; the other\u0027s copy in that folder goes to the trash. Requires MANAGE_LIBRARIES and DELETE_TRACKS.",
+        "operationId": "ShareDuplicateFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareDuplicateFileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/duplicates/rescan": {
+      "post": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Looks through the whole catalog again, in the background, for pairs not proposed yet. Requires MANAGE_LIBRARIES.",
+        "operationId": "RescanDuplicates",
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -5149,6 +5210,81 @@
         "parameters": [
           {
             "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/duplicates/copies": {
+      "get": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Songs with several files of their own in one library (a FLAC and an MP3), by track id with a cursor. Conversions Arcanist keeps are not copies. Requires MANAGE_LIBRARIES.",
+        "operationId": "TrackCopies",
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackCopiesPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/duplicates/copies/{fileId}": {
+      "delete": {
+        "tags": [
+          "Duplicates"
+        ],
+        "summary": "Moves one copy of a song to the trash; the song stays with the others (last_copy when it has none). Requires DELETE_TRACKS.",
+        "operationId": "DeleteTrackFile",
+        "parameters": [
+          {
+            "name": "fileId",
             "in": "path",
             "required": true,
             "schema": {
@@ -18889,7 +19025,9 @@
           "trackB",
           "similarity",
           "status",
-          "detectedAt"
+          "detectedAt",
+          "shareableFileIds",
+          "shareBlocked"
         ],
         "type": "object",
         "properties": {
@@ -18917,6 +19055,23 @@
           "detectedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "shareableFileIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "shareBlocked": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DuplicateShareBlock"
+              }
+            ]
           }
         }
       },
@@ -18927,11 +19082,21 @@
           "ADD_VERSION"
         ]
       },
+      "DuplicateShareBlock": {
+        "enum": [
+          "SAME_ALBUM",
+          "NO_PERMISSION",
+          "DIFFERENT_LIBRARIES",
+          "READ_ONLY",
+          null
+        ]
+      },
       "DuplicateStatus": {
         "enum": [
           "OPEN",
           "MERGED",
-          "DISMISSED"
+          "DISMISSED",
+          "SHARED"
         ]
       },
       "DuplicateUser": {
@@ -20089,6 +20254,7 @@
           "SAME_TRACK",
           "NOT_BETTER",
           "REPLACED_WORSE",
+          "SAME_AUDIO_OTHER_ALBUM",
           "UNREADABLE",
           "TRANSCODING_UNAVAILABLE",
           "TRANSCODING_FAILED",
@@ -29286,6 +29452,18 @@
           }
         }
       },
+      "ShareDuplicateFileInput": {
+        "required": [
+          "fileId"
+        ],
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "SharingSettingsInput": {
         "required": [
           "publicLinks",
@@ -29321,6 +29499,12 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "jamDeletePlaylist": {
+            "type": [
+              "null",
+              "boolean"
             ]
           }
         }
@@ -29376,6 +29560,10 @@
               "null",
               "string"
             ]
+          },
+          "jamDeletePlaylist": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -30851,6 +31039,55 @@
           }
         }
       },
+      "TrackCopies": {
+        "required": [
+          "track",
+          "deletableFileIds"
+        ],
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/Track"
+          },
+          "deletableFileIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "TrackCopiesPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackCopies"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "TrackDeletion": {
         "required": [
           "trackId",
@@ -31029,7 +31266,8 @@
           "contentHash",
           "addedAt",
           "modifiedAt",
-          "cueTrack"
+          "cueTrack",
+          "shared"
         ],
         "type": "object",
         "properties": {
@@ -31151,6 +31389,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "shared": {
+            "type": "boolean"
           }
         }
       },

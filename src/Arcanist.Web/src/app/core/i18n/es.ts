@@ -1176,7 +1176,21 @@ export const es: Dictionary = {
     create: 'Nuevo usuario',
     edit: 'Editar usuario',
     tabs: { account: 'Cuenta', permissions: 'Permisos', libraries: 'Bibliotecas' },
-    filter: { label: 'Filtrar', all: 'Todos', admins: 'Administradores', disabled: 'Desactivados' },
+    filter: {
+      label: 'Filtrar',
+      all: 'Todos',
+      pending: 'Por aprobar',
+      admins: 'Administradores',
+      disabled: 'Desactivados',
+    },
+    pending: 'Por aprobar',
+    pendingHelp: 'Pidió su cuenta con una invitación: no puede entrar hasta que la apruebes.',
+    pendingBanner: '{count} cuenta(s) pedida(s) con invitación esperan tu aprobación.',
+    pendingShow: 'Ver',
+    approve: 'Aprobar',
+    approveHelp:
+      'Pidió esta cuenta con una invitación. Elige qué puede hacer y qué bibliotecas escucha, y apruébala: podrá iniciar sesión. Si no la quieres, elimínala.',
+    approved: 'Cuenta de {name} aprobada',
     actionsFor: 'Acciones de {name}',
     permissionCount: '{count} permisos',
     permissionGroups: {
@@ -1260,6 +1274,7 @@ export const es: Dictionary = {
     EDIT_METADATA: 'Editar etiquetas y carátulas',
     DELETE_TRACKS: 'Eliminar canciones',
     SHARE_LINKS: 'Compartir fuera del servidor',
+    INVITE: 'Invitar a otras personas',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Crear, editar y eliminar las bibliotecas a las que tiene acceso.',
@@ -1280,6 +1295,8 @@ export const es: Dictionary = {
       'Eliminar canciones de las bibliotecas a las que sube música, desde las apps. Sus archivos van a la papelera de la carpeta (30 días).',
     SHARE_LINKS:
       'Crear enlaces públicos de sus playlists (cualquiera con el enlace ve las canciones y oye 30 segundos) y abrir sus Jukebox Jams a invitados sin cuenta, si el servidor lo permite (Ajustes → Compartir).',
+    INVITE:
+      'Crear invitaciones al servidor (necesita la URL pública): un enlace y un QR que añaden el servidor a Ultimate Desktop y a las apps móviles y, si el servidor lo permite, con los que alguien pide una cuenta que un administrador aprueba.',
   },
   account: {
     sections: {
@@ -2063,6 +2080,10 @@ export const es: Dictionary = {
       jamDeletePlaylist: 'Eliminar la lista al finalizar un Jukebox Jam',
       jamDeletePlaylistHelp:
         'Cada Jam crea una lista con lo que suena. Activado, al terminar se elimina; apagado, se queda como una playlist más del anfitrión. Es lo que viene marcado al empezar un Jam: quien lo empieza puede cambiarlo para ese Jam.',
+      invitationSignup: 'Crear cuentas con invitaciones',
+      invitationSignupHelp:
+        'Quien tenga una invitación (permiso «Invitar a otras personas») podrá pedir una cuenta desde su enlace. La cuenta queda desactivada y sin acceso hasta que un administrador la apruebe en Usuarios.',
+      invitationNeedsUrl: 'Las invitaciones necesitan la URL pública del servidor (abajo).',
       permission:
         'Además, cada usuario necesita el permiso «Compartir fuera del servidor» (Usuarios). Los administradores lo tienen siempre.',
       publicUrl: 'URL pública del servidor',
@@ -3000,6 +3021,56 @@ export const es: Dictionary = {
       'Escanéalo con la app en el dispositivo. Después inicia sesión en la app como siempre.',
     serverHelp: 'Envía este enlace al administrador del otro servidor.',
   },
+  invitations: {
+    title: 'Invitar a alguien',
+    description:
+      'Un enlace y un QR con la dirección de este servidor: lo añaden en un momento a Ultimate Desktop y a las apps móviles. Sirve una sola vez y caduca en 7 días.',
+    needsPublicUrl:
+      'Las invitaciones necesitan la URL pública del servidor, que es donde las apps lo encuentran. Pídesela a un administrador (Ajustes → Compartir).',
+    note: 'Para quién (opcional)',
+    notePlaceholder: 'Ana',
+    create: 'Crear invitación',
+    signupOn:
+      'Quien no tenga cuenta podrá pedirla con la invitación; un administrador la aprueba antes de que entre.',
+    signupOff: 'Sirve para añadir el servidor e iniciar sesión con una cuenta que ya existe.',
+    untitled: 'Invitación',
+    state: { PENDING: 'Sin usar', USED: 'Usada', EXPIRED: 'Caducada', REVOKED: 'Anulada' },
+    usedBy: 'Pidió la cuenta {name}',
+    made: 'Creada {when}',
+    revoke: 'Anular',
+    revoked: 'Invitación anulada',
+    created: 'Invitación creada',
+    how: 'Escanéalo con Ultimate en el móvil, o pega el enlace en Ultimate Desktop al añadir un servidor. Después se inicia sesión como siempre.',
+    howWithSignup:
+      'Escanéalo con Ultimate en el móvil, o pega el enlace en Ultimate Desktop al añadir un servidor. Quien no tenga cuenta la pide abriendo el enlace; un administrador la aprueba.',
+    orType: 'O escribe la dirección y el código:',
+    once: 'El código solo se muestra ahora. Sirve una vez: cópialo o compártelo antes de cerrar.',
+  },
+  join: {
+    loading: 'Comprobando la invitación…',
+    invalidTitle: 'Esta invitación no sirve',
+    invalid: 'Ya se usó, se anuló o caducó. Pide otra a quien te invitó.',
+    title: '{name} te invita a su servidor de música',
+    appsTitle: 'En Ultimate',
+    apps: 'En Ultimate Desktop o en la app móvil, añade un servidor y pega este enlace (o escanea el QR de la invitación).',
+    link: 'Enlace de la invitación',
+    orType: 'O escribe la dirección {url} y el código {code}.',
+    signupTitle: '¿No tienes cuenta?',
+    signupHelp:
+      'Pídela aquí. Un administrador del servidor la revisa y la aprueba; hasta entonces no podrás entrar.',
+    userName: 'Nombre de usuario',
+    displayName: 'Tu nombre (opcional)',
+    password: 'Contraseña',
+    confirm: 'Repite la contraseña',
+    mismatch: 'Las contraseñas no coinciden.',
+    signup: 'Pedir cuenta',
+    once: 'La invitación sirve una sola vez.',
+    noSignup:
+      'Este servidor no crea cuentas con invitaciones: pide a quien te invitó que te dé una.',
+    haveAccount: 'Ya tengo cuenta: iniciar sesión',
+    doneTitle: 'Cuenta pedida',
+    done: 'Tu cuenta «{name}» espera la aprobación de un administrador. Cuando la apruebe, inicia sesión con ella en Ultimate o aquí.',
+  },
   arcanistImport: {
     title: 'Migrar desde otro Arcanist',
     subtitle:
@@ -3715,6 +3786,12 @@ export const es: Dictionary = {
     access_denied: 'El servidor no tiene permiso para leer esa carpeta.',
     invalid_credentials: 'Usuario o contraseña incorrectos.',
     account_disabled: 'Esta cuenta está desactivada.',
+    account_pending_approval:
+      'Tu cuenta aún espera la aprobación de un administrador. Podrás entrar cuando la apruebe.',
+    not_pending_approval: 'Esa cuenta no espera aprobación.',
+    invitation_signup_disabled: 'Este servidor no crea cuentas con invitaciones.',
+    public_url_required:
+      'Las invitaciones necesitan la URL pública del servidor (Ajustes → Compartir).',
     too_many_requests: 'Demasiados intentos. Espera un momento.',
     reauthentication_required: 'Confirma tu contraseña para continuar.',
     validation_failed: 'Revisa los datos marcados.',

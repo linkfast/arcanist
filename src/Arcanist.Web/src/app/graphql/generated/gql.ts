@@ -32,13 +32,17 @@ type Documents = {
     "\n  mutation StartScan($libraryId: ID!, $full: Boolean!) {\n    startScan(libraryId: $libraryId, full: $full) {\n      ...ScanJobFields\n    }\n  }\n": typeof types.StartScanDocument,
     "\n  mutation CancelScan($id: ID!) {\n    cancelScan(id: $id)\n  }\n": typeof types.CancelScanDocument,
     "\n  subscription ScanJobUpdated {\n    scanJobUpdated {\n      ...ScanJobFields\n    }\n  }\n": typeof types.ScanJobUpdatedDocument,
-    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n": typeof types.UserFieldsFragmentDoc,
+    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n    pendingApproval\n  }\n": typeof types.UserFieldsFragmentDoc,
     "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n": typeof types.UsersDocument,
     "\n  mutation CreateUser($input: CreateUserInput!) {\n    createUser(input: $input) {\n      id\n    }\n  }\n": typeof types.CreateUserDocument,
     "\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\n    updateUser(id: $id, input: $input) {\n      id\n    }\n  }\n": typeof types.UpdateUserDocument,
     "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n      libraryIds\n      readOnlyLibraryIds\n    }\n  }\n": typeof types.SetUserLibrariesDocument,
     "\n  mutation ResetUserPassword($id: ID!, $input: ResetUserPasswordInput!) {\n    resetUserPassword(id: $id, input: $input)\n  }\n": typeof types.ResetUserPasswordDocument,
     "\n  mutation DeleteUser($id: ID!) {\n    deleteUser(id: $id)\n  }\n": typeof types.DeleteUserDocument,
+    "\n  mutation ApproveUser($id: ID!, $input: ApproveUserInput) {\n    approveUser(id: $id, input: $input) {\n      ...UserFields\n    }\n  }\n": typeof types.ApproveUserDocument,
+    "\n  query Invitations($all: Boolean) {\n    invitations(all: $all) {\n      id\n      note\n      createdAt\n      expiresAt\n      state\n      createdBy\n      usedBy\n    }\n    sharing {\n      ...SharingFields\n    }\n  }\n": typeof types.InvitationsDocument,
+    "\n  mutation CreateInvitation($input: CreateInvitationInput) {\n    createInvitation(input: $input) {\n      id\n      code\n      url\n      serverUrl\n      expiresAt\n      signupAllowed\n    }\n  }\n": typeof types.CreateInvitationDocument,
+    "\n  mutation RevokeInvitation($id: ID!) {\n    revokeInvitation(id: $id)\n  }\n": typeof types.RevokeInvitationDocument,
     "\n  query MySessions {\n    mySessions {\n      id\n      deviceName\n      userAgent\n      ipAddress\n      createdAt\n      lastSeenAt\n      expiresAt\n      isCurrent\n    }\n  }\n": typeof types.MySessionsDocument,
     "\n  mutation RevokeMySession($id: ID!) {\n    revokeMySession(id: $id)\n  }\n": typeof types.RevokeMySessionDocument,
     "\n  mutation ChangeMyPassword($input: ChangeMyPasswordInput!) {\n    changeMyPassword(input: $input)\n  }\n": typeof types.ChangeMyPasswordDocument,
@@ -139,7 +143,7 @@ type Documents = {
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.CheckServerUpdateDocument,
     "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": typeof types.SetServerUpdateSettingsDocument,
-    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n": typeof types.SharingFieldsFragmentDoc,
+    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n    invitationSignup\n    canInvite\n  }\n": typeof types.SharingFieldsFragmentDoc,
     "\n  query Sharing {\n    sharing {\n      ...SharingFields\n    }\n  }\n": typeof types.SharingDocument,
     "\n  mutation SetSharingSettings($input: SharingSettingsInput!) {\n    setSharingSettings(input: $input) {\n      ...SharingFields\n    }\n  }\n": typeof types.SetSharingSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n        pricing\n        pricingUrl\n      }\n    }\n  }\n": typeof types.ExtensionMarketplaceDocument,
@@ -345,13 +349,17 @@ const documents: Documents = {
     "\n  mutation StartScan($libraryId: ID!, $full: Boolean!) {\n    startScan(libraryId: $libraryId, full: $full) {\n      ...ScanJobFields\n    }\n  }\n": types.StartScanDocument,
     "\n  mutation CancelScan($id: ID!) {\n    cancelScan(id: $id)\n  }\n": types.CancelScanDocument,
     "\n  subscription ScanJobUpdated {\n    scanJobUpdated {\n      ...ScanJobFields\n    }\n  }\n": types.ScanJobUpdatedDocument,
-    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n": types.UserFieldsFragmentDoc,
+    "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n    pendingApproval\n  }\n": types.UserFieldsFragmentDoc,
     "\n  query Users {\n    users {\n      ...UserFields\n    }\n    libraries {\n      id\n      name\n      visibleToAll\n      personal\n    }\n  }\n": types.UsersDocument,
     "\n  mutation CreateUser($input: CreateUserInput!) {\n    createUser(input: $input) {\n      id\n    }\n  }\n": types.CreateUserDocument,
     "\n  mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {\n    updateUser(id: $id, input: $input) {\n      id\n    }\n  }\n": types.UpdateUserDocument,
     "\n  mutation SetUserLibraries($id: ID!, $input: SetUserLibrariesInput!) {\n    setUserLibraries(id: $id, input: $input) {\n      id\n      libraryIds\n      readOnlyLibraryIds\n    }\n  }\n": types.SetUserLibrariesDocument,
     "\n  mutation ResetUserPassword($id: ID!, $input: ResetUserPasswordInput!) {\n    resetUserPassword(id: $id, input: $input)\n  }\n": types.ResetUserPasswordDocument,
     "\n  mutation DeleteUser($id: ID!) {\n    deleteUser(id: $id)\n  }\n": types.DeleteUserDocument,
+    "\n  mutation ApproveUser($id: ID!, $input: ApproveUserInput) {\n    approveUser(id: $id, input: $input) {\n      ...UserFields\n    }\n  }\n": types.ApproveUserDocument,
+    "\n  query Invitations($all: Boolean) {\n    invitations(all: $all) {\n      id\n      note\n      createdAt\n      expiresAt\n      state\n      createdBy\n      usedBy\n    }\n    sharing {\n      ...SharingFields\n    }\n  }\n": types.InvitationsDocument,
+    "\n  mutation CreateInvitation($input: CreateInvitationInput) {\n    createInvitation(input: $input) {\n      id\n      code\n      url\n      serverUrl\n      expiresAt\n      signupAllowed\n    }\n  }\n": types.CreateInvitationDocument,
+    "\n  mutation RevokeInvitation($id: ID!) {\n    revokeInvitation(id: $id)\n  }\n": types.RevokeInvitationDocument,
     "\n  query MySessions {\n    mySessions {\n      id\n      deviceName\n      userAgent\n      ipAddress\n      createdAt\n      lastSeenAt\n      expiresAt\n      isCurrent\n    }\n  }\n": types.MySessionsDocument,
     "\n  mutation RevokeMySession($id: ID!) {\n    revokeMySession(id: $id)\n  }\n": types.RevokeMySessionDocument,
     "\n  mutation ChangeMyPassword($input: ChangeMyPasswordInput!) {\n    changeMyPassword(input: $input)\n  }\n": types.ChangeMyPasswordDocument,
@@ -452,7 +460,7 @@ const documents: Documents = {
     "\n  query ServerUpdate {\n    serverUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.ServerUpdateDocument,
     "\n  mutation CheckServerUpdate {\n    checkServerUpdate {\n      ...ServerUpdateFields\n    }\n  }\n": types.CheckServerUpdateDocument,
     "\n  mutation SetServerUpdateSettings($input: SetServerUpdateSettingsInput!) {\n    setServerUpdateSettings(input: $input) {\n      ...ServerUpdateFields\n    }\n  }\n": types.SetServerUpdateSettingsDocument,
-    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n": types.SharingFieldsFragmentDoc,
+    "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n    invitationSignup\n    canInvite\n  }\n": types.SharingFieldsFragmentDoc,
     "\n  query Sharing {\n    sharing {\n      ...SharingFields\n    }\n  }\n": types.SharingDocument,
     "\n  mutation SetSharingSettings($input: SharingSettingsInput!) {\n    setSharingSettings(input: $input) {\n      ...SharingFields\n    }\n  }\n": types.SetSharingSettingsDocument,
     "\n  query ExtensionMarketplace($language: String, $refresh: Boolean) {\n    extensionMarketplace(language: $language, refresh: $refresh) {\n      available\n      errorCode\n      fetchedAt\n      source\n      extensions {\n        id\n        name\n        description\n        author\n        homepage\n        license\n        iconUrl\n        official\n        categories\n        version\n        size\n        minServerVersion\n        compatible\n        installedVersion\n        updateAvailable\n        builtIn\n        pricing\n        pricingUrl\n      }\n    }\n  }\n": types.ExtensionMarketplaceDocument,
@@ -729,7 +737,7 @@ export function graphql(source: "\n  subscription ScanJobUpdated {\n    scanJobU
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n"): (typeof documents)["\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n  }\n"];
+export function graphql(source: "\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n    pendingApproval\n  }\n"): (typeof documents)["\n  fragment UserFields on UserAccount {\n    id\n    userName\n    displayName\n    role\n    permissions\n    isDisabled\n    createdAt\n    lastLoginAt\n    libraryIds\n    readOnlyLibraryIds\n    hasSecondFactor\n    pendingApproval\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -754,6 +762,22 @@ export function graphql(source: "\n  mutation ResetUserPassword($id: ID!, $input
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation DeleteUser($id: ID!) {\n    deleteUser(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteUser($id: ID!) {\n    deleteUser(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation ApproveUser($id: ID!, $input: ApproveUserInput) {\n    approveUser(id: $id, input: $input) {\n      ...UserFields\n    }\n  }\n"): (typeof documents)["\n  mutation ApproveUser($id: ID!, $input: ApproveUserInput) {\n    approveUser(id: $id, input: $input) {\n      ...UserFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Invitations($all: Boolean) {\n    invitations(all: $all) {\n      id\n      note\n      createdAt\n      expiresAt\n      state\n      createdBy\n      usedBy\n    }\n    sharing {\n      ...SharingFields\n    }\n  }\n"): (typeof documents)["\n  query Invitations($all: Boolean) {\n    invitations(all: $all) {\n      id\n      note\n      createdAt\n      expiresAt\n      state\n      createdBy\n      usedBy\n    }\n    sharing {\n      ...SharingFields\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation CreateInvitation($input: CreateInvitationInput) {\n    createInvitation(input: $input) {\n      id\n      code\n      url\n      serverUrl\n      expiresAt\n      signupAllowed\n    }\n  }\n"): (typeof documents)["\n  mutation CreateInvitation($input: CreateInvitationInput) {\n    createInvitation(input: $input) {\n      id\n      code\n      url\n      serverUrl\n      expiresAt\n      signupAllowed\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation RevokeInvitation($id: ID!) {\n    revokeInvitation(id: $id)\n  }\n"): (typeof documents)["\n  mutation RevokeInvitation($id: ID!) {\n    revokeInvitation(id: $id)\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
@@ -1157,7 +1181,7 @@ export function graphql(source: "\n  mutation SetServerUpdateSettings($input: Se
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n"): (typeof documents)["\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n  }\n"];
+export function graphql(source: "\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n    invitationSignup\n    canInvite\n  }\n"): (typeof documents)["\n  fragment SharingFields on SharingStatus {\n    publicLinks\n    jamGuests\n    guestAddLimit\n    maxGuests\n    canShareLinks\n    publicUrl\n    publicUrlSetByEnvironment\n    jamDeletePlaylist\n    invitationSignup\n    canInvite\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

@@ -4198,6 +4198,54 @@
         }
       }
     },
+    "/rest/v1/users/{id}/approve": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Lets in an account asked for with an invitation (pendingApproval): turns it on with the permissions and libraries given. Requires MANAGE_USERS and a recent authentication.",
+        "operationId": "ApproveUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ApproveUserInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAccount"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/users/{id}/libraries": {
       "put": {
         "tags": [
@@ -4271,6 +4319,168 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/rest/v1/invitations": {
+      "get": {
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "The user\u0027s invitations to the server, newest first (INVITE); with all=true, everyone\u0027s (MANAGE_USERS). Codes are only shown on making them.",
+        "operationId": "Invitations",
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Makes an invitation (INVITE; it needs the server\u0027s public URL, otherwise public_url_required): single use, a week long. Its link and QR code add the server to Ultimate apps and, if the server allows it, ask for an account that waits for an administrator.",
+        "operationId": "CreateInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CreateInvitationInput"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewInvitation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/invitations/{id}/revoke": {
+      "post": {
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Stops an invitation from working: its maker, or whoever manages users.",
+        "operationId": "RevokeInvitation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/invitations/check": {
+      "post": {
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "What an invitation leads to, for anyone with its code: the server\u0027s public URL, who invited and whether an account can be asked for. 403 invitation_invalid when it does not work (used, revoked, expired); failures count against the address.",
+        "operationId": "CheckInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationCodeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/public/invitations/signup": {
+      "post": {
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Asks for an account with an invitation, when the server allows it (otherwise invitation_signup_disabled): it is made disabled and waits for an administrator to approve it; signing in before answers account_pending_approval. The invitation does not work again.",
+        "operationId": "SignUpWithInvitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationSignupInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationSignup"
+                }
+              }
+            }
           }
         }
       }
@@ -15127,7 +15337,8 @@
           "BROWSER_LOGIN",
           "PLAY_HISTORY_MANAGEMENT",
           "AVAILABLE_PLAYERS",
-          "WISH_LIST_CLOUD_SYNC"
+          "WISH_LIST_CLOUD_SYNC",
+          "INVITATIONS"
         ]
       },
       "AppPassword": {
@@ -15156,6 +15367,44 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ApproveUserInput": {
+        "required": [
+          "permissions",
+          "libraryIds"
+        ],
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          },
+          "libraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "readOnlyLibraryIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -17684,6 +17933,20 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "CreateInvitationInput": {
+        "required": [
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20574,6 +20837,134 @@
             "default": false
           }
         }
+      },
+      "Invitation": {
+        "required": [
+          "id",
+          "note",
+          "createdAt",
+          "expiresAt",
+          "state",
+          "createdBy",
+          "usedBy"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/InvitationState"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "usedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "InvitationCodeInput": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "InvitationPreview": {
+        "required": [
+          "serverUrl",
+          "invitedBy",
+          "expiresAt",
+          "signupAllowed"
+        ],
+        "type": "object",
+        "properties": {
+          "serverUrl": {
+            "type": "string"
+          },
+          "invitedBy": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "signupAllowed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InvitationSignup": {
+        "required": [
+          "userName",
+          "pendingApproval"
+        ],
+        "type": "object",
+        "properties": {
+          "userName": {
+            "type": "string"
+          },
+          "pendingApproval": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InvitationSignupInput": {
+        "required": [
+          "code",
+          "userName",
+          "password",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "InvitationState": {
+        "enum": [
+          "PENDING",
+          "USED",
+          "EXPIRED",
+          "REVOKED"
+        ]
       },
       "JoinJukeboxJamInput": {
         "required": [
@@ -24686,6 +25077,39 @@
           }
         }
       },
+      "NewInvitation": {
+        "required": [
+          "id",
+          "code",
+          "url",
+          "serverUrl",
+          "expiresAt",
+          "signupAllowed"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "serverUrl": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "signupAllowed": {
+            "type": "boolean"
+          }
+        }
+      },
       "OnlineService": {
         "enum": [
           "MUSIC_BRAINZ",
@@ -25957,7 +26381,8 @@
           "VIEW_ALL_WISHES",
           "EDIT_METADATA",
           "DELETE_TRACKS",
-          "SHARE_LINKS"
+          "SHARE_LINKS",
+          "INVITE"
         ]
       },
       "PlannedMove": {
@@ -29506,6 +29931,12 @@
               "null",
               "boolean"
             ]
+          },
+          "invitationSignup": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -29564,6 +29995,14 @@
           "jamDeletePlaylist": {
             "type": "boolean",
             "default": true
+          },
+          "invitationSignup": {
+            "type": "boolean",
+            "default": false
+          },
+          "canInvite": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -32946,6 +33385,10 @@
           "hasSecondFactor": {
             "type": "boolean",
             "default": false
+          },
+          "pendingApproval": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -34132,6 +34575,9 @@
     },
     {
       "name": "Me"
+    },
+    {
+      "name": "Invitations"
     },
     {
       "name": "Analysis"

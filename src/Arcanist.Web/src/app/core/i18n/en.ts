@@ -1163,7 +1163,21 @@ export const en: Dictionary = {
     create: 'New user',
     edit: 'Edit user',
     tabs: { account: 'Account', permissions: 'Permissions', libraries: 'Libraries' },
-    filter: { label: 'Filter', all: 'All', admins: 'Administrators', disabled: 'Disabled' },
+    filter: {
+      label: 'Filter',
+      all: 'All',
+      pending: 'To approve',
+      admins: 'Administrators',
+      disabled: 'Disabled',
+    },
+    pending: 'To approve',
+    pendingHelp: 'Asked for with an invitation: they cannot sign in until you approve it.',
+    pendingBanner: '{count} account(s) asked for with an invitation wait for your approval.',
+    pendingShow: 'Show',
+    approve: 'Approve',
+    approveHelp:
+      'This account was asked for with an invitation. Choose what it can do and which libraries it hears, and approve it: they can then sign in. If you do not want it, delete it.',
+    approved: '{name}’s account approved',
     actionsFor: 'Actions for {name}',
     permissionCount: '{count} permissions',
     permissionGroups: {
@@ -1247,6 +1261,7 @@ export const en: Dictionary = {
     EDIT_METADATA: 'Edit tags and covers',
     DELETE_TRACKS: 'Delete songs',
     SHARE_LINKS: 'Share outside the server',
+    INVITE: 'Invite other people',
   },
   permissionHelp: {
     MANAGE_LIBRARIES: 'Create, edit and delete the libraries they can access.',
@@ -1265,6 +1280,8 @@ export const en: Dictionary = {
       'Change the tags (title, artists, album…) and covers of songs in the libraries they add to, from apps such as Ultimate Desktop. They are written to the files themselves; the original goes to the folder’s trash.',
     DELETE_TRACKS:
       'Delete songs from the libraries they add to, from apps. Their files go to the folder’s trash (kept 30 days).',
+    INVITE:
+      'Make invitations to the server (it needs its public URL): a link and a QR code that add the server to Ultimate Desktop and the mobile apps and, if the server allows it, with which someone asks for an account an administrator approves.',
     SHARE_LINKS:
       'Make public links to their playlists (anyone with the link sees the songs and hears 30 seconds) and open their Jukebox Jams to guests without an account, when the server allows it (Settings → Sharing).',
   },
@@ -2042,6 +2059,10 @@ export const en: Dictionary = {
       jamDeletePlaylist: 'Delete the playlist when a Jukebox Jam ends',
       jamDeletePlaylistHelp:
         'Each Jam makes a playlist of what plays. On, it is deleted when the Jam ends; off, it stays as one more of the host’s playlists. This is what comes ticked when a Jam starts: whoever starts it can change it for that Jam.',
+      invitationSignup: 'Make accounts with invitations',
+      invitationSignupHelp:
+        'Whoever has an invitation (permission “Invite other people”) can ask for an account from its link. It stays disabled and without access until an administrator approves it in Users.',
+      invitationNeedsUrl: 'Invitations need the server’s public URL (below).',
       permission:
         'Each user also needs the “Share outside the server” permission (Users). Administrators always have it.',
       publicUrl: 'Server’s public URL',
@@ -2964,6 +2985,56 @@ export const en: Dictionary = {
     deviceHelp: 'Scan it with the app on the device. Then sign in to the app as usual.',
     serverHelp: 'Send this link to the other server’s administrator.',
   },
+  invitations: {
+    title: 'Invite someone',
+    description:
+      'A link and a QR code with this server’s address: they add it in a moment to Ultimate Desktop and the mobile apps. Each works once and expires in 7 days.',
+    needsPublicUrl:
+      'Invitations need the server’s public URL, which is where apps find it. Ask an administrator (Settings → Sharing).',
+    note: 'Who it is for (optional)',
+    notePlaceholder: 'Ana',
+    create: 'Make invitation',
+    signupOn:
+      'Someone without an account can ask for one with it; an administrator approves it before they get in.',
+    signupOff: 'It adds the server and signs in with an account that already exists.',
+    untitled: 'Invitation',
+    state: { PENDING: 'Unused', USED: 'Used', EXPIRED: 'Expired', REVOKED: 'Revoked' },
+    usedBy: '{name} asked for an account',
+    made: 'Made {when}',
+    revoke: 'Revoke',
+    revoked: 'Invitation revoked',
+    created: 'Invitation made',
+    how: 'Scan it with Ultimate on the phone, or paste the link in Ultimate Desktop when adding a server. Then sign in as usual.',
+    howWithSignup:
+      'Scan it with Ultimate on the phone, or paste the link in Ultimate Desktop when adding a server. Someone without an account asks for one by opening the link; an administrator approves it.',
+    orType: 'Or type the address and the code:',
+    once: 'The code is only shown now. It works once: copy or share it before closing.',
+  },
+  join: {
+    loading: 'Checking the invitation…',
+    invalidTitle: 'This invitation does not work',
+    invalid: 'It was used, revoked or expired. Ask whoever invited you for another.',
+    title: '{name} invites you to their music server',
+    appsTitle: 'In Ultimate',
+    apps: 'In Ultimate Desktop or the mobile app, add a server and paste this link (or scan the invitation’s QR code).',
+    link: 'Invitation link',
+    orType: 'Or type the address {url} and the code {code}.',
+    signupTitle: 'No account?',
+    signupHelp:
+      'Ask for one here. An administrator of the server reviews and approves it; until then you cannot sign in.',
+    userName: 'User name',
+    displayName: 'Your name (optional)',
+    password: 'Password',
+    confirm: 'Password again',
+    mismatch: 'The passwords do not match.',
+    signup: 'Ask for an account',
+    once: 'The invitation works only once.',
+    noSignup:
+      'This server does not make accounts with invitations: ask whoever invited you to give you one.',
+    haveAccount: 'I have an account: sign in',
+    doneTitle: 'Account asked for',
+    done: 'Your account “{name}” waits for an administrator’s approval. Once approved, sign in with it in Ultimate or here.',
+  },
   arcanistImport: {
     title: 'Migrate from another Arcanist',
     subtitle:
@@ -3669,6 +3740,11 @@ export const en: Dictionary = {
     access_denied: 'The server is not allowed to read that folder.',
     invalid_credentials: 'Wrong user name or password.',
     account_disabled: 'This account is disabled.',
+    account_pending_approval:
+      'Your account still waits for an administrator’s approval. You can sign in once it is approved.',
+    not_pending_approval: 'That account is not waiting for approval.',
+    invitation_signup_disabled: 'This server does not make accounts with invitations.',
+    public_url_required: 'Invitations need the server’s public URL (Settings → Sharing).',
     too_many_requests: 'Too many attempts. Please wait a moment.',
     reauthentication_required: 'Confirm your password to continue.',
     validation_failed: 'Check the highlighted fields.',

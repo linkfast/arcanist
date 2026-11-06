@@ -28,6 +28,8 @@ public enum Permissions : long
     DeleteTracks = 1 << 10,
     /// <summary>Shares outside the server: public links to playlists, Jukebox Jams open to guests without an account.</summary>
     ShareLinks = 1 << 11,
+    /// <summary>Makes invitations to the server, with its public URL: to add it to Ultimate apps, and to ask for an account when the server allows it.</summary>
+    Invite = 1 << 12,
 }
 
 public sealed class User : Entity
@@ -67,6 +69,9 @@ public sealed class User : Entity
 
     /// <summary>Pairs a second factor at the next sign-in, whatever the server requires: an administrator reset theirs, or they had one on the server they came from.</summary>
     public bool MustSetUpSecondFactor { get; set; }
+
+    /// <summary>Made with an invitation and waiting for an administrator: disabled, without permissions or libraries, until approved.</summary>
+    public bool PendingApproval { get; set; }
 
     public List<UserSession> Sessions { get; } = [];
 
@@ -163,6 +168,34 @@ public sealed class AppPassword : Entity
     public DateTime CreatedAt { get; init; }
 
     public DateTime? LastUsedAt { get; set; }
+}
+
+/// <summary>
+/// An invitation to this server, of a single use: its link (the server's public URL and the code) adds the server to an
+/// Ultimate app, and lets someone ask for an account when the server allows it. Only the code's hash is kept.
+/// </summary>
+public sealed class ServerInvitation : Entity
+{
+    public required string CodeHash { get; init; }
+
+    public Guid CreatedByUserId { get; init; }
+
+    public User CreatedBy { get; init; } = null!;
+
+    /// <summary>Who it is for, as the one inviting wrote it: only for them to recognize it.</summary>
+    public string? Note { get; init; }
+
+    public DateTime CreatedAt { get; init; }
+
+    public DateTime ExpiresAt { get; init; }
+
+    public DateTime? RevokedAt { get; set; }
+
+    /// <summary>When an account was asked for with it: it does not work again.</summary>
+    public DateTime? UsedAt { get; set; }
+
+    /// <summary>The account made with it, while it exists.</summary>
+    public Guid? UsedByUserId { get; set; }
 }
 
 /// <summary>Server-wide setting stored as JSON, for values edited from the admin panel at runtime.</summary>

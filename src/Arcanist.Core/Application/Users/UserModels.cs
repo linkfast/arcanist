@@ -38,12 +38,19 @@ public enum Permission
     /// account.
     /// </summary>
     ShareLinks,
+
+    /// <summary>
+    /// Makes invitations to the server (it needs its public URL): a link and a QR code that add the server to Ultimate
+    /// apps, and with which someone asks for an account when the server allows it.
+    /// </summary>
+    Invite,
 }
 
 /// <param name="LibraryIds">Libraries granted explicitly. Administrators and libraries visible to all are not listed,
 /// unless the user is only a listener there.</param>
 /// <param name="ReadOnlyLibraryIds">Of those, the ones the user listens to but adds nothing to (no uploads).</param>
 /// <param name="HasSecondFactor">They sign in with an authenticator app or a passkey too.</param>
+/// <param name="PendingApproval">Asked for with an invitation: disabled until an administrator approves it (approveUser).</param>
 public sealed record UserAccount(
     Guid Id,
     string UserName,
@@ -55,7 +62,8 @@ public sealed record UserAccount(
     DateTime? LastLoginAt,
     IReadOnlyList<Guid> LibraryIds,
     IReadOnlyList<Guid> ReadOnlyLibraryIds,
-    bool HasSecondFactor = false);
+    bool HasSecondFactor = false,
+    bool PendingApproval = false);
 
 /// <summary>A signed-in device of the current user.</summary>
 public sealed record Session(
@@ -89,6 +97,11 @@ public sealed record UpdateUserInput(
 /// ones visible to all. Null keeps nobody read only.</param>
 public sealed record SetUserLibrariesInput(IReadOnlyList<Guid> LibraryIds, IReadOnlyList<Guid>? ReadOnlyLibraryIds = null);
 
+/// <summary>What an account asked for with an invitation gets once approved.</summary>
+/// <param name="LibraryIds">The libraries it is given (beyond those visible to all).</param>
+/// <param name="ReadOnlyLibraryIds">Libraries it only listens to, adding nothing.</param>
+public sealed record ApproveUserInput(IReadOnlyList<Permission>? Permissions, IReadOnlyList<Guid>? LibraryIds, IReadOnlyList<Guid>? ReadOnlyLibraryIds = null);
+
 public sealed record ResetUserPasswordInput(string NewPassword);
 
 public sealed record ChangeMyPasswordInput(string CurrentPassword, string NewPassword);
@@ -115,12 +128,13 @@ public static class PermissionMapping
         Permission.EditMetadata => Permissions.EditMetadata,
         Permission.DeleteTracks => Permissions.DeleteTracks,
         Permission.ShareLinks => Permissions.ShareLinks,
+        Permission.Invite => Permissions.Invite,
         _ => throw new ArgumentOutOfRangeException(nameof(permission), permission, null),
     };
 
     public static UserAccount ToAccount(this User user, IReadOnlyList<Guid> libraryIds, IReadOnlyList<Guid>? readOnlyLibraryIds = null) => new(
         user.Id, user.UserName, user.DisplayName, user.Role, ToList(user.Permissions),
-        user.IsDisabled, user.CreatedAt, user.LastLoginAt, libraryIds, readOnlyLibraryIds ?? [], user.HasSecondFactor);
+        user.IsDisabled, user.CreatedAt, user.LastLoginAt, libraryIds, readOnlyLibraryIds ?? [], user.HasSecondFactor, user.PendingApproval);
 
     /// <summary>The account with its grants as stored: every row is a library, and some are read only.</summary>
     public static UserAccount ToAccount(this User user, IEnumerable<LibraryAccess> grants)

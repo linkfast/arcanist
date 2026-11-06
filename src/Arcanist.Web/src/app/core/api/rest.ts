@@ -17,7 +17,8 @@ export type Permission =
   | 'VIEW_ALL_WISHES'
   | 'EDIT_METADATA'
   | 'DELETE_TRACKS'
-  | 'SHARE_LINKS';
+  | 'SHARE_LINKS'
+  | 'INVITE';
 export type DatabaseProvider = 'SQLITE' | 'POSTGRES';
 
 export interface UserAccount {

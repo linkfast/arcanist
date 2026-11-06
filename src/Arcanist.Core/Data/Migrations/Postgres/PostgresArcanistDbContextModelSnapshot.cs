@@ -2650,6 +2650,50 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("ScanJobs");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ServerInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UsedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("UsedByUserId");
+
+                    b.ToTable("ServerInvitations");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Setting", b =>
                 {
                     b.Property<string>("Key")
@@ -2918,6 +2962,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("PendingApproval")
+                        .HasColumnType("boolean");
 
                     b.Property<long>("Permissions")
                         .HasColumnType("bigint");
@@ -3795,6 +3842,22 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ServerInvitation", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UsedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Track", b =>

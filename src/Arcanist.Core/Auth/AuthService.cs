@@ -300,7 +300,7 @@ public sealed class AuthService(
 
         // Only revealed once the password is right, so it does not help guessing accounts.
         if (user.IsDisabled)
-            return (null, new AuthResult.Failure(ErrorCodes.AccountDisabled));
+            return (null, new AuthResult.Failure(user.PendingApproval ? ErrorCodes.AccountPendingApproval : ErrorCodes.AccountDisabled));
 
         if (verification == PasswordVerificationResult.SuccessRehashNeeded)
             user.PasswordHash = passwordHasher.HashPassword(user, password);

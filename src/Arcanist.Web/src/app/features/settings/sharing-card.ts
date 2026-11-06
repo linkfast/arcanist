@@ -110,6 +110,25 @@ import { SetSharingSettingsMutation, SharingQuery } from '../../graphql/operatio
               }}</span>
             </span>
           </label>
+          <label class="flex items-start gap-3" data-tour="settings-invitation-signup">
+            <hlm-switch
+              class="mt-0.5"
+              [checked]="s.invitationSignup"
+              [disabled]="busy()"
+              (checkedChange)="save({ invitationSignup: $event })"
+            />
+            <span class="grid gap-0.5">
+              <span class="font-medium">{{ 'sharing.card.invitationSignup' | t }}</span>
+              <span class="text-muted-foreground">{{
+                'sharing.card.invitationSignupHelp' | t
+              }}</span>
+              @if (!s.publicUrl) {
+                <span class="text-amber-700 dark:text-amber-300">{{
+                  'sharing.card.invitationNeedsUrl' | t
+                }}</span>
+              }
+            </span>
+          </label>
           <p class="text-xs text-muted-foreground">{{ 'sharing.card.permission' | t }}</p>
           <form class="grid gap-1 border-t pt-4" (ngSubmit)="savePublicUrl()">
             <label class="font-medium" for="sharing-public-url">{{
@@ -186,7 +205,10 @@ export class SharingCard implements OnInit {
 
   protected async save(
     change: Partial<
-      Omit<Sharing, 'canShareLinks' | 'publicUrlSetByEnvironment' | 'publicUrl' | '__typename'>
+      Omit<
+        Sharing,
+        'canShareLinks' | 'canInvite' | 'publicUrlSetByEnvironment' | 'publicUrl' | '__typename'
+      >
     > & { publicUrl?: string },
   ): Promise<boolean> {
     const current = this.status();
@@ -200,6 +222,7 @@ export class SharingCard implements OnInit {
         guestAddLimit: current.guestAddLimit,
         maxGuests: current.maxGuests,
         jamDeletePlaylist: current.jamDeletePlaylist,
+        invitationSignup: current.invitationSignup,
         ...change,
       };
       this.show((await this.gql.mutate(SetSharingSettingsMutation, { input })).setSharingSettings);

@@ -10,7 +10,7 @@ public sealed class SharingService(AccessGuard guard, SharingSettings settings, 
     {
         var access = guard.Authenticated();
         var config = await settings.GetAsync(cancellationToken);
-        return ToModel(config, access.Has(Permissions.ShareLinks));
+        return ToModel(config, access.Has(Permissions.ShareLinks), access.Has(Permissions.Invite));
     }
 
     /// <summary>Turns public links and guests on or off: turned off, those there were stop working at once.</summary>
@@ -23,19 +23,20 @@ public sealed class SharingService(AccessGuard guard, SharingSettings settings, 
         var publicUrl = input.PublicUrl is null ? current.PublicUrl : SharingSettings.NormalizeUrl(input.PublicUrl);
         if (publicUrl != current.PublicUrl && settings.EnvironmentPublicUrl is not null)
             throw new ArcanistException.Conflict(ErrorCodes.SetByEnvironment);
-        // Null keeps what a Jam does with its playlist (clients from before the setting).
+        // Null keeps what a Jam does with its playlist and whether invitations make accounts (clients from before them).
         var config = await settings.SetAsync(
             new SharingConfig(input.PublicLinks, input.JamGuests, input.GuestAddLimit, input.MaxGuests, publicUrl,
-                input.JamDeletePlaylist ?? current.JamDeletePlaylist), cancellationToken);
-        return ToModel(config, true);
+                input.JamDeletePlaylist ?? current.JamDeletePlaylist, input.InvitationSignup ?? current.InvitationSignup), cancellationToken);
+        return ToModel(config, true, true);
     }
 
-    private SharingStatus ToModel(SharingConfig config, bool canShare)
+    private SharingStatus ToModel(SharingConfig config, bool canShare, bool canInvite)
     {
         var environment = settings.EnvironmentPublicUrl;
+        var publicUrl = environment ?? config.PublicUrl;
         var node = services.GetService<Arcanist.Core.P2P.P2PNode>()?.State;
         return new(config.PublicLinks, config.JamGuests, config.GuestAddLimit, config.MaxGuests, canShare && (config.PublicLinks || config.JamGuests),
-            environment ?? config.PublicUrl, environment is not null, node is { Running: true } ? node.NodeId : null,
-            config.JamDeletePlaylist);
+            publicUrl, environment is not null, node is { Running: true } ? node.NodeId : null,
+            config.JamDeletePlaylist, config.InvitationSignup, canInvite && publicUrl is not null);
     }
 }

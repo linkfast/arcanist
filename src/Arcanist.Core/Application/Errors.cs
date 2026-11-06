@@ -24,6 +24,18 @@ public static class ErrorCodes
     public const string ReauthenticationRequired = "reauthentication_required";
     public const string InvalidCredentials = "invalid_credentials";
     public const string AccountDisabled = "account_disabled";
+
+    /// <summary>An account made with an invitation that an administrator has not approved yet.</summary>
+    public const string AccountPendingApproval = "account_pending_approval";
+
+    /// <summary>Approving an account that is not waiting for approval.</summary>
+    public const string NotPendingApproval = "not_pending_approval";
+
+    /// <summary>The server does not make accounts with invitations (sharing.invitationSignup is off).</summary>
+    public const string InvitationSignupDisabled = "invitation_signup_disabled";
+
+    /// <summary>Invitations need the server's public URL: it is where apps find the server.</summary>
+    public const string PublicUrlRequired = "public_url_required";
     public const string InvalidRefreshToken = "invalid_refresh_token";
     public const string TooManyRequests = "too_many_requests";
     public const string LastAdministrator = "last_administrator";

@@ -35,6 +35,7 @@ import { SectionLayout, accountSections, activeSection } from '../../shared/sect
 import { ThemeSelect } from '../../shared/theme-select';
 import { MyCloud } from './my-cloud';
 import { MyDevices } from './my-devices';
+import { MyInvitations } from './my-invitations';
 import { MyDlna } from './my-dlna';
 import { MySecondFactor } from './my-second-factor';
 import { MyTours } from './my-tours';
@@ -72,6 +73,7 @@ type Pending =
     ThemeSelect,
     MyCloud,
     MyDevices,
+    MyInvitations,
     MyDlna,
     MySecondFactor,
     MyVideos,
@@ -228,6 +230,9 @@ type Pending =
             </div>
           </section>
           <app-my-devices />
+          @if (auth.can('INVITE')) {
+            <app-my-invitations />
+          }
         }
 
         @case ('cloud') {

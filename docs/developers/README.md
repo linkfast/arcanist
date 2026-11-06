@@ -30,6 +30,23 @@ on your local network") announces itself over SSDP as a `urn:schemas-upnp-org:de
 of `LOCATION` (`presentationURL` is its panel, `/admin/`), and `serialNumber` identifies the server across address
 changes. The announcement publishes no music by itself: DLNA serves only the libraries an administrator publishes.
 
+**From an invitation** (`INVITATIONS` in `features`): users with the `INVITE` permission make single-use invitations
+(`createInvitation`, a week long) once the server has a public URL. An invitation is a link,
+`{publicUrl}/admin/join#ABCD-EFGH-JKLM`, shown as a QR code, or the public URL plus the short code typed by hand.
+
+- **Adding the server:** take the link whole. The server's address is everything before `/admin/join` (a public URL
+  may have a path, `https://example.com/music`) and the code is after the `#`; the code ignores case, dashes and
+  spaces. `POST /rest/v1/public/invitations/check` with `{ "code": "…" }` needs no account and answers `serverUrl`,
+  `invitedBy`, `expiresAt` and `signupAllowed`, or `403 invitation_invalid` (used, revoked, expired, or its maker can
+  no longer invite). Checking does not use it up. Then sign in as usual (or through the browser, below).
+- **Asking for an account,** when `signupAllowed` (the server's `sharing.invitationSignup`, off by default):
+  `POST /rest/v1/public/invitations/signup` with `{ code, userName, password, displayName }` makes the account
+  **disabled, without permissions or libraries,** and uses the invitation up. An administrator approves it
+  (`approveUser`, or turning it on in the panel); until then signing in answers `account_pending_approval`, only once
+  the password is right. Opening the link in a browser does the same: the panel's join page explains how to add the
+  server and asks for the account.
+- Failures with codes count against the address, as signing in does (`too_many_requests`).
+
 ## Signing in
 
 Authentication is REST-only.

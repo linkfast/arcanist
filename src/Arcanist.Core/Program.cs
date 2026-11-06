@@ -105,6 +105,7 @@ builder.Services.AddArcanistAuth(builder.Configuration);
 builder.Services.Configure<ServerOptions>(builder.Configuration.GetSection("Arcanist"));
 builder.Services.AddScoped<AccessGuard>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<InvitationService>();
 builder.Services.AddSingleton<LibraryRules>();
 builder.Services.AddScoped<LibraryService>();
 builder.Services.AddSingleton<Arcanist.Core.Application.Libraries.LibraryMoves>();

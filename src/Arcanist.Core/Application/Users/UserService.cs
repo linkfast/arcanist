@@ -100,9 +100,41 @@ public sealed class UserService(
         user.Role = input.Role;
         user.Permissions = input.Role == UserRole.Admin ? Permissions.None : permissions;
         user.IsDisabled = input.IsDisabled;
+        // Turning on an account asked for with an invitation approves it.
+        if (!input.IsDisabled)
+            user.PendingApproval = false;
         if (privilegesChanged)
             user.SecurityStamp = Guid.NewGuid().ToString("N");
 
+        await db.SaveChangesAsync(cancellationToken);
+        accessCache.InvalidateUser(user.Id);
+
+        return await GetAccountAsync(user.Id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Lets in an account asked for with an invitation: turns it on, with the permissions and libraries given (as on
+    /// creating a user; none but those visible to everyone when null).
+    /// </summary>
+    public async Task<UserAccount> ApproveAsync(Guid id, ApproveUserInput? input, CancellationToken cancellationToken)
+    {
+        var actor = guard.Permission(Permissions.ManageUsers);
+        guard.RecentAuthentication();
+
+        var user = await FindManageableAsync(actor, id, cancellationToken);
+        if (!user.PendingApproval)
+            throw new ArcanistException.Conflict(ErrorCodes.NotPendingApproval);
+
+        var permissions = PermissionMapping.ToFlags(input?.Permissions);
+        EnsureCanGrant(actor, UserRole.User, permissions);
+        var (libraryIds, readOnly) = await ValidateGrantsAsync(actor, input?.LibraryIds ?? [], input?.ReadOnlyLibraryIds, cancellationToken);
+
+        await db.LibraryAccess.Where(a => a.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
+        db.LibraryAccess.AddRange(Grants(user.Id, libraryIds, readOnly));
+        user.Permissions = permissions;
+        user.IsDisabled = false;
+        user.PendingApproval = false;
+        user.SecurityStamp = Guid.NewGuid().ToString("N");
         await db.SaveChangesAsync(cancellationToken);
         accessCache.InvalidateUser(user.Id);
 

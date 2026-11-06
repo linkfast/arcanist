@@ -13,6 +13,17 @@
   <div class="flex justify-center py-12"><hlm-spinner /></div>
 } @else {
   <div class="grid gap-3">
+    @if (pendingCount() > 0 && filter() !== 'pending') {
+      <div
+        class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300"
+        role="status"
+      >
+        <span>{{ 'users.pendingBanner' | t: { count: pendingCount() } }}</span>
+        <button hlmBtn size="sm" variant="outline" type="button" (click)="filter.set('pending')">
+          {{ 'users.pendingShow' | t }}
+        </button>
+      </div>
+    }
     <div class="flex flex-wrap items-center gap-2" data-tour="users-filters">
       <input
         hlmInput
@@ -74,7 +85,11 @@
                   @if (user.role === 'ADMIN') {
                     <span hlmBadge>{{ 'users.roles.ADMIN' | t }}</span>
                   }
-                  @if (user.isDisabled) {
+                  @if (user.pendingApproval) {
+                    <span hlmBadge variant="outline" [title]="'users.pendingHelp' | t">{{
+                      'users.pending' | t
+                    }}</span>
+                  } @else if (user.isDisabled) {
                     <span hlmBadge variant="destructive">{{ 'users.disabled' | t }}</span>
                   }
                   @if (user.hasSecondFactor) {
@@ -126,7 +141,11 @@
                         type="button"
                         (cdkMenuItemTriggered)="openEdit(user)"
                       >
-                        <ng-icon name="lucidePencil" /> {{ 'common.edit' | t }}
+                        @if (user.pendingApproval) {
+                          <ng-icon name="lucideCircleCheck" /> {{ 'users.approve' | t }}
+                        } @else {
+                          <ng-icon name="lucidePencil" /> {{ 'common.edit' | t }}
+                        }
                       </button>
                       <button
                         cdkMenuItem
@@ -148,15 +167,17 @@
                             {{ 'users.resetSecondFactor' | t }}
                           </button>
                         }
-                        <button
-                          cdkMenuItem
-                          [class]="menuItem"
-                          type="button"
-                          (cdkMenuItemTriggered)="toggling.set(user)"
-                        >
-                          <ng-icon [name]="user.isDisabled ? 'lucideCircleCheck' : 'lucideBan'" />
-                          {{ (user.isDisabled ? 'users.enable' : 'users.disable') | t }}
-                        </button>
+                        @if (!user.pendingApproval) {
+                          <button
+                            cdkMenuItem
+                            [class]="menuItem"
+                            type="button"
+                            (cdkMenuItemTriggered)="toggling.set(user)"
+                          >
+                            <ng-icon [name]="user.isDisabled ? 'lucideCircleCheck' : 'lucideBan'" />
+                            {{ (user.isDisabled ? 'users.enable' : 'users.disable') | t }}
+                          </button>
+                        }
                         <button
                           cdkMenuItem
                           [class]="menuItem + ' text-destructive'"
@@ -193,6 +214,9 @@
           <h3 hlmDialogTitle>
             {{ current.id ? current.userName : ('users.create' | t) }}
           </h3>
+          @if (current.pendingApproval) {
+            <p hlmDialogDescription>{{ 'users.approveHelp' | t }}</p>
+          }
         </hlm-dialog-header>
 
         @if (current.role !== 'ADMIN') {
@@ -352,7 +376,7 @@
             {{ 'common.cancel' | t }}
           </button>
           <button hlmBtn type="submit" [disabled]="busy()">
-            {{ 'common.save' | t }}
+            {{ (current.pendingApproval ? 'users.approve' : 'common.save') | t }}
           </button>
         </hlm-dialog-footer>
       </form>

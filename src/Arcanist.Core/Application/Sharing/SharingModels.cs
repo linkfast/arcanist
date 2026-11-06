@@ -50,12 +50,16 @@ public sealed record SharedPlaylistPage(IReadOnlyList<SharedPlaylistEntry> Items
 /// to come in through P2P).</param>
 /// <param name="JamDeletePlaylist">A new Jukebox Jam deletes its playlist when it ends unless whoever starts it keeps it
 /// (<c>saveAsPlaylist</c>): clients start their "delete the playlist when the Jam ends" choice from this.</param>
+/// <param name="InvitationSignup">Someone with an invitation can ask for an account (it waits for an administrator).</param>
+/// <param name="CanInvite">The user may make invitations: INVITE, with a public URL set.</param>
 public sealed record SharingStatus(
     bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, bool CanShareLinks, string? PublicUrl, bool PublicUrlSetByEnvironment,
-    string? P2pNodeId = null, bool JamDeletePlaylist = true);
+    string? P2pNodeId = null, bool JamDeletePlaylist = true, bool InvitationSignup = false, bool CanInvite = false);
 
 /// <param name="PublicUrl">The server's public URL (http or https; a bare host is taken as https). Null keeps the one
 /// there is; empty takes it off.</param>
 /// <param name="JamDeletePlaylist">Whether a new Jukebox Jam deletes its playlist when it ends by default. Null keeps it.</param>
+/// <param name="InvitationSignup">Whether someone with an invitation can ask for an account. Null keeps it.</param>
 public sealed record SharingSettingsInput(
-    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null, bool? JamDeletePlaylist = null);
+    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null, bool? JamDeletePlaylist = null,
+    bool? InvitationSignup = null);

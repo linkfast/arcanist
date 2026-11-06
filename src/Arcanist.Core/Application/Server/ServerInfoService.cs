@@ -238,6 +238,13 @@ public enum ApiFeature
     /// wish list in the account need not sync this server's themselves.
     /// </summary>
     WishListCloudSync,
+
+    /// <summary>
+    /// Invitations: a link (<c>{publicUrl}/admin/join#CODE</c>) or a code with the server's address adds it to an app
+    /// (<c>POST /rest/v1/public/invitations/check</c>), and asks for an account when the server allows it
+    /// (<c>POST /rest/v1/public/invitations/signup</c>). See the developers' guide.
+    /// </summary>
+    Invitations,
 }
 
 public sealed class ServerInfoService(

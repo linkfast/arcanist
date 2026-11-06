@@ -2645,6 +2645,50 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.ToTable("ScanJobs");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ServerInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UsedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("UsedByUserId");
+
+                    b.ToTable("ServerInvitations");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Setting", b =>
                 {
                     b.Property<string>("Key")
@@ -2913,6 +2957,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("PendingApproval")
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("Permissions")
                         .HasColumnType("INTEGER");
@@ -3790,6 +3837,22 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                         .IsRequired();
 
                     b.Navigation("Library");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.ServerInvitation", b =>
+                {
+                    b.HasOne("Arcanist.Core.Data.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Arcanist.Core.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UsedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
                 });
 
             modelBuilder.Entity("Arcanist.Core.Data.Entities.Track", b =>

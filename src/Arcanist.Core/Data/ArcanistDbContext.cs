@@ -56,6 +56,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
 
     public DbSet<MigrationGrant> MigrationGrants => Set<MigrationGrant>();
 
+    public DbSet<ServerInvitation> ServerInvitations => Set<ServerInvitation>();
+
     public DbSet<ArcanistImport> ArcanistImports => Set<ArcanistImport>();
 
     public DbSet<ArcanistImportFile> ArcanistImportFiles => Set<ArcanistImportFile>();
@@ -318,6 +320,15 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             grant.Property(g => g.CodeHash).HasMaxLength(64);
             grant.Property(g => g.LastUsedBy).HasMaxLength(NameLength);
             grant.HasIndex(g => g.CodeHash).IsUnique();
+        });
+
+        modelBuilder.Entity<ServerInvitation>(invitation =>
+        {
+            invitation.Property(i => i.CodeHash).HasMaxLength(64);
+            invitation.Property(i => i.Note).HasMaxLength(NameLength);
+            invitation.HasIndex(i => i.CodeHash).IsUnique();
+            invitation.HasOne(i => i.CreatedBy).WithMany().HasForeignKey(i => i.CreatedByUserId).OnDelete(DeleteBehavior.Cascade);
+            invitation.HasOne<User>().WithMany().HasForeignKey(i => i.UsedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ArcanistImport>(import =>

@@ -222,6 +222,7 @@ export const UserFields = graphql(`
     libraryIds
     readOnlyLibraryIds
     hasSecondFactor
+    pendingApproval
   }
 `);
 
@@ -274,6 +275,50 @@ export const ResetUserPasswordMutation = graphql(`
 export const DeleteUserMutation = graphql(`
   mutation DeleteUser($id: ID!) {
     deleteUser(id: $id)
+  }
+`);
+
+export const ApproveUserMutation = graphql(`
+  mutation ApproveUser($id: ID!, $input: ApproveUserInput) {
+    approveUser(id: $id, input: $input) {
+      ...UserFields
+    }
+  }
+`);
+
+export const InvitationsQuery = graphql(`
+  query Invitations($all: Boolean) {
+    invitations(all: $all) {
+      id
+      note
+      createdAt
+      expiresAt
+      state
+      createdBy
+      usedBy
+    }
+    sharing {
+      ...SharingFields
+    }
+  }
+`);
+
+export const CreateInvitationMutation = graphql(`
+  mutation CreateInvitation($input: CreateInvitationInput) {
+    createInvitation(input: $input) {
+      id
+      code
+      url
+      serverUrl
+      expiresAt
+      signupAllowed
+    }
+  }
+`);
+
+export const RevokeInvitationMutation = graphql(`
+  mutation RevokeInvitation($id: ID!) {
+    revokeInvitation(id: $id)
   }
 `);
 
@@ -1489,6 +1534,8 @@ export const SharingFieldsFragment = graphql(`
     publicUrl
     publicUrlSetByEnvironment
     jamDeletePlaylist
+    invitationSignup
+    canInvite
   }
 `);
 

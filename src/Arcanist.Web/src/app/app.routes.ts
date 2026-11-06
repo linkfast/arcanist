@@ -33,6 +33,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/authorize.page').then((m) => m.AuthorizePage),
   },
   {
+    // An invitation link: how to add this server to an app, and asking for an account. No session.
+    path: 'join',
+    canActivate: [setupCompletedGuard],
+    loadComponent: () => import('./features/login/join.page').then((m) => m.JoinPage),
+  },
+  {
     path: 'device',
     canActivate: [setupCompletedGuard, authGuard],
     loadComponent: () => import('./features/login/device.page').then((m) => m.DevicePage),

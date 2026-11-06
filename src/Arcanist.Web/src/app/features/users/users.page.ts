@@ -47,13 +47,13 @@ import { AccessLevels, LibraryAccessEditor, grantsOf, levelsOf } from './library
 
 type User = UserFieldsFragment;
 type Library = UsersResult['libraries'][number];
-type UserFilter = 'all' | 'admins' | 'disabled';
+type UserFilter = 'all' | 'pending' | 'admins' | 'disabled';
 type FormTab = 'account' | 'permissions' | 'libraries';
 
 /** The permissions by what they are about, as the user's page shows them. */
 const permissionGroups: { id: string; permissions: Permission[] }[] = [
   { id: 'music', permissions: ['DOWNLOAD', 'UPLOAD', 'EDIT_METADATA', 'DELETE_TRACKS'] },
-  { id: 'sharing', permissions: ['SHARE_LINKS', 'PLAY_ON_SERVER'] },
+  { id: 'sharing', permissions: ['SHARE_LINKS', 'INVITE', 'PLAY_ON_SERVER'] },
   {
     id: 'server',
     permissions: [
@@ -75,6 +75,8 @@ interface UserForm {
   role: UserRole;
   permissions: Permission[];
   isDisabled: boolean;
+  /** Asked for with an invitation: saving the form lets it in. */
+  pendingApproval: boolean;
   /** What they may do in each library. */
   levels: AccessLevels;
 }
@@ -163,13 +165,17 @@ export class UsersPage implements OnInit {
   /** Every library but users' personal ones: each user listens to it, adds to it, or (if restricted) neither. */
   protected readonly accessLibraries = computed(() => this.libraries().filter((l) => !l.personal));
 
-  protected readonly filters: UserFilter[] = ['all', 'admins', 'disabled'];
+  protected readonly filters: UserFilter[] = ['all', 'pending', 'admins', 'disabled'];
   protected readonly filter = signal<UserFilter>('all');
+  protected readonly pendingCount = computed(
+    () => (this.users() ?? []).filter((user) => user.pendingApproval).length,
+  );
   protected readonly userQuery = signal('');
   protected readonly filteredUsers = computed(() => {
     const words = searchKey(this.userQuery()).trim().split(/\s+/).filter(Boolean);
     const filter = this.filter();
     return (this.users() ?? []).filter((user) => {
+      if (filter === 'pending' && !user.pendingApproval) return false;
       if (filter === 'admins' && user.role !== 'ADMIN') return false;
       if (filter === 'disabled' && !user.isDisabled) return false;
       const text = searchKey(`${user.userName} ${user.displayName ?? ''}`);
@@ -230,6 +236,7 @@ export class UsersPage implements OnInit {
       role: 'USER',
       permissions: [],
       isDisabled: false,
+      pendingApproval: false,
       levels: levelsOf(this.accessLibraries(), [], []),
     });
   }
@@ -242,7 +249,9 @@ export class UsersPage implements OnInit {
       password: '',
       role: user.role,
       permissions: [...user.permissions],
-      isDisabled: user.isDisabled,
+      // Opening one that waits for approval is approving it: saving turns it on.
+      isDisabled: user.pendingApproval ? false : user.isDisabled,
+      pendingApproval: user.pendingApproval,
       levels: levelsOf(this.accessLibraries(), user.libraryIds, user.readOnlyLibraryIds),
     });
   }
@@ -329,7 +338,11 @@ export class UsersPage implements OnInit {
         });
       }
       this.form.set(null);
-      toast.success(this.i18n.t('users.saved'));
+      toast.success(
+        form.pendingApproval && !form.isDisabled
+          ? this.i18n.t('users.approved', { name: form.userName })
+          : this.i18n.t('users.saved'),
+      );
       await this.load();
     } catch (error) {
       this.formError.set(this.describe(ApiError.from(error)));

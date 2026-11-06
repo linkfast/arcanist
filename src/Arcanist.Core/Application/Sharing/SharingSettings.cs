@@ -11,8 +11,11 @@ namespace Arcanist.Core.Application.Sharing;
 /// start with it. Null: they are relative, and clients complete them with the address they opened the server with.</param>
 /// <param name="JamDeletePlaylist">What a new Jukebox Jam does with its playlist when it ends, unless whoever starts it says
 /// otherwise: deleted (the default, also for servers from before the setting) or kept as a playlist of the host's.</param>
+/// <param name="InvitationSignup">Someone with an invitation can ask for an account, which waits disabled for an
+/// administrator's approval. Off by default.</param>
 public sealed record SharingConfig(
-    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null, bool JamDeletePlaylist = true)
+    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, string? PublicUrl = null, bool JamDeletePlaylist = true,
+    bool InvitationSignup = false)
 {
     public static readonly SharingConfig Default = new(false, false, 5, 100);
 

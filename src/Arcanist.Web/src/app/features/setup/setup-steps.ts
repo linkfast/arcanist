@@ -336,7 +336,10 @@ export class SetupAddonsStep {
   readonly draft = input.required<SetupExtrasDraft>();
   /** Ultimate Cloud may be offered (the administrator did not turn off every outside service). */
   readonly cloud = input(true);
-  protected readonly builtIn = WIZARD_EXTENSIONS.filter((id) => !ULTIMATE_EXTENSIONS.includes(id));
+  /** DLNA is offered in the Ultimate step, as the announcement that lets apps find this server. */
+  protected readonly builtIn = WIZARD_EXTENSIONS.filter(
+    (id) => id !== 'dlna' && !ULTIMATE_EXTENSIONS.includes(id),
+  );
   protected readonly forUltimate = ULTIMATE_EXTENSIONS;
   protected readonly url = ULTIMATE_URL;
 

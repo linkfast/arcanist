@@ -23,6 +23,13 @@ version, whether setup is complete, the Ultimate Cloud features enabled, `featur
 source code, as the AGPL requires). Until setup is complete every other call answers `503` with code
 `setup_required`; send the user to `/admin/setup`.
 
+**On the local network**, a server with the DLNA extension on (the setup wizard offers it as "discover this server
+on your local network") announces itself over SSDP as a `urn:schemas-upnp-org:device:MediaServer:1`. Send an
+`M-SEARCH` for that type, fetch the description at each answer's `LOCATION` and keep the devices whose
+`manufacturer` is `LinkFast S.A.` and `modelName` is `Arcanist`: the server's address is the scheme, host and port
+of `LOCATION` (`presentationURL` is its panel, `/admin/`), and `serialNumber` identifies the server across address
+changes. The announcement publishes no music by itself: DLNA serves only the libraries an administrator publishes.
+
 ## Signing in
 
 Authentication is REST-only.

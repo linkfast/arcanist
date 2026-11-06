@@ -5,6 +5,7 @@ import {
   lucideCloud,
   lucideExternalLink,
   lucideMonitorSmartphone,
+  lucideRadar,
   lucideSparkles,
 } from '@ng-icons/lucide';
 import { HlmButtonImports } from '@spartan-ng/helm/button';
@@ -25,6 +26,7 @@ import { SetupExtrasDraft, ULTIMATE_EXTENSIONS, ULTIMATE_URL } from './setup-ext
       lucideCloud,
       lucideExternalLink,
       lucideMonitorSmartphone,
+      lucideRadar,
       lucideSparkles,
     }),
   ],
@@ -81,6 +83,24 @@ import { SetupExtrasDraft, ULTIMATE_EXTENSIONS, ULTIMATE_URL } from './setup-ext
         </section>
       }
     </div>
+
+    <label
+      class="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm"
+      data-tour="setup-discovery"
+    >
+      <span class="flex gap-3">
+        <ng-icon name="lucideRadar" size="18" class="mt-0.5 shrink-0 text-primary" />
+        <span class="grid gap-0.5">
+          <span class="font-medium">{{ 'setup.ultimate.discovery.name' | t }}</span>
+          <span class="text-muted-foreground">{{ 'setup.ultimate.discovery.help' | t }}</span>
+        </span>
+      </span>
+      <hlm-switch
+        [checked]="draft().extensions.dlna"
+        (checkedChange)="draft().extensions.dlna = $event"
+        [aria-label]="'setup.ultimate.discovery.name' | t"
+      />
+    </label>
 
     <section class="grid gap-3">
       <div class="flex items-center gap-2">

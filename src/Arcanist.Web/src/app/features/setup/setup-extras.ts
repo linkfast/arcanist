@@ -55,7 +55,8 @@ export class SetupExtrasDraft {
   p2pInitial: string | null = null;
 
   readonly extensions: Record<WizardExtension, boolean> = {
-    dlna: false,
+    // The DLNA announcement lets apps on the local network find this server; it publishes no library by itself.
+    dlna: true,
     subsonic: false,
     mstream: false,
     // AI enhancers (the AI DJ's analyses) start on; the administrator can switch them off.

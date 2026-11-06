@@ -2948,6 +2948,10 @@ export const en: Dictionary = {
     paired: 'Paired {when}',
     revoked: 'Device revoked',
     none: 'You have no paired devices.',
+    byAddress: 'Connect by address',
+    byAddressHelp:
+      'The app scans this server’s address and asks you to sign in. No P2P: the phone must be able to reach that address.',
+    addressQr: 'QR code of the server’s address',
   },
   invitation: {
     title: 'Invitation created',

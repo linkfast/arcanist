@@ -51,6 +51,15 @@ arcanist://p2p?kind=device&node=<ticket>&token=<token>&name=<server name>
   the JSON `connect` takes.
 - `token` is for one use, and expires: 30 minutes for devices, 7 days for shares.
 
+Without P2P, **My devices → Connect by address** shows the server's address as a QR code, so it need not be
+typed:
+
+```
+arcanist://connect?url=<the server's public URL, or the panel's address, URL-encoded>
+```
+
+It holds no secret: the app adds the server by that address and signs in as usual.
+
 ## Pairing a device
 
 1. Scan the QR code and read it with `parse_invitation`. Keep `ticket` and `name`: they are how the app finds this

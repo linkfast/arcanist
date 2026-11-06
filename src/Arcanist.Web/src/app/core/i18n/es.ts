@@ -2917,6 +2917,10 @@ export const es: Dictionary = {
     paired: 'Emparejado {when}',
     revoked: 'Dispositivo revocado',
     none: 'No tienes dispositivos emparejados.',
+    byAddress: 'Conectar por dirección',
+    byAddressHelp:
+      'La app escanea la dirección de este servidor y te pide iniciar sesión. Sin P2P: el móvil tiene que poder llegar a esa dirección.',
+    addressQr: 'Código QR de la dirección del servidor',
   },
   invitation: {
     title: 'Invitación creada',

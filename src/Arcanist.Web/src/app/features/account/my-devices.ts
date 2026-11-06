@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { toast } from '@spartan-ng/brain/sonner';
@@ -16,9 +16,18 @@ import {
   CreateDeviceInvitationMutation,
   MyDevicesQuery,
   RevokeNetworkPeerMutation,
+  SharingQuery,
 } from '../../graphql/operations';
 import { DateTimePipe, RelativeTimePipe } from '../../shared/format';
-import { Invitation } from '../../shared/invitation';
+import { Invitation, qrPath } from '../../shared/invitation';
+
+/**
+ * What an app scans to add this server by its address, without P2P: `arcanist://connect?url=…`. It holds no secret:
+ * the app then signs in as usual.
+ */
+export function connectLink(url: string): string {
+  return `arcanist://connect?url=${encodeURIComponent(url)}`;
+}
 
 /**
  * The user's devices paired through the P2P network: the app scans a QR code and then reaches this server from
@@ -59,6 +68,9 @@ import { Invitation } from '../../shared/invitation';
             />
           </hlm-field>
           <button hlmBtn type="submit" [disabled]="busy()">{{ 'devices.pair' | t }}</button>
+          <button hlmBtn variant="outline" type="button" (click)="showAddress.set(true)">
+            {{ 'devices.byAddress' | t }}
+          </button>
         </form>
         @if (error()) {
           <p class="text-sm text-destructive">{{ error() }}</p>
@@ -113,6 +125,27 @@ import { Invitation } from '../../shared/invitation';
         }
       </hlm-dialog-content>
     </hlm-dialog>
+
+    <hlm-dialog [state]="showAddress() ? 'open' : 'closed'" (closed)="showAddress.set(false)">
+      <hlm-dialog-content *brnDialogContent="let ctx" class="w-[min(28rem,calc(100vw-2rem))]">
+        <hlm-dialog-header>
+          <h3 hlmDialogTitle>{{ 'devices.byAddress' | t }}</h3>
+          <p hlmDialogDescription>{{ 'devices.byAddressHelp' | t }}</p>
+        </hlm-dialog-header>
+        <div class="grid justify-items-center gap-3">
+          <svg
+            class="size-64 rounded-md bg-white p-2"
+            role="img"
+            [attr.aria-label]="'devices.addressQr' | t"
+            [attr.viewBox]="'0 0 ' + addressQr().size + ' ' + addressQr().size"
+            shape-rendering="crispEdges"
+          >
+            <path [attr.d]="addressQr().path" fill="#000" />
+          </svg>
+          <p class="break-all text-center font-mono text-xs">{{ address() }}</p>
+        </div>
+      </hlm-dialog-content>
+    </hlm-dialog>
   `,
 })
 export class MyDevices implements OnInit {
@@ -124,9 +157,22 @@ export class MyDevices implements OnInit {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly invitation = signal<{ link: string; expiresAt: string } | null>(null);
+  protected readonly showAddress = signal(false);
+  /** Where apps reach this server: its public URL, else the address this panel was opened with. */
+  protected readonly address = signal(location.origin);
+  protected readonly addressQr = computed(() => qrPath(connectLink(this.address())));
 
   async ngOnInit(): Promise<void> {
-    await this.load();
+    await Promise.all([this.load(), this.loadAddress()]);
+  }
+
+  private async loadAddress(): Promise<void> {
+    try {
+      const publicUrl = (await this.gql.query(SharingQuery)).sharing.publicUrl;
+      if (publicUrl) this.address.set(publicUrl);
+    } catch {
+      // The panel's own address stays.
+    }
   }
 
   private async load(): Promise<void> {

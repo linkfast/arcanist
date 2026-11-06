@@ -29370,6 +29370,12 @@
           },
           "publicUrlSetByEnvironment": {
             "type": "boolean"
+          },
+          "p2pNodeId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

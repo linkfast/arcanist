@@ -45,8 +45,12 @@ public sealed record SharedPlaylistPage(IReadOnlyList<SharedPlaylistEntry> Items
 /// slash: shared links (playlists, Jams) start with it. Null: they are relative to the address the client uses.</param>
 /// <param name="PublicUrlSetByEnvironment">The public URL comes from the environment (Arcanist__Network__PublicUrl): the
 /// panel cannot change it.</param>
+/// <param name="P2pNodeId">The server's node id while its P2P network runs, null otherwise: with <see cref="PublicUrl"/>, the
+/// addresses the server announces, so a player can move to them without signing in again (a device still needs to be paired
+/// to come in through P2P).</param>
 public sealed record SharingStatus(
-    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, bool CanShareLinks, string? PublicUrl, bool PublicUrlSetByEnvironment);
+    bool PublicLinks, bool JamGuests, int GuestAddLimit, int MaxGuests, bool CanShareLinks, string? PublicUrl, bool PublicUrlSetByEnvironment,
+    string? P2pNodeId = null);
 
 /// <param name="PublicUrl">The server's public URL (http or https; a bare host is taken as https). Null keeps the one
 /// there is; empty takes it off.</param>

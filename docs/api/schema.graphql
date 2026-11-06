@@ -2855,6 +2855,7 @@ type SharingStatus {
   canShareLinks: Boolean!
   publicUrl: String
   publicUrlSetByEnvironment: Boolean!
+  p2pNodeId: String
 }
 
 type SharedPlaylist {

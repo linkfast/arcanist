@@ -51,48 +51,67 @@ public sealed class DuplicateDetector(TimeProvider time, ILogger<DuplicateDetect
     /// <summary>Looks for duplicates of these tracks.</summary>
     public async Task<Outcome> ProcessTracksAsync(ArcanistDbContext db, IReadOnlyCollection<Guid> trackIds, CancellationToken cancellationToken)
     {
-        int merged = 0, linked = 0, proposed = 0;
+        var outcome = new Outcome(0, 0, 0);
         foreach (var trackId in trackIds)
         {
-            var track = await db.Tracks.AsNoTracking().Where(t => t.Id == trackId)
-                .Select(t => new TrackFacts(t.Id, t.AlbumId, t.DurationMs, t.TrackNumber, t.DiscNumber, t.AddedAt, t.RecordingId))
-                .SingleOrDefaultAsync(cancellationToken);
-            // Merged away earlier in this run.
-            if (track is null)
-                continue;
-
-            var fingerprints = (await FingerprintsAsync(db, [track.Id], cancellationToken)).GetValueOrDefault(track.Id);
-            var hashes = await HashesAsync(db, track.Id, cancellationToken);
-
-            foreach (var candidate in await CandidatesAsync(db, track, hashes, cancellationToken))
+            // One track that fails (a row changed under it, a fingerprint that cannot be read) never stops the others:
+            // the sweep would otherwise retry the same batch forever and never reach the rest of the catalog.
+            try
             {
-                var candidatePrints = (await FingerprintsAsync(db, [candidate.Id], cancellationToken)).GetValueOrDefault(candidate.Id);
-                var theirHashes = await HashesAsync(db, candidate.Id, cancellationToken);
-                double? similarity = hashes.Overlaps(theirHashes) ? 1
-                    : fingerprints is null || candidatePrints is null || !AudioAnalyzer.IsAvailable ? null
-                    : fingerprints.SelectMany(a => candidatePrints.Select(b => AudioAnalyzer.Compare(a, b))).Max();
+                var found = await ProcessTrackAsync(db, trackId, cancellationToken);
+                outcome = new Outcome(outcome.Merged + found.Merged, outcome.Linked + found.Linked, outcome.Proposed + found.Proposed);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                db.ChangeTracker.Clear();
+                logger.LogWarning(e, "Looking for duplicates of track {Track} failed", trackId);
+            }
+        }
 
-                if (similarity >= MergeThreshold && CanMerge(track, candidate))
-                {
-                    var (keep, remove) = Prefer(track, candidate) ? (track.Id, candidate.Id) : (candidate.Id, track.Id);
-                    await TrackMerger.MergeAsync(db, keep, remove, cancellationToken);
-                    logger.LogInformation("Merged track {Removed} into {Kept} (fingerprint similarity {Similarity:0.00})", remove, keep, similarity);
-                    merged++;
-                    if (remove == track.Id)
-                        break;
-                    continue;
-                }
+        return outcome;
+    }
 
-                if (similarity >= MergeThreshold && candidate.AlbumId != track.AlbumId
-                    && await LinkRecordingsAsync(db, track.RecordingId, candidate.RecordingId, cancellationToken))
-                    linked++;
+    private async Task<Outcome> ProcessTrackAsync(ArcanistDbContext db, Guid trackId, CancellationToken cancellationToken)
+    {
+        int merged = 0, linked = 0, proposed = 0;
+        var track = await db.Tracks.AsNoTracking().Where(t => t.Id == trackId)
+            .Select(t => new TrackFacts(t.Id, t.AlbumId, t.DurationMs, t.TrackNumber, t.DiscNumber, t.AddedAt, t.RecordingId))
+            .SingleOrDefaultAsync(cancellationToken);
+        // Merged away earlier in this run.
+        if (track is null)
+            return new Outcome(0, 0, 0);
 
-                if (similarity >= CandidateThreshold
-                    || ((similarity is null || similarity >= SameNameThreshold) && await SameSongByNameAsync(db, track, candidate, similarity is null, cancellationToken)))
-                {
-                    if (await ProposeAsync(db, track.Id, candidate.Id, similarity ?? 0, cancellationToken))
-                        proposed++;
-                }
+        var fingerprints = (await FingerprintsAsync(db, [track.Id], cancellationToken)).GetValueOrDefault(track.Id);
+        var hashes = await HashesAsync(db, track.Id, cancellationToken);
+
+        foreach (var candidate in await CandidatesAsync(db, track, hashes, cancellationToken))
+        {
+            var candidatePrints = (await FingerprintsAsync(db, [candidate.Id], cancellationToken)).GetValueOrDefault(candidate.Id);
+            var theirHashes = await HashesAsync(db, candidate.Id, cancellationToken);
+            double? similarity = hashes.Overlaps(theirHashes) ? 1
+                : fingerprints is null || candidatePrints is null || !AudioAnalyzer.IsAvailable ? null
+                : fingerprints.SelectMany(a => candidatePrints.Select(b => AudioAnalyzer.Compare(a, b))).Max();
+
+            if (similarity >= MergeThreshold && CanMerge(track, candidate))
+            {
+                var (keep, remove) = Prefer(track, candidate) ? (track.Id, candidate.Id) : (candidate.Id, track.Id);
+                await TrackMerger.MergeAsync(db, keep, remove, cancellationToken);
+                logger.LogInformation("Merged track {Removed} into {Kept} (fingerprint similarity {Similarity:0.00})", remove, keep, similarity);
+                merged++;
+                if (remove == track.Id)
+                    break;
+                continue;
+            }
+
+            if (similarity >= MergeThreshold && candidate.AlbumId != track.AlbumId
+                && await LinkRecordingsAsync(db, track.RecordingId, candidate.RecordingId, cancellationToken))
+                linked++;
+
+            if (similarity >= CandidateThreshold
+                || ((similarity is null || similarity >= SameNameThreshold) && await SameSongByNameAsync(db, track, candidate, similarity is null, cancellationToken)))
+            {
+                if (await ProposeAsync(db, track.Id, candidate.Id, similarity ?? 0, cancellationToken))
+                    proposed++;
             }
         }
 

@@ -181,6 +181,47 @@ internal static partial class UpdateInstructions
         return changes;
     }
 
+    /// <summary>
+    /// The changes a release's notes list (newest first), from the section its workflow writes between
+    /// <c>&lt;!-- arcanist:changes --&gt;</c> and <c>&lt;!-- /arcanist:changes --&gt;</c>: an area per "### " heading and a change per
+    /// "- " line, ending with the link to its commit. Null for notes without that section (releases made before it).
+    /// </summary>
+    public static List<ArcanistChange>? ReleaseChanges(string? notes)
+    {
+        var section = ChangesSection().Match(notes ?? "");
+        if (!section.Success)
+            return null;
+
+        var changes = new List<ArcanistChange>();
+        string? area = null;
+        foreach (var raw in section.Groups[1].Value.ReplaceLineEndings("\n").Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.StartsWith("### ", StringComparison.Ordinal))
+                area = line[4..].Trim() is { Length: > 0 } heading ? heading : null;
+            else if (line.StartsWith("## ", StringComparison.Ordinal))
+                area = null;
+            else if (line.StartsWith("- ", StringComparison.Ordinal))
+            {
+                var item = line[2..].Trim();
+                var link = CommitLink().Match(item);
+                var text = link.Success ? item[..link.Index].TrimEnd() : item;
+                if (text.Length > 0)
+                    changes.Add(new ArcanistChange(area, text, link.Success ? link.Groups[1].Value : null));
+            }
+        }
+
+        changes.Reverse();
+        return changes;
+    }
+
+    [GeneratedRegex(@"<!--\s*arcanist:changes\s*-->(.*?)<!--\s*/arcanist:changes\s*-->", RegexOptions.Singleline)]
+    private static partial Regex ChangesSection();
+
+    /// <summary>"([abc1234](https://…/commit/…))" at the end of a change.</summary>
+    [GeneratedRegex(@"\s*\(\[[0-9a-f]{4,40}\]\((https?://[^)\s]+)\)\)$")]
+    private static partial Regex CommitLink();
+
     private static readonly HashSet<string> InternalAreas = new(["Tests", "Test", "CI", "Release"], StringComparer.OrdinalIgnoreCase);
 
     [GeneratedRegex(@"^([^:]{1,40}):\s+(.+)$")]

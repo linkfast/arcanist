@@ -35,13 +35,17 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The history and the tags: what changed since the release before.
+          fetch-depth: 0
       - id: version
         run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
       - env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
-        # The notes are .github/release-notes.md (which file to download), with a warning on pre-releases; GitHub
-        # appends what changed since the previous release.
+        # The notes: a warning on pre-releases, what changed since the release before (by area, between markers that
+        # Arcanist reads to show what a new version brings), then .github/release-notes.md (which file to download);
+        # GitHub appends its own list of pull requests.
         run: |
           prerelease=""
           : > notes.md
@@ -50,6 +54,8 @@ jobs:
             printf '%s\n\n' '> **Pre-release.** Expect rough edges, and keep a backup of what matters to you.' > notes.md
             ;;
           esac
+          pwsh -NoProfile -File .github/scripts/release-changes.ps1 -Tag "$TAG" -Repository "$GITHUB_REPOSITORY" >> notes.md
+          printf '\n' >> notes.md
           sed "s/{{VERSION}}/$VERSION/g" .github/release-notes.md >> notes.md
           gh release create "$TAG" --draft --verify-tag --title "Arcanist $VERSION" --notes-file notes.md --generate-notes $prerelease
 

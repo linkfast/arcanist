@@ -30,9 +30,9 @@ public sealed class FakeGitHubReleases : HttpMessageHandler
             : new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(content) });
     }
 
-    public static object Release(string tag, bool prerelease = false, bool draft = false, string[]? assets = null) => new
+    public static object Release(string tag, bool prerelease = false, bool draft = false, string[]? assets = null, string? body = null) => new
     {
-        tag_name = tag, name = $"Arcanist {tag.TrimStart('v')}", body = $"## What's changed\n* Things in {tag}",
+        tag_name = tag, name = $"Arcanist {tag.TrimStart('v')}", body = body ?? $"## What's changed\n* Things in {tag}",
         html_url = $"https://github.com/linkfast/arcanist/releases/tag/{tag}", draft, prerelease, published_at = "2026-10-19T12:00:00Z",
         assets = (assets ?? []).Select(name => new
         {
@@ -135,6 +135,40 @@ public sealed class UpdateTests
         Assert.True(update!.UpdateAvailable);
         Assert.Empty(update.Changes);
         Assert.Null(update.ErrorCode);
+    }
+
+    [Fact]
+    public async Task The_changes_come_from_the_release_notes_of_every_version_missing()
+    {
+        static string Notes(string version, string section) =>
+            $"> **Pre-release.**\n\n<!-- arcanist:changes -->\n## What's new in {version}\n\n{section}\n<!-- /arcanist:changes -->\n\n## Which file do I need?\n- Not a change";
+        _github.Releases =
+        [
+            FakeGitHubReleases.Release("v0.1.0-alpha.1", prerelease: true),
+            FakeGitHubReleases.Release("v0.1.0-alpha.2", prerelease: true, body: Notes("0.1.0-alpha.2",
+                "### Duplicates\n- one track that fails no longer stops the rest ([abc1234](https://github.com/linkfast/arcanist/commit/abc1234))")),
+            FakeGitHubReleases.Release("v0.1.0-alpha.3", prerelease: true, body: Notes("0.1.0-alpha.3",
+                "- A change without an area ([def5678](https://github.com/linkfast/arcanist/commit/def5678))\n\n### Invitations\n- a link\n- and a QR code ([0123456](https://github.com/linkfast/arcanist/commit/0123456))")),
+        ];
+        // The comparison would say other things: the notes win when every version has them.
+        _github.Comparisons["v0.1.0-alpha.1...v0.1.0-alpha.3"] = FakeGitHubReleases.Comparison(null, "Something: from the comparison");
+
+        await using var factory = Create("0.1.0-alpha.1");
+        await factory.CompleteSetupAsync();
+        var admin = await factory.CreateAuthenticatedClientAsync();
+        var update = await (await admin.PostAsync("/rest/v1/server/update/check", null, Cancel)).Content.ReadFromJsonAsync<ServerUpdate>(ArcanistFactory.Json, Cancel);
+
+        // The newest version first, and in each its newest change first.
+        Assert.Equal(
+            [("Invitations", "and a QR code"), ("Invitations", "a link"), (null, "A change without an area"), ("Duplicates", "one track that fails no longer stops the rest")],
+            update!.Changes.Select(c => (c.Area, c.Text)));
+        Assert.Equal(("https://github.com/linkfast/arcanist/commit/0123456", null), (update.Changes[0].Url, update.Changes[1].Url));
+        Assert.False(update.MoreChanges);
+
+        // A version in between without the section (a release made before it): the comparison says it all.
+        _github.Releases[1] = FakeGitHubReleases.Release("v0.1.0-alpha.2", prerelease: true);
+        update = await (await admin.PostAsync("/rest/v1/server/update/check", null, Cancel)).Content.ReadFromJsonAsync<ServerUpdate>(ArcanistFactory.Json, Cancel);
+        Assert.Equal([("Something", "from the comparison")], update!.Changes.Select(c => (c.Area, c.Text)));
     }
 
     [Theory]

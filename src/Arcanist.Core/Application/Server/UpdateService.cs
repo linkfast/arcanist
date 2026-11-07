@@ -139,7 +139,7 @@ public sealed class UpdateChecker(
                     .GetFromJsonAsync<List<GitHubRelease>>(options.CurrentValue.ReleasesUrl, JsonSerializerOptions.Web, cancellationToken) ?? [];
                 var latest = Newest(releases, CurrentVersion);
                 var (changes, more) = latest is not null && ArcanistVersion.Compare(latest.Version, CurrentVersion) > 0
-                    ? await ChangesAsync(latest.Version, cancellationToken)
+                    ? FromNotes(releases, CurrentVersion) is { } listed ? listed : await ChangesAsync(latest.Version, cancellationToken)
                     : ([], false);
                 var assets = releases.FirstOrDefault(r => latest is not null && ArcanistVersion.TryNormalize(r.TagName, out var version) && version == latest.Version)?.Assets
                     ?.Select(ToAsset).ToList();
@@ -189,6 +189,27 @@ public sealed class UpdateChecker(
                 return new ArcanistRelease(version, string.IsNullOrWhiteSpace(r.Name) ? $"Arcanist {version}" : r.Name,
                     r.Body ?? "", r.HtmlUrl, r.PublishedAt ?? DateTime.MinValue, r.Prerelease);
             });
+    }
+
+    /// <summary>Most changes listed: beyond them, the release pages have the rest.</summary>
+    private const int MaxChanges = 300;
+
+    /// <summary>
+    /// What the versions after <paramref name="current"/> changed, as their release notes list it (newest version first),
+    /// when every one of them has the section (<see cref="UpdateInstructions.ReleaseChanges"/>); null otherwise, and the
+    /// comparison of the tags says it.
+    /// </summary>
+    internal static (IReadOnlyList<ArcanistChange> Changes, bool More)? FromNotes(IEnumerable<GitHubRelease> releases, string current)
+    {
+        var newer = Applicable(releases, current)
+            .Where(r => ArcanistVersion.Compare(r.Version, current) > 0)
+            .OrderByDescending(r => r.Version, Comparer<string>.Create(ArcanistVersion.Compare))
+            .Select(r => UpdateInstructions.ReleaseChanges(r.Notes))
+            .ToList();
+        if (newer.Count == 0 || newer.Any(n => n is null))
+            return null;
+        var all = newer.SelectMany(n => n!).ToList();
+        return (all.Take(MaxChanges).ToList(), all.Count > MaxChanges);
     }
 
     /// <summary>

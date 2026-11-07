@@ -301,6 +301,7 @@ the server uses them only while the extension runs, and answers `cloud_plus_requ
 | `IMyCloudUploadProvider` | Takes `uploadTracksToMyCloud`; the queue is the users' history of uploads (`IMyCloudUploadQueue`). |
 | `IS3LibraryPolicy` | Whether S3 libraries can be created, used and deleted. Without one there are no S3 libraries (those of a managed extension excepted). |
 | `IBackupDestinationProvider` | A kind of backup destination (`backupProviders`), with an `IBackupStore` that never overwrites. |
+| `IP2PRelayProvider` | A relay for the P2P node in place of n0's public relays (asked whenever the node's settings apply, at most a minute later). A relay the administrator chose in the panel stays. |
 
 `ICloudDropUploads` (Cloud Drop's songs waiting to go to the account's library) and `IP2PDevices` (this server's P2P
 node, and the devices an Ultimate Cloud account vouches for) are what the server keeps for them. Ultimate Cloud Plus,

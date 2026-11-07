@@ -1446,6 +1446,77 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.ToTable("LyricsDrafts");
                 });
 
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LyricsReadingCache", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Readings")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TextHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TextHash")
+                        .IsUnique();
+
+                    b.ToTable("LyricsReadings");
+                });
+
+            modelBuilder.Entity("Arcanist.Core.Data.Entities.LyricsTranslation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Engine")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("From")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Lines")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TextHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TextHash", "Language")
+                        .IsUnique();
+
+                    b.ToTable("LyricsTranslations");
+                });
+
             modelBuilder.Entity("Arcanist.Core.Data.Entities.MediaFile", b =>
                 {
                     b.Property<Guid>("Id")

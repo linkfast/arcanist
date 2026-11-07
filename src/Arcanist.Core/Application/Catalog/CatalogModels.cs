@@ -97,9 +97,13 @@ public sealed record LyricsLine(int TimeMs, string Text);
 /// the Lyrics Sync extension runs, they have EDIT_METADATA, and the song has words and a copy on this server's disks.</param>
 /// <param name="ResyncPending">A re-sync asked for is waiting for the extension or being worked on; the timing shown is
 /// still the previous one.</param>
+/// <param name="Language">The language of the lyrics (ISO 639-1), when the extension that reads them (Lyrics Languages) knows it
+/// from their script; null for lyrics in the Latin alphabet, or without it.</param>
+/// <param name="Readings">How each line is pronounced (romaji, furigana, pinyin…): one per line shown (the synchronized lines,
+/// or the plain lyrics by line), null for a line that needs none; null for lyrics that need none, or without the extension.</param>
 public sealed record TrackLyrics(
     Guid TrackId, string? Plain, IReadOnlyList<LyricsLine>? Synced, LyricsSource Source, bool Instrumental, LyricsSource? SyncedSource = null,
-    bool CanResync = false, bool ResyncPending = false);
+    bool CanResync = false, bool ResyncPending = false, string? Language = null, IReadOnlyList<LyricsLineReading?>? Readings = null);
 
 /// <summary>Overview of a copy's audio for seek bars: peak amplitudes from start to end.</summary>
 /// <param name="Peaks">1000 values from 0 (silence) to 255 (full scale), evenly spread over the duration.</param>

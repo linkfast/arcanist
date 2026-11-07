@@ -129,6 +129,10 @@ type Query {
   serverStats(period: StatsPeriod!, timeZone: String, libraryId: ID): ServerStats!
   "Each library the user sees at a glance: songs, albums, files, size and length, and with VIEW_ALL_STATS its plays and listeners of the last 30 days."
   librarySummaries: [LibrarySummary!]!
+  "A song's lyrics in another language (ISO 639-1, such as es; with the Lyrics Languages extension): READY with one line per line of trackLyrics (so their times apply), NOT_REQUESTED until someone asks for it (requestLyricsTranslation), QUEUED or WORKING while it is made (follow lyricsTranslationReady), FAILED (tried again an hour later), UNAVAILABLE (nothing translates into that language here) or SAME_LANGUAGE. Kept for everyone once made. Errors: not_found (no such song, or no lyrics)."
+  lyricsTranslation(trackId: ID!, language: String!): LyricsTranslationResult!
+  "The languages lyrics can be translated into on this server (ISO 639-1); empty without a translator (the Lyrics Languages extension, with a model or an LLM)."
+  lyricsTranslationLanguages: [String!]!
   "How many songs have lyrics, how many of them are timed (and how many timed on this server), how many plain lyrics could be timed here, and whether the official extension that does it (Lyrics Sync) is installed and running. Administrators only."
   lyricsTiming: LyricsTimingStatus!
   "Whether a song's words can be recognized by a model (the Lyrics Sync extension), where that stands, and the draft waiting for review (only for those who can review it: EDIT_METADATA and a library with the song they may change)."
@@ -971,6 +975,8 @@ type TrackLyrics {
   syncedSource: LyricsSource
   canResync: Boolean!
   resyncPending: Boolean!
+  language: String
+  readings: [LyricsLineReading]
 }
 
 type LyricsLine {
@@ -984,6 +990,16 @@ enum LyricsSource {
   ONLINE
   ALIGNED
   TRANSCRIBED
+}
+
+type LyricsLineReading {
+  romanized: String
+  ruby: [LyricsRuby!]
+}
+
+type LyricsRuby {
+  text: String!
+  reading: String
 }
 
 type Waveform {
@@ -1897,6 +1913,26 @@ type LibrarySummary {
   plays: Int
   listeners: Int
   lastPlayedAt: DateTime
+}
+
+type LyricsTranslationResult {
+  trackId: ID!
+  language: String!
+  status: LyricsTranslationStatus!
+  from: String
+  lines: [String!]
+  engine: String
+  position: Int
+}
+
+enum LyricsTranslationStatus {
+  READY
+  NOT_REQUESTED
+  QUEUED
+  WORKING
+  FAILED
+  UNAVAILABLE
+  SAME_LANGUAGE
 }
 
 type LyricsTimingStatus {
@@ -3365,6 +3401,8 @@ enum ApiFeature {
   AVAILABLE_PLAYERS
   WISH_LIST_CLOUD_SYNC
   INVITATIONS
+  LYRICS_READINGS
+  LYRICS_TRANSLATION
 }
 
 type LegalTerms {
@@ -3720,6 +3758,8 @@ type Mutation {
   clearPlayHistory: DeletedPlays!
   "Chooses how users rate tracks: STARS (one to five, five being a StarTrack) or STAR (the StarTrack alone, kept as five). Nothing is lost when switching. Requires MANAGE_SETTINGS."
   setRatingMode(mode: RatingMode!): RatingMode!
+  "Asks for a song's lyrics in another language (ISO 639-1): READY at once when someone asked for them before, else QUEUED; lyricsTranslationReady says when it is done. Anyone who sees the song may ask. Errors: not_found (no such song, or no lyrics)."
+  requestLyricsTranslation(trackId: ID!, language: String!): LyricsTranslationResult!
   "Asks the Lyrics Sync extension to work out the timing of a song's lyrics again from its audio, whatever timing they have (from the file, LRCLib or worked out here). The lyrics as they are now come back with resyncPending; their current timing stays until the new one is saved (syncedSource ALIGNED, resyncPending false), and is kept if the extension cannot match the words to the singing (resyncPending false, nothing changed). Requires EDIT_METADATA. Errors: not_found, lyrics_sync_unavailable (the extension is not installed or not running), no_lyrics (none, or instrumental), library_read_only, no_local_copy (no copy on this server's disks to listen to)."
   resyncTrackLyrics(trackId: ID!): TrackLyrics!
   "Asks for a song without lyrics to have its words recognized by a model (Lyrics Sync), first of all (also again after NO_VOICE or FAILED). What it writes is a draft (NEEDS_REVIEW) that nobody sees as the song's lyrics until someone reviews and accepts it. Any user who can hear the song. Errors: not_found, has_lyrics, lyrics_sync_unavailable, no_local_copy."
@@ -4866,6 +4906,8 @@ type Subscription {
   jukeboxJamChanged(code: String!): JukeboxJamChange!
   "The user's StarTracks (or other ratings) changed, here or through their Ultimate Cloud account."
   starTracksChanged: StarTracksChange!
+  "A translation of the song's lyrics asked for is done (READY) or failed (FAILED): read lyricsTranslation again."
+  lyricsTranslationReady(trackId: ID!): LyricsTranslationReady!
   "A playlist the user sees changed (its tracks, name or sharing) or was deleted; with `playlistId`, only that one. Read it again with playlist and playlistEntries."
   playlistChanged(playlistId: ID): PlaylistChange!
   "Changes of scans of one library, or of all the user can see: status changes immediately, progress at most twice a second. Requires RUN_SCANS or MANAGE_LIBRARIES."
@@ -4902,6 +4944,12 @@ enum JukeboxJamChangeKind {
 
 type StarTracksChange {
   changedAt: DateTime!
+}
+
+type LyricsTranslationReady {
+  trackId: ID!
+  language: String!
+  status: LyricsTranslationStatus!
 }
 
 type PlaylistChange {

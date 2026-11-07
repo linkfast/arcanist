@@ -245,6 +245,18 @@ public enum ApiFeature
     /// (<c>POST /rest/v1/public/invitations/signup</c>). See the developers' guide.
     /// </summary>
     Invitations,
+
+    /// <summary>
+    /// How lyrics in scripts many cannot read are pronounced (romaji, furigana, pinyin, Revised Romanization, other scripts
+    /// in the Latin alphabet): <c>TrackLyrics.language</c> and <c>readings</c>, from the Lyrics Languages extension while it runs.
+    /// </summary>
+    LyricsReadings,
+
+    /// <summary>
+    /// Lyrics translated on request and kept for everyone (<c>lyricsTranslation</c>, <c>requestLyricsTranslation</c>,
+    /// <c>lyricsTranslationLanguages</c>, <c>lyricsTranslationReady</c>), while an extension translates (Lyrics Languages).
+    /// </summary>
+    LyricsTranslation,
 }
 
 public sealed class ServerInfoService(
@@ -258,7 +270,8 @@ public sealed class ServerInfoService(
     Core.Extensions.ExtensionHost extensions,
     Core.Ai.AiMonitor ai,
     EditionResolver edition,
-    Cloud.CloudPlus plus)
+    Cloud.CloudPlus plus,
+    Catalog.LyricsLanguages lyricsLanguages)
 {
     public const int ApiVersion = 1;
 
@@ -279,7 +292,10 @@ public sealed class ServerInfoService(
             && (f != ApiFeature.LyricsTranscription || Application.Catalog.LyricsTimingService.StateOf(extensions) == Application.Catalog.LyricsTimingExtension.Running)
             // What Ultimate Cloud Plus provides, while it runs.
             && (f != ApiFeature.MyCloudUploads || plus.Uploads is not null)
-            && (f != ApiFeature.WishListCloudSync || plus.Features?.WishListSync == true)).ToList(),
+            && (f != ApiFeature.WishListCloudSync || plus.Features?.WishListSync == true)
+            // What the extension that reads and translates lyrics provides, while it runs.
+            && (f != ApiFeature.LyricsReadings || lyricsLanguages.Reader is not null)
+            && (f != ApiFeature.LyricsTranslation || lyricsLanguages.TranslationLanguages.Count > 0)).ToList(),
         AnalysisOn ? ai.Current.Progress with { AnalysisVersion = Core.Analysis.DjAudioAnalyzer.Version } : null,
         edition.Current,
         extensions.OpenSourceOnly);

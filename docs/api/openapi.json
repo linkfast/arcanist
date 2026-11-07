@@ -12851,6 +12851,108 @@
         }
       }
     },
+    "/rest/v1/tracks/{trackId}/lyrics/translations/{language}": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "The song\u0027s lyrics in another language (ISO 639-1; Lyrics Languages extension): READY with one line per line of the lyrics, NOT_REQUESTED until asked for (POST), QUEUED or WORKING while it is made (ask again), FAILED, UNAVAILABLE or SAME_LANGUAGE. not_found without lyrics.",
+        "operationId": "LyricsTranslation",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "language",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsTranslationResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Asks for the song\u0027s lyrics in another language: READY at once if made before, else QUEUED (ask again with GET). Anyone who sees the song may ask.",
+        "operationId": "RequestLyricsTranslation",
+        "parameters": [
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "language",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LyricsTranslationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/lyrics/translation-languages": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "The languages lyrics can be translated into on this server (ISO 639-1); empty without a translator.",
+        "operationId": "LyricsTranslationLanguages",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/rest/v1/tracks/{trackId}/lyrics/resync": {
       "post": {
         "tags": [
@@ -15338,7 +15440,9 @@
           "PLAY_HISTORY_MANAGEMENT",
           "AVAILABLE_PLAYERS",
           "WISH_LIST_CLOUD_SYNC",
-          "INVITATIONS"
+          "INVITATIONS",
+          "LYRICS_READINGS",
+          "LYRICS_TRANSLATION"
         ]
       },
       "AppPassword": {
@@ -23363,6 +23467,48 @@
           }
         }
       },
+      "LyricsLineReading": {
+        "required": [
+          "romanized",
+          "ruby"
+        ],
+        "type": "object",
+        "properties": {
+          "romanized": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ruby": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LyricsRuby"
+            }
+          }
+        }
+      },
+      "LyricsRuby": {
+        "required": [
+          "text",
+          "reading"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "reading": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "LyricsSource": {
         "enum": [
           "SIDECAR",
@@ -23493,6 +23639,71 @@
             ]
           }
         }
+      },
+      "LyricsTranslationResult": {
+        "required": [
+          "trackId",
+          "language",
+          "status",
+          "from",
+          "lines",
+          "engine",
+          "position"
+        ],
+        "type": "object",
+        "properties": {
+          "trackId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LyricsTranslationStatus"
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lines": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "engine": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "position": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "LyricsTranslationStatus": {
+        "enum": [
+          "READY",
+          "NOT_REQUESTED",
+          "QUEUED",
+          "WORKING",
+          "FAILED",
+          "UNAVAILABLE",
+          "SAME_LANGUAGE"
+        ]
       },
       "MaintenanceState": {
         "required": [
@@ -31985,6 +32196,21 @@
           "resyncPending": {
             "type": "boolean",
             "default": false
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "readings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/LyricsLineReading"
+            }
           }
         }
       },

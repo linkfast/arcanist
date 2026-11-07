@@ -93,6 +93,20 @@ public static class CatalogEndpoints
             .WithName("TrackLyrics")
             .WithSummary("A track's lyrics, with synchronized lines when known. not_found when it has none.");
 
+        catalog.MapGet("/tracks/{trackId:guid}/lyrics/translations/{language}", (Guid trackId, string language, LyricsLanguageService service, CancellationToken ct) =>
+                service.TranslationAsync(trackId, language, request: false, ct))
+            .WithName("LyricsTranslation")
+            .WithSummary("The song's lyrics in another language (ISO 639-1; Lyrics Languages extension): READY with one line per line of the lyrics, NOT_REQUESTED until asked for (POST), QUEUED or WORKING while it is made (ask again), FAILED, UNAVAILABLE or SAME_LANGUAGE. not_found without lyrics.");
+
+        catalog.MapPost("/tracks/{trackId:guid}/lyrics/translations/{language}", (Guid trackId, string language, LyricsLanguageService service, CancellationToken ct) =>
+                service.TranslationAsync(trackId, language, request: true, ct))
+            .WithName("RequestLyricsTranslation")
+            .WithSummary("Asks for the song's lyrics in another language: READY at once if made before, else QUEUED (ask again with GET). Anyone who sees the song may ask.");
+
+        catalog.MapGet("/lyrics/translation-languages", (LyricsLanguageService service) => service.Languages())
+            .WithName("LyricsTranslationLanguages")
+            .WithSummary("The languages lyrics can be translated into on this server (ISO 639-1); empty without a translator.");
+
         catalog.MapPost("/tracks/{trackId:guid}/lyrics/resync", (Guid trackId, CatalogService service, CancellationToken ct) =>
                 service.ResyncLyricsAsync(trackId, ct))
             .WithName("ResyncTrackLyrics")

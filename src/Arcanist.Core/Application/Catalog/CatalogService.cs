@@ -21,6 +21,7 @@ public sealed class CatalogService(
     Listening.RatingSettings ratings,
     Core.Extensions.ExtensionHost extensions,
     LyricsTiming lyricsTiming,
+    LyricsLanguages lyricsLanguages,
     Videos.VideoClips videoClips,
     Capabilities.ICapabilityService capabilities,
     TimeProvider time)
@@ -447,8 +448,11 @@ public sealed class CatalogService(
         // Someone is looking at lyrics without timing: a timing extension works these out first.
         if (synced is not { Count: > 0 } && plain is not null && !lyrics.Instrumental)
             lyricsTiming.Request(trackId);
-        return new TrackLyrics(trackId, plain, synced is { Count: > 0 } ? synced : null, lyrics.Source, lyrics.Instrumental,
-            synced is { Count: > 0 } ? lyrics.SyncedSource ?? lyrics.Source : null, canResync, resyncPending);
+        var shown = synced is { Count: > 0 } ? synced : null;
+        // How the lines are pronounced, when an extension reads their script (kept by their text).
+        var (language, readings) = lyrics.Instrumental ? (null, null) : await lyricsLanguages.ReadingsAsync(LyricsLanguages.LinesOf(plain, shown), cancellationToken);
+        return new TrackLyrics(trackId, plain, shown, lyrics.Source, lyrics.Instrumental,
+            shown is not null ? lyrics.SyncedSource ?? lyrics.Source : null, canResync, resyncPending, language, readings);
     }
 
     /// <summary>

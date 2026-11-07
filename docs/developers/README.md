@@ -417,6 +417,37 @@ it as the song's lyrics until a person corrects and accepts it.
   `/admin/lyrics/review/{trackId}`.
 - Lyrics a file or a `.lrc` brings later replace `TRANSCRIBED` ones.
 
+### Pronunciation and translation
+
+With the official Lyrics Languages extension running, lyrics in scripts many cannot read come with how they are
+pronounced, and players can ask for lyrics in another language. Both work line by line on **the lines shown**: the
+`synced` lines when there are, else `plain` split at line breaks (blank lines included), so readings and translations
+go with their line and keep its time.
+
+- **Readings** (`serverInfo.features` has `LYRICS_READINGS`): `trackLyrics` adds `language` (ISO 639-1, from the
+  script; for lyrics in the Latin alphabet only when their commonest words say it) and `readings`, one per line shown
+  (`null` for a line that needs none; `readings` is `null` for lyrics that need none, such as English):
+  - `romanized`: the line in the Latin alphabet: Japanese in romaji, Chinese in pinyin with tones, Korean in the Revised
+    Romanization, Cyrillic, Greek, Arabic, Hebrew, Thai, Indian scripts… Show it under the line, smaller.
+  - `ruby`: for Japanese, the line in parts with the reading of those with kanji (`{text, reading}`; `reading` is
+    `null` for kana and punctuation): draw it as `<ruby>夜空<rt>よぞら</rt></ruby>`, or ignore it.
+
+  Ask for `language` and `readings` only when the feature is announced: older servers do not know the fields.
+- **Translations** (`LYRICS_TRANSLATION`): `lyricsTranslationLanguages` / `GET /rest/v1/lyrics/translation-languages`
+  lists the languages offered (ISO 639-1). `requestLyricsTranslation(trackId, language)` /
+  `POST /rest/v1/tracks/{trackId}/lyrics/translations/{language}` asks for one, `lyricsTranslation(trackId, language)` /
+  `GET` on the same path reads it; both answer `status`:
+  - `READY`: `lines` has one translated line per line shown (empty for an empty one), with the `engine` that made it
+    ("LLM · llama3.1", "M2M100"); say it is a machine translation.
+  - `NOT_REQUESTED` (nobody asked yet), `QUEUED` (with its `position`) or `WORKING`: the server makes it in the
+    background, one song at a time; follow `lyricsTranslationReady(trackId)` (GraphQL subscription) or read it again
+    every few seconds. An LLM takes seconds; the local model from seconds to a few minutes on a small server.
+  - `FAILED` (tried again an hour later), `UNAVAILABLE` (nothing translates into that language here) or
+    `SAME_LANGUAGE` (the lyrics are in it already: do not offer the lyrics' own `language`).
+
+  A translation is made once and kept for everyone, by the text of the lyrics: lyrics that change are translated again.
+  Any user who can hear the song may ask. Lyrics of music videos are not translated yet.
+
 ## Music videos
 
 Servers with `MUSIC_VIDEOS` in `serverInfo.features` keep music videos: files next to their songs, named after them,

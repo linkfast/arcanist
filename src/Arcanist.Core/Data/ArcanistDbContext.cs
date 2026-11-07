@@ -40,6 +40,8 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
     public DbSet<VideoAlignmentRequest> VideoAlignmentRequests => Set<VideoAlignmentRequest>();
     public DbSet<VideoLyricsTiming> VideoLyricsTimings => Set<VideoLyricsTiming>();
     public DbSet<LyricsDraft> LyricsDrafts => Set<LyricsDraft>();
+    public DbSet<LyricsReadingCache> LyricsReadings => Set<LyricsReadingCache>();
+    public DbSet<LyricsTranslation> LyricsTranslations => Set<LyricsTranslation>();
     public DbSet<DuplicateCandidate> DuplicateCandidates => Set<DuplicateCandidate>();
     public DbSet<OnlineLookup> OnlineLookups => Set<OnlineLookup>();
     public DbSet<DropFolder> DropFolders => Set<DropFolder>();
@@ -812,6 +814,23 @@ public abstract class ArcanistDbContext(DbContextOptions options) : DbContext(op
             draft.HasOne(d => d.Track).WithOne().HasForeignKey<LyricsDraft>(d => d.TrackId).OnDelete(DeleteBehavior.Cascade);
             draft.Property(d => d.Language).HasMaxLength(16);
             draft.Property(d => d.Model).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<LyricsReadingCache>(reading =>
+        {
+            reading.Property(r => r.TextHash).HasMaxLength(64);
+            reading.Property(r => r.Version).HasMaxLength(64);
+            reading.Property(r => r.Language).HasMaxLength(16);
+            reading.HasIndex(r => r.TextHash).IsUnique();
+        });
+
+        modelBuilder.Entity<LyricsTranslation>(translation =>
+        {
+            translation.Property(t => t.TextHash).HasMaxLength(64);
+            translation.Property(t => t.Language).HasMaxLength(16);
+            translation.Property(t => t.From).HasMaxLength(16);
+            translation.Property(t => t.Engine).HasMaxLength(100);
+            translation.HasIndex(t => new { t.TextHash, t.Language }).IsUnique();
         });
 
         modelBuilder.Entity<OnlineLookup>(lookup =>

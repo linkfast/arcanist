@@ -137,6 +137,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         // every copy of a track is re-tagged at once (an edit of its tags), the first keeps the track and the rest join it.
         var inBatch = existingFiles.Values.GroupBy(f => f.TrackId).ToDictionary(g => g.Key, g => g.Count());
         var claimed = new HashSet<Guid>();
+        var newFiles = new List<MediaFile>();
 
         foreach (var (file, album) in resolved)
         {
@@ -226,6 +227,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
                     AddedAt = now,
                 };
                 db.MediaFiles.Add(mediaFile);
+                newFiles.Add(mediaFile);
                 fileCounts[track.Id] = fileCounts.GetValueOrDefault(track.Id) + 1;
                 added++;
             }
@@ -263,6 +265,7 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
             db.TrackGenres.AddRange(genres);
         }
 
+        await SetUploadersAsync(newFiles, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await RemoveObsoleteCueTracksAsync(files, cancellationToken);
         await FlushPendingUpdatesAsync(cancellationToken);
@@ -270,6 +273,35 @@ internal sealed class CatalogWriter(ArcanistDbContext db, TimeProvider time)
         db.ChangeTracker.Clear();
 
         return new BatchResult(added, updated);
+    }
+
+    /// <summary>
+    /// New files that are uploads still waiting for their scan (the uploader's history has them, by library and audio
+    /// hash) remember who uploaded them; the oldest upload of the same audio wins.
+    /// </summary>
+    private async Task SetUploadersAsync(List<MediaFile> newFiles, CancellationToken cancellationToken)
+    {
+        if (newFiles.Count == 0)
+            return;
+        var hashes = newFiles.Select(f => f.ContentHash).Distinct().ToList();
+        var uploads = await db.UserUploads.AsNoTracking()
+            .Where(u => u.Kind == UserUploadKind.Library && u.ContentHash != null && u.LibraryId != null && hashes.Contains(u.ContentHash)
+                        && (u.Status == UserUploadStatus.Processing || u.Status == UserUploadStatus.Added))
+            .OrderBy(u => u.CreatedAt)
+            .Select(u => new { u.ContentHash, LibraryId = u.LibraryId!.Value, u.UserId })
+            .ToListAsync(cancellationToken);
+        if (uploads.Count == 0)
+            return;
+
+        var sourceIds = newFiles.Select(f => f.LibrarySourceId).Distinct().ToList();
+        var libraryOf = await db.LibrarySources.AsNoTracking().Where(s => sourceIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.LibraryId, cancellationToken);
+        foreach (var file in newFiles)
+        {
+            if (libraryOf.TryGetValue(file.LibrarySourceId, out var library)
+                && uploads.FirstOrDefault(u => u.ContentHash == file.ContentHash && u.LibraryId == library) is { } upload)
+                file.UploadedByUserId = upload.UserId;
+        }
     }
 
     /// <summary>Keeps the file's lyrics unless the track already has more trusted ones (see <see cref="LyricsSource"/>).</summary>

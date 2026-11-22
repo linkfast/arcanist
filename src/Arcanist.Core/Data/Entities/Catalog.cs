@@ -229,6 +229,12 @@ public sealed class MediaFile : Entity
     /// that track and do not let its tags change the track.
     /// </summary>
     public bool TrackLocked { get; set; }
+
+    /// <summary>
+    /// The user who uploaded this file to its library (also an extension's upload on their behalf); null for one a scan
+    /// found otherwise. No foreign key: a deleted user leaves it without a name.
+    /// </summary>
+    public Guid? UploadedByUserId { get; set; }
 }
 
 public enum ArtworkSource

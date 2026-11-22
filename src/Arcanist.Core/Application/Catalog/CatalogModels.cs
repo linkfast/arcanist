@@ -63,6 +63,8 @@ public sealed record Loudness(double Integrated, double Range, double TruePeak, 
 /// <param name="CueTrack">0 for a whole file; for an album in one file split by a cue sheet, the number of this track.</param>
 /// <param name="Shared">The file's tags describe a track of another album and this track plays it too, its metadata being
 /// only in the catalog: the same audio is stored once. Editing this track leaves the file as it is; deleting it too.</param>
+/// <param name="UploadedBy">The user who uploaded this copy to its library; null when a scan found it (or for uploads older
+/// than this field).</param>
 public sealed record TrackFile(
     Guid Id,
     string? Format,
@@ -82,7 +84,8 @@ public sealed record TrackFile(
     DateTime AddedAt,
     DateTime ModifiedAt,
     int CueTrack,
-    bool Shared);
+    bool Shared,
+    Playlists.UserReference? UploadedBy = null);
 
 /// <summary>A line of synchronized lyrics, shown from <paramref name="TimeMs"/> until the next line.</summary>
 public sealed record LyricsLine(int TimeMs, string Text);
@@ -133,6 +136,8 @@ public sealed record Waveform(Guid TrackId, Guid FileId, int DurationMs, IReadOn
 /// server writes). A hint: the server may still answer <c>read_only</c>.</param>
 /// <param name="CanDelete">The user may delete it (DELETE_TRACKS, and every copy where the server can remove files).</param>
 /// <param name="Videos">Its music videos in libraries the user can access (of this track or another of the same recording).</param>
+/// <param name="UploadedBy">Who uploaded it: the uploader of its best copy someone uploaded; null when every copy was found by
+/// a scan (or uploaded before this field).</param>
 public sealed record Track(
     Guid Id,
     string Title,
@@ -164,7 +169,8 @@ public sealed record Track(
     DateTime UpdatedAt,
     bool CanEdit,
     bool CanDelete,
-    IReadOnlyList<Videos.VideoClip> Videos);
+    IReadOnlyList<Videos.VideoClip> Videos,
+    Playlists.UserReference? UploadedBy = null);
 
 /// <param name="NextCursor">Pass as <c>after</c> to get the next page; null on the last page.</param>
 public sealed record ArtistPage(IReadOnlyList<Artist> Items, string? NextCursor, int TotalCount);

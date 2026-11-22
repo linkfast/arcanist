@@ -336,6 +336,15 @@ public sealed class CatalogService(
 
         var withLyrics = (await db.Lyrics.AsNoTracking().Where(l => ids.Contains(l.TrackId)).Select(l => l.TrackId).ToListAsync(cancellationToken)).ToHashSet();
 
+        // Who uploaded the copies, by the name others see (as in shared playlists).
+        var uploaderIds = visibleFiles.Where(f => f.UploadedByUserId is not null).Select(f => f.UploadedByUserId!.Value).Distinct().ToList();
+        var uploaders = uploaderIds.Count == 0
+            ? []
+            : (await db.Users.AsNoTracking().Where(u => uploaderIds.Contains(u.Id)).Select(u => new { u.Id, u.UserName, u.DisplayName })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(u => u.Id, u => new Playlists.UserReference(u.Id, u.DisplayName ?? u.UserName));
+        Playlists.UserReference? UploaderOf(MediaFile f) => f.UploadedByUserId is { } by ? uploaders.GetValueOrDefault(by) : null;
+
         var hashes = visibleFiles.Select(f => f.ContentHash).Distinct().ToList();
         var analyses = await db.AudioAnalyses.AsNoTracking()
             .Where(a => hashes.Contains(a.ContentHash) && a.State == AnalysisState.Analyzed)
@@ -384,7 +393,8 @@ public sealed class CatalogService(
                         f.ReplayGainTrackGain, f.ReplayGainAlbumGain,
                         LoudnessOf(analyses.GetValueOrDefault(f.ContentHash), album.Loudness, album.TruePeak),
                         StreamUrls.For(t.Id, streamToken, f.Id),
-                        libraryOf[f.LibrarySourceId], f.RelativePath, f.ContentHash, f.AddedAt, f.ModifiedAt, Math.Max(f.CueTrack, 0), f.IsSharedCopy))
+                        libraryOf[f.LibrarySourceId], f.RelativePath, f.ContentHash, f.AddedAt, f.ModifiedAt, Math.Max(f.CueTrack, 0), f.IsSharedCopy,
+                        UploaderOf(f)))
                     .ToList(),
                 StreamUrls.For(t.Id, streamToken),
                 userRatings.TryGetValue(t.Id, out var rating) && (!singleStar || rating == 5) ? rating : null,
@@ -402,7 +412,8 @@ public sealed class CatalogService(
                 t.UpdatedAt,
                 canEdit && copies.Any(Writable) && copies.Where(Writable).All(Changeable),
                 canDelete && copies.Count > 0 && copies.All(Changeable),
-                clips.Where(c => c.Second.TrackId == t.Id || c.Second.RecordingId == t.RecordingId).Select(c => c.First).ToList());
+                clips.Where(c => c.Second.TrackId == t.Id || c.Second.RecordingId == t.RecordingId).Select(c => c.First).ToList(),
+                copies.Select(UploaderOf).FirstOrDefault(u => u is not null));
         }).ToList();
     }
 

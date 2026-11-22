@@ -22,6 +22,7 @@ uses:
 | `TRACK_DELETION` | `deleteTrack`, `deleteTracks`, `Track.canDelete`, permission `DELETE_TRACKS` |
 | `ARTWORK_EDITING` | `setTrackArtwork`, `removeTrackArtwork`, `setAlbumArtwork`, `removeAlbumArtwork` |
 | `TRACK_PROPERTIES` | the extra fields of `Track` and `TrackFile` below |
+| `TRACK_UPLOADER` | `Track.uploadedBy` and `TrackFile.uploadedBy` (`{ id name }`): who uploaded the song (its best copy someone uploaded); null for files a scan found, and for uploads made before this version |
 | `STORAGE_USAGE` | `myStorage` |
 | `UPLOAD_TARGET` | `libraryId` on `POST /rest/v1/uploads`, `myUploadSettings` / `setMyUploadSettings` |
 | `CHANGES_SINCE` | `changedSince` on `tracks` and `playlists`, `TrackPage.serverTime`, `trackIds`, `catalogChanged` |

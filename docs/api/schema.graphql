@@ -790,6 +790,7 @@ type Track {
   canEdit: Boolean!
   canDelete: Boolean!
   videos: [VideoClip!]!
+  uploadedBy: UserReference
 }
 
 type AlbumReference {
@@ -846,6 +847,7 @@ type TrackFile {
   modifiedAt: DateTime!
   cueTrack: Int!
   shared: Boolean!
+  uploadedBy: UserReference
 }
 
 type Loudness {
@@ -855,6 +857,11 @@ type Loudness {
   trackGain: Float!
   albumGain: Float
   albumPeak: Float
+}
+
+type UserReference {
+  id: ID!
+  name: String!
 }
 
 type VideoClip {
@@ -1113,11 +1120,6 @@ type Playlist {
   members: [PlaylistMember!]!
   link: PlaylistLink
   jukeboxJamCode: String
-}
-
-type UserReference {
-  id: ID!
-  name: String!
 }
 
 enum PlaylistRole {
@@ -3403,6 +3405,7 @@ enum ApiFeature {
   INVITATIONS
   LYRICS_READINGS
   LYRICS_TRANSLATION
+  TRACK_UPLOADER
 }
 
 type LegalTerms {

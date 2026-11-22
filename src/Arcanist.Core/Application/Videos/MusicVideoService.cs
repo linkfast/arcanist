@@ -202,15 +202,6 @@ public sealed class MusicVideoService(
                ?? throw new ArcanistException.NotFound();
     }
 
-    private async Task RequestAlignmentAsync(Guid videoId, CancellationToken cancellationToken)
-    {
-        var top = await db.VideoAlignmentRequests.MaxAsync(r => (long?)r.Priority, cancellationToken) ?? 0;
-        var request = await db.VideoAlignmentRequests.SingleOrDefaultAsync(r => r.VideoId == videoId, cancellationToken);
-        if (request is null)
-            db.VideoAlignmentRequests.Add(new VideoAlignmentRequest { VideoId = videoId, Priority = top + 1, RequestedAt = time.GetUtcNow().UtcDateTime });
-        else
-            request.Priority = top + 1;
-        await db.SaveChangesAsync(cancellationToken);
-        signals.RequestAlignment();
-    }
+    private Task RequestAlignmentAsync(Guid videoId, CancellationToken cancellationToken) =>
+        VideoAlignmentQueue.RequestFirstAsync(db, signals, videoId, time.GetUtcNow().UtcDateTime, cancellationToken);
 }

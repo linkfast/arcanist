@@ -1596,6 +1596,9 @@ namespace Arcanist.Core.Data.Migrations.Postgres
                     b.Property<bool>("TrackLocked")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ContentHash");

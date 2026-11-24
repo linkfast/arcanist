@@ -257,6 +257,12 @@ public enum ApiFeature
     /// <c>lyricsTranslationLanguages</c>, <c>lyricsTranslationReady</c>), while an extension translates (Lyrics Languages).
     /// </summary>
     LyricsTranslation,
+
+    /// <summary>
+    /// Who uploaded each song: <c>Track.uploadedBy</c> (the best copy someone uploaded) and <c>TrackFile.uploadedBy</c>
+    /// (that copy's), for files uploaded to a library since this version; null for the rest (found by a scan).
+    /// </summary>
+    TrackUploader,
 }
 
 public sealed class ServerInfoService(

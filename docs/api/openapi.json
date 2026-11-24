@@ -15442,7 +15442,8 @@
           "WISH_LIST_CLOUD_SYNC",
           "INVITATIONS",
           "LYRICS_READINGS",
-          "LYRICS_TRANSLATION"
+          "LYRICS_TRANSLATION",
+          "TRACK_UPLOADER"
         ]
       },
       "AppPassword": {
@@ -31289,6 +31290,16 @@
             "items": {
               "$ref": "#/components/schemas/VideoClip"
             }
+          },
+          "uploadedBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UserReference"
+              }
+            ]
           }
         }
       },
@@ -32042,6 +32053,16 @@
           },
           "shared": {
             "type": "boolean"
+          },
+          "uploadedBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UserReference"
+              }
+            ]
           }
         }
       },

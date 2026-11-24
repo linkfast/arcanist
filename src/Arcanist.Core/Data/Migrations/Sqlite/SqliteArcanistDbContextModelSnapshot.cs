@@ -1591,6 +1591,9 @@ namespace Arcanist.Core.Data.Migrations.Sqlite
                     b.Property<bool>("TrackLocked")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ContentHash");

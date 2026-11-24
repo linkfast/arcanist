@@ -3705,6 +3705,8 @@ export const es: Dictionary = {
     cloud_quota_exceeded: 'El almacenamiento de Ultimate Cloud está lleno: no se sube nada más.',
     cloud_read_only:
       'La cuenta de Ultimate Cloud está en solo lectura (suscripción vencida): no se sube nada.',
+    cloud_download_limit_reached:
+      'La cuenta de Ultimate Cloud agotó sus descargas por ahora: el resto baja cuando se renueven.',
     upload_failed: 'La subida a Ultimate Cloud falló.',
     cloud_upload_cue:
       'La canción solo existe como parte de un archivo dividido por una hoja CUE, que no se puede subir por separado.',

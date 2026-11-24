@@ -3663,6 +3663,8 @@ export const en: Dictionary = {
     cloud_quota_exceeded: 'The Ultimate Cloud storage is full: nothing more is uploaded.',
     cloud_read_only:
       'The Ultimate Cloud account is read only (a lapsed subscription): nothing is uploaded.',
+    cloud_download_limit_reached:
+      'The Ultimate Cloud account used up its downloads for now: the rest come down when they renew.',
     upload_failed: 'Uploading to Ultimate Cloud failed.',
     cloud_upload_cue:
       'The song only exists as part of a file split by a CUE sheet, which cannot be uploaded on its own.',

@@ -330,6 +330,8 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
             if (query.Contains("checkCloudFile"))
             {
+                if (CheckError is { } checkError)
+                    return Json(new { errors = new[] { new { message = "Refused.", extensions = new { code = checkError } } } });
                 var hash = variables!["h"]!.GetValue<string>();
                 var track = TrackHashes.FirstOrDefault(t => t.Value == hash).Key;
                 return Json(new
@@ -393,6 +395,8 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
             if (query.Contains("downloadUrl"))
             {
+                if (DownloadsUsedUp)
+                    return Json(new { errors = new[] { new { message = "Download limit reached.", extensions = new { code = "CLOUD_DOWNLOAD_LIMIT_REACHED" } } } });
                 var id = variables!["id"]!.GetValue<string>();
                 return Json(new { data = new { downloadUrl = new { url = $"{FilesBase}/file/bucket/{id}?Authorization=token" } } });
             }
@@ -523,6 +527,12 @@ public sealed class FakeUltimateCloud : HttpMessageHandler
 
     /// <summary>The account's storage is full.</summary>
     public bool Full { get; set; }
+
+    /// <summary>The account's downloads for this window are used up (<c>downloadUrl</c> answers <c>CLOUD_DOWNLOAD_LIMIT_REACHED</c>).</summary>
+    public bool DownloadsUsedUp { get; set; }
+
+    /// <summary>The code <c>checkCloudFile</c> answers with instead of its result (<c>AUTH_NOT_AUTHENTICATED</c>…); null: it answers.</summary>
+    public string? CheckError { get; set; }
 
     /// <summary>The account's backup storage, by path: the B2 object, its size and whether its upload was registered.</summary>
     public ConcurrentDictionary<string, (string Key, long Size, bool Registered)> BackupFiles { get; } = new();

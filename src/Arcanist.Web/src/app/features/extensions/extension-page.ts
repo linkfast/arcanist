@@ -9,6 +9,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -455,9 +456,13 @@ export class ExtensionPage implements OnInit, OnDestroy {
     // Another extension's page: start over.
     effect(() => {
       this.id();
-      this.page.set(null);
-      this.dirty.set(false);
-      void this.load();
+      // Only the id is tracked: load() reads `dirty` and other signals, and tracking them
+      // made every edit restart the page.
+      untracked(() => {
+        this.page.set(null);
+        this.dirty.set(false);
+        void this.load();
+      });
     });
   }
 

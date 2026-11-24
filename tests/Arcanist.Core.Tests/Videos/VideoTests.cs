@@ -33,7 +33,7 @@ public sealed class VideoTests : IAsyncLifetime
     /// A library with a song (40 s of melody) and, next to it, its video: 5 s of a scene, the song's first 30 s,
     /// 4 s of a scene. Also a video named after the song, a live one of another performance and one of nothing here.
     /// </summary>
-    private async Task StartAsync()
+    private async Task StartAsync(Action<IServiceProvider>? beforeSetup = null)
     {
         _ffmpeg = TestFfmpeg.Require();
         if (!AudioAligner.IsAvailable)
@@ -62,6 +62,7 @@ public sealed class VideoTests : IAsyncLifetime
             ["Arcanist:Dlna:Port"] = "8484",
             ["Arcanist:Extensions:subsonic:Enabled"] = "true",
         });
+        beforeSetup?.Invoke(_factory.Services);
         await _factory.CompleteSetupAsync(new SetupLibrary("Music", [_music]));
         _admin = await _factory.CreateAuthenticatedClientAsync();
         await _factory.WaitForScansAsync(_admin);
@@ -158,6 +159,42 @@ public sealed class VideoTests : IAsyncLifetime
         Assert.Equal(2, (await VideosAsync("?linked=false")).GetProperty("totalCount").GetInt32());
         Assert.Equal(2, (await VideosAsync($"?trackId={trackId}")).GetProperty("totalCount").GetInt32());
         Assert.Equal(1, (await VideosAsync("?search=nothing")).GetProperty("totalCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task A_video_being_watched_is_aligned_while_streams_run_and_the_rest_waits()
+    {
+        // Something streams the whole time (another listener): the backlog of videos to align waits for it.
+        IDisposable? listening = null;
+        await StartAsync(services => listening = services.GetRequiredService<Arcanist.Core.Media.StreamActivity>().Begin());
+        try
+        {
+            var page = await VideosAsync();
+            var watched = Named(page, "Album/01 Song.mp4").GetProperty("id").GetString()!;
+            var other = Named(page, "Band - Song (Official Video).mp4").GetProperty("id").GetString()!;
+            await Task.Delay(3000, Cancel);
+            Assert.Equal("PENDING", (await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/videos/{watched}", ArcanistFactory.Json, Cancel)).GetProperty("sync").GetString());
+
+            // Someone plays one with the song's audio before it is aligned: it hears the video's own audio and that
+            // video goes first, aligned even though streams run.
+            using (var stream = await _admin.GetAsync($"/rest/v1/videos/{watched}/stream?audio=track", HttpCompletionOption.ResponseHeadersRead, Cancel))
+            {
+                stream.EnsureSuccessStatusCode();
+                Assert.Equal("video", stream.Headers.GetValues("X-Arcanist-Video-Audio").Single());
+            }
+            Assert.Equal("READY", (await AlignedAsync(watched)).GetProperty("sync").GetString());
+            Assert.Equal("PENDING", (await _admin.GetFromJsonAsync<JsonElement>($"/rest/v1/videos/{other}", ArcanistFactory.Json, Cancel)).GetProperty("sync").GetString());
+
+            // The streams end: the rest is aligned too.
+            listening?.Dispose();
+            listening = null;
+            _factory.Services.GetRequiredService<Arcanist.Core.Videos.VideoAlignmentWorker>().Wake();
+            Assert.Equal("READY", (await AlignedAsync(other)).GetProperty("sync").GetString());
+        }
+        finally
+        {
+            listening?.Dispose();
+        }
     }
 
     [Fact]

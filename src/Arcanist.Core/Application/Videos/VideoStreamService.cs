@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Arcanist.Core.Analysis;
 using Arcanist.Core.Application.Catalog;
 using Arcanist.Core.Auth;
 using Arcanist.Core.Data;
@@ -30,7 +31,9 @@ public sealed class VideoStreamService(
     VideoTranscoder transcoder,
     VideoPrepareWorker prepare,
     FfmpegLocator ffmpeg,
-    ILibraryStorageResolver storages)
+    ILibraryStorageResolver storages,
+    VideoSignals signals,
+    TimeProvider time)
 {
     public const string AudioHeader = "X-Arcanist-Video-Audio";
 
@@ -52,6 +55,12 @@ public sealed class VideoStreamService(
 
         var plan = await plans.PlanAsync(db, video, mode, catalog.VisibleFiles(access), cancellationToken);
         context.Response.Headers[AudioHeader] = plan.AudioKey == "video" ? "video" : "track";
+        // Asked for the song's audio but not aligned yet: someone is watching it, so it is aligned first (the worker
+        // drops the request when it can't be aligned at all).
+        if (mode == VideoAudioMode.Track && plan.AudioKey == "video" && !HttpMethods.IsHead(context.Request.Method)
+            && video.RecordingId is not null && AudioAligner.IsAvailable && video.LibrarySource.Kind is LibrarySourceKind.Local or LibrarySourceKind.S3
+            && !await db.VideoAlignments.AnyAsync(a => a.VideoHash == video.ContentHash && a.AlignerVersion == AudioAligner.Version, cancellationToken))
+            await VideoAlignmentQueue.RequestFirstAsync(db, signals, video.Id, time.GetUtcNow().UtcDateTime, cancellationToken);
         if ((await settings.GetAsync(cancellationToken)).PrepareWhenPlayed)
             prepare.Request(video.Id);
 

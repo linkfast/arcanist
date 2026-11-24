@@ -17,7 +17,8 @@ namespace Arcanist.Core.Videos;
 /// <summary>
 /// Aligns each linked music video with the audio of its song, in the background: first the videos someone asked
 /// for, then every video whose alignment is missing for this aligner version. One at a time, on a low-priority
-/// thread, waiting while scans and streams run; with the audio analysis switched off it does nothing. Database
+/// thread, waiting while scans run; while streams run only the videos asked for (one being watched before it is
+/// aligned is asked for by its stream: <see cref="VideoAlignmentQueue"/>). With the audio analysis switched off it does nothing. Database
 /// work goes in short maintenance units; decoding and aligning happen outside them.
 /// </summary>
 public sealed class VideoAlignmentWorker(
@@ -100,12 +101,15 @@ public sealed class VideoAlignmentWorker(
             return IdleDelay;
         if (!await settings.GetAsync(SettingKeys.AnalysisEnabled, true, cancellationToken))
             return IdleDelay;
-        if (scans.HasActiveJobs || streams.Active > 0)
+        if (scans.HasActiveJobs)
             return TimeSpan.FromSeconds(15);
+        // While something streams only what was asked for goes ahead (above all the video being watched, which sounds
+        // with its own audio until then); the backlog waits for the streams to end.
+        var streaming = streams.Active > 0;
 
         var ffmpegPath = (await ffmpeg.GetAsync(cancellationToken))?.Path;
-        if (await DbAsync(db => NextAsync(db, ffmpegPath is not null, cancellationToken), cancellationToken) is not { } item)
-            return IdleDelay;
+        if (await DbAsync(db => NextAsync(db, ffmpegPath is not null, streaming, cancellationToken), cancellationToken) is not { } item)
+            return streaming ? TimeSpan.FromSeconds(15) : IdleDelay;
 
         var outcome = await Task.Factory.StartNew(() =>
         {
@@ -127,7 +131,7 @@ public sealed class VideoAlignmentWorker(
 
     internal sealed record WorkItem(Guid VideoId, string VideoHash, StorageLocation VideoLocation, string VideoPath, VideoSong Song);
 
-    private async Task<WorkItem?> NextAsync(ArcanistDbContext db, bool withFfmpeg, CancellationToken cancellationToken)
+    private async Task<WorkItem?> NextAsync(ArcanistDbContext db, bool withFfmpeg, bool requestedOnly, CancellationToken cancellationToken)
     {
         var version = AudioAligner.Version;
         var now = time.GetUtcNow().UtcDateTime;
@@ -137,7 +141,9 @@ public sealed class VideoAlignmentWorker(
             .Select(r => r.VideoId)
             .Take(20)
             .ToListAsync(cancellationToken);
-        var pending = await Pending(db, version, withFfmpeg).OrderBy(v => v.AddedAt).Select(v => v.Id).Take(20).ToListAsync(cancellationToken);
+        var pending = requestedOnly
+            ? []
+            : await Pending(db, version, withFfmpeg).OrderBy(v => v.AddedAt).Select(v => v.Id).Take(20).ToListAsync(cancellationToken);
 
         foreach (var id in requested.Concat(pending).Distinct())
         {
